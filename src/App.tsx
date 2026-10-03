@@ -49,7 +49,7 @@ export default function App() {
         <button className="back" onClick={() => go('')}>&larr; Everything</button>
       )}
       {route === 'note-id'
-        ? <PracticeScreen onLeave={() => go('')} />
+        ? <PracticeScreen />
         : Screen ? <Screen /> : <Home go={go} />}
     </main>
   );

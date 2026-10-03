@@ -38,10 +38,9 @@ interface Round {
   result: Result | null;
 }
 
-export function PracticeScreen({ onLeave, audio = defaultSynth }: {
-  onLeave(): void;
-  audio?: AudioOut;
-}) {
+// Navigation belongs to the router, which already puts a back control above
+// every screen; a second one here was two ways out of the same page.
+export function PracticeScreen({ audio = defaultSynth }: { audio?: AudioOut }) {
   const lastExercise = useSettings((s) => s.doc.lastExercise);
   const definition = useMemo(() => exerciseTypeOr(lastExercise), [lastExercise]);
 
@@ -115,7 +114,6 @@ export function PracticeScreen({ onLeave, audio = defaultSynth }: {
         <h1>{definition.name} <span className="tag">practice</span></h1>
         <p className="lede">{definition.description}</p>
         <div className="nav">
-          <button type="button" className="quiet" onClick={onLeave}>Back to the workbench</button>
           {EXERCISE_TYPES.length > 1 && (
             <select
               value={definition.id}

@@ -138,9 +138,41 @@ describe('identifyChord', () => {
     expect(new Set(readings.map((r) => r.rootPc))).toEqual(new Set([0, 3, 6, 9]));
   });
 
-  it('ranks a triad reading above an exotic one', () => {
-    const readings = identifyChord(voiceChord(chord(parsePitch('C4'), chordType('maj'), 1)));
-    expect(readings[0].type.family).toBe('triad');
+  // The old version of this asked for the first reading of a major triad in
+  // first inversion, which has exactly one reading — so it could not fail, and
+  // reversing the comparator left it green. Only a four-note set has readings
+  // in two families, so only a four-note set exercises the ordering at all.
+  it('offers the simpler family first when a set has two readings', () => {
+    // C E G A is C6 and Am7 at once. CHORD_TYPES ranks seventh above sixth, so
+    // the seventh is the primary answer and the sixth is still offered.
+    const readings = identifyChord(voiceChord(chord(parsePitch('C4'), chordType('maj6'))));
+    expect(readings.map((r) => r.type.family)).toEqual(['seventh', 'sixth']);
+    expect(readings[0].type.id).toBe('min7');
+    expect(readings[0].rootPc).toBe(pitchClass(parsePitch('A4')));
+  });
+
+  it('breaks a tie within a family towards root position', () => {
+    const readings = identifyChord(voiceChord(chord(parsePitch('C4'), chordType('dim7'))));
+    expect(readings.map((r) => r.inversion)).toEqual([0, 1, 2, 3]);
+    expect(readings[0].rootPc).toBe(pitchClass(parsePitch('C4')));
+  });
+
+  it('returns the readings already ordered, never needing a re-sort', () => {
+    for (const typeId of ['maj6', 'min6', 'dim7', 'sus2', 'maj']) {
+      for (let inversion = 0; inversion < 3; inversion++) {
+        const readings = identifyChord(voiceChord(chord(parsePitch('C4'), chordType(typeId), inversion)));
+        const families = readings.map((r) => r.type.family);
+        // Within one family the inversions ascend; across families the order
+        // never goes back to a family already left behind.
+        const seen: string[] = [];
+        for (const family of families) {
+          if (seen[seen.length - 1] !== family) {
+            expect(seen, `${typeId} inv ${inversion}`).not.toContain(family);
+            seen.push(family);
+          }
+        }
+      }
+    }
   });
 
   it('declines to name fewer than three distinct pitch classes', () => {

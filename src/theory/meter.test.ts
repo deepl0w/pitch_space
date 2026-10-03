@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BASE_TICKS, NOTE_BASES, TICKS_PER_QUARTER, TIME_SIGNATURES, beamSpanIndex,
+  BASE_TICKS, NOTE_BASES, TICKS_PER_QUARTER, TICKS_PER_WHOLE, TIME_SIGNATURES, beamSpanIndex,
   beatLevel, isDownbeat, metricWeight, noteValue, ticksOf, tiedValues,
   timeSignature, valueOfTicks,
 } from './meter';
@@ -67,6 +67,38 @@ describe('the tick grid', () => {
       expect(parts.length).toBeGreaterThan(0);
       expect(parts.reduce((s, v) => s + ticksOf(v), 0)).toBe(ticks);
     }
+  });
+
+  // Summing back is not enough on its own: a shortest-first walk also sums,
+  // and notates a dotted half as twenty-four tied 64ths. Longest-first is the
+  // property, and taking a value whole whenever one measures the duration is
+  // what makes it readable.
+  it('takes the longest value first, all the way down', () => {
+    for (let n = 1; n <= 64 * 4; n++) {
+      const ticks = n * BASE_TICKS['64'];
+      const spans = tiedValues(ticks).map(ticksOf);
+      expect(spans, `${ticks} ticks`).toEqual([...spans].sort((a, b) => b - a));
+    }
+  });
+
+  it('writes a duration that has its own value as that one value', () => {
+    for (const base of NOTE_BASES) {
+      for (const dots of [0, 1, 2] as const) {
+        let ticks: number;
+        try { ticks = ticksOf(noteValue(base, dots)); } catch { continue; }
+        expect(tiedValues(ticks), `${base} with ${dots} dot(s)`)
+          .toEqual([{ base, dots }]);
+      }
+    }
+  });
+
+  it('reaches for the biggest value that still fits, then the remainder', () => {
+    // A quarter tied to a sixteenth, not five tied sixteenths.
+    expect(tiedValues(2100)).toEqual([{ base: 'q', dots: 0 }, { base: '16', dots: 0 }]);
+    // Two whole notes' worth comes back as a double-dotted whole and a quarter.
+    // Greedy reaches past the plain whole note because a dotted one still fits,
+    // and both readings spend two values, so neither is longer than the other.
+    expect(tiedValues(TICKS_PER_WHOLE * 2)).toEqual([{ base: 'w', dots: 2 }, { base: 'q', dots: 0 }]);
   });
 });
 

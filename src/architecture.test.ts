@@ -202,6 +202,28 @@ describe('ADR 0003 — one importer for the notation library', () => {
   });
 });
 
+  /**
+   * Every pitch reaching a VexFlow key goes through simplifySpelling first.
+   *
+   * VexFlow's key parser accepts at most a double accidental, and spellings
+   * past that are reachable from the shipped key list — a Cb diminished
+   * seventh contains a Bbbb. That once refused to draw. The adapter funnels
+   * every pitch through one helper, and this keeps it funnelled: a later edit
+   * reaching for vexKey directly would compile, pass every test in the suite,
+   * and break only on the chords nobody generates by hand.
+   */
+  it('simplifies every spelling before it becomes a vexflow key', () => {
+    const raw: string[] = [];
+    for (const file of filesUnder(join(SRC, 'exercises'))) {
+      readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+        for (const match of line.matchAll(/vexKey\s*\(\s*([A-Za-z_$][\w$]*)/g)) {
+          if (match[1] !== 'simplifySpelling') raw.push(`${show(file)}:${i + 1}  ${line.trim()}`);
+        }
+      });
+    }
+    expect(raw).toEqual([]);
+  });
+
 describe('the npm scripts', () => {
   const pkg = JSON.parse(
     readFileSync(join(SRC, '..', 'package.json'), 'utf8'),

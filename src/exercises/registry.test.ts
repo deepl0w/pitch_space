@@ -189,7 +189,14 @@ describe('every exercise type’s generator', () => {
       if (!d.answerScore) return;
       for (let seed = 0; seed < 50; seed++) {
         const spec = d.answerScore(d.generate({ seed, settings: d.settings.defaults }));
-        expect(spec.notes.length).toBeGreaterThan(0);
+        // Something to look at, which is not the same as notes. A key
+        // signature with no notes is the whole answer to a key-identification
+        // exercise, and the renderer draws the stave for it; an empty stave
+        // with no signature either would be a blank box.
+        expect(
+          spec.notes.length > 0 || spec.key !== undefined,
+          `${d.id} seed ${seed}: nothing to engrave`,
+        ).toBe(true);
         expect(['treble', 'bass', 'alto', 'tenor']).toContain(spec.clef);
       }
     });

@@ -22,6 +22,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0005](0005-seeds-are-minted-outside-the-core.md) | Seeds are minted outside the core | Accepted |
 | [0006](0006-settings-in-localstorage-progress-in-indexeddb.md) | Settings in localStorage, progress in IndexedDB | Accepted |
 | [0007](0007-an-attempt-records-per-event-item-attribution.md) | An attempt records per-event item attribution | Accepted |
+| [0008](0008-an-onset-is-a-rise-in-the-frames-own-spectrum.md) | An onset is a rise in the frame's own spectrum | Accepted |
 
 ## The shape of the thing
 

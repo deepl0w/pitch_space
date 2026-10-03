@@ -216,3 +216,55 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   font-size: 0.85rem; color: var(--muted); margin-top: 1rem;
   border-left: 3px solid var(--accent); padding-left: 0.7rem;
 }
+
+/* ---- The circle of fifths ----------------------------------------------- */
+
+.circle-layout { display: grid; gap: 1.25rem; align-items: start; margin-bottom: 1.25rem; }
+@media (min-width: 46rem) { .circle-layout { grid-template-columns: minmax(0, 1fr) 15rem; } }
+
+.circle { width: 100%; max-width: 30rem; margin: 0 auto; display: block; }
+
+.wedge {
+  fill: var(--surface);
+  stroke: var(--bg);
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: fill 120ms;
+}
+.wedge:hover { fill: color-mix(in oklab, var(--accent) 22%, var(--surface)); }
+
+/* Each relation gets its own weight of the one accent rather than a separate
+   hue: the wheel is already busy, and five colours would read as decoration
+   instead of as structure. */
+.wedge-self { fill: var(--accent); }
+.wedge-relative { fill: color-mix(in oklab, var(--accent) 55%, var(--surface)); }
+.wedge-parallel { fill: color-mix(in oklab, var(--accent) 38%, var(--surface)); }
+.wedge-dominant,
+.wedge-subdominant { fill: color-mix(in oklab, var(--accent) 24%, var(--surface)); }
+.wedge-enharmonic { fill: color-mix(in oklab, var(--accent) 14%, var(--surface)); }
+
+.wedge-label {
+  font-size: 11px; font-weight: 600; fill: var(--ink);
+  text-anchor: middle; dominant-baseline: middle; pointer-events: none;
+}
+.wedge-label-minor { font-size: 9.5px; font-weight: 500; fill: var(--muted); }
+.wedge-signature {
+  font-size: 8px; fill: var(--muted);
+  text-anchor: middle; dominant-baseline: middle; pointer-events: none;
+}
+.circle-centre {
+  font-size: 13px; font-weight: 650; fill: var(--ink);
+  text-anchor: middle; dominant-baseline: middle;
+}
+.circle-centre-small { font-size: 9px; font-weight: 500; fill: var(--muted); }
+
+.circle-side h2 { margin-bottom: 0.5rem; }
+.relations { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.relation {
+  display: flex; flex-direction: column; gap: 0.1rem; width: 100%; text-align: left;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px; padding: 0.45rem 0.65rem;
+}
+.relation:hover { border-color: var(--accent); filter: none; }
+.relation-name { font-weight: 600; font-size: 0.88rem; }
+.relation-kind { font-size: 0.72rem; color: var(--muted); }

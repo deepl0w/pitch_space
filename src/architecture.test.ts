@@ -183,14 +183,6 @@ describe('ADR 0002 — generation is reproducible from its seed', () => {
   // seeds itself randomly is a suite that fails intermittently, and the rule
   // is easier to keep with no exclusions than with one.
   //
-  // Test files are in scope deliberately. A suite about determinism that
-  // seeds itself randomly is a suite that fails intermittently, and the rule
-  // is easier to keep with no exclusions than with one.
-  //
-  // Test files are in scope deliberately. A suite about determinism that
-  // seeds itself randomly is a suite that fails intermittently, and the rule
-  // is easier to keep with no exclusions than with one.
-  //
   // No exception, because the core has nothing to except. Minting a seed is
   // an app-layer event — the user asking for a new exercise — and the core
   // only ever spends one. An earlier draft of this rule carved out

@@ -7,9 +7,9 @@ import {
 import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
-import type { Clef, ScoreNote } from '../render/toVexflow';
+import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
 import type {
-  Difficulty, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
+  BaseSettings, Difficulty, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
 
 /**
@@ -64,8 +64,10 @@ export function intervalItemId(semitones: number, direction: IntervalDirection):
 
 /* -- settings ------------------------------------------------------------- */
 
-export interface IntervalSettings {
-  difficulty: Difficulty;
+// Extends the shared base rather than restating its fields: redeclaring
+// `difficulty` is what let this drift out of step when `presentation` was
+// added to the contract.
+export interface IntervalSettings extends BaseSettings {
   /** Semitone distances that may be drawn, ascending and distinct. */
   semitones: readonly number[];
   directions: readonly IntervalDirection[];
@@ -75,6 +77,7 @@ export interface IntervalSettings {
 const CLEFS: readonly Clef[] = ['treble', 'bass', 'alto', 'tenor'];
 
 export const INTERVAL_DEFAULTS: IntervalSettings = {
+  presentation: 'listen',
   difficulty: 2,
   // Every simple interval above the unison. Narrowing is what the settings
   // panel is for; a default that starts narrow hides most of the exercise
@@ -91,6 +94,8 @@ function coerceIntervalSettings(stored: unknown): IntervalSettings {
     ? raw.difficulty as Difficulty
     : INTERVAL_DEFAULTS.difficulty;
 
+  const presentation = raw.presentation === 'read' ? 'read' as const : 'listen' as const;
+
   // Sorted and de-duplicated here rather than trusted, so a hand-edited or
   // older document cannot make the generator's candidate pool depend on the
   // order someone happened to write it in.
@@ -106,6 +111,7 @@ function coerceIntervalSettings(stored: unknown): IntervalSettings {
 
   return {
     difficulty,
+    presentation,
     // An empty pool is a screen with nothing to generate, so it falls back
     // rather than surfacing as an error the user cannot act on from here.
     semitones: semitones.length > 0 ? semitones : INTERVAL_DEFAULTS.semitones,
@@ -245,6 +251,7 @@ export function generateInterval(spec: ExerciseSpec<IntervalSettings>): Interval
   return {
     type: INTERVAL_EXERCISE_ID,
     seed: spec.seed,
+    presentation: spec.settings.presentation,
     semitones,
     direction,
     pitches: [first, second],
@@ -321,4 +328,22 @@ export function intervalScoreNotes(exercise: IntervalExercise): ScoreNote[] {
     return [{ pitches: exercise.pitches, value: noteValue('w') }];
   }
   return exercise.pitches.map((pitch) => ({ pitches: [pitch], value: noteValue('h') }));
+}
+
+/**
+ * The two notes, engraved, when the exercise is being read rather than heard.
+ *
+ * Null when listening: showing the notes would answer the question before it
+ * was asked.
+ */
+export function intervalQuestionScore(exercise: IntervalExercise): ScoreSpec | null {
+  if (exercise.presentation !== 'read') return null;
+  const [low, high] = exercise.pitches;
+  // A harmonic interval is one event with both notes; a melodic one is two,
+  // in the order it would have sounded.
+  const notes: ScoreNote[] = exercise.direction === 'harmonic'
+    ? [{ pitches: [low, high], value: noteValue('w') }]
+    : (exercise.direction === 'down' ? [high, low] : [low, high])
+      .map((p) => ({ pitches: [p], value: noteValue('h') }));
+  return { notes, clef: exercise.clef };
 }

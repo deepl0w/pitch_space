@@ -44,6 +44,12 @@ export interface OnsetOptions {
   thresholdFactor?: number;
   /** How far above the whole signal's average flux a peak has to stand. */
   thresholdFloor?: number;
+  /**
+   * What fraction of the frame's own magnitude spectrum has to be new. The
+   * one term that is not computed from the flux curve, and so the only one
+   * that can tell a steady tone from an attack.
+   */
+  spectralFloor?: number;
   /** Two peaks closer than this are one attack seen twice. */
   minSeparationSeconds?: number;
 }
@@ -111,6 +117,67 @@ const THRESHOLD_FACTOR = 1.5;
  */
 const THRESHOLD_FLOOR = 1;
 
+/**
+ * …and this much of the frame's own spectrum has to be *new*.
+ *
+ * The two terms above are both relative to the flux curve, and on a steady
+ * tone the flux curve is nothing but numerical wobble: a 220 Hz sine held for
+ * a second reported eighteen onsets, evenly spaced about 52 ms apart, because
+ * the median and the average it was being compared against were made of the
+ * same wobble. A held note on a bowed or wind instrument is exactly that
+ * signal, so rhythm scoring would have invented attacks inside one.
+ *
+ * This term compares the flux to something outside the flux curve: the L1
+ * norm of the frame's own magnitude spectrum, which is the quantity the flux
+ * is a sum of rises of. The ratio therefore reads as "what fraction of this
+ * frame's spectrum was not there a hop ago", it is dimensionless, and it is
+ * exactly invariant under gain — both numerator and denominator scale with
+ * the signal, which is what keeps the 30 dB-quieter corpus reporting
+ * identical times (the tuner's ADR 0002 is the standing argument for making
+ * every term a ratio).
+ *
+ * Measured over the fixtures in `audio/testing/signals.ts`, at 44.1 kHz, as
+ * the largest flux ÷ spectral-L1 reached at any local maximum of the flux:
+ *
+ * | Signal                                            | ratio   |
+ * | ------------------------------------------------- | ------- |
+ * | 220 Hz sine held, cut dead, or faded out over 20 ms | 0.0019 |
+ * | the same sine 30 dB quieter                        | 0.0019 |
+ * | 196 Hz sawtooth held                               | 0.0085 |
+ * | a pluck whose attack fell before the first frame   | 0.0029 |
+ * | a pluck struck within the capture                  | 0.88   |
+ * | one struck over a string still ringing             | 0.65   |
+ * | a 0.005-amplitude pluck over a −60 dBFS room       | 0.44   |
+ *
+ * 0.01 sits above every held tone measured — 5.2× above the sine, 1.2× above
+ * the sawtooth — and 44× below the quietest struck note in the corpus. It is
+ * set nearer the wobble than the midpoint of that gap on purpose: the wobble
+ * side is bounded by what a held tone can do, which is a property of the
+ * transform and will not change, whereas the attack side is four synthesised
+ * plucks and a real instrument's softest attack could sit well below them.
+ * The headroom belongs where the evidence is weakest.
+ *
+ * The floor does not have to separate events from non-events on its own, and
+ * does not: a sine held over a −50 dBFS room wobbles to 0.026, and it is the
+ * median term that keeps that silent. This term exists for the one case the
+ * other two cannot see — a flux curve flat enough that its own median is no
+ * yardstick.
+ *
+ * Two things it does cost. An attack falling inside the very first frame is
+ * no longer reported at all, which is the blind spot the method has always
+ * had and was previously being papered over by the same wobble this removes.
+ * And, as with every constant here, it was measured against synthesised
+ * plucks and has never met a recording — the tuner's ADR 0008 is explicit
+ * about what that is worth.
+ *
+ * Swept rather than assumed: the suite is green for every value from 0.0007
+ * to 0.08, red below (the wobble returns) and red above (the faint pluck and
+ * the bowed attack go missing). The band is wider than the raw ratios above
+ * because this is one of three terms and the other two are still working.
+ * 0.01 is near its geometric centre. See docs/adr/0008.
+ */
+const THRESHOLD_SPECTRAL_FLOOR = 0.01;
+
 export function frameSizeFor(sampleRate: number): number {
   return nearestPow2(ONSET_FRAME_SECONDS * sampleRate);
 }
@@ -144,6 +211,7 @@ export function detectOnsets(samples: Samples, options: OnsetOptions): OnsetAnal
   const medianSpanSeconds = options.medianSpanSeconds ?? MEDIAN_SPAN_SECONDS;
   const thresholdFactor = options.thresholdFactor ?? THRESHOLD_FACTOR;
   const thresholdFloor = options.thresholdFloor ?? THRESHOLD_FLOOR;
+  const spectralFloor = options.spectralFloor ?? THRESHOLD_SPECTRAL_FLOOR;
   const minSeparationSeconds = options.minSeparationSeconds ?? MIN_SEPARATION_SECONDS;
 
   const frameTimeSeconds = (frame: number) => (frame * hopSize + frameSize / 2) / sampleRate;
@@ -153,6 +221,9 @@ export function detectOnsets(samples: Samples, options: OnsetOptions): OnsetAnal
     : Math.floor((samples.length - frameSize) / hopSize) + 1;
   const flux = new Float64Array(Math.max(0, frames));
   const threshold = new Float64Array(flux.length);
+  // L1 norm of each frame's magnitude spectrum — the total the flux is a sum
+  // of rises out of, and so what the flux is a meaningful fraction of.
+  const spectralSum = new Float64Array(flux.length);
   const empty: OnsetAnalysis = {
     onsets: [], flux, threshold, frameSize, hopSize, frameTimeSeconds,
   };
@@ -169,6 +240,10 @@ export function detectOnsets(samples: Samples, options: OnsetOptions): OnsetAnal
     const start = t * hopSize;
     for (let i = 0; i < frameSize; i++) windowed[i] = samples[start + i] * window[i];
     fft.magnitudes(windowed, current);
+
+    let magnitude = 0;
+    for (let k = 0; k < bins; k++) magnitude += current[k];
+    spectralSum[t] = magnitude;
 
     if (t > 0) {
       let rise = 0;
@@ -194,7 +269,8 @@ export function detectOnsets(samples: Samples, options: OnsetOptions): OnsetAnal
     const from = Math.max(0, t - span);
     const to = Math.min(frames, t + span + 1);
     threshold[t] = thresholdFactor * median(flux, from, to, scratch)
-      + thresholdFloor * average;
+      + thresholdFloor * average
+      + spectralFloor * spectralSum[t];
   }
 
   // A peak, not merely a crossing. Without the local-maximum test a single

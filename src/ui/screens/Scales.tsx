@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
 import { usePlayer } from '../sound';
@@ -10,6 +11,9 @@ import { noteValue } from '../../theory/meter';
 import { CLEFS, OCTAVES, keyOptions } from './options';
 
 const FAMILIES = ['common', 'mode', 'pentatonic', 'symmetric', 'exotic'] as const;
+
+/** Title and lede come from the menu, so the card and this page cannot drift. */
+const entry = entryFor('scales');
 
 export function Scales() {
   const [keyIdValue, setKeyIdValue] = useState('C_major');
@@ -37,11 +41,8 @@ export function Scales() {
   return (
     <>
       <header>
-        <h1>Scales</h1>
-        <p className="lede">
-          Twenty scale types in every key, spelled the way the scale requires
-          rather than by whichever accidental is nearer.
-        </p>
+        <h1>{entry.name}</h1>
+        <p className="lede">{entry.lede}</p>
       </header>
 
       <Panel>

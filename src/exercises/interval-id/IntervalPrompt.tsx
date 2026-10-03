@@ -34,7 +34,12 @@ export function IntervalPrompt({
     firstHeardAt.current ??= Date.now();
   }
 
+  const reading = exercise.presentation === 'read';
+
   useEffect(() => {
+    // Nothing sounds when the exercise is being read: the notes are on the
+    // staff and playing them would answer the question.
+    if (reading) return;
     // Guarded against StrictMode's deliberate double-mount, which would
     // otherwise play the interval twice over itself.
     if (autoplayed.current) return;
@@ -60,7 +65,7 @@ export function IntervalPrompt({
   return (
     <div className="prompt">
       <div className="actions">
-        <button type="button" onClick={play}>Play it again</button>
+        {!reading && <button type="button" onClick={play}>Play it again</button>}
         <span className="secondary">{PRESENTATION[exercise.direction]}</span>
       </div>
 

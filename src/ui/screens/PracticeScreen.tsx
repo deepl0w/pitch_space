@@ -110,6 +110,20 @@ export function PracticeScreen({ exerciseId, audio = defaultSynth }: {
     void progressStore.getState().record(attempt);
   }
 
+  /**
+   * The question on the staff, for an exercise being read rather than heard.
+   *
+   * Shown before the answer and replaced by it afterwards, so a reading
+   * exercise has exactly one stave on screen at a time rather than the
+   * question and its answer stacked.
+   */
+  const questionScore = useMemo(
+    () => (round && !round.result && definition.questionScore
+      ? definition.questionScore(round.exercise)
+      : null),
+    [round, definition],
+  );
+
   const answerScore = useMemo(
     () => (round?.result && definition.answerScore
       ? definition.answerScore(round.exercise)
@@ -171,6 +185,7 @@ export function PracticeScreen({ exerciseId, audio = defaultSynth }: {
           />
         )}
 
+      {questionScore && <Score spec={questionScore} />}
       {answerScore && <Score spec={answerScore} />}
 
       {round?.result && (

@@ -27,8 +27,8 @@ export interface MenuEntry {
  * the screen have to agree on, and that comes from the definition.
  */
 const BLURBS: Record<string, string> = {
-  'interval-id': 'Name the distance between two notes you hear.',
-  'key-id': 'Read a key signature and name the key.',
+  'interval-id': 'Name the distance between two notes — by ear, or read off the staff.',
+  'key-id': 'Name the key, from its signature, from the notes, or by ear.',
 };
 
 /** A card for each built exercise, titled by the exercise itself. */
@@ -56,19 +56,19 @@ const PLANNED: MenuEntry[] = [
     // which is why they belong together.
     route: 'note-id',
     name: 'Note identification',
-    blurb: 'Name a single note — on its own, or against a reference you hear first.',
+    blurb: 'Name a single note — alone or against a reference, by ear or on the staff.',
     ready: false,
   },
   {
     route: 'rhythm',
     name: 'Rhythm',
-    blurb: 'Clap or play a generated rhythm back against the click.',
+    blurb: 'Clap or play a rhythm back — read from the staff, or copied by ear.',
     ready: false,
   },
   {
     route: 'chord-id',
     name: 'Chord identification',
-    blurb: 'Name the quality of a chord by ear.',
+    blurb: 'Name the quality of a chord — by ear, or read off the staff.',
     ready: false,
   },
   {
@@ -80,7 +80,7 @@ const PLANNED: MenuEntry[] = [
   {
     route: 'scale-id',
     name: 'Scale identification',
-    blurb: 'Name a scale from hearing it.',
+    blurb: 'Name a scale — by ear, or read off the staff.',
     ready: false,
   },
 ];

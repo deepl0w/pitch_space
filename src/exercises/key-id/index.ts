@@ -1,7 +1,8 @@
 import { defineExercise } from '../types';
 import { KeyPrompt } from './KeyPrompt';
 import {
-  KEY_EXERCISE_ID, coerceKeySettings, generateKey, gradeKey, keyScoreSpec, keySettingsSchema,
+  KEY_EXERCISE_ID, coerceKeySettings, generateKey, gradeKey, keyQuestionSpec, keyScoreSpec,
+  keySettingsSchema,
   type KeyExercise, type KeyResponse, type KeySettings,
 } from './keys';
 
@@ -15,11 +16,15 @@ import {
 export const keyIdentification = defineExercise<KeySettings, KeyExercise, KeyResponse>({
   id: KEY_EXERCISE_ID,
   name: 'Key identification',
-  description: 'Read a key signature and name the key it belongs to.',
+  description: 'Name the key — from its signature, from the notes, or by ear.',
+  // All three: the signature and the bare accidentals are read, a passage is
+  // heard. Declaring both is what puts the choice in the settings panel.
+  presentations: ['read', 'listen'],
   settings: keySettingsSchema,
   generate: generateKey,
   grade: gradeKey,
   Prompt: KeyPrompt,
+  questionScore: keyQuestionSpec,
   // The signature *is* the question, so the same stave serves as the answer.
   answerScore: keyScoreSpec,
 });

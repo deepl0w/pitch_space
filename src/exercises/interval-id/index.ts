@@ -1,7 +1,8 @@
 import { defineExercise } from '../types';
 import { IntervalPrompt } from './IntervalPrompt';
 import {
-  generateInterval, gradeInterval, intervalScoreNotes, intervalSettingsSchema,
+  generateInterval, gradeInterval, intervalQuestionScore, intervalScoreNotes,
+  intervalSettingsSchema,
   INTERVAL_EXERCISE_ID,
   type IntervalExercise, type IntervalResponse, type IntervalSettings,
 } from './intervals';
@@ -19,11 +20,15 @@ export const intervalIdentification = defineExercise<
 >({
   id: INTERVAL_EXERCISE_ID,
   name: 'Interval identification',
-  description: 'Two notes sound; say how far apart they were.',
+  // Both: the same interval read off the staff and heard are different
+  // skills, and a learner is routinely fluent at one and lost at the other.
+  presentations: ['listen', 'read'],
+  description: 'Say how far apart two notes are, by ear or from the staff.',
   settings: intervalSettingsSchema,
   generate: generateInterval,
   grade: gradeInterval,
   Prompt: IntervalPrompt,
+  questionScore: intervalQuestionScore,
   answerScore: (exercise) => ({ notes: intervalScoreNotes(exercise), clef: exercise.clef }),
 });
 

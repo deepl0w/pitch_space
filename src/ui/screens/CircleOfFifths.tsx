@@ -44,6 +44,27 @@ function signatureText(key: Key): string {
   return `${Math.abs(key.accidentals)}${key.accidentals > 0 ? '♯' : '♭'}`;
 }
 
+/**
+ * One or two names centred in a wedge, stacked when there are two.
+ *
+ * `dy` on the first tspan rather than on the text element, because shifting
+ * the text shifts the anchor too and the pair ends up off-centre.
+ */
+function WedgeNames({ x, y, names, className }: {
+  x: number; y: number; names: string[]; className: string;
+}) {
+  if (names.length === 1) {
+    return <text x={x} y={y} className={className}>{names[0]}</text>;
+  }
+  return (
+    <text x={x} y={y} className={className}>
+      {names.map((name, i) => (
+        <tspan key={name} x={x} dy={i === 0 ? -5.5 : 11}>{name}</tspan>
+      ))}
+    </text>
+  );
+}
+
 export function CircleOfFifths() {
   const [selectedId, setSelectedId] = useState('C_major');
   const [sevenths, setSevenths] = useState(false);
@@ -102,16 +123,14 @@ export function CircleOfFifths() {
                   d={wedgePath(position.index, MIDDLE, INNER)}
                   onClick={() => setSelectedId(keyId(minor))}
                 />
-                <text x={mx} y={my} className="wedge-label">
-                  {position.major.map((k, i) => (
-                    <tspan key={i}>{i > 0 ? ' / ' : ''}{keyName(k).replace(' major', '')}</tspan>
-                  ))}
-                </text>
-                <text x={nx} y={ny} className="wedge-label wedge-label-minor">
-                  {position.minor.map((k, i) => (
-                    <tspan key={i}>{i > 0 ? ' / ' : ''}{keyName(k).replace(' minor', '')}m</tspan>
-                  ))}
-                </text>
+                {/* Stacked rather than joined by a slash. Three of the twelve
+                    positions carry two spellings, and "B / C♭" is wider than a
+                    thirty-degree wedge at this radius however small the type
+                    gets — so the enharmonic twin goes on its own line. */}
+                <WedgeNames x={mx} y={my} className="wedge-label"
+                            names={position.major.map((k) => keyName(k).replace(' major', ''))} />
+                <WedgeNames x={nx} y={ny} className="wedge-label wedge-label-minor"
+                            names={position.minor.map((k) => `${keyName(k).replace(' minor', '')}m`)} />
                 <text x={sx} y={sy} className="wedge-signature">{signatureText(major)}</text>
               </g>
             );

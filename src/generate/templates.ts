@@ -124,7 +124,9 @@ export const TEMPLATES: readonly Template[] = [
   // --- two-fives ----------------------------------------------------------
   template('ii-V-I', 'ii–V–I', MAJOR, 4,
     [s(1, 2), s(1, 5), s(2, 1)], 'PAC', 3, ['jazz', 'classical']),
-  template('ii7-V7-I', 'ii7–V7–Imaj7', MAJOR, 4,
+  // Named for the chords it contains: the tonic here is the plain triad the
+  // steps ask for, and a cadence's tonic is rewritten to one in any case.
+  template('ii7-V7-I', 'ii7–V7–I', MAJOR, 4,
     [s(1, 2, { typeId: 'min7' }), s(1, 5, { typeId: 'dom7' }), s(2, 1)],
     'PAC', 5, ['jazz']),
   template('ii-V', 'ii–V', MAJOR, 2,

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  DEFAULT_SAMPLE_RATE, concat, mix, noiseFloor, pluckSequence, pluckedString, scaled,
-  silence, sine, startingAt,
+  DEFAULT_SAMPLE_RATE, concat, faded, mix, noiseFloor, pluckSequence, pluckedString,
+  sawtooth, scaled, silence, sine, startingAt,
 } from '../testing/signals';
 import { ONSET_FRAME_SECONDS, detectOnsets, frameSizeFor } from './onsetDetector';
 
@@ -58,18 +58,18 @@ describe('finding the attacks in a performance', () => {
   // partials into the spectrum, and that is what is being measured.
   it('hears a note struck over one that is still ringing', () => {
     const rate = DEFAULT_SAMPLE_RATE;
-    const ringing = pluckedString({
+    const ringing = startingAt(pluckedString({
       frequencyHz: 98, seconds: 2, seed: 603, decaySeconds: 6, amplitude: 0.6,
-    });
+    }), 0.2, rate);
     const over = startingAt(
-      pluckedString({ frequencyHz: 147, seconds: 1, seed: 605, amplitude: 0.25 }), 0.5, rate);
+      pluckedString({ frequencyHz: 147, seconds: 1, seed: 605, amplitude: 0.25 }), 0.7, rate);
     const detected = timesOf(mix(ringing, over));
     expect(detected.length).toBe(2);
-    expect(worstError(detected, [0, 0.5])).toBeLessThan(0.02);
+    expect(worstError(detected, [0.2, 0.7])).toBeLessThan(0.02);
   });
 
   it('reports one onset per attack rather than one per frame it stays loud for', () => {
-    const single = pluckedString({ frequencyHz: 110, seconds: 1.5, seed: 607 });
+    const single = startingAt(pluckedString({ frequencyHz: 110, seconds: 1.5, seed: 607 }), 0.2);
     expect(timesOf(single).length).toBe(1);
   });
 
@@ -103,39 +103,113 @@ describe('what is not an onset', () => {
     expect(detected[0]).toBeCloseTo(0.3, 1);
   });
 
-  // An attack inside the very first frame is findable after all, just late:
-  // spectral flux measures a rise over the previous frame, and a pluck's
-  // energy keeps climbing for several frames, so it is caught on the way up
-  // rather than at the strike. 17 ms at this hop size.
-  it('finds an attack inside the first frame, late rather than not at all', () => {
+  /**
+   * The blind spot, pinned at its boundary rather than described.
+   *
+   * Spectral flux measures a rise over the previous frame, so an attack
+   * inside the very first frame has nothing to be a rise over. It used to be
+   * reported anyway — the flux curve of a note already sounding wobbles, and
+   * before the spectral floor landed that wobble cleared the threshold. The
+   * reported time was then the first wobble, which happened to be early, not
+   * the strike.
+   *
+   * The same pluck a fifth of a second later is found exactly, which is what
+   * makes this a boundary and not an outage. Real capture is running before
+   * anyone plays, so the case the detector cannot do is one the app does not
+   * produce.
+   */
+  it('cannot find an attack that fell before the first frame, and says so by silence', () => {
     const atZero = pluckSequence({
       atSeconds: [0], frequencyHz: 196, seed: 607, seconds: 1, decaySeconds: 2,
     });
-    const found = timesOf(atZero);
+    expect(timesOf(atZero)).toEqual([]);
+
+    const leadIn = pluckSequence({
+      atSeconds: [0.2], frequencyHz: 196, seed: 607, seconds: 1.2, decaySeconds: 2,
+    });
+    const found = timesOf(leadIn);
     expect(found).toHaveLength(1);
-    expect(found[0]).toBeGreaterThan(0);
-    expect(found[0]).toBeLessThan(0.03);
+    expect(worstError(found, [0.2])).toBeLessThan(0.02);
   });
 
   /**
-   * KNOWN DEFECT, measured not guessed. The adaptive threshold has no
-   * absolute floor, so on a signal whose flux is near zero throughout — a
-   * steady tone — the median it adapts to is also near zero and ordinary
-   * numerical wobble clears it.
+   * Was a known defect. The adaptive threshold was made entirely out of the
+   * flux curve — a local median and the whole signal's average — so on a
+   * signal whose flux is near zero throughout, the yardstick was near zero
+   * too and ordinary numerical wobble cleared it. A held 220 Hz sine reported
+   * eighteen onsets about 52 ms apart.
    *
-   * A sine faded out over 20 ms reports onsets at 0.046, 0.284, 0.354, 0.424
-   * and 0.493 seconds, none of which is an event. The same sine cut dead
-   * reports only the cut, because the discontinuity's own flux lifts the
-   * median high enough to mask the wobble — so the bug hides exactly when the
-   * fixture is crudest.
+   * The fixture has to be a tone with no event in it at all. The obvious
+   * fixture — a tone that starts after some silence — hides the bug rather
+   * than showing it, because the start's own flux lifts the average term high
+   * enough to mask the wobble behind it; `finds only the start of a tone that
+   * is simply held` above was green throughout. The crudest fixture looked
+   * the healthiest, which is why these begin partway into a note.
    *
-   * This matters beyond the test: a held note on a bowed or wind instrument
-   * is a steady tone, and rhythm scoring would invent attacks inside one. The
-   * fix is a floor relative to the frame's own energy, and the threshold it
-   * needs is a measurement, so it belongs with the detector's corpus rather
-   * than with a guess made here.
+   * It matters beyond the test: a held note on a bowed or wind instrument is
+   * a steady tone, and rhythm scoring would have invented attacks inside one.
    */
-  it.todo('does not invent onsets inside a steady tone');
+  it('invents nothing inside a tone that is simply sounding', () => {
+    expect(timesOf(sine({ frequencyHz: 220, seconds: 1 }))).toEqual([]);
+    expect(timesOf(sine({ frequencyHz: 440, seconds: 1 }))).toEqual([]);
+    expect(timesOf(sawtooth({ frequencyHz: 196, seconds: 1 }))).toEqual([]);
+  });
+
+  it('invents nothing when that tone is released rather than cut', () => {
+    const released = faded(sine({ frequencyHz: 220, seconds: 1 }), { outSeconds: 0.02 });
+    expect(timesOf(released)).toEqual([]);
+  });
+
+  // The floor is a ratio for the same reason every other term is. Were it an
+  // absolute level it would hold at one input gain and either go deaf or go
+  // mad at the next, which is the failure the tuner's ADR 0002 records.
+  it('invents nothing inside a steady tone 30 dB quieter either', () => {
+    const quiet = scaled(sine({ frequencyHz: 220, seconds: 1 }), 10 ** (-30 / 20));
+    expect(timesOf(quiet)).toEqual([]);
+  });
+
+  // Which term is doing the work, asked of the detector rather than asserted
+  // in a comment. Turning the spectral floor off is the detector as it was,
+  // and it reported eighteen onsets in this tone. If a later tuning pass makes
+  // this pass with the floor off, the floor has stopped being the thing that
+  // fixed it and the two can be reasoned about separately again.
+  it('is the spectral floor and not the other two terms that silences it', () => {
+    const held = sine({ frequencyHz: 220, seconds: 1 });
+    const unfloored = detectOnsets(held, {
+      sampleRate: DEFAULT_SAMPLE_RATE, spectralFloor: 0,
+    });
+    expect(unfloored.onsets.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The other half of the trade. A floor that silences a held tone can just as
+ * easily silence a soft attack, and that failure is the harder one to notice
+ * — a missing onset reads as the player having not played, which is a thing
+ * players do.
+ */
+describe('what the floor must not cost', () => {
+  it('still hears a pluck a fifth of the amplitude of the room it sits in', () => {
+    const room = noiseFloor({ seconds: 2, seed: 901, levelDbfs: -60 });
+    const faint = startingAt(
+      pluckedString({ frequencyHz: 220, seconds: 1.4, seed: 903, amplitude: 0.005 }), 0.5);
+    const detected = timesOf(mix(room, faint));
+    expect(detected).toHaveLength(1);
+    expect(worstError(detected, [0.5])).toBeLessThan(0.02);
+  });
+
+  // A bowed or blown note has no strike, only a crescendo. 100 ms of one is
+  // still an event and still has to be found.
+  it('still hears a note that fades in over 100 ms rather than being struck', () => {
+    const bowed = concat(
+      silence(0.3), faded(sine({ frequencyHz: 220, seconds: 0.8 }), {
+        inSeconds: 0.1, outSeconds: 0.05,
+      }),
+      silence(0.1), faded(sine({ frequencyHz: 294, seconds: 0.8 }), {
+        inSeconds: 0.1, outSeconds: 0.05,
+      }));
+    expect(timesOf(bowed)).toHaveLength(2);
+  });
 });
 
 describe('the same performance at a different gain', () => {

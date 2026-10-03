@@ -74,6 +74,7 @@ interface Placement { cell: RhythmCell; beat: number }
 
 function isAllowed(
   cell: RhythmCell, beat: number, chosen: Placement[], options: RhythmOptions,
+  totalBeats: number,
 ): boolean {
   const syncopated = cell.tags.includes('syncopated');
   const tupletCell = cell.tags.includes('tuplet');
@@ -98,14 +99,13 @@ function isAllowed(
     if (previous?.cell.tags.includes('tuplet')) return false;
   }
 
-  // A bar of nothing but rests is not an exercise.
-  if (cell.tags.includes('rest') && !cell.events.some((e) => !e.rest)) {
-    const sounding = chosen.some((p) => p.cell.events.some((e) => !e.rest));
-    const beatsLeft = beat + cell.beats;
-    if (!sounding && beatsLeft >= chosen.length + cell.beats) {
-      // Allowed only if some later beat can still sound; the caller's
-      // backtracking will undo this if none does.
-    }
+  // A bar of nothing but rests is not an exercise. Only the cell that would
+  // complete such a bar is refused, so rests remain free everywhere else and
+  // the search does not have to backtrack out of a silent bar it already
+  // committed to.
+  const silent = (c: RhythmCell) => c.events.every((e) => e.rest);
+  if (silent(cell) && beat + cell.beats >= totalBeats && !chosen.some((p) => !silent(p.cell))) {
+    return false;
   }
   return true;
 }
@@ -139,7 +139,7 @@ export function chooseCells(rng: Rng, options: RhythmOptions): Placement[] | nul
       // A two-beat cell needs the next beat to be the same length, which is
       // not true across the join of an irregular meter.
       if (cell.beats === 2 && ts.beatDurations[beat + 1] !== ts.beatDurations[beat]) return false;
-      return isAllowed(cell, beat, chosen, options);
+      return isAllowed(cell, beat, chosen, options, ts.beatStarts.length);
     });
 
     if (candidates.length === 0) {
@@ -171,11 +171,10 @@ function layOut(placements: Placement[], ts: TimeSignature, barStart: number): R
   for (const { cell, beat } of placements) {
     const beatTicks = ts.beatDurations[beat];
     const scaled: CellEvent[] = scaleCell(cell, beatTicks);
-    const scaleFactor = beatTicks / (cell.kind === 'simple' ? SIMPLE_BEAT : COMPOUND_BEAT);
     let tupletId: number | undefined;
     let at = barStart + ts.beatStarts[beat];
     for (const event of scaled) {
-      const value = valueForEvent(event, scaleFactor);
+      const value = valueForEvent(event);
       if (value === null) throw new Error(`cell ${cell.id} produced an unnotatable duration`);
       if (event.tuplet && tupletId === undefined) tupletId = nextTupletId++;
       events.push({

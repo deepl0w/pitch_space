@@ -1,4 +1,4 @@
-import { TICKS_PER_QUARTER, type NoteValue, type TimeSignature, noteValue } from '../theory/meter';
+import { TICKS_PER_QUARTER, type NoteValue, type TimeSignature, valueOfTicks } from '../theory/meter';
 
 /**
  * The rhythmic cell library.
@@ -102,16 +102,19 @@ export const CELLS: readonly RhythmCell[] = [
   cell('q_qr', 2, 'simple', [note(Q), rest(Q)], 3, ['rest']),
 
   // --- compound beat -----------------------------------------------------
-  cell('dq', 1, 'compound', [note(Q + E)], 5, ['even', 'sustained']),
-  cell('dqr', 1, 'compound', [rest(Q + E)], 5, ['rest']),
-  cell('eee', 1, 'compound', [note(E), note(E), note(E)], 5, ['even']),
-  cell('q_e', 1, 'compound', [note(Q), note(E)], 6, ['even']),
-  cell('e_q', 1, 'compound', [note(E), note(Q)], 7, ['syncopated', 'sustained']),
+  cell('dq', 1, 'compound', [note(Q + E)], 1, ['even', 'sustained']),
+  cell('dqr', 1, 'compound', [rest(Q + E)], 2, ['rest']),
+  cell('eee', 1, 'compound', [note(E), note(E), note(E)], 3, ['even']),
+  cell('q_e', 1, 'compound', [note(Q), note(E)], 4, ['even']),
+  cell('ee_er', 1, 'compound', [note(E), note(E), rest(E)], 5, ['rest']),
   cell('er_ee', 1, 'compound', [rest(E), note(E), note(E)], 6, ['rest', 'syncopated']),
-  cell('ee_er', 1, 'compound', [note(E), note(E), rest(E)], 6, ['rest']),
+  cell('e_q', 1, 'compound', [note(E), note(Q)], 7, ['syncopated', 'sustained']),
   cell('e_ss_e', 1, 'compound', [note(E), note(S), note(S), note(E)], 7, ['even']),
   cell('ssssss', 1, 'compound', [note(S), note(S), note(S), note(S), note(S), note(S)], 8, ['even']),
   cell('duplet_e', 1, 'compound', tuplet(2, 3, E), 9, ['tuplet']),
+  cell('dh', 2, 'compound', [note((Q + E) * 2)], 2, ['even', 'sustained']),
+  cell('dq_eee', 2, 'compound', [note(Q + E), note(E), note(E), note(E)], 4, ['even']),
+  cell('eee_dq', 2, 'compound', [note(E), note(E), note(E), note(Q + E)], 4, ['even', 'sustained']),
 ];
 
 /**
@@ -146,18 +149,17 @@ export function scaleCell(cell: RhythmCell, beatTicks: number): CellEvent[] {
   });
 }
 
-/** The notated value for a cell event, accounting for its tuplet ratio. */
-export function valueForEvent(event: CellEvent, scaleFactor = 1): NoteValue | null {
-  const sounding = event.ticks / scaleFactor;
+/**
+ * The notated value for a cell event.
+ *
+ * Read from the event's real duration, not from the reference beat it was
+ * written against: a cell scaled onto the eighth-note beat of a 7/8 bar is
+ * notated in eighths, and un-scaling it first would write quarters. Only a
+ * tuplet separates sounding from written, which is what the ratio is for.
+ */
+export function valueForEvent(event: CellEvent): NoteValue | null {
   const written = event.tuplet
-    ? (sounding * event.tuplet.count) / event.tuplet.inTheTimeOf
-    : sounding;
-  const BASE: Array<[number, NoteValue]> = [
-    [Q * 4, noteValue('w')], [Q * 3, noteValue('h', 1)], [Q * 2, noteValue('h')],
-    [Q + E, noteValue('q', 1)], [Q, noteValue('q')],
-    [E + S, noteValue('8', 1)], [E, noteValue('8')],
-    [S + S / 2, noteValue('16', 1)], [S, noteValue('16')],
-    [T, noteValue('32')],
-  ];
-  return BASE.find(([ticks]) => ticks === written)?.[1] ?? null;
+    ? (event.ticks * event.tuplet.count) / event.tuplet.inTheTimeOf
+    : event.ticks;
+  return Number.isInteger(written) ? valueOfTicks(written) : null;
 }

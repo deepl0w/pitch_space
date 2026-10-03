@@ -1,0 +1,23 @@
+node_modules
+dist
+dist-ssr
+*.local
+.vite
+
+# Capacitor's generated Android project keeps its build output out of the tree.
+android/app/build
+android/build
+android/.gradle
+android/app/src/main/assets/public
+android/local.properties
+*.keystore
+keystore.properties
+
+.DS_Store
+*.log
+
+# Per-worktree agent state: role, handoff note, and the worktrees themselves.
+.claude/role
+.claude/handoff.md
+.claude/worktrees/
+.claude/settings.local.json

@@ -151,10 +151,18 @@ export function planPhrases(
     ? requested
     : weightedPick(rng, available);
 
-  const half = options.cadences?.antecedent ?? 'HC';
   // The blues turnaround lands on the dominant, so that is the form's own
   // close rather than a weaker version of a perfect cadence.
   const close = options.cadences?.final ?? (form === 'blues' ? 'HC' : 'PAC');
+  // A plagal close is approached from the subdominant, and a dominant moving
+  // to a subdominant is the one join this generator refuses. Inside a phrase
+  // `planCadence` repairs that by putting a tonic in front of the IV, but a
+  // consequent of two chords has no room for one and the chord in front of
+  // its subdominant is the antecedent's own cadence — locked, and restored by
+  // the second pass if anything overwrites it. So a period that closes
+  // plagally asks its question with the weak authentic cadence instead.
+  const asked = options.cadences?.antecedent ?? 'HC';
+  const half: CadenceType = close === 'PC' && asked === 'HC' ? 'IAC' : asked;
 
   if (form === 'period' && bars % 2 === 0) {
     const n = bars / 2;
@@ -617,6 +625,25 @@ export function sixFourKind(
 }
 
 /**
+ * Whether inverting this chord would strand the six-four in front of it.
+ *
+ * A six-four is legal because of where its bass came from and where it goes,
+ * and the chord it goes to is the one this pass is about to move. The pass
+ * walks forwards, so that chord is still in root position when the six-four
+ * is approved and may be inverted one step later — which turns a passing
+ * six-four's descent into a neighbour, or takes the dominant out from under a
+ * cadential one, leaving a second inversion with no explanation at all.
+ */
+function strandsPrecedingSixFour(
+  ctx: Context, slots: readonly Slot[], index: number, replacement: RomanNumeral,
+): boolean {
+  const before = slots[index - 1];
+  if (before === undefined || !isSixFour(before.numeral)) return false;
+  return sixFourKind(ctx.key, ctx.ts, before.startTick,
+    slots[index - 2]?.numeral, before.numeral, replacement) === null;
+}
+
+/**
  * Inversions, chosen to turn a bass leap into a bass step.
  *
  * Nothing is inverted for variety. An inversion has to shorten the bass line
@@ -653,7 +680,9 @@ function applyInversions(ctx: Context, slots: Slot[], rate: number): void {
       const candidateCost = cost(step);
       if (stepwise && candidateCost <= bestCost - 2) { best = candidate; bestCost = candidateCost; }
     }
-    if (best !== undefined && chance(ctx.rng, rate)) here.numeral = best;
+    if (best === undefined || !chance(ctx.rng, rate)) continue;
+    if (strandsPrecedingSixFour(ctx, slots, i, best)) continue;
+    here.numeral = best;
   }
 }
 

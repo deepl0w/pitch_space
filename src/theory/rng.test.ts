@@ -36,6 +36,23 @@ describe('makeRng', () => {
     for (const count of buckets) expect(Math.abs(count / (n / 10) - 1)).toBeLessThan(0.05);
   });
 
+  it('refuses a seed that would not identify its own stream', () => {
+    // `>>> 0` used to coerce silently, so makeRng(0) and makeRng(2 ** 32) were
+    // one stream reporting two different seeds. Minting is the app layer's job
+    // under ADR 0005, so a bad seed is a bug there and has to say so.
+    for (const seed of [-1, 1.5, NaN, Infinity, 2 ** 32, 2 ** 53]) {
+      expect(() => makeRng(seed), `${seed}`).toThrow(/Seed must be an integer/);
+    }
+  });
+
+  it('accepts both ends of the range a 32-bit seed can take', () => {
+    for (const seed of [0, 0xffffffff]) expect(() => makeRng(seed)).not.toThrow();
+  });
+
+  it('reports the seed it was actually given', () => {
+    for (const seed of [0, 1, 48213, 0xffffffff]) expect(makeRng(seed).seed).toBe(seed);
+  });
+
   it('takes any seed the app layer mints', () => {
     // Seeds come from outside the core under ADR 0005, so every value a
     // 32-bit mint can produce has to replay.

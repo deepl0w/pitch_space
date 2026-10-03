@@ -617,6 +617,25 @@ export function sixFourKind(
 }
 
 /**
+ * Whether inverting this chord would strand the six-four in front of it.
+ *
+ * A six-four is legal because of where its bass came from and where it goes,
+ * and the chord it goes to is the one this pass is about to move. The pass
+ * walks forwards, so that chord is still in root position when the six-four
+ * is approved and may be inverted one step later — which turns a passing
+ * six-four's descent into a neighbour, or takes the dominant out from under a
+ * cadential one, leaving a second inversion with no explanation at all.
+ */
+function strandsPrecedingSixFour(
+  ctx: Context, slots: readonly Slot[], index: number, replacement: RomanNumeral,
+): boolean {
+  const before = slots[index - 1];
+  if (before === undefined || !isSixFour(before.numeral)) return false;
+  return sixFourKind(ctx.key, ctx.ts, before.startTick,
+    slots[index - 2]?.numeral, before.numeral, replacement) === null;
+}
+
+/**
  * Inversions, chosen to turn a bass leap into a bass step.
  *
  * Nothing is inverted for variety. An inversion has to shorten the bass line
@@ -653,7 +672,9 @@ function applyInversions(ctx: Context, slots: Slot[], rate: number): void {
       const candidateCost = cost(step);
       if (stepwise && candidateCost <= bestCost - 2) { best = candidate; bestCost = candidateCost; }
     }
-    if (best !== undefined && chance(ctx.rng, rate)) here.numeral = best;
+    if (best === undefined || !chance(ctx.rng, rate)) continue;
+    if (strandsPrecedingSixFour(ctx, slots, i, best)) continue;
+    here.numeral = best;
   }
 }
 

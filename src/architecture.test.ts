@@ -200,7 +200,6 @@ describe('ADR 0003 — one importer for the notation library', () => {
     expect(importers.length).toBeLessThanOrEqual(1);
     for (const path of importers) expect(path).toBe(ALLOWED);
   });
-});
 
   /**
    * Every pitch reaching a VexFlow key goes through simplifySpelling first.
@@ -223,6 +222,7 @@ describe('ADR 0003 — one importer for the notation library', () => {
     }
     expect(raw).toEqual([]);
   });
+});
 
 describe('the npm scripts', () => {
   const pkg = JSON.parse(

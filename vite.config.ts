@@ -20,6 +20,7 @@ export default defineConfig({
     // node. A component test that needs a DOM opts in with a file-level
     // // @vitest-environment jsdom comment rather than slowing everything down.
     environment: 'node',
+    setupFiles: ['./src/testing/setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 })

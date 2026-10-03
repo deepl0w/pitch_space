@@ -118,6 +118,15 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
     ready: true,
   },
   {
+    route: 'circle',
+    name: 'The circle of fifths',
+    blurb: 'How the keys relate, and which chords each one supplies.',
+    lede: 'Major keys outside, their relative minors inside, one sharp or one '
+      + 'flat per step. Pick any key to see what stands next to it and what '
+      + 'chords it gives you.',
+    ready: true,
+  },
+  {
     route: 'rhythms',
     name: 'Rhythms',
     blurb: 'The named figures bars are built from, notated and played.',

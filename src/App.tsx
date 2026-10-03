@@ -4,6 +4,7 @@ import { Scales } from './ui/screens/Scales';
 import { Chords } from './ui/screens/Chords';
 import { KeyChords } from './ui/screens/KeyChords';
 import { Rhythms } from './ui/screens/Rhythms';
+import { CircleOfFifths } from './ui/screens/CircleOfFifths';
 import { PracticeScreen } from './ui/screens/PracticeScreen';
 import { findExerciseType } from './exercises/registry';
 import { stopSound } from './ui/sound';
@@ -33,6 +34,7 @@ const SCREENS: Partial<Record<string, () => React.ReactElement>> = {
   chords: Chords,
   'key-chords': KeyChords,
   rhythms: Rhythms,
+  circle: CircleOfFifths,
 };
 
 export default function App() {

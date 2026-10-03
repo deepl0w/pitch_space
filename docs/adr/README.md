@@ -71,9 +71,12 @@ as `generate/` and `audio/dsp/` land, the greps start covering them without
 being edited, which is the point of writing them this way rather than against a
 file list.
 
-**None of this is enforced by a test yet.** `CLAUDE.md` says it is; `npm test`
-reports no test files. Until that test exists the boundaries hold on authorship
-alone, and the first breach will arrive in a branch whose own tests are green.
+**None of this is enforced by a test yet.** `CLAUDE.md` says it is. There are
+tests now — `src/theory/meter.test.ts` carries 20, and they are the right shape,
+asserting that beam spans tile the bar and that a triple meter has no secondary
+accent. But none of them asks a question about the boundaries above. Until one
+does, those hold on authorship alone, and the first breach will arrive in a
+branch whose own tests are green.
 
 ## Template
 

@@ -43,3 +43,23 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 if (typeof globalThis.ResizeObserver === 'undefined' && typeof document !== 'undefined') {
   globalThis.ResizeObserver = TestResizeObserver;
 }
+
+/**
+ * jsdom has no `matchMedia`, and Score asks it for the colour scheme so a
+ * theme change can force a redraw. The stub reports the light scheme and
+ * accepts listeners it never calls: a test that wants to drive a theme change
+ * should add one here first, rather than have every component test carry a
+ * dependency on media queries it does not care about.
+ */
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia;
+}

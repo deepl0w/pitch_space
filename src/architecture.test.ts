@@ -1,127 +1,189 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The constraints in CLAUDE.md that are cheap to break and expensive to notice.
- * Keeping the music engine and the analysis chain free of the browser is what
- * lets both run under vitest on a laptop; vexflow staying behind one file is
- * what keeps the notation library out of the rest of the app.
+ * The boundaries from docs/adr/, asked of the repository.
  *
- * The sources are read through import.meta.glob rather than node's fs so that
- * this file obeys the same rule it enforces and needs no node types.
+ * ADR 0001, 0002 and 0003 each state a constraint that is a convention rather
+ * than a module boundary — nothing in the language stops a later branch from
+ * importing `document` into the generator. Until this file existed those held
+ * on authorship alone, and the first breach would have arrived in a branch
+ * whose own tests were green.
+ *
+ * The scan walks the filesystem rather than `git ls-files`, so an untracked
+ * file breaches the rule too. A boundary that only applies once you commit is
+ * not much of a boundary.
  */
-const SOURCES: Record<string, string> = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('./**/*.{ts,tsx}', { query: '?raw', import: 'default', eager: true }),
-  )
-    .map(([path, source]) => [path.replace(/^\.\//, ''), source as string])
-    .filter(([path]) => !/\.test\.tsx?$/.test(path)),
-);
 
-const filesUnder = (dir: string) =>
-  Object.keys(SOURCES).filter((path) => path.startsWith(`${dir}/`));
+const SRC = new URL('.', import.meta.url).pathname;
+
+function filesUnder(dir: string): string[] {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return []; // generate/ and audio/dsp/ do not exist yet; the rule still stands.
+  }
+  const out: string[] = [];
+  for (const entry of entries) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) out.push(...filesUnder(full));
+    else if (/\.tsx?$/.test(full)) out.push(full);
+  }
+  return out;
+}
+
+const CORE_DIRS = ['theory', 'generate', 'audio/dsp'];
+
+function coreFiles(): string[] {
+  return CORE_DIRS.flatMap((d) => filesUnder(join(SRC, ...d.split('/'))));
+}
+
+function show(path: string): string {
+  return relative(SRC, path).split(sep).join('/');
+}
+
+/** Line-by-line matches, so a failure names the line and not just the file. */
+function hits(files: string[], pattern: RegExp): string[] {
+  const found: string[] = [];
+  for (const file of files) {
+    readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+      if (pattern.test(line)) found.push(`${show(file)}:${i + 1}  ${line.trim()}`);
+    });
+  }
+  return found;
+}
 
 /** Every module specifier a file imports or re-exports, static or dynamic. */
-function importsOf(path: string): string[] {
-  const source = SOURCES[path];
+function importsOf(file: string): string[] {
+  const source = readFileSync(file, 'utf8');
   const patterns = [
     /\bfrom\s*['"]([^'"]+)['"]/g,
     /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+    /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
     /\bimport\s+['"]([^'"]+)['"]/g,
   ];
-  return patterns.flatMap((pattern) => [...source.matchAll(pattern)].map((m) => m[1]));
+  return patterns.flatMap((p) => [...source.matchAll(p)].map((m) => m[1]));
 }
 
-/** Where a relative import lands, as a path under src/, or null for a package. */
-function resolveWithin(fromFile: string, specifier: string): string | null {
+/** Where a relative specifier lands, as a path under src/, or null for a package. */
+function resolveWithin(file: string, specifier: string): string | null {
   if (!specifier.startsWith('.')) return null;
-  const segments = fromFile.split('/').slice(0, -1).concat(specifier.split('/'));
-  const out: string[] = [];
-  for (const segment of segments) {
-    if (segment === '.' || segment === '') continue;
-    if (segment === '..') out.pop();
-    else out.push(segment);
-  }
-  return out.join('/');
+  return show(join(file, '..', specifier));
 }
 
-// Each pure layer, and the layers it is allowed to reach into.
-const PURE_LAYERS = [
-  { dir: 'theory', mayImport: ['theory'] },
-  { dir: 'generate', mayImport: ['generate', 'theory'] },
-  { dir: 'audio/dsp', mayImport: ['audio/dsp'] },
-];
+describe('ADR 0001 — a pure core', () => {
+  // Nothing here may reach for the platform. This is what lets the whole music
+  // engine and the whole analysis chain run under vitest on a laptop.
+  // The AudioContext branch used to read `{\bAudioContext\b`, so it only matched
+  // after a literal brace and `new AudioContext()` walked straight through it.
+  const PLATFORM = new RegExp([
+    /\b(document|window|navigator|localStorage|sessionStorage|indexedDB)\s*\./,
+    /\b(Audio|Offline(Audio)?)Context\b/,
+    /\bHTML[A-Z]\w*\b/,
+    /\bfetch\s*\(/,
+    /\b(setTimeout|setInterval|requestAnimationFrame)\s*\(/,
+  ].map((r) => r.source).join('|'));
 
-// Anything that only exists in a browser. A pure layer importing one of these
-// is the first step of the engine becoming untestable off a device.
-const PLATFORM_PACKAGES = ['react', 'react-dom', 'zustand', 'vexflow', '@capacitor', 'vite'];
-
-// Browser globals a pure layer must not reach for, and the determinism rules:
-// an exercise reported by its seed has to reproduce exactly.
-const FORBIDDEN_GLOBALS = [
-  /\bdocument\./, /\bwindow\./, /\bnavigator\./, /\blocalStorage\b/,
-  /\bAudioContext\b/, /\bHTML[A-Z]\w*\b/, /\bfetch\s*\(/,
-  /\bperformance\.now\b/, /\bDate\.now\b/, /\bnew Date\b/, /\bsetTimeout\b/,
-];
-
-describe('the pure layers stay pure', () => {
-  it.each(PURE_LAYERS)('$dir imports nothing above itself', ({ dir, mayImport }) => {
-    for (const file of filesUnder(dir)) {
-      for (const specifier of importsOf(file)) {
-        const target = resolveWithin(file, specifier);
-        if (target === null) continue;
-        const allowed = mayImport.some((l) => target === l || target.startsWith(`${l}/`));
-        expect(allowed, `${file} imports ${specifier}, outside ${mayImport.join(' or ')}`).toBe(true);
-      }
-    }
+  it('finds the core directories it is meant to be guarding', () => {
+    // A rule that silently guards nothing is worse than no rule, so fail loudly
+    // if theory/ moves rather than reporting a vacuous pass.
+    expect(filesUnder(join(SRC, 'theory')).length).toBeGreaterThan(0);
   });
 
-  it.each(PURE_LAYERS)('$dir imports nothing from the platform', ({ dir }) => {
-    for (const file of filesUnder(dir)) {
-      for (const specifier of importsOf(file)) {
-        if (specifier.startsWith('.')) continue;
-        for (const pkg of PLATFORM_PACKAGES) {
-          expect(specifier === pkg || specifier.startsWith(`${pkg}/`), `${file} imports ${specifier}`)
-            .toBe(false);
+  it('reaches for no platform API', () => {
+    expect(hits(coreFiles(), PLATFORM)).toEqual([]);
+  });
+
+  // An allowlist rather than a list of the layers that exist today: a blocklist
+  // goes quietly out of date the moment someone adds a directory to src/.
+  const MAY_IMPORT: Record<string, string[]> = {
+    theory: ['theory'],
+    generate: ['generate', 'theory'],
+    'audio/dsp': ['audio/dsp'],
+  };
+  const PLATFORM_PACKAGES = ['react', 'react-dom', 'zustand', 'vexflow', '@capacitor', 'vite'];
+
+  it('imports nothing from the layers above it', () => {
+    const offenders: string[] = [];
+    for (const dir of CORE_DIRS) {
+      for (const file of filesUnder(join(SRC, ...dir.split('/')))) {
+        for (const specifier of importsOf(file)) {
+          const target = resolveWithin(file, specifier);
+          if (target === null) continue;
+          const allowed = MAY_IMPORT[dir]
+            .some((layer) => target === layer || target.startsWith(`${layer}/`));
+          if (!allowed) offenders.push(`${show(file)} imports ${specifier}`);
         }
       }
     }
+    expect(offenders).toEqual([]);
   });
 
-  it.each(PURE_LAYERS)('$dir reaches for no browser global and no clock', ({ dir }) => {
-    for (const file of filesUnder(dir)) {
-      for (const pattern of FORBIDDEN_GLOBALS) {
-        expect(pattern.test(SOURCES[file]), `${file} matches ${pattern}`).toBe(false);
+  it('imports no package that only exists in a browser', () => {
+    const offenders: string[] = [];
+    for (const file of coreFiles()) {
+      for (const specifier of importsOf(file)) {
+        if (specifier.startsWith('.')) continue;
+        if (PLATFORM_PACKAGES.some((pkg) => specifier === pkg || specifier.startsWith(`${pkg}/`))) {
+          offenders.push(`${show(file)} imports ${specifier}`);
+        }
       }
     }
+    expect(offenders).toEqual([]);
   });
 });
 
-describe('generation is deterministic given a seed', () => {
-  // theory/rng.ts owns the one call to Math.random, in randomSeed(), because the
-  // seed has to come from somewhere. Everything downstream takes an Rng.
-  const SEED_SOURCE = 'theory/rng.ts';
+describe('ADR 0002 — generation is reproducible from its seed', () => {
+  // Stated around the musical choice rather than around the call: minting a
+  // seed is the one allowed entry point, spending one is pure. Asserting that
+  // there are no callers at all would make the rule false on day one, and a
+  // rule the code already breaks teaches people to ignore the check.
+  it('lets entropy in at randomSeed and nowhere else', () => {
+    const callers = new Set(
+      hits(coreFiles(), /Math\.random/).map((h) => h.split(':')[0]),
+    );
+    expect([...callers]).toEqual(['theory/rng.ts']);
 
-  it.each(PURE_LAYERS)('$dir calls Math.random only where the seed is made', ({ dir }) => {
-    for (const file of filesUnder(dir)) {
-      if (file === SEED_SOURCE) continue;
-      expect(/Math\.random\s*\(/.test(SOURCES[file]), `${file} calls Math.random`).toBe(false);
+    const rng = readFileSync(join(SRC, 'theory', 'rng.ts'), 'utf8');
+    const fn = rng.slice(rng.indexOf('export function randomSeed'));
+    expect(fn.slice(0, fn.indexOf('\n}'))).toContain('Math.random');
+  });
+
+  it('reads no clock', () => {
+    expect(hits(coreFiles(), /Date\.now|new Date\(|performance\.now/)).toEqual([]);
+  });
+
+  it('never spreads a Set or Map straight into a choice', () => {
+    // Insertion order is not a musical rule. Spreading is fine when the result
+    // is sorted before anything picks from it, so this looks for a spread that
+    // is not followed by a sort on the same line or the next.
+    const offenders: string[] = [];
+    for (const file of coreFiles()) {
+      const lines = readFileSync(file, 'utf8').split('\n');
+      lines.forEach((line, i) => {
+        if (!/\[\.\.\.(new Set|new Map|\w*([Ss]et|[Mm]ap))\b/.test(line)) return;
+        const window = line + (lines[i + 1] ?? '');
+        if (!/\.sort\(/.test(window)) offenders.push(`${show(file)}:${i + 1}  ${line.trim()}`);
+      });
     }
-  });
-
-  it('confines Math.random in the seed source to randomSeed', () => {
-    const source = SOURCES[SEED_SOURCE];
-    expect(source.match(/Math\.random\s*\(/g) ?? []).toHaveLength(1);
-    const body = source.slice(source.indexOf('export function randomSeed'));
-    expect(body.slice(0, body.indexOf('\n}'))).toContain('Math.random');
+    expect(offenders).toEqual([]);
   });
 });
 
-describe('vexflow stays behind one file', () => {
-  const RENDERER = 'exercises/render/toVexflow.ts';
+describe('ADR 0003 — one importer for the notation library', () => {
+  const ALLOWED = 'exercises/render/toVexflow.ts';
 
-  it('is imported by nothing but the renderer', () => {
-    const importers = Object.keys(SOURCES)
-      .filter((file) => importsOf(file).some((s) => s === 'vexflow' || s.startsWith('vexflow/')));
-    expect(importers.filter((f) => f !== RENDERER)).toEqual([]);
+  it('keeps vexflow behind a single adapter', () => {
+    const importers = [...new Set(
+      filesUnder(SRC)
+        .filter((f) => importsOf(f).some((s) => s === 'vexflow' || s.startsWith('vexflow/')))
+        .map(show),
+    )].sort();
+    // Zero is the state before the renderer lands; more than one is how the
+    // containment quietly dies.
+    expect(importers.length).toBeLessThanOrEqual(1);
+    for (const path of importers) expect(path).toBe(ALLOWED);
   });
 });

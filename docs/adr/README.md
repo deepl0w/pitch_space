@@ -1,0 +1,94 @@
+# Architecture decision records
+
+One record per decision that would be expensive to reverse or puzzling to
+inherit. Records are **append-only**: once a record is published its argument is
+never rewritten, only its status changed to `Superseded by NNNN`. A later
+decision that narrows an earlier one says so on its own face.
+
+Numbering is sequential, four digits, and never reused. **Claim a number before
+you write, with `.claude/scripts/fleet.sh adr-claim "<title>"`.** It allocates
+against every number that exists anywhere — on any branch, in any worktree's
+working tree including an uncommitted draft, and in the claims file — rather
+than against what anyone remembers agreeing. Reserving by message does not work:
+a reservation and the work it was meant to protect can cross in flight.
+`fleet.sh adr-taken` shows who holds what.
+
+| # | Decision | Status |
+| --- | --- | --- |
+| [0001](0001-a-pure-core.md) | A pure core: theory, generate and dsp import nothing above themselves | Accepted |
+| [0002](0002-generation-is-reproducible-from-its-seed.md) | Generation is reproducible from its seed | Accepted |
+| [0003](0003-one-importer-for-the-notation-library.md) | One importer for the notation library | Accepted |
+
+## The shape of the thing
+
+The green boxes are plain TypeScript over plain data: no DOM, no
+`AudioContext`, no React, no persistence. That is what lets the whole music
+engine and the whole analysis chain run under vitest on a laptop
+([0001](0001-a-pure-core.md)), and it is the constraint most worth protecting.
+Everything the platform supplies enters at the edges, and the notation library
+enters at exactly one file ([0003](0003-one-importer-for-the-notation-library.md)).
+
+```mermaid
+flowchart LR
+    seed["seed<br/>randomSeed()"] --> gen
+    theory["theory/<br/>pitch, interval, key,<br/>scale, chord"] --> gen["generate/<br/>harmony, rhythm,<br/>melody, exercise"]
+    gen --> ex["exercises/<br/>models"]
+    ex --> vex["render/toVexflow.ts<br/>the one importer"]
+    vex --> ui["ui/<br/>notation, screens"]
+
+    mic["capture/<br/>microphone, worklet"] --> dsp["audio/dsp/<br/>pitch, chroma, onsets"]
+    dsp --> judge["exercises/<br/>judging"]
+    ex --> judge
+    judge --> ui
+    ex --> out["audio/output/<br/>instruments, metronome"]
+
+    classDef pure fill:#dbe9d6,stroke:#4f7a43,color:#16210f
+    classDef platform fill:#f6d8d8,stroke:#9b4b4b,color:#2b1414
+    classDef edge fill:#d8e2f6,stroke:#4b5f9b,color:#141c2b
+    class theory,gen,dsp,ex,judge pure
+    class mic,ui,out platform
+    class seed,vex edge
+```
+
+Both boundaries are conventions today, not module boundaries, so they are worth
+being able to re-ask rather than trust:
+
+```bash
+# 0001 — nothing in the core reaches for the platform.
+grep -rn 'document\.\|window\.\|AudioContext\|navigator\.\|localStorage' \
+  src/theory src/generate src/audio/dsp
+
+# 0002 — randomSeed is the only place entropy enters.
+grep -rn 'Math\.random' src/theory src/generate | grep -v 'rng\.ts'
+
+# 0003 — one file imports the notation library.
+git ls-files 'src/*' | xargs grep -l "from 'vexflow'"
+```
+
+The first two should print nothing and the third exactly one path, ending
+`render/toVexflow.ts`. They are asked of directories that do not all exist yet;
+as `generate/` and `audio/dsp/` land, the greps start covering them without
+being edited, which is the point of writing them this way rather than against a
+file list.
+
+**None of this is enforced by a test yet.** `CLAUDE.md` says it is. There are
+tests now — `src/theory/meter.test.ts` carries 20, and they are the right shape,
+asserting that beam spans tile the bar and that a triple meter has no secondary
+accent. But none of them asks a question about the boundaries above. Until one
+does, those hold on authorship alone, and the first breach will arrive in a
+branch whose own tests are green.
+
+## Template
+
+```markdown
+# ADR NNNN — Title
+
+- **Status:** Accepted
+- **Date:** YYYY-MM-DD
+
+## Context
+## Decision
+## Consequences
+### What this costs
+## Revisit when
+```

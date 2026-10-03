@@ -31,7 +31,20 @@ export interface SettingsDocV1 {
 
 export type SettingsDoc = SettingsDocV1;
 
-export const SETTINGS_DEFAULTS: SettingsDoc = { exercises: {}, lastExercise: null };
+/**
+ * A fresh defaults document, built rather than shared.
+ *
+ * {@link SETTINGS_DEFAULTS} is one object, and spreading it copies only the
+ * top level — so every caller that took `{ ...SETTINGS_DEFAULTS }` was handed
+ * the *same* `exercises` map, and the first one to write a key into it
+ * changed what every later first run was given.
+ */
+export function settingsDefaults(): SettingsDoc {
+  return { exercises: {}, lastExercise: null };
+}
+
+/** The defaults as a value, for comparison. Call {@link settingsDefaults} to own one. */
+export const SETTINGS_DEFAULTS: SettingsDoc = settingsDefaults();
 
 /**
  * Empty at version 1, and checked to be the right kind of empty.
@@ -51,7 +64,7 @@ export const SETTINGS_MIGRATIONS: readonly MigrationStep[] = [];
  * user's settings every time they ran an older release.
  */
 export function coerceSettings(data: unknown): SettingsDoc {
-  if (typeof data !== 'object' || data === null) return { ...SETTINGS_DEFAULTS };
+  if (typeof data !== 'object' || data === null) return settingsDefaults();
   const doc = data as Partial<SettingsDocV1>;
   const exercises = typeof doc.exercises === 'object' && doc.exercises !== null
     ? { ...doc.exercises }

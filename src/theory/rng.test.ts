@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chance, makeRng, pick, randomSeed, rngInt, sample, shuffled, weightedPick } from './rng';
+import { chance, makeRng, pick, rngInt, sample, shuffled, weightedPick } from './rng';
 
 const draws = (seed: number, n: number) => {
   const rng = makeRng(seed);
@@ -36,12 +36,12 @@ describe('makeRng', () => {
     for (const count of buckets) expect(Math.abs(count / (n / 10) - 1)).toBeLessThan(0.05);
   });
 
-  it('produces a seed that reproduces its own stream', () => {
-    const seed = randomSeed();
-    expect(Number.isInteger(seed)).toBe(true);
-    expect(seed).toBeGreaterThanOrEqual(0);
-    expect(seed).toBeLessThanOrEqual(0xffffffff);
-    expect(draws(seed, 8)).toEqual(draws(seed, 8));
+  it('takes any seed the app layer mints', () => {
+    // Seeds come from outside the core under ADR 0005, so every value a
+    // 32-bit mint can produce has to replay.
+    for (const seed of [0, 1, 0x7fffffff, 0x80000000, 0xffffffff]) {
+      expect(draws(seed, 8)).toEqual(draws(seed, 8));
+    }
   });
 });
 

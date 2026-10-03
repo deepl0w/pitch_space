@@ -98,8 +98,12 @@ describe('ADR 0001 — a pure core', () => {
     expect(hits(coreFiles(), PLATFORM)).toEqual([]);
   });
 
-  // An allowlist rather than a list of the layers that exist today: a blocklist
-  // goes quietly out of date the moment someone adds a directory to src/.
+  // An allowlist rather than a list of the layers that exist today. A blocklist
+  // goes quietly out of date the moment someone adds a directory to src/, and
+  // it is hard to tell when it has: the version that matched only single quotes
+  // let `from "react"` through, and the mutation that should have exposed that
+  // was caught by the ADR 0003 rule instead, which hid the gap. Reading every
+  // import and asking where it lands has nothing to keep in step.
   const MAY_IMPORT: Record<string, string[]> = {
     theory: ['theory'],
     generate: ['generate', 'theory'],
@@ -138,27 +142,15 @@ describe('ADR 0001 — a pure core', () => {
 });
 
 describe('ADR 0002 — generation is reproducible from its seed', () => {
-  // Stated around the musical choice rather than around the call: minting a
-  // seed is the one allowed entry point, spending one is pure. Asserting that
-  // there are no callers at all would make the rule false on day one, and a
-  // rule the code already breaks teaches people to ignore the check.
-  it('lets entropy in at randomSeed and nowhere else', () => {
-    // Scoped to the function rather than to the file. Asserting only that
-    // rng.ts is the sole file would let a second generator be added beside
-    // randomSeed, which is the whole thing this rule exists to stop.
-    const entropy = hits(coreFiles(), /Math\.random/).filter(
-      (h) => !/^\s*(\*|\/\/|\/\*)/.test(h.slice(h.indexOf('  ') + 2)),
-    );
-    expect(entropy).toHaveLength(1);
-    expect(entropy[0]).toMatch(/^theory\/rng\.ts:/);
-
-    const lines = readFileSync(join(SRC, 'theory', 'rng.ts'), 'utf8').split('\n');
-    const opens = lines.findIndex((l) => l.includes('export function randomSeed'));
-    const closes = lines.findIndex((l, i) => i > opens && l.startsWith('}'));
-    const at = Number(/^[^:]+:(\d+)/.exec(entropy[0])![1]);
-    expect(opens).toBeGreaterThanOrEqual(0);
-    expect(at).toBeGreaterThan(opens);
-    expect(at).toBeLessThanOrEqual(closes + 1);
+  // No exception, because the core has nothing to except. Minting a seed is
+  // an app-layer event — the user asking for a new exercise — and the core
+  // only ever spends one. An earlier draft of this rule carved out
+  // randomSeed(); deleting the function was cheaper than documenting it, and
+  // left the rule true as CLAUDE.md states it. See docs/adr/0005.
+  it('lets no entropy into the core at all', () => {
+    const entropy = hits(coreFiles(), /Math\.random|crypto\.getRandomValues/)
+      .filter((h) => !/^\s*(\*|\/\/|\/\*)/.test(h.slice(h.indexOf('  ') + 2)));
+    expect(entropy).toEqual([]);
   });
 
   it('reads no clock', () => {

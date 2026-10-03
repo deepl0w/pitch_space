@@ -151,10 +151,18 @@ export function planPhrases(
     ? requested
     : weightedPick(rng, available);
 
-  const half = options.cadences?.antecedent ?? 'HC';
   // The blues turnaround lands on the dominant, so that is the form's own
   // close rather than a weaker version of a perfect cadence.
   const close = options.cadences?.final ?? (form === 'blues' ? 'HC' : 'PAC');
+  // A plagal close is approached from the subdominant, and a dominant moving
+  // to a subdominant is the one join this generator refuses. Inside a phrase
+  // `planCadence` repairs that by putting a tonic in front of the IV, but a
+  // consequent of two chords has no room for one and the chord in front of
+  // its subdominant is the antecedent's own cadence — locked, and restored by
+  // the second pass if anything overwrites it. So a period that closes
+  // plagally asks its question with the weak authentic cadence instead.
+  const asked = options.cadences?.antecedent ?? 'HC';
+  const half: CadenceType = close === 'PC' && asked === 'HC' ? 'IAC' : asked;
 
   if (form === 'period' && bars % 2 === 0) {
     const n = bars / 2;

@@ -18,6 +18,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0001](0001-a-pure-core.md) | A pure core: theory, generate and dsp import nothing above themselves | Accepted |
 | [0002](0002-generation-is-reproducible-from-its-seed.md) | Generation is reproducible from its seed | Accepted |
 | [0003](0003-one-importer-for-the-notation-library.md) | One importer for the notation library | Accepted |
+| [0004](0004-harmony-stays-symbolic-until-it-is-spelled.md) | Harmony stays symbolic until it is spelled | Accepted |
 
 ## The shape of the thing
 
@@ -71,12 +72,21 @@ as `generate/` and `audio/dsp/` land, the greps start covering them without
 being edited, which is the point of writing them this way rather than against a
 file list.
 
-**None of this is enforced by a test yet.** `CLAUDE.md` says it is. There are
-tests now — `src/theory/meter.test.ts` carries 20, and they are the right shape,
-asserting that beam spans tile the bar and that a triple meter has no secondary
-accent. But none of them asks a question about the boundaries above. Until one
-does, those hold on authorship alone, and the first breach will arrive in a
-branch whose own tests are green.
+These are now enforced, by [`src/architecture.test.ts`](../../src/architecture.test.ts),
+which asks all three of the repository on every run. It walks the filesystem
+rather than `git ls-files`, so an untracked file breaches the rules too, and it
+asserts the core directories are non-empty first so that the rules fail loudly
+if `theory/` ever moves instead of reporting a vacuous pass.
+
+Each rule has been mutation-tested rather than trusted: a platform API, a stray
+`Math.random`, a clock read, an unsorted `Set` spread, a React import and a
+second vexflow importer were each introduced and confirmed to turn the suite
+red. That matters more than it sounds. Two of the rules originally passed
+mutations they should have caught — `new AudioContext()` slipped through a `{`
+that stood where a word boundary belonged, and the entropy rule checked that
+`rng.ts` was the only *file* calling `Math.random` rather than that
+`randomSeed` was the only *caller*, so a second generator beside it passed. A
+guard nobody has watched fail is a guard nobody knows works.
 
 ## Template
 

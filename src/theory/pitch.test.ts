@@ -84,8 +84,24 @@ describe('parsePitch', () => {
   });
 
   it('refuses what it cannot spell rather than guessing', () => {
-    for (const bad of ['H4', 'C', '4C', 'C#', 'Cbbb4', '']) {
+    // Mixed accidentals, a missing octave, a letter outside A-G.
+    for (const bad of ['H4', 'C', '4C', 'C#', 'C#b4', 'Cbx4', 'Cb#4', '']) {
       expect(() => parsePitch(bad)).toThrow(/Unparseable/);
+    }
+  });
+
+  // pitchName generates an accidental of any width, because a Cb diminished
+  // seventh contains a Bbbb and calling it "undefined" was the original defect.
+  // The parser has to accept the same grammar or the two stop being inverses,
+  // and a pitch written out by name cannot be read back on exactly the rare
+  // spellings that caused the trouble in the first place.
+  it('reads back anything pitchName can write', () => {
+    for (let alter = -4; alter <= 4; alter++) {
+      for (let letter = 0; letter < 7; letter++) {
+        const original = pitch(letter as 0, alter, 4);
+        const text = pitchName(original);
+        expect(parsePitch(text), text).toEqual(original);
+      }
     }
   });
 });

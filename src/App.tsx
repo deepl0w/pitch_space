@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { Score } from './ui/notation/Score';
 import type { ScoreNote, Clef } from './exercises/render/toVexflow';
-import { Synth, type Voice } from './audio/output/synth';
+import { Synth } from './audio/output/synth';
+import { schedule } from './audio/output/schedule';
 import { midiOf, pitchName, simplifySpelling } from './theory/pitch';
 import { ALL_KEYS, type Key, keyId, keyName } from './theory/key';
 import { SCALE_TYPES, degreeLabel, spellScale } from './theory/scale';
@@ -10,6 +11,13 @@ import { DIATONIC_SEVENTHS, DIATONIC_TRIADS, type Degree, numeral, numeralText, 
 import { noteValue } from './theory/meter';
 
 type Subject = 'scale' | 'chord' | 'diatonic';
+
+/** Seconds between successive notated events. */
+const EVENT_GAP = 0.62;
+/** Seconds between the pitches of one event when it is rolled. */
+const ROLL_GAP = 0.14;
+/** How long a note rings when it is one of several. */
+const HOLD = 1.1;
 
 const DEGREES: Degree[] = [1, 2, 3, 4, 5, 6, 7];
 const synth = new Synth();
@@ -43,22 +51,29 @@ export default function App() {
     [view, clef, key],
   );
 
-  function play(mode: 'together' | 'spread') {
+  /**
+   * The only axis that means anything here is whether the pitches *within* one
+   * notated event sound together or are rolled. Events always advance in
+   * sequence — eight notes of a scale are a line whatever you do, and playing
+   * them simultaneously is a cluster, not a scale.
+   *
+   * The previous pair of buttons did not do this. "Together" set the gap to 0
+   * and the gap was then read as `step || 0.9`, so zero fell through to 0.9
+   * and both buttons played the same thing at different speeds.
+   */
+  function play(rolled: boolean) {
     if (playing.current) return;
     playing.current = true;
-    setTimeout(() => { playing.current = false; }, 300);
-    const step = mode === 'together' ? 0 : 0.42;
-    const voices: Voice[] = [];
-    view.notes.forEach((note, index) => {
-      for (const pitch of note.pitches) {
-        voices.push({
-          midi: midiOf(pitch),
-          start: index * (step || 0.9),
-          duration: step ? 0.5 : 1.6,
-        });
-      }
-    });
-    synth.play(voices);
+    window.setTimeout(() => { playing.current = false; }, 250);
+    synth.play(schedule(
+      view.notes.map((note) => ({ midis: note.pitches.map(midiOf) })),
+      {
+        eventGap: EVENT_GAP,
+        rollGap: rolled ? ROLL_GAP : 0,
+        // A lone chord can ring; in a sequence it has to clear the next one.
+        hold: view.notes.length === 1 ? 2.2 : HOLD,
+      },
+    ));
   }
 
   return (
@@ -138,8 +153,11 @@ export default function App() {
       <Score spec={scoreSpec} />
 
       <div className="actions">
-        <button onClick={() => play('spread')}>Play one at a time</button>
-        <button onClick={() => play('together')}>Play together</button>
+        {view.actions.map((action) => (
+          <button key={action.label} onClick={() => play(action.rolled)}>
+            {action.label}
+          </button>
+        ))}
       </div>
 
       <section className="readout">
@@ -173,7 +191,11 @@ function signature(key: Key): string {
 }
 
 interface ViewLabel { primary: string; secondary: string }
-interface View { notes: ScoreNote[]; labels: ViewLabel[]; title: string }
+/** What playing this view can usefully mean, named for what it does. */
+interface PlayAction { label: string; rolled: boolean }
+interface View {
+  notes: ScoreNote[]; labels: ViewLabel[]; title: string; actions: PlayAction[];
+}
 
 function buildView(o: {
   key: Key; subject: Subject; scaleId: string; chordId: string;
@@ -188,6 +210,7 @@ function buildView(o: {
     const withOctave = [...pitches, { ...pitches[0], octave: pitches[0].octave + 1 }];
     return {
       title: `${pitchName(tonic, false)} ${type.name}`,
+      actions: [{ label: 'Play the scale', rolled: false }],
       notes: withOctave.map((p) => ({ pitches: [p], value: noteValue('q') })),
       labels: withOctave.map((p, i) => ({
         primary: pitchName(p),
@@ -202,6 +225,10 @@ function buildView(o: {
     const pitches = voiceChord(built);
     return {
       title: chordSymbol(built),
+      actions: [
+        { label: 'Play as a chord', rolled: false },
+        { label: 'Arpeggiate it', rolled: true },
+      ],
       notes: [{ pitches, value: noteValue('w') }],
       labels: pitches.map((p, i) => {
         const engraved = simplifySpelling(p);
@@ -222,6 +249,10 @@ function buildView(o: {
   const numerals = DEGREES.map((d) => numeral(d, table[d - 1]));
   return {
     title: `${keyName(o.key)} — ${o.sevenths ? 'diatonic sevenths' : 'diatonic triads'}`,
+    actions: [
+      { label: 'Play each chord', rolled: false },
+      { label: 'Roll each chord', rolled: true },
+    ],
     notes: numerals.map((n) => ({
       pitches: spellChord(realizeNumeral({ ...o.key, tonic }, n)),
       value: noteValue('h'),

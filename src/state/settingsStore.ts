@@ -3,7 +3,7 @@ import { createStore, type StoreApi } from 'zustand/vanilla';
 import { localStorageSlot, type Slot } from './persistence';
 import { migrate, versioned, type Versioned } from './migrate';
 import {
-  coerceSettings, SETTINGS_DEFAULTS, SETTINGS_KEY, SETTINGS_MIGRATIONS, SETTINGS_SCHEMA,
+  coerceSettings, settingsDefaults, SETTINGS_KEY, SETTINGS_MIGRATIONS, SETTINGS_SCHEMA,
   type SettingsDoc,
 } from './schema';
 
@@ -48,7 +48,7 @@ export function createSettingsStore(
     validate: coerceSettings,
   });
 
-  const doc = outcome.ok ? outcome.value : { ...SETTINGS_DEFAULTS };
+  const doc = outcome.ok ? outcome.value : settingsDefaults();
   const persisting = !(outcome.ok === false && outcome.reason === 'from-the-future');
 
   // Paying the migration once, here, rather than on every read. An absent
@@ -75,7 +75,7 @@ export function createSettingsStore(
         // because the user asked for the unreadable document to go — and once
         // it has gone there is nothing left to protect, so writing resumes.
         slot.clear();
-        set({ doc: { ...SETTINGS_DEFAULTS }, persisting: true });
+        set({ doc: settingsDefaults(), persisting: true });
       },
     };
   });

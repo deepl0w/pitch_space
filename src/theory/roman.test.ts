@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_KEYS, MAJOR_KEYS, MINOR_KEYS, findKey, keyName } from './key';
-import { diatonicOf, midiOf, pitchName } from './pitch';
+import { type Pitch, diatonicOf, midiOf, pitchName } from './pitch';
 import { identifyChord } from './chord';
 import {
   DIATONIC_SEVENTHS, DIATONIC_TRIADS, type Degree, degreeRoot, numeral,
   numeralText, realizePitches,
 } from './roman';
 
-const names = (ps: { letter: number; alter: number; octave: number }[]) =>
-  ps.map((p) => pitchName(p, false));
+const names = (ps: Pitch[]) => ps.map((p) => pitchName(p, false));
 
 const DEGREES: Degree[] = [1, 2, 3, 4, 5, 6, 7];
 

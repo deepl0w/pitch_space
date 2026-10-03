@@ -134,6 +134,29 @@ describe('how a numeral is written', () => {
     expect(numeralText(numeral(5, 'dom7', { inversion: -1 }))).toBe('V42');
   });
 
+  // figures() routes sixths, suspensions and extended chords through the
+  // suffix instead of the figure tables. That branch had no test: gutting it to
+  // return '' left the whole suite green.
+  it('names the inversion of a chord that has no figures of its own', () => {
+    expect(numeralText(numeral(5, 'sus4'))).toBe('Vsus4');
+    expect(numeralText(numeral(5, 'sus4', { inversion: 1 }))).toBe('Vsus4 inv1');
+    expect(numeralText(numeral(1, 'dom9', { inversion: 2 }))).toBe('I9 inv2');
+    expect(numeralText(numeral(1, 'min6', { inversion: 3 }))).toBe('im6 inv3');
+  });
+
+  // The triad prints I+, so the seventh built on it should not quietly shed the
+  // sign: aug7 was routed into the seventh figures by family and came out as
+  // I7, which is a plain dominant seventh and a different chord.
+  it('keeps an augmented chord augmented whatever its size', () => {
+    expect(numeralText(numeral(1, 'aug'))).toBe('I+');
+    expect(numeralText(numeral(1, 'aug7'))).not.toBe(numeralText(numeral(1, 'dom7')));
+    expect(numeralText(numeral(1, 'aug7'))).toContain('+');
+    for (let inversion = 0; inversion < 4; inversion++) {
+      expect(numeralText(numeral(1, 'aug7', { inversion })), `inversion ${inversion}`)
+        .toContain('+');
+    }
+  });
+
   it('never prints undefined, whatever inversion it is handed', () => {
     for (const typeId of ['maj', 'dom7', 'dom9']) {
       for (let inversion = -6; inversion <= 8; inversion++) {

@@ -158,7 +158,9 @@ export function numeralText(n: RomanNumeral): string {
   let quality = '';
   if (n.typeId === 'dim' || n.typeId === 'dim7') quality = 'o';
   else if (n.typeId === 'm7b5') quality = 'ø';
-  else if (n.typeId === 'aug') quality = '+';
+  // aug7 takes the seventh figures, so without the sign it prints as a plain
+  // dominant seventh — a different chord, not a shorthand for this one.
+  else if (n.typeId === 'aug' || n.typeId === 'aug7') quality = '+';
   const text = accidentalGlyph(n.chromaticAlter) + cased + quality + figures(type, n.inversion);
   if (n.appliedTo === undefined) return text;
   return `${text}/${ROMAN[n.appliedTo - 1]}`;

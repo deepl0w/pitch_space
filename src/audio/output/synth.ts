@@ -18,12 +18,16 @@ export interface Voice {
   gain?: number;
 }
 
+const MASTER_GAIN = 0.22;
+
 /** A few partials with a little inharmonicity reads as struck rather than buzzy. */
 const PARTIALS = [1, 0.5, 0.28, 0.16, 0.09, 0.05, 0.03];
 
 export class Synth {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
+  /** Everything scheduled and not yet finished, so it can be cut short. */
+  private scheduled: OscillatorNode[] = [];
 
   /**
    * Browsers refuse to start an AudioContext until a gesture, so this is
@@ -33,7 +37,7 @@ export class Synth {
     if (!this.context) {
       this.context = new AudioContext();
       this.master = this.context.createGain();
-      this.master.gain.value = 0.22;
+      this.master.gain.value = MASTER_GAIN;
       this.master.connect(this.context.destination);
     }
     if (this.context.state === 'suspended') void this.context.resume();
@@ -53,11 +57,36 @@ export class Synth {
     }
   }
 
-  stop(): void {
+  /**
+   * Cut every scheduled note short.
+   *
+   * Notes are scheduled into the future against the audio clock, so simply
+   * navigating away leaves the rest of the passage to play out over whatever
+   * screen comes next. Stopping the oscillators is not enough on its own —
+   * cutting a ringing note dead produces a click — so the master gain is
+   * ramped down over a few milliseconds first and restored once they are
+   * gone.
+   */
+  stopAll(): void {
+    if (!this.context || !this.master) return;
+    const now = this.context.currentTime;
+    this.master.gain.cancelScheduledValues(now);
+    this.master.gain.setValueAtTime(this.master.gain.value, now);
+    this.master.gain.linearRampToValueAtTime(0, now + 0.012);
+    for (const oscillator of this.scheduled) {
+      try { oscillator.stop(now + 0.015); } catch { /* already stopped */ }
+    }
+    this.scheduled = [];
+    this.master.gain.setValueAtTime(MASTER_GAIN, now + 0.02);
+  }
+
+  /** Release the audio hardware entirely. */
+  close(): void {
     if (!this.context) return;
     void this.context.close();
     this.context = null;
     this.master = null;
+    this.scheduled = [];
   }
 
   private scheduleNote(
@@ -87,6 +116,10 @@ export class Synth {
       oscillator.connect(partialGain).connect(envelope);
       oscillator.start(at);
       oscillator.stop(at + voice.duration + 0.4);
+      this.scheduled.push(oscillator);
+      oscillator.addEventListener('ended', () => {
+        this.scheduled = this.scheduled.filter((o) => o !== oscillator);
+      });
     }
   }
 }

@@ -1,5 +1,5 @@
 import {
-  Accidental, Beam, Dot, Formatter, Renderer, Stave, StaveNote, Voice,
+  Accidental, Beam, Dot, Formatter, Renderer, Stave, StaveNote, Tuplet, Voice,
 } from 'vexflow/bravura';
 import { type Pitch, simplifySpelling, vexKey } from '../../theory/pitch';
 import { type Key, vexKeySignature } from '../../theory/key';
@@ -29,6 +29,12 @@ export interface ScoreNote {
   value: NoteValue;
   /** Drawn in colour, for marking a performance against the score. */
   colour?: string;
+  /**
+   * Shared by the members of one tuplet bracket, with the ratio it is written
+   * at. Without this a triplet is drawn as three plain eighths and the bar
+   * looks over-full — the notes are right and the notation is a lie.
+   */
+  tuplet?: { id: number; count: number; inTheTimeOf: number };
 }
 
 export interface ScoreSpec {
@@ -157,11 +163,33 @@ export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: D
   // signature is not marked again and a departure from it is.
   Accidental.applyAccidentals([voice], spec.key ? vexKeySignature(spec.key) : 'C');
 
+  // Tuplets are built before formatting, because the bracket participates in
+  // the layout rather than being drawn over it afterwards.
+  const tuplets: Tuplet[] = [];
+  const groups = new Map<number, StaveNote[]>();
+  spec.notes.forEach((note, i) => {
+    if (!note.tuplet) return;
+    const list = groups.get(note.tuplet.id) ?? [];
+    list.push(staveNotes[i]);
+    groups.set(note.tuplet.id, list);
+  });
+  for (const [id, members] of [...groups].sort((a, b) => a[0] - b[0])) {
+    const ratio = spec.notes.find((n) => n.tuplet?.id === id)!.tuplet!;
+    tuplets.push(new Tuplet(members, {
+      numNotes: ratio.count,
+      notesOccupied: ratio.inTheTimeOf,
+    }));
+  }
+
   const beams = Beam.generateBeams(staveNotes.filter((n) => !n.isRest()));
   new Formatter().joinVoices([voice]).format([voice], options.width - 90);
   voice.draw(context, stave);
   for (const beam of beams) {
     beam.setStyle({ fillStyle: ink, strokeStyle: ink });
     beam.setContext(context).draw();
+  }
+  for (const tuplet of tuplets) {
+    tuplet.setStyle({ fillStyle: ink, strokeStyle: ink });
+    tuplet.setContext(context).draw();
   }
 }

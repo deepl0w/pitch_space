@@ -101,3 +101,66 @@ button:active { transform: translateY(1px); }
   main { padding-top: 1.25rem; }
   .field { flex: 1 1 100%; }
 }
+
+/* ---- Navigation and the home menu --------------------------------------- */
+
+.section {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); margin: 1.75rem 0 0.7rem;
+}
+.section:first-of-type { margin-top: 1rem; }
+
+.menu { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+@media (min-width: 40rem) { .menu { grid-template-columns: 1fr 1fr; } }
+
+.card {
+  display: flex; flex-direction: column; gap: 0.25rem; width: 100%;
+  text-align: left; font: inherit; cursor: pointer;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+.card:hover { border-color: var(--accent); filter: none; }
+.card-name { font-weight: 600; font-size: 0.95rem; }
+.card-blurb { font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
+
+/* Unbuilt entries are listed rather than hidden, so the shape of the app is
+   visible before all of it exists. They are not buttons, because nothing
+   happens when you press them. */
+.card-pending { cursor: default; opacity: 0.62; }
+.card-pending:hover { border-color: var(--line); }
+.card-state {
+  align-self: flex-start; margin-top: 0.3rem;
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 0.1rem 0.45rem;
+}
+
+.back {
+  background: none; border: none; color: var(--muted);
+  font-size: 0.82rem; padding: 0 0 0.75rem; cursor: pointer;
+}
+.back:hover { color: var(--accent); filter: none; }
+
+/* ---- The rhythm figure catalogue ---------------------------------------- */
+
+.count { color: var(--muted); font-size: 0.8rem; margin: 0 0 0.8rem; }
+
+.figures { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+@media (min-width: 52rem) { .figures { grid-template-columns: 1fr 1fr; } }
+
+.figure {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 0.75rem 0.85rem 0.25rem;
+}
+.figure .score { background: none; border: none; padding: 0; }
+.figure .score-host { min-height: 120px; }
+
+.figure-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.figure-name { font-weight: 600; font-size: 0.9rem; }
+.figure-meta { font-size: 0.72rem; color: var(--muted); flex: 1 1 auto; }
+.figure-play {
+  font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 6px;
+  background: none; color: var(--accent); border: 1px solid currentColor;
+}
+.figure-play:hover { background: var(--accent); color: var(--bg); filter: none; }

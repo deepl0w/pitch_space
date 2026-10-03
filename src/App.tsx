@@ -1,265 +1,51 @@
-import { useMemo, useRef, useState } from 'react';
-import { Score } from './ui/notation/Score';
-import type { ScoreNote, Clef } from './exercises/render/toVexflow';
-import { Synth } from './audio/output/synth';
-import { schedule } from './audio/output/schedule';
-import { midiOf, pitchName, simplifySpelling } from './theory/pitch';
-import { ALL_KEYS, type Key, keyId, keyName } from './theory/key';
-import { SCALE_TYPES, degreeLabel, spellScale } from './theory/scale';
-import { CHORD_TYPES, chord, chordSymbol, spellChord, voiceChord } from './theory/chord';
-import { DIATONIC_SEVENTHS, DIATONIC_TRIADS, type Degree, numeral, numeralText, realizeNumeral } from './theory/roman';
-import { noteValue } from './theory/meter';
+import { useEffect, useState } from 'react';
+import { Home } from './ui/screens/Home';
+import { Scales } from './ui/screens/Scales';
+import { Chords } from './ui/screens/Chords';
+import { KeyChords } from './ui/screens/KeyChords';
+import { Rhythms } from './ui/screens/Rhythms';
+import { stopSound } from './ui/sound';
 
-type Subject = 'scale' | 'chord' | 'diatonic';
+/**
+ * Routing, such as it is.
+ *
+ * The hash rather than the History API, because this ships as a static bundle
+ * to a PWA and inside a Capacitor shell, and neither has a server to rewrite
+ * deep links back to index.html. A hash route survives a reload in both
+ * without any configuration, which the History API would need and the
+ * Capacitor one could not provide at all.
+ */
+function useRoute(): [string, (route: string) => void] {
+  const read = () => window.location.hash.replace(/^#\/?/, '');
+  const [route, setRoute] = useState(read);
+  useEffect(() => {
+    const onChange = () => setRoute(read());
+    window.addEventListener('hashchange', onChange);
+    return () => window.removeEventListener('hashchange', onChange);
+  }, []);
+  return [route, (next: string) => { window.location.hash = next ? `#/${next}` : ''; }];
+}
 
-/** Seconds between successive notated events. */
-const EVENT_GAP = 0.62;
-/** Seconds between the pitches of one event when it is rolled. */
-const ROLL_GAP = 0.14;
-/** How long a note rings when it is one of several. */
-const HOLD = 1.1;
-
-const DEGREES: Degree[] = [1, 2, 3, 4, 5, 6, 7];
-const synth = new Synth();
+const SCREENS: Partial<Record<string, () => React.ReactElement>> = {
+  scales: Scales,
+  chords: Chords,
+  'key-chords': KeyChords,
+  rhythms: Rhythms,
+};
 
 export default function App() {
-  const [keyIdValue, setKeyIdValue] = useState('C_major');
-  const [subject, setSubject] = useState<Subject>('scale');
-  const [scaleId, setScaleId] = useState('major');
-  const [chordId, setChordId] = useState('maj7');
-  const [inversion, setInversion] = useState(0);
-  const [sevenths, setSevenths] = useState(false);
-  const [clef, setClef] = useState<Clef>('treble');
-  const [octave, setOctave] = useState(4);
-  const playing = useRef(false);
+  const [route, go] = useRoute();
+  const Screen = SCREENS[route];
 
-  const key: Key = useMemo(
-    () => ALL_KEYS.find((k) => keyId(k) === keyIdValue)!,
-    [keyIdValue],
-  );
-
-  const view = useMemo(
-    () => buildView({ key, subject, scaleId, chordId, inversion, sevenths, octave }),
-    [key, subject, scaleId, chordId, inversion, sevenths, octave],
-  );
-
-  // Score redraws when the spec's identity changes, so building it inline in
-  // the JSX would re-engrave the whole staff on every render of this
-  // component — including the ones caused by opening a select.
-  const scoreSpec = useMemo(
-    () => ({ notes: view.notes, clef, key }),
-    [view, clef, key],
-  );
-
-  /**
-   * The only axis that means anything here is whether the pitches *within* one
-   * notated event sound together or are rolled. Events always advance in
-   * sequence — eight notes of a scale are a line whatever you do, and playing
-   * them simultaneously is a cluster, not a scale.
-   *
-   * The previous pair of buttons did not do this. "Together" set the gap to 0
-   * and the gap was then read as `step || 0.9`, so zero fell through to 0.9
-   * and both buttons played the same thing at different speeds.
-   */
-  function play(rolled: boolean) {
-    if (playing.current) return;
-    playing.current = true;
-    window.setTimeout(() => { playing.current = false; }, 250);
-    synth.play(schedule(
-      view.notes.map((note) => ({ midis: note.pitches.map(midiOf) })),
-      {
-        eventGap: EVENT_GAP,
-        rollGap: rolled ? ROLL_GAP : 0,
-        // A lone chord can ring; in a sequence it has to clear the next one.
-        hold: view.notes.length === 1 ? 2.2 : HOLD,
-      },
-    ));
-  }
+  // Notes are scheduled into the future against the audio clock, so leaving a
+  // screen does not stop the passage it started — it plays on over whatever
+  // comes next. Silence it on every route change.
+  useEffect(() => { stopSound(); }, [route]);
 
   return (
     <main>
-      <header>
-        <h1>Music Practice <span className="tag">workbench</span></h1>
-        <p className="lede">
-          The theory core, rendered and sounded. Nothing here is an exercise yet —
-          this is the bench the generator gets built against.
-        </p>
-      </header>
-
-      <section className="panel">
-        <Field label="Key">
-          <select value={keyIdValue} onChange={(e) => setKeyIdValue(e.target.value)}>
-            {ALL_KEYS.map((k) => (
-              <option key={keyId(k)} value={keyId(k)}>
-                {keyName(k)} ({signature(k)})
-              </option>
-            ))}
-          </select>
-        </Field>
-
-        <Field label="Show">
-          <select value={subject} onChange={(e) => setSubject(e.target.value as Subject)}>
-            <option value="scale">A scale</option>
-            <option value="chord">One chord</option>
-            <option value="diatonic">Every chord in the key</option>
-          </select>
-        </Field>
-
-        {subject === 'scale' && (
-          <Field label="Scale">
-            <select value={scaleId} onChange={(e) => setScaleId(e.target.value)}>
-              {SCALE_TYPES.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </Field>
-        )}
-
-        {subject === 'chord' && (
-          <>
-            <Field label="Chord">
-              <select value={chordId} onChange={(e) => setChordId(e.target.value)}>
-                {CHORD_TYPES.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </Field>
-            <Field label="Inversion">
-              <select value={inversion} onChange={(e) => setInversion(Number(e.target.value))}>
-                {[0, 1, 2, 3, 4].map((i) => <option key={i} value={i}>{i}</option>)}
-              </select>
-            </Field>
-          </>
-        )}
-
-        {subject === 'diatonic' && (
-          <Field label="Chords">
-            <select value={String(sevenths)} onChange={(e) => setSevenths(e.target.value === 'true')}>
-              <option value="false">Triads</option>
-              <option value="true">Sevenths</option>
-            </select>
-          </Field>
-        )}
-
-        <Field label="Clef">
-          <select value={clef} onChange={(e) => setClef(e.target.value as Clef)}>
-            {['treble', 'bass', 'alto', 'tenor'].map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </Field>
-
-        <Field label="Octave">
-          <select value={octave} onChange={(e) => setOctave(Number(e.target.value))}>
-            {[2, 3, 4, 5].map((o) => <option key={o} value={o}>{o}</option>)}
-          </select>
-        </Field>
-      </section>
-
-      <Score spec={scoreSpec} />
-
-      <div className="actions">
-        {view.actions.map((action) => (
-          <button key={action.label} onClick={() => play(action.rolled)}>
-            {action.label}
-          </button>
-        ))}
-      </div>
-
-      <section className="readout">
-        <h2>{view.title}</h2>
-        <ol className="items">
-          {view.labels.map((label, i) => (
-            <li key={i}>
-              <span className="primary">{label.primary}</span>
-              <span className="secondary">{label.secondary}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
+      {Screen && <button className="back" onClick={() => go('')}>&larr; Everything</button>}
+      {Screen ? <Screen /> : <Home go={go} />}
     </main>
   );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="field">
-      <span>{label}</span>
-      {children}
-    </label>
-  );
-}
-
-function signature(key: Key): string {
-  if (key.accidentals === 0) return 'no accidentals';
-  const n = Math.abs(key.accidentals);
-  return `${n} ${key.accidentals > 0 ? 'sharp' : 'flat'}${n > 1 ? 's' : ''}`;
-}
-
-interface ViewLabel { primary: string; secondary: string }
-/** What playing this view can usefully mean, named for what it does. */
-interface PlayAction { label: string; rolled: boolean }
-interface View {
-  notes: ScoreNote[]; labels: ViewLabel[]; title: string; actions: PlayAction[];
-}
-
-function buildView(o: {
-  key: Key; subject: Subject; scaleId: string; chordId: string;
-  inversion: number; sevenths: boolean; octave: number;
-}): View {
-  const tonic = { ...o.key.tonic, octave: o.octave };
-
-  if (o.subject === 'scale') {
-    const type = SCALE_TYPES.find((s) => s.id === o.scaleId)!;
-    const pitches = spellScale(tonic, type);
-    // Close the octave so the scale sounds finished rather than cut off.
-    const withOctave = [...pitches, { ...pitches[0], octave: pitches[0].octave + 1 }];
-    return {
-      title: `${pitchName(tonic, false)} ${type.name}`,
-      actions: [{ label: 'Play the scale', rolled: false }],
-      notes: withOctave.map((p) => ({ pitches: [p], value: noteValue('q') })),
-      labels: withOctave.map((p, i) => ({
-        primary: pitchName(p),
-        secondary: i === withOctave.length - 1 ? '8' : degreeLabel(type, i),
-      })),
-    };
-  }
-
-  if (o.subject === 'chord') {
-    const type = CHORD_TYPES.find((c) => c.id === o.chordId)!;
-    const built = chord(tonic, type, o.inversion);
-    const pitches = voiceChord(built);
-    return {
-      title: chordSymbol(built),
-      actions: [
-        { label: 'Play as a chord', rolled: false },
-        { label: 'Arpeggiate it', rolled: true },
-      ],
-      notes: [{ pitches, value: noteValue('w') }],
-      labels: pitches.map((p, i) => {
-        const engraved = simplifySpelling(p);
-        const respelt = engraved.alter !== p.alter;
-        return {
-          primary: pitchName(p),
-          secondary: respelt
-            ? `engraved ${pitchName(engraved)}`
-            : i === 0 ? 'bass' : `+${midiOf(p) - midiOf(pitches[0])} semitones`,
-        };
-      }),
-    };
-  }
-
-  const table = o.key.mode === 'major'
-    ? (o.sevenths ? DIATONIC_SEVENTHS.major : DIATONIC_TRIADS.major)
-    : (o.sevenths ? DIATONIC_SEVENTHS.minor : DIATONIC_TRIADS.minor);
-  const numerals = DEGREES.map((d) => numeral(d, table[d - 1]));
-  return {
-    title: `${keyName(o.key)} — ${o.sevenths ? 'diatonic sevenths' : 'diatonic triads'}`,
-    actions: [
-      { label: 'Play each chord', rolled: false },
-      { label: 'Roll each chord', rolled: true },
-    ],
-    notes: numerals.map((n) => ({
-      pitches: spellChord(realizeNumeral({ ...o.key, tonic }, n)),
-      value: noteValue('h'),
-    })),
-    labels: numerals.map((n) => ({
-      primary: numeralText(n),
-      secondary: chordSymbol(realizeNumeral({ ...o.key, tonic }, n)),
-    })),
-  };
 }

@@ -129,7 +129,6 @@ function totalTicks(notes: readonly ScoreNote[]): number {
  */
 export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: DrawOptions): void {
   container.replaceChildren();
-  if (spec.notes.length === 0) return;
 
   const height = options.height ?? DEFAULT_SCORE_HEIGHT;
   const ink = options.colour ?? '#000000';
@@ -147,6 +146,12 @@ export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: D
     stave.addTimeSignature(`${spec.timeSignature.numerator}/${spec.timeSignature.denominator}`);
   }
   stave.setContext(context).draw();
+
+  // A stave with a signature and nothing on it is a legitimate thing to
+  // draw — it is the whole question a key-signature exercise asks — so an
+  // empty note list gets the clef, the signature and the barlines rather than
+  // an early return and a blank box.
+  if (spec.notes.length === 0) return;
 
   const staveNotes = spec.notes.map((n) => toStaveNote(n, spec.clef, ink));
 

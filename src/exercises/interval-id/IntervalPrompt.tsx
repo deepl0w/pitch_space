@@ -34,7 +34,12 @@ export function IntervalPrompt({
     firstHeardAt.current ??= Date.now();
   }
 
+  const reading = exercise.presentation === 'read';
+
   useEffect(() => {
+    // Nothing sounds when the exercise is being read: the notes are on the
+    // staff and playing them would answer the question.
+    if (reading) return;
     // Guarded against StrictMode's deliberate double-mount, which would
     // otherwise play the interval twice over itself.
     if (autoplayed.current) return;
@@ -46,7 +51,11 @@ export function IntervalPrompt({
   }, []);
 
   function answer(semitones: number) {
-    if (result) return;
+    // `chosen` as well as `result`, because the result arrives from above:
+    // between the tap and the screen handing the grade back down there is a
+    // render in which the buttons are still live, and a second response to
+    // an exercise is a second attempt at one the user has already answered.
+    if (result || chosen !== null) return;
     setChosen(semitones);
     onRespond({ semitones, ...latencySince(firstHeardAt.current) });
   }
@@ -56,7 +65,7 @@ export function IntervalPrompt({
   return (
     <div className="prompt">
       <div className="actions">
-        <button type="button" onClick={play}>Play it again</button>
+        {!reading && <button type="button" onClick={play}>Play it again</button>}
         <span className="secondary">{PRESENTATION[exercise.direction]}</span>
       </div>
 

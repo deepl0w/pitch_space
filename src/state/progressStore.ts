@@ -65,13 +65,22 @@ export function createProgressStore(log: Log<AttemptRow> = defaultAttemptLog()):
         const attempts: Attempt[] = [];
         let unreadable = 0;
         for (const row of rows) {
-          const outcome = migrate<Attempt>(row, {
-            current: ATTEMPT_SCHEMA,
-            steps: ATTEMPT_MIGRATIONS,
-            validate: coerceAttempt,
-          });
-          if (outcome.ok) attempts.push(outcome.value);
-          else unreadable++;
+          // Per row, because `coerceAttempt` refuses by throwing: a single
+          // half-written record would otherwise land in the outer catch and
+          // report the user's entire history as unavailable. The step table
+          // is asserted complete at import, so the other throw `migrate` has
+          // — a gap in that table — cannot reach here.
+          try {
+            const outcome = migrate<Attempt>(row, {
+              current: ATTEMPT_SCHEMA,
+              steps: ATTEMPT_MIGRATIONS,
+              validate: coerceAttempt,
+            });
+            if (outcome.ok) attempts.push(outcome.value);
+            else unreadable++;
+          } catch {
+            unreadable++;
+          }
         }
         // Sorted here rather than trusted from the index, because a row
         // written by a release that indexed a different field would come

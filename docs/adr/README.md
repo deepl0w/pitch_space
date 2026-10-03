@@ -21,6 +21,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0004](0004-harmony-stays-symbolic-until-it-is-spelled.md) | Harmony stays symbolic until it is spelled | Accepted |
 | [0005](0005-seeds-are-minted-outside-the-core.md) | Seeds are minted outside the core | Accepted |
 | [0008](0008-an-onset-is-a-rise-in-the-frames-own-spectrum.md) | An onset is a rise in the frame's own spectrum | Accepted |
+| [0009](0009-align-a-performance-by-dynamic-programming.md) | Align a performance by dynamic programming, not by nearest neighbour | Accepted |
 
 ## The shape of the thing
 

@@ -37,7 +37,7 @@ export function SettingsPanel<S>({ fields, settings, onChange }: {
             );
           case 'multi':
             return (
-              <Field key={field.id} label={field.label}>
+              <Field key={field.id} label={field.label} group>
                 <Chips
                   options={field.options}
                   chosen={field.selected(settings)}

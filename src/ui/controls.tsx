@@ -1,7 +1,33 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
-/** A labelled control. Shared so every screen's panel lines up with the others. */
-export function Field({ label, children }: { label: string; children: ReactNode }) {
+/**
+ * A labelled control, or a labelled group of them.
+ *
+ * `<label>` names exactly one control, and a `<button>` is labelable — so a
+ * label wrapping a row of chips named the first chip, and clicking the
+ * caption "Intervals" silently toggled the unison. Which is worse than it
+ * sounds: nothing on screen says the caption is clickable, so the setting
+ * changes and the user has no reason to look at the chips.
+ *
+ * A group therefore gets `role="group"` and `aria-labelledby` instead. It
+ * reads the same to a screen reader, names all of them rather than one, and
+ * the caption stops being a control.
+ */
+export function Field({ label, children, group = false }: {
+  label: string;
+  children: ReactNode;
+  /** Set when the field wraps several controls rather than one. */
+  group?: boolean;
+}) {
+  const id = useId();
+  if (group) {
+    return (
+      <div className="field" role="group" aria-labelledby={id}>
+        <span id={id}>{label}</span>
+        {children}
+      </div>
+    );
+  }
   return (
     <label className="field">
       <span>{label}</span>

@@ -1,4 +1,4 @@
-import { type Pitch, diatonicOf, midiOf, respell } from './pitch';
+import { type Pitch, accidentalGlyph, diatonicOf, midiOf, respell } from './pitch';
 import { type Key, keyPitches } from './key';
 import { type Chord, type ChordType, chord, chordType, spellChord } from './chord';
 
@@ -118,26 +118,32 @@ export function realizePitches(key: Key, n: RomanNumeral): Pitch[] {
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 
-/** Figured bass for an inversion, which is what a numeral actually prints. */
+/**
+ * Figured bass for an inversion.
+ *
+ * The inversion is taken modulo the chord size, matching `voiceChord`. Taking
+ * `Math.min` instead meant the figure and the sound disagreed: a triad at
+ * inversion 3 printed I64 while sounding in root position, and a negative
+ * inversion printed "Iundefined".
+ *
+ * Only triads and sevenths get figures, because only they have them. An added
+ * sixth, a suspension and the extended chords have no standard figured bass,
+ * so the suffix carries the quality and an inversion is named outright rather
+ * than dressed up in figures that would mean something else.
+ */
 function figures(type: ChordType, inversion: number): string {
   const size = type.semitones.length;
-  // Normalised the way voiceChord normalises it, so the figure and the chord
-  // that sounds cannot disagree. Clamping instead meant a triad asked for its
-  // third inversion printed 64 while sounding in root position, and a negative
-  // inversion indexed off the end of the table and printed "undefined".
   const inv = ((inversion % size) + size) % size;
-  if (size >= 4) return ['7', '65', '43', '42'][Math.min(inv, 3)];
-  return ['', '6', '64'][Math.min(inv, 2)];
+  if (type.family === 'triad') return ['', '6', '64'][inv];
+  if (type.family === 'seventh' || (type.family === 'altered' && size === 4)) {
+    return ['7', '65', '43', '42'][inv];
+  }
+  return type.suffix + (inv === 0 ? '' : ` inv${inv}`);
 }
 
 function isMinorish(typeId: string): boolean {
   return typeId.startsWith('min') || typeId === 'dim' || typeId === 'dim7'
     || typeId === 'm7b5' || typeId === 'minmaj7';
-}
-
-function accidentalPrefix(alter: number): string {
-  if (alter === 0) return '';
-  return alter < 0 ? 'b'.repeat(-alter) : '#'.repeat(alter);
 }
 
 /**
@@ -153,7 +159,7 @@ export function numeralText(n: RomanNumeral): string {
   if (n.typeId === 'dim' || n.typeId === 'dim7') quality = 'o';
   else if (n.typeId === 'm7b5') quality = 'ø';
   else if (n.typeId === 'aug') quality = '+';
-  const text = accidentalPrefix(n.chromaticAlter) + cased + quality + figures(type, n.inversion);
+  const text = accidentalGlyph(n.chromaticAlter) + cased + quality + figures(type, n.inversion);
   if (n.appliedTo === undefined) return text;
   return `${text}/${ROMAN[n.appliedTo - 1]}`;
 }

@@ -18,8 +18,20 @@ export interface Rng {
   readonly seed: number;
 }
 
-/** mulberry32 — small, fast, and good enough for musical choices. */
+/**
+ * mulberry32 — small, fast, and good enough for musical choices.
+ *
+ * The seed is rejected rather than coerced. `>>> 0` silently maps NaN to 0,
+ * truncates a fraction and wraps at 2^32, so `makeRng(0)` and
+ * `makeRng(2 ** 32)` were one stream reporting two different seeds — and a
+ * seed that does not identify its own stream is the one thing this module
+ * exists to provide. Minting is the app layer's job (ADR 0005), so a bad seed
+ * here is a bug there, and should say so.
+ */
 export function makeRng(seed: number): Rng {
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) {
+    throw new Error(`Seed must be an integer in [0, 2^32): got ${seed}`);
+  }
   let a = seed >>> 0;
   return {
     seed,

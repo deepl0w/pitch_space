@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  INTERVAL_MNEMONICS, SIMPLE_INTERVAL_NAMES, intervalBetween, intervalName, qualityOf,
-} from './interval';
+import { INTERVAL_MNEMONICS, SIMPLE_INTERVAL_NAMES, directedIntervalName, intervalBetween, intervalName, qualityOf } from './interval';
 import { midiOf, parsePitch, pitchFromDiatonic } from './pitch';
 
 const between = (low: string, high: string) =>
@@ -75,5 +73,45 @@ describe('the ear-training tables', () => {
     for (let semitones = 1; semitones <= 12; semitones++) {
       expect(INTERVAL_MNEMONICS[semitones], `${semitones}`).toBeTypeOf('string');
     }
+  });
+});
+
+describe('intervals measured in either order', () => {
+  const iv = (a: string, b: string) => intervalBetween(parsePitch(a), parsePitch(b));
+
+  // The reported defect: the old signature stated its precondition only in the
+  // names (low, high), and judging a played note against the asked-for one
+  // breaks it constantly.
+  it('measures downwards without producing nonsense', () => {
+    expect(intervalName(iv('D4', 'C4'))).toBe('M2');
+    expect(intervalName(iv('C5', 'C4'))).toBe('P8');
+    expect(intervalName(iv('G4', 'B3'))).toBe('m6');
+    // F down to B spans five letter names, so it is a diminished fifth; the
+    // augmented fourth is F *up* to B. Same six semitones, different interval.
+    expect(intervalName(iv('F5', 'B4'))).toBe('d5');
+    expect(intervalName(iv('F4', 'B4'))).toBe('A4');
+  });
+
+  it('gives the same size either way, and the opposite direction', () => {
+    for (const [a, b] of [['C4', 'G4'], ['E3', 'Bb5'], ['F#4', 'A4'], ['C4', 'C6']]) {
+      const up = iv(a, b);
+      const down = iv(b, a);
+      expect(down.number).toBe(up.number);
+      expect(down.semitones).toBe(up.semitones);
+      expect(down.direction).toBe(-up.direction);
+      expect(intervalName(down)).toBe(intervalName(up));
+    }
+  });
+
+  it('calls a unison no direction, and lets the accidental carry the quality', () => {
+    expect(iv('C4', 'C4').direction).toBe(0);
+    expect(intervalName(iv('C4', 'C#4'))).toBe('A1');
+    expect(intervalName(iv('C4', 'Cb4'))).toBe('d1');
+  });
+
+  it('says which way round it was, for feedback on a played answer', () => {
+    expect(directedIntervalName(iv('C4', 'G4'))).toBe('P5 up');
+    expect(directedIntervalName(iv('G4', 'C4'))).toBe('P5 down');
+    expect(directedIntervalName(iv('C4', 'C4'))).toBe('P1');
   });
 });

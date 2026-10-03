@@ -10,6 +10,8 @@ export interface Interval {
   /** 1 = unison, 2 = second, ... 8 = octave. Can exceed 8 for compound. */
   number: number;
   semitones: number;
+  /** Which way it was measured: 1 up, -1 down, 0 for a unison. */
+  direction: -1 | 0 | 1;
 }
 
 export type Quality = 'dim' | 'min' | 'perf' | 'maj' | 'aug';
@@ -18,9 +20,32 @@ export type Quality = 'dim' | 'min' | 'perf' | 'maj' | 'aug';
 const BASE_SEMITONES = [0, 2, 4, 5, 7, 9, 11];
 const IS_PERFECT = [true, false, false, true, true, false, false];
 
-export function intervalBetween(low: Pitch, high: Pitch): Interval {
-  const diatonic = diatonicOf(high) - diatonicOf(low);
-  return { number: diatonic + 1, semitones: midiOf(high) - midiOf(low) };
+/**
+ * The interval from one pitch to another, in whichever order they come.
+ *
+ * `number` is always the ascending magnitude and `direction` says which way it
+ * was measured, because every caller that wants the size wants it positive. An
+ * earlier version took (low, high) and stated the ordering only in its
+ * parameter names: given a descending pair it returned number 0 and printed
+ * "m0", or "P-6" for a descending octave. Judging a played note against the one
+ * that was asked for hits that case constantly, so the precondition had to go
+ * rather than be documented.
+ *
+ * Direction is the direction on the staff, so an altered unison has none: C to
+ * Cb and C to C# both stay on the same step, and there the sign of `semitones`
+ * is carrying the quality rather than a direction. Taking the magnitude of both
+ * components independently would collapse those two into one interval.
+ */
+export function intervalBetween(from: Pitch, to: Pitch): Interval {
+  const diatonic = diatonicOf(to) - diatonicOf(from);
+  const semitones = midiOf(to) - midiOf(from);
+  if (diatonic === 0) return { number: 1, semitones, direction: 0 };
+  const direction = diatonic > 0 ? 1 : -1;
+  return {
+    number: Math.abs(diatonic) + 1,
+    semitones: semitones * direction,
+    direction,
+  };
 }
 
 export function qualityOf(iv: Interval): Quality {
@@ -43,6 +68,12 @@ const QUALITY_ABBREV: Record<Quality, string> = {
 
 export function intervalName(iv: Interval): string {
   return QUALITY_ABBREV[qualityOf(iv)] + iv.number;
+}
+
+/** The name with its direction, for feedback on a played answer. */
+export function directedIntervalName(iv: Interval): string {
+  if (iv.direction === 0) return intervalName(iv);
+  return `${intervalName(iv)} ${iv.direction > 0 ? 'up' : 'down'}`;
 }
 
 /** The names ear-training exercises use, keyed by semitone distance. */

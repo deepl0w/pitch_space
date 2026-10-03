@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import { drawScore, type ScoreSpec } from './toVexflow';
-import { ALL_KEYS, findKey, keyName } from '../../theory/key';
+import { ALL_KEYS, type Key, findKey, keyName } from '../../theory/key';
 import { CHORD_TYPES, chord, spellChord } from '../../theory/chord';
 import { SCALE_TYPES, spellScale } from '../../theory/scale';
 import { noteValue } from '../../theory/meter';
+import {
+  DIATONIC_SEVENTHS, DIATONIC_TRIADS, type Degree, numeral, realizePitches,
+} from '../../theory/roman';
 import { type Pitch, parsePitch, pitchName } from '../../theory/pitch';
 
 /**
@@ -88,10 +91,35 @@ describe('drawing a score', () => {
       const pitches = [
         ...CHORD_TYPES.flatMap((type) => spellChord(chord(tonic, type))),
         ...SCALE_TYPES.flatMap((type) => spellScale(tonic, type)),
+        ...romanSpellings(key),
       ];
       for (const p of pitches) seen.set(`${p.letter}:${p.alter}`, p);
     }
     return [...seen.values()];
+  };
+
+  /**
+   * A harmony exercise reaches the staff through a numeral, not through a
+   * chord rooted on the tonic, and an applied chord is built against its
+   * target rather than against the home key — so it can spell a note the
+   * catalogs never produce. VII/II in A# minor has a C### in it, which is one
+   * spelling further out than anything the chord list alone reaches.
+   */
+  const romanSpellings = (key: Key): Pitch[] => {
+    const out: Pitch[] = [];
+    for (let degree = 1; degree <= 7; degree++) {
+      for (const table of [DIATONIC_TRIADS, DIATONIC_SEVENTHS]) {
+        out.push(...realizePitches(key, numeral(degree as Degree, table[key.mode][degree - 1])));
+      }
+      for (const target of [2, 3, 4, 5, 6] as Degree[]) {
+        for (const typeId of ['maj', 'dom7', 'dim7']) {
+          for (const applied of [5, 7] as Degree[]) {
+            out.push(...realizePitches(key, numeral(applied, typeId, { appliedTo: target })));
+          }
+        }
+      }
+    }
+    return out;
   };
 
   it('covers more spellings than a single key could', () => {
@@ -99,6 +127,24 @@ describe('drawing a score', () => {
     const spellings = everySpelling();
     expect(spellings.length).toBeGreaterThan(20);
     expect(spellings.some((p) => Math.abs(p.alter) > 2)).toBe(true);
+  });
+
+  it('reaches further through a numeral than through the chord list alone', () => {
+    // If the numeral path ever stops contributing, the sweep above still
+    // passes on the catalogs and quietly stops covering what the app renders.
+    const catalogs = new Set<string>();
+    for (const key of ALL_KEYS) {
+      const tonic = { ...key.tonic, octave: 4 };
+      for (const type of CHORD_TYPES) {
+        for (const p of spellChord(chord(tonic, type))) catalogs.add(`${p.letter}:${p.alter}`);
+      }
+      for (const type of SCALE_TYPES) {
+        for (const p of spellScale(tonic, type)) catalogs.add(`${p.letter}:${p.alter}`);
+      }
+    }
+    const extra = ALL_KEYS.flatMap(romanSpellings)
+      .filter((p) => !catalogs.has(`${p.letter}:${p.alter}`));
+    expect(extra.map((p) => pitchName(p, false))).toContain('C###');
   });
 
   it('engraves every spelling the chord and scale catalogs can produce', () => {

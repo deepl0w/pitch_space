@@ -46,7 +46,11 @@ export function IntervalPrompt({
   }, []);
 
   function answer(semitones: number) {
-    if (result) return;
+    // `chosen` as well as `result`, because the result arrives from above:
+    // between the tap and the screen handing the grade back down there is a
+    // render in which the buttons are still live, and a second response to
+    // an exercise is a second attempt at one the user has already answered.
+    if (result || chosen !== null) return;
     setChosen(semitones);
     onRespond({ semitones, ...latencySince(firstHeardAt.current) });
   }

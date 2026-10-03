@@ -76,13 +76,15 @@ function resolveWithin(file: string, specifier: string): string | null {
 describe('ADR 0001 — a pure core', () => {
   // Nothing here may reach for the platform. This is what lets the whole music
   // engine and the whole analysis chain run under vitest on a laptop.
-  // The AudioContext branch used to read `{\bAudioContext\b`, so it only matched
-  // after a literal brace and `new AudioContext()` walked straight through it.
+  // Audio types are spelled out rather than matched loosely because audio/dsp/
+  // is the directory most at risk: it is arithmetic over Float32Array that
+  // sits one import away from the microphone that produced it. The timers are
+  // here rather than under ADR 0002 because they are the platform's clock:
+  // nothing in a pure layer should be scheduling itself.
   const PLATFORM = new RegExp([
     /\b(document|window|navigator|localStorage|sessionStorage|indexedDB)\s*\./,
-    /\b(Audio|Offline(Audio)?)Context\b/,
-    /\bHTML[A-Z]\w*\b/,
-    /\bfetch\s*\(/,
+    /\b(Offline)?AudioContext\b|\bAudioWorklet\w*\b|\bMediaStream\b|\bgetUserMedia\b/,
+    /\bHTML\w*Element\b|\bfetch\s*\(/,
     /\b(setTimeout|setInterval|requestAnimationFrame)\s*\(/,
   ].map((r) => r.source).join('|'));
 
@@ -141,14 +143,22 @@ describe('ADR 0002 — generation is reproducible from its seed', () => {
   // there are no callers at all would make the rule false on day one, and a
   // rule the code already breaks teaches people to ignore the check.
   it('lets entropy in at randomSeed and nowhere else', () => {
-    const callers = new Set(
-      hits(coreFiles(), /Math\.random/).map((h) => h.split(':')[0]),
+    // Scoped to the function rather than to the file. Asserting only that
+    // rng.ts is the sole file would let a second generator be added beside
+    // randomSeed, which is the whole thing this rule exists to stop.
+    const entropy = hits(coreFiles(), /Math\.random/).filter(
+      (h) => !/^\s*(\*|\/\/|\/\*)/.test(h.slice(h.indexOf('  ') + 2)),
     );
-    expect([...callers]).toEqual(['theory/rng.ts']);
+    expect(entropy).toHaveLength(1);
+    expect(entropy[0]).toMatch(/^theory\/rng\.ts:/);
 
-    const rng = readFileSync(join(SRC, 'theory', 'rng.ts'), 'utf8');
-    const fn = rng.slice(rng.indexOf('export function randomSeed'));
-    expect(fn.slice(0, fn.indexOf('\n}'))).toContain('Math.random');
+    const lines = readFileSync(join(SRC, 'theory', 'rng.ts'), 'utf8').split('\n');
+    const opens = lines.findIndex((l) => l.includes('export function randomSeed'));
+    const closes = lines.findIndex((l, i) => i > opens && l.startsWith('}'));
+    const at = Number(/^[^:]+:(\d+)/.exec(entropy[0])![1]);
+    expect(opens).toBeGreaterThanOrEqual(0);
+    expect(at).toBeGreaterThan(opens);
+    expect(at).toBeLessThanOrEqual(closes + 1);
   });
 
   it('reads no clock', () => {

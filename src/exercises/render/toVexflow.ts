@@ -38,10 +38,25 @@ export interface ScoreSpec {
   timeSignature?: TimeSignature;
 }
 
+/** The one default. Score passes `height` through, so it must not have its own. */
+export const DEFAULT_SCORE_HEIGHT = 170;
+
 export interface DrawOptions {
   width: number;
-  /** Drawn at this many pixels; the caller scales for device pixel ratio. */
+  /** Drawn at this many pixels; defaults to DEFAULT_SCORE_HEIGHT. */
   height?: number;
+  /**
+   * Ink colour, as a CSS colour string.
+   *
+   * Passed into VexFlow rather than applied to its output with CSS. The
+   * output cannot be recoloured reliably from outside: a staff line is a
+   * zero-area path that is stroked and carries no `stroke` attribute, so an
+   * attribute selector misses it and it keeps the default black, while a
+   * `fill` rule broad enough to catch the glyphs also overrides the
+   * `fill="none"` those same paths rely on. The result is some marks
+   * recoloured and some not.
+   */
+  colour?: string;
 }
 
 const BASE_TO_VEX: Record<NoteValue['base'], string> = {
@@ -67,7 +82,7 @@ function engravable(pitch: Pitch): string {
   return vexKey(simplifySpelling(pitch));
 }
 
-function toStaveNote(note: ScoreNote, clef: Clef): StaveNote {
+function toStaveNote(note: ScoreNote, clef: Clef, ink: string): StaveNote {
   const isRest = note.pitches.length === 0;
   const staveNote = new StaveNote({
     keys: isRest ? [REST_KEY[clef]] : note.pitches.map(engravable),
@@ -75,9 +90,10 @@ function toStaveNote(note: ScoreNote, clef: Clef): StaveNote {
     clef,
   });
   for (let i = 0; i < note.value.dots; i++) Dot.buildAndAttach([staveNote], { all: true });
-  if (note.colour) {
-    staveNote.setStyle({ fillStyle: note.colour, strokeStyle: note.colour });
-  }
+  // A note's own colour wins, so marking a performance against the score
+  // works the same way the default ink does.
+  const colour = note.colour ?? ink;
+  staveNote.setStyle({ fillStyle: colour, strokeStyle: colour });
   return staveNote;
 }
 
@@ -89,20 +105,27 @@ function totalTicks(notes: readonly ScoreNote[]): number {
 /**
  * Draw a single stave into `container`, replacing whatever was there.
  *
- * Returns the height actually used, because the caller cannot know it until
- * the stave has been laid out and a notation view that guesses leaves either a
- * clipped staff or a gap.
+ * The caller decides the height. An earlier version claimed to return the
+ * height actually used, and returned the height it had been handed — which is
+ * the caller's guess echoed back, and worse than no answer because it reads
+ * like a measurement. Reporting a real one needs the laid-out bounding box,
+ * and will matter when a score breaks across systems rather than sitting on
+ * one stave; until then there is nothing to report.
  */
-export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: DrawOptions): number {
+export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: DrawOptions): void {
   container.replaceChildren();
-  if (spec.notes.length === 0) return 0;
+  if (spec.notes.length === 0) return;
 
-  const height = options.height ?? 160;
+  const height = options.height ?? DEFAULT_SCORE_HEIGHT;
+  const ink = options.colour ?? '#000000';
   const renderer = new Renderer(container, Renderer.Backends.SVG);
   renderer.resize(options.width, height);
   const context = renderer.getContext();
+  context.setFillStyle(ink);
+  context.setStrokeStyle(ink);
 
   const stave = new Stave(10, 20, options.width - 20);
+  stave.setStyle({ fillStyle: ink, strokeStyle: ink });
   stave.addClef(spec.clef);
   if (spec.key) stave.addKeySignature(vexKeySignature(spec.key));
   if (spec.timeSignature) {
@@ -110,7 +133,7 @@ export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: D
   }
   stave.setContext(context).draw();
 
-  const staveNotes = spec.notes.map((n) => toStaveNote(n, spec.clef));
+  const staveNotes = spec.notes.map((n) => toStaveNote(n, spec.clef, ink));
 
   // VexFlow is told how many beats it is holding rather than being allowed to
   // infer it, so a deliberately partial bar — a scale, an interval pair — draws
@@ -128,7 +151,8 @@ export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: D
   const beams = Beam.generateBeams(staveNotes.filter((n) => !n.isRest()));
   new Formatter().joinVoices([voice]).format([voice], options.width - 90);
   voice.draw(context, stave);
-  for (const beam of beams) beam.setContext(context).draw();
-
-  return height;
+  for (const beam of beams) {
+    beam.setStyle({ fillStyle: ink, strokeStyle: ink });
+    beam.setContext(context).draw();
+  }
 }

@@ -35,6 +35,14 @@ export default function App() {
     [key, subject, scaleId, chordId, inversion, sevenths, octave],
   );
 
+  // Score redraws when the spec's identity changes, so building it inline in
+  // the JSX would re-engrave the whole staff on every render of this
+  // component — including the ones caused by opening a select.
+  const scoreSpec = useMemo(
+    () => ({ notes: view.notes, clef, key }),
+    [view, clef, key],
+  );
+
   function play(mode: 'together' | 'spread') {
     if (playing.current) return;
     playing.current = true;
@@ -127,7 +135,7 @@ export default function App() {
         </Field>
       </section>
 
-      <Score spec={{ notes: view.notes, clef, key, timeSignature: undefined }} />
+      <Score spec={scoreSpec} />
 
       <div className="actions">
         <button onClick={() => play('spread')}>Play one at a time</button>

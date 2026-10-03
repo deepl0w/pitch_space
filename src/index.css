@@ -67,10 +67,10 @@ select {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 10px; padding: 0.5rem; overflow-x: auto;
 }
+/* --score-ink is read by Score.tsx and handed to VexFlow, which is the only
+   way to colour the whole drawing: see the note there on why recolouring the
+   emitted SVG from here leaves some marks black. */
 .score-host { min-height: 170px; }
-/* VexFlow draws with explicit black; recolour it so the staff survives dark mode. */
-.score-host :is(path, rect, text) { fill: var(--score-ink); }
-.score-host :is(path, line, rect)[stroke] { stroke: var(--score-ink); }
 .score-error { color: #b4442e; font-size: 0.85rem; padding: 0 0.5rem 0.5rem; margin: 0; }
 
 .actions { display: flex; gap: 0.6rem; margin: 1rem 0 1.75rem; flex-wrap: wrap; }

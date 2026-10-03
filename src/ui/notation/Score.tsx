@@ -8,10 +8,27 @@ import { drawScore, type ScoreSpec } from '../../exercises/render/toVexflow';
  * fighting: React never reconciles inside this div, and VexFlow never sees a
  * node React is about to replace.
  */
-export function Score({ spec, height = 170 }: { spec: ScoreSpec; height?: number }) {
+export function Score({ spec, height }: { spec: ScoreSpec; height?: number }) {
   const host = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [scheme, setScheme] = useState(0);
+
+  // The ink colour is read from the stylesheet and handed to VexFlow, rather
+  // than applied to its output afterwards. Recolouring the SVG from outside
+  // does not work: a staff line is a stroked path carrying no `stroke`
+  // attribute, so an attribute selector misses it and it stays black, while a
+  // `fill` rule wide enough to catch the glyphs overrides the `fill="none"`
+  // those same paths depend on.
+  //
+  // Reading it at draw time means a theme change has to force a redraw, which
+  // is what `scheme` counts.
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const bump = () => setScheme((n) => n + 1);
+    media.addEventListener('change', bump);
+    return () => media.removeEventListener('change', bump);
+  }, []);
 
   // Notation does not reflow like text, so it is redrawn at the measured width
   // rather than scaled. A ResizeObserver is the only thing that reports the
@@ -29,8 +46,9 @@ export function Score({ spec, height = 170 }: { spec: ScoreSpec; height?: number
   useEffect(() => {
     const node = host.current;
     if (!node || width === 0) return;
+    const colour = getComputedStyle(node).getPropertyValue('--score-ink').trim() || undefined;
     try {
-      drawScore(node, spec, { width, height });
+      drawScore(node, spec, { width, height, colour });
       // The rule says an effect should synchronize React with an external
       // system, which is exactly what this is: VexFlow is the external system,
       // and whether it could engrave the spec is only knowable by asking it.
@@ -47,7 +65,7 @@ export function Score({ spec, height = 170 }: { spec: ScoreSpec; height?: number
       // oxlint-disable-next-line react/set-state-in-effect
       setError(cause instanceof Error ? cause.message : String(cause));
     }
-  }, [spec, width, height]);
+  }, [spec, width, height, scheme]);
 
   return (
     <div className="score">

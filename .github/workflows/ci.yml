@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Tests, types and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Separately rather than through ./test.sh --all, so a failing lint and a
+      # failing suite are two red steps instead of one.
+      - run: npm run typecheck
+      - run: npx vitest run
+      - run: npx oxlint src
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: ignore
+
+  android:
+    name: Android bundle
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Capacitor is not set up yet, so this job has nothing to assemble. It is
+      # here wired up rather than added later, and skips cleanly until android/
+      # exists — see docs/ROADMAP.md.
+      - name: Check whether there is an Android project
+        id: android
+        run: echo "present=$([ -d android ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@v4
+        if: steps.android.outputs.present == 'yes'
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Decode the upload keystore
+        if: steps.android.outputs.present == 'yes' && env.ANDROID_KEYSTORE_BASE64 != ''
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_FILE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+      - name: Build the bundle
+        if: steps.android.outputs.present == 'yes'
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./build.sh --bundle
+      - uses: actions/upload-artifact@v4
+        if: steps.android.outputs.present == 'yes'
+        with:
+          name: app-release-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: ignore

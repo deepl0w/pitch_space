@@ -53,9 +53,16 @@ Node 20.19+ or 22.12+, and for the Android build a JDK 17+ and the Android SDK.
 ./test.sh --check            # is this machine set up
 npm test                     # the vitest suite — run this before handing work back
 npm run typecheck            # tsc; a merge can pass tests and still not compile
-./build.sh --android --run   # build, install and launch on a device
+./test.sh --all              # what CI runs: tests, types, lint, offline precache
+./build.sh                   # production web build
+./build.sh --dev             # the dev server, at http://localhost:5173
 make help                    # the same things, wrapped
 ```
+
+`./build.sh --android` exists and refuses with a reason: Capacitor is not set
+up yet, so the app currently ships as a PWA only. `./test.sh --offline` does
+the same for the service worker. Both are wired so they start working when
+those land rather than being added afterwards; `docs/ROADMAP.md` has the rest.
 
 ## The code
 

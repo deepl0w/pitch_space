@@ -31,6 +31,9 @@
  * Order-preserving is not an incidental property of the method, it is the
  * other half of the point. Music is a sequence: an attack cannot answer the
  * fourth written note if the attack after it answers the second.
+ *
+ * docs/adr/0009 records the decision, what it costs, and the mutations each
+ * part of it was checked against.
  */
 
 /**
@@ -86,7 +89,7 @@ const TOLERANCE_CEILING_SECONDS = 0.1;
  * interval is the decision, and both of its ends are asserted. Swept against
  * the suite, 0.5 up to but not including 1 is green; 0.5 itself survives only
  * on the tie-break below, which is why the honest statement of the rule is
- * the open interval.
+ * the open interval. See docs/adr/0009.
  */
 const GAP_COST = 0.75;
 

@@ -11,7 +11,13 @@
  * every machine and in CI. A stub is enough instead: the only thing asked of
  * the context is text metrics, and the tests here assert that a score draws
  * rather than that it is spaced to the pixel.
+ *
+ * ResizeObserver is stubbed for the same reason from the other direction:
+ * jsdom implements no layout, so a component that measures itself before
+ * drawing would never draw at all. Installing it here rather than per file
+ * means every component test inherits one.
  */
+import { TestResizeObserver } from './resizeObserver';
 if (typeof HTMLCanvasElement !== 'undefined') {
   const approximate = { width: 0 } as TextMetrics;
   HTMLCanvasElement.prototype.getContext = function getContext() {
@@ -32,4 +38,8 @@ if (typeof HTMLCanvasElement !== 'undefined') {
       translate: () => {},
     } as unknown as CanvasRenderingContext2D;
   } as unknown as typeof HTMLCanvasElement.prototype.getContext;
+}
+
+if (typeof globalThis.ResizeObserver === 'undefined' && typeof document !== 'undefined') {
+  globalThis.ResizeObserver = TestResizeObserver;
 }

@@ -117,6 +117,23 @@ describe('sounding the interval', () => {
     expect(new Set(audio.plays[0].map((v) => v.start)).size).toBe(1);
   });
 
+  it('sounds nothing, and offers no replay, when the interval is to be read', () => {
+    // The notes are on the staff; playing them would answer the question.
+    render(exercise({ presentation: 'read' }));
+    expect(audio.plays).toEqual([]);
+    expect(replay()).toBeNull();
+  });
+
+  it('still takes an answer when the interval is read rather than heard', () => {
+    const ex = exercise({ presentation: 'read', semitones: 7 });
+    render(ex, { settings: { ...INTERVAL_DEFAULTS, semitones: [3, 7] } });
+    click(choiceFor(7));
+    // No latency, because the clock starts at the first hearing and there
+    // was none. Omitted rather than zero: zero would be the strongest
+    // possible evidence of an instant answer.
+    expect(responses).toEqual([{ semitones: 7 }]);
+  });
+
   it('says how the interval was presented', () => {
     for (const [direction, caption] of [
       ['up', 'ascending'], ['down', 'descending'], ['harmonic', 'both notes together'],

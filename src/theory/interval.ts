@@ -41,9 +41,13 @@ export function intervalBetween(from: Pitch, to: Pitch): Interval {
   const semitones = midiOf(to) - midiOf(from);
   if (diatonic === 0) return { number: 1, semitones, direction: 0 };
   const direction = diatonic > 0 ? 1 : -1;
+  // `|| 0` normalises negative zero, which measuring downwards produces
+  // whenever the two pitches sound alike on different steps: Db to C# counts 0
+  // semitones, and -0 compares equal under === but not under Object.is, so an
+  // interval would fail a toEqual against the same interval measured upwards.
   return {
     number: Math.abs(diatonic) + 1,
-    semitones: semitones * direction,
+    semitones: semitones * direction || 0,
     direction,
   };
 }

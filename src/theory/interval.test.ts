@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { INTERVAL_MNEMONICS, SIMPLE_INTERVAL_NAMES, directedIntervalName, intervalBetween, intervalName, qualityOf } from './interval';
-import { midiOf, parsePitch, pitchFromDiatonic } from './pitch';
+import { type Pitch, diatonicOf, midiOf, parsePitch, pitch, pitchFromDiatonic, pitchName } from './pitch';
 
 const between = (low: string, high: string) =>
   intervalName(intervalBetween(parsePitch(low), parsePitch(high)));
@@ -59,6 +59,55 @@ describe('intervalBetween', () => {
     expect(between('C4', 'Gb4')).toBe('d5');
     expect(between('C4', 'G4')).toBe('P5');
     expect(between('C4', 'G#4')).toBe('A5');
+  });
+});
+
+describe('measuring either way round, swept', () => {
+  // Every spelled pitch over two octaves, each pair both ways. The property is
+  // the point here rather than any one pair: a caller comparing a played note
+  // against the asked-for one hands them over in whichever order they arrive.
+  const pitches: Pitch[] = [];
+  for (let octave = 3; octave <= 5; octave++) {
+    for (let letter = 0; letter < 7; letter++) {
+      for (const alter of [-1, 0, 1]) pitches.push(pitch(letter as 0, alter, octave));
+    }
+  }
+
+  it('reports the same size and the opposite direction', () => {
+    for (const a of pitches) {
+      for (const b of pitches) {
+        if (diatonicOf(a) === diatonicOf(b)) continue; // a unison has no direction
+        const there = intervalBetween(a, b);
+        const back = intervalBetween(b, a);
+        const where = `${pitchName(a)} <-> ${pitchName(b)}`;
+        expect(back.number, where).toBe(there.number);
+        expect(back.semitones, where).toBe(there.semitones);
+        expect(back.direction, where).toBe(-there.direction);
+        expect(intervalName(back), where).toBe(intervalName(there));
+      }
+    }
+  });
+
+  it('always names a positive interval, and never undefined', () => {
+    for (const a of pitches) {
+      for (const b of pitches) {
+        const iv = intervalBetween(a, b);
+        const where = `${pitchName(a)} -> ${pitchName(b)}`;
+        expect(iv.number, where).toBeGreaterThanOrEqual(1);
+        expect(intervalName(iv), where).toMatch(/^[dmPMA]\d+$/);
+        expect(directedIntervalName(iv), where).not.toContain('undefined');
+      }
+    }
+  });
+
+  it('gives direction exactly when the two sit on different staff steps', () => {
+    for (const a of pitches) {
+      for (const b of pitches) {
+        const sameStep = diatonicOf(a) === diatonicOf(b);
+        const where = `${pitchName(a)} -> ${pitchName(b)}`;
+        expect(intervalBetween(a, b).direction === 0, where).toBe(sameStep);
+      }
+    }
   });
 });
 

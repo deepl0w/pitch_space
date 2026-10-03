@@ -1,10 +1,16 @@
 /**
  * Seeded random source.
  *
- * Every generator in `src/theory/` takes one of these rather than calling
- * Math.random, so an exercise is reproducible from its seed. That is what lets
- * a user report "seed 48213 gave me a bar that does not scan" and lets a test
- * assert over ten thousand generated exercises without snapshotting any of them.
+ * Every generator in `src/theory/` and `src/generate/` takes one of these
+ * rather than calling Math.random, so an exercise is reproducible from its
+ * seed. That is what lets a user report "seed 48213 gave me a bar that does
+ * not scan" and lets a test assert over ten thousand generated exercises
+ * without snapshotting any of them.
+ *
+ * Minting a seed is not this layer's job and does not happen here. The core
+ * spends seeds; the app layer mints one when the user asks for a new
+ * exercise, which is where the nondeterminism belongs and where it is
+ * visible. See docs/adr/0005.
  */
 export interface Rng {
   /** Uniform in [0, 1) */
@@ -25,10 +31,6 @@ export function makeRng(seed: number): Rng {
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     },
   };
-}
-
-export function randomSeed(): number {
-  return (Math.random() * 0xffffffff) >>> 0;
 }
 
 export function rngInt(rng: Rng, minInclusive: number, maxInclusive: number): number {

@@ -19,6 +19,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0002](0002-generation-is-reproducible-from-its-seed.md) | Generation is reproducible from its seed | Accepted |
 | [0003](0003-one-importer-for-the-notation-library.md) | One importer for the notation library | Accepted |
 | [0004](0004-harmony-stays-symbolic-until-it-is-spelled.md) | Harmony stays symbolic until it is spelled | Accepted |
+| [0005](0005-seeds-are-minted-outside-the-core.md) | Seeds are minted outside the core | Accepted |
 
 ## The shape of the thing
 
@@ -59,8 +60,8 @@ being able to re-ask rather than trust:
 grep -rn 'document\.\|window\.\|AudioContext\|navigator\.\|localStorage' \
   src/theory src/generate src/audio/dsp
 
-# 0002 — randomSeed is the only place entropy enters.
-grep -rn 'Math\.random' src/theory src/generate | grep -v 'rng\.ts'
+# 0002, narrowed by 0005 — no entropy reaches the core at all.
+grep -rn 'Math\.random\|crypto\.getRandomValues' src/theory src/generate
 
 # 0003 — one file imports the notation library.
 git ls-files 'src/*' | xargs grep -l "from 'vexflow'"
@@ -81,12 +82,21 @@ if `theory/` ever moves instead of reporting a vacuous pass.
 Each rule has been mutation-tested rather than trusted: a platform API, a stray
 `Math.random`, a clock read, an unsorted `Set` spread, a React import and a
 second vexflow importer were each introduced and confirmed to turn the suite
-red. That matters more than it sounds. Two of the rules originally passed
-mutations they should have caught — `new AudioContext()` slipped through a `{`
-that stood where a word boundary belonged, and the entropy rule checked that
-`rng.ts` was the only *file* calling `Math.random` rather than that
-`randomSeed` was the only *caller*, so a second generator beside it passed. A
-guard nobody has watched fail is a guard nobody knows works.
+red — twenty-one mutations in all, covering every alternative of every rule
+rather than one per rule.
+
+That distinction is the whole lesson. Three rules originally passed mutations
+they should have caught, and each was hidden by a sibling alternative that
+matched instead. `new AudioContext()` slipped through a `{` standing where a
+word boundary belonged. The entropy rule checked that `rng.ts` was the only
+*file* calling `Math.random` rather than that `randomSeed` was the only
+*caller*, so a second generator beside it passed — since made moot by
+[0005](0005-seeds-are-minted-outside-the-core.md), which admits no entropy at
+all. And the upward-import rule matched only single quotes, so `from "react"`
+walked through it, while the vexflow mutation that should have exposed that was
+being caught by the 0003 rule instead. A guard nobody has watched fail is a
+guard nobody knows works, and mutating a rule is not the same as mutating every
+branch of it.
 
 ## Template
 

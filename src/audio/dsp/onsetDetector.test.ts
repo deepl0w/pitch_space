@@ -155,9 +155,11 @@ describe('what is not an onset', () => {
     expect(timesOf(sawtooth({ frequencyHz: 196, seconds: 1 }))).toEqual([]);
   });
 
-  it('invents nothing when that tone is released rather than cut', () => {
-    const released = faded(sine({ frequencyHz: 220, seconds: 1 }), { outSeconds: 0.02 });
-    expect(timesOf(released)).toEqual([]);
+  it('invents nothing inside a tone over a room it is barely louder than', () => {
+    const held = mix(
+      sine({ frequencyHz: 220, seconds: 1.5 }),
+      noiseFloor({ seconds: 1.5, seed: 705, levelDbfs: -50 }));
+    expect(timesOf(held)).toEqual([]);
   });
 
   // The floor is a ratio for the same reason every other term is. Were it an
@@ -179,6 +181,72 @@ describe('what is not an onset', () => {
       sampleRate: DEFAULT_SAMPLE_RATE, spectralFloor: 0,
     });
     expect(unfloored.onsets.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * A note ending is a fall, and half-wave rectifying the flux is supposed to
+ * be what keeps a fall from reading as an attack. It mostly is. The exception
+ * is sharp enough to be worth a block of its own, and it is swept rather than
+ * asserted from one fixture, because an earlier version of this intention was
+ * a single 220 Hz tone with a 20 ms release — which happens to be one of the
+ * few cells in the grid below where nothing is reported, so the test passed
+ * while the property it was named for was false at five other frequencies.
+ */
+describe('a release, which is not an attack', () => {
+  const FREQUENCIES = [110, 294, 440, 880];
+  const DURATIONS = [0.9, 1.1, 1.5];
+
+  /** How many of the grid report anything at all for a release this long. */
+  function gridHearing(releaseSeconds: number): number {
+    let heard = 0;
+    for (const frequencyHz of FREQUENCIES) {
+      for (const seconds of DURATIONS) {
+        const released = faded(sine({ frequencyHz, seconds }), { outSeconds: releaseSeconds });
+        if (timesOf(released).length > 0) heard++;
+      }
+    }
+    return heard;
+  }
+  const gridSize = FREQUENCIES.length * DURATIONS.length;
+
+  it('ignores a release far shorter than the analysis frame', () => {
+    for (const fraction of [1 / 8, 1 / 4, 1 / 2]) {
+      expect(gridHearing(ONSET_FRAME_SECONDS * fraction)).toBe(0);
+    }
+  });
+
+  it('ignores a release far longer than the analysis frame', () => {
+    for (const multiple of [2, 3, 4]) {
+      expect(gridHearing(ONSET_FRAME_SECONDS * multiple)).toBe(0);
+    }
+  });
+
+  /**
+   * KNOWN DEFECT, pinned rather than described, because it is narrow enough
+   * to be lost otherwise.
+   *
+   * A release lasting about as long as the analysis frame is reported as an
+   * onset. It is a resonance with the frame and not a property of releases:
+   * swept over release durations, nothing is heard at an eighth, a quarter or
+   * a half of the frame, nothing at twice it or beyond, and three quarters of
+   * the grid at the frame duration itself. A raised-cosine release that fits
+   * inside one frame smears the tone's energy across the spectrum within that
+   * frame, and the smear is a genuine *rise* in every bin the tone was not
+   * occupying, which is what half-wave rectification cannot filter out.
+   *
+   * For rhythm scoring this is a note ending reported as a note starting, so
+   * it is the same class of fault as the steady-tone defect above and wants
+   * fixing. It is not fixed here because every candidate repair is another
+   * threshold measured against synthesised audio, which is how the defect
+   * above came to exist. The thing that should settle it is a recording of an
+   * instrument actually being released. See the handoff note.
+   *
+   * Keyed to `ONSET_FRAME_SECONDS` rather than to 23 ms, so that changing the
+   * frame re-asks the question instead of silently stranding this.
+   */
+  it('hears a release the length of the analysis frame, which it should not', () => {
+    expect(gridHearing(ONSET_FRAME_SECONDS)).toBeGreaterThan(gridSize / 2);
   });
 });
 

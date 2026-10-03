@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_KEYS, MAJOR_KEYS, MINOR_KEYS, findKey, keyName } from './key';
 import { type Pitch, diatonicOf, midiOf, pitchName } from './pitch';
-import { identifyChord } from './chord';
+import { chordType, identifyChord, spellChord, voiceChord } from './chord';
 import {
   DIATONIC_SEVENTHS, DIATONIC_TRIADS, type Degree, degreeRoot, numeral,
-  numeralText, realizePitches,
+  numeralText, realizeNumeral, realizePitches,
 } from './roman';
 
 const names = (ps: Pitch[]) => ps.map((p) => pitchName(p, false));
@@ -119,5 +119,45 @@ describe('how a numeral is written', () => {
     expect(numeralText(numeral(1, 'maj', { inversion: 2 }))).toBe('I64');
     expect(numeralText(numeral(2, 'maj', { chromaticAlter: -1, inversion: 1 }))).toBe('bII6');
     expect(numeralText(numeral(5, 'dom7', { appliedTo: 5 }))).toBe('V7/V');
+  });
+
+  // The figure and the chord that sounds are decided in two places: figures()
+  // clamped the inversion, voiceChord() takes it modulo the number of tones.
+  // Out of range they disagreed, and a negative one indexed off the end of the
+  // figure table and printed the word "undefined".
+  it('figures an out-of-range inversion as the chord that actually sounds', () => {
+    const triad = numeral(1, 'maj', { inversion: 3 });
+    expect(numeralText(triad)).toBe('I');
+    expect(numeralText(numeral(1, 'maj', { inversion: 4 }))).toBe('I6');
+    expect(numeralText(numeral(1, 'maj', { inversion: -1 }))).toBe('I64');
+    expect(numeralText(numeral(5, 'dom7', { inversion: 4 }))).toBe('V7');
+    expect(numeralText(numeral(5, 'dom7', { inversion: -1 }))).toBe('V42');
+  });
+
+  it('never prints undefined, whatever inversion it is handed', () => {
+    for (const typeId of ['maj', 'dom7', 'dom9']) {
+      for (let inversion = -6; inversion <= 8; inversion++) {
+        const text = numeralText(numeral(1, typeId, { inversion }));
+        expect(text, `${typeId} inversion ${inversion}`).not.toContain('undefined');
+      }
+    }
+  });
+
+  it('agrees with the bass the chord is voiced on', () => {
+    for (const typeId of ['maj', 'dom7']) {
+      const size = chordType(typeId).semitones.length;
+      for (let inversion = -4; inversion <= 6; inversion++) {
+        const n = numeral(1, typeId, { inversion });
+        const key = findKey('C_major');
+        const bass = voiceChord(realizeNumeral(key, n))[0];
+        const wanted = spellChord(realizeNumeral(key, numeral(1, typeId)))[
+          ((inversion % size) + size) % size
+        ];
+        expect(pitchName(bass, false), `${typeId} inversion ${inversion}`)
+          .toBe(pitchName(wanted, false));
+        expect(numeralText(n), `${typeId} inversion ${inversion}`)
+          .toBe(numeralText(numeral(1, typeId, { inversion: ((inversion % size) + size) % size })));
+      }
+    }
   });
 });

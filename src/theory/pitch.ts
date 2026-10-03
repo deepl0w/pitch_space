@@ -62,17 +62,28 @@ export function pitchClass(p: Pitch): number {
   return ((midiOf(p) % 12) + 12) % 12;
 }
 
-export const ACCIDENTAL_GLYPHS: Record<number, string> = {
-  [-2]: 'bb', [-1]: 'b', 0: '', 1: '#', 2: '##',
-};
+/**
+ * Spelling runs past the double accidental more often than it looks: a Cb
+ * diminished seventh has a Bbbb in it, and a whole-tone scale on A# has an F###.
+ * A fixed table covering -2..+2 returned undefined for those, which reached the
+ * user as a note called "Bundefined" and as a VexFlow key of "bundefined/4".
+ */
+export function accidentalGlyph(alter: number): string {
+  return alter < 0 ? 'b'.repeat(-alter) : '#'.repeat(alter);
+}
+
+/** The common accidentals, derived so the table and the glyphs cannot disagree. */
+export const ACCIDENTAL_GLYPHS: Record<number, string> = Object.fromEntries(
+  [-2, -1, 0, 1, 2].map((a) => [a, accidentalGlyph(a)]),
+);
 
 export function pitchName(p: Pitch, withOctave = true): string {
-  return LETTER_NAMES[p.letter] + ACCIDENTAL_GLYPHS[p.alter] + (withOctave ? p.octave : '');
+  return LETTER_NAMES[p.letter] + accidentalGlyph(p.alter) + (withOctave ? p.octave : '');
 }
 
 /** VexFlow key string, e.g. "c#/4" */
 export function vexKey(p: Pitch): string {
-  return `${LETTER_NAMES[p.letter].toLowerCase()}${ACCIDENTAL_GLYPHS[p.alter]}/${p.octave}`;
+  return `${LETTER_NAMES[p.letter].toLowerCase()}${accidentalGlyph(p.alter)}/${p.octave}`;
 }
 
 export function freqOf(midi: number, a4 = 440): number {

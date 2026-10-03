@@ -121,8 +121,13 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 /** Figured bass for an inversion, which is what a numeral actually prints. */
 function figures(type: ChordType, inversion: number): string {
   const size = type.semitones.length;
-  if (size >= 4) return ['7', '65', '43', '42'][Math.min(inversion, 3)];
-  return ['', '6', '64'][Math.min(inversion, 2)];
+  // Normalised the way voiceChord normalises it, so the figure and the chord
+  // that sounds cannot disagree. Clamping instead meant a triad asked for its
+  // third inversion printed 64 while sounding in root position, and a negative
+  // inversion indexed off the end of the table and printed "undefined".
+  const inv = ((inversion % size) + size) % size;
+  if (size >= 4) return ['7', '65', '43', '42'][Math.min(inv, 3)];
+  return ['', '6', '64'][Math.min(inv, 2)];
 }
 
 function isMinorish(typeId: string): boolean {

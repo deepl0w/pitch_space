@@ -1,4 +1,4 @@
-import { type Letter, type Pitch, midiOf, pitchFromDiatonic, diatonicOf } from './pitch';
+import { type Letter, type Pitch, accidentalGlyph, midiOf, pitchFromDiatonic, diatonicOf } from './pitch';
 
 /**
  * A scale is defined by two parallel patterns: how far each degree sits above
@@ -117,8 +117,7 @@ export function degreeLabel(type: ScaleType, index: number): string {
   const semi = type.semitones[index % type.semitones.length];
   const natural = [0, 2, 4, 5, 7, 9, 11][step % 7];
   const alter = semi - natural - (step >= 7 ? 12 : 0);
-  const prefix = alter === 0 ? '' : alter < 0 ? 'b'.repeat(-alter) : '#'.repeat(alter);
-  return prefix + String((step % 7) + 1);
+  return accidentalGlyph(alter) + String((step % 7) + 1);
 }
 
 export type { Letter };

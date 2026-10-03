@@ -55,16 +55,37 @@ function hits(files: string[], pattern: RegExp): string[] {
   return found;
 }
 
+/** Every module specifier a file imports or re-exports, static or dynamic. */
+function importsOf(file: string): string[] {
+  const source = readFileSync(file, 'utf8');
+  const patterns = [
+    /\bfrom\s*['"]([^'"]+)['"]/g,
+    /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+    /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+    /\bimport\s+['"]([^'"]+)['"]/g,
+  ];
+  return patterns.flatMap((p) => [...source.matchAll(p)].map((m) => m[1]));
+}
+
+/** Where a relative specifier lands, as a path under src/, or null for a package. */
+function resolveWithin(file: string, specifier: string): string | null {
+  if (!specifier.startsWith('.')) return null;
+  return show(join(file, '..', specifier));
+}
+
 describe('ADR 0001 — a pure core', () => {
   // Nothing here may reach for the platform. This is what lets the whole music
   // engine and the whole analysis chain run under vitest on a laptop.
   // Audio types are spelled out rather than matched loosely because audio/dsp/
   // is the directory most at risk: it is arithmetic over Float32Array that
-  // sits one import away from the microphone that produced it.
+  // sits one import away from the microphone that produced it. The timers are
+  // here rather than under ADR 0002 because they are the platform's clock:
+  // nothing in a pure layer should be scheduling itself.
   const PLATFORM = new RegExp([
     /\b(document|window|navigator|localStorage|sessionStorage|indexedDB)\s*\./,
     /\b(Offline)?AudioContext\b|\bAudioWorklet\w*\b|\bMediaStream\b|\bgetUserMedia\b/,
     /\bHTML\w*Element\b|\bfetch\s*\(/,
+    /\b(setTimeout|setInterval|requestAnimationFrame)\s*\(/,
   ].map((r) => r.source).join('|'));
 
   it('finds the core directories it is meant to be guarding', () => {
@@ -77,18 +98,54 @@ describe('ADR 0001 — a pure core', () => {
     expect(hits(coreFiles(), PLATFORM)).toEqual([]);
   });
 
+  // An allowlist rather than a list of the layers that exist today: a blocklist
+  // goes quietly out of date the moment someone adds a directory to src/.
+  const MAY_IMPORT: Record<string, string[]> = {
+    theory: ['theory'],
+    generate: ['generate', 'theory'],
+    'audio/dsp': ['audio/dsp'],
+  };
+  const PLATFORM_PACKAGES = ['react', 'react-dom', 'zustand', 'vexflow', '@capacitor', 'vite'];
+
   it('imports nothing from the layers above it', () => {
-    // Both quote styles. An earlier version matched only single quotes, so
-    // `from "react"` walked through it — and the vexflow mutation that should
-    // have exposed that was being caught by the ADR 0003 rule instead, which
-    // hid the gap.
-    const forbidden =
-      /from\s+['"](react|react-dom|zustand|vexflow|\.\.\/(ui|app|state|exercises|audio\/(capture|output)))/;
-    expect(hits(coreFiles(), forbidden)).toEqual([]);
+    // An allowlist of what each directory may reach, not a denylist of names
+    // someone remembered to forbid — the denylist this replaced also matched
+    // only single quotes, so `from "react"` walked through it. importsOf takes
+    // both, and static, dynamic and require forms.
+    const offenders: string[] = [];
+    for (const dir of CORE_DIRS) {
+      for (const file of filesUnder(join(SRC, ...dir.split('/')))) {
+        for (const specifier of importsOf(file)) {
+          const target = resolveWithin(file, specifier);
+          if (target === null) continue;
+          const allowed = MAY_IMPORT[dir]
+            .some((layer) => target === layer || target.startsWith(`${layer}/`));
+          if (!allowed) offenders.push(`${show(file)} imports ${specifier}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('imports no package that only exists in a browser', () => {
+    const offenders: string[] = [];
+    for (const file of coreFiles()) {
+      for (const specifier of importsOf(file)) {
+        if (specifier.startsWith('.')) continue;
+        if (PLATFORM_PACKAGES.some((pkg) => specifier === pkg || specifier.startsWith(`${pkg}/`))) {
+          offenders.push(`${show(file)} imports ${specifier}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });
 
 describe('ADR 0002 — generation is reproducible from its seed', () => {
+  // Test files are in scope deliberately. A suite about determinism that
+  // seeds itself randomly is a suite that fails intermittently, and the rule
+  // is easier to keep with no exclusions than with one.
+  //
   // No exception, because the core has nothing to except. Minting a seed is
   // an app-layer event — the user asking for a new exercise — and the core
   // only ever spends one. An earlier draft of this rule carved out
@@ -126,9 +183,10 @@ describe('ADR 0003 — one importer for the notation library', () => {
 
   it('keeps vexflow behind a single adapter', () => {
     const importers = [...new Set(
-      hits(filesUnder(SRC), /from\s+['"]vexflow|require\(['"]vexflow/)
-        .map((h) => h.split(':')[0]),
-    )];
+      filesUnder(SRC)
+        .filter((f) => importsOf(f).some((s) => s === 'vexflow' || s.startsWith('vexflow/')))
+        .map(show),
+    )].sort();
     // Zero is the state before the renderer lands; more than one is how the
     // containment quietly dies.
     expect(importers.length).toBeLessThanOrEqual(1);

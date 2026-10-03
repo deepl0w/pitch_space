@@ -90,16 +90,22 @@ export function spellChord(c: Chord): Pitch[] {
 }
 
 /**
- * Voice the chord as actual sounding pitches, applying the inversion by lifting
- * the bottom notes an octave at a time. `maxSpread` keeps a wide extended chord
- * from running off the top of the keyboard.
+ * Voice the chord as actual sounding pitches: the tone the inversion asks for in
+ * the bass, the rest stacked in close position above it. `open` asks for a
+ * drop-2 spacing instead of a bare stack.
  */
 export function voiceChord(c: Chord, options: { open?: boolean } = {}): Pitch[] {
   const tones = spellChord(c);
   const inv = ((c.inversion % tones.length) + tones.length) % tones.length;
-  const voiced = tones.map((p, i) =>
-    i < inv ? { ...p, octave: p.octave + 1 } : p,
-  );
+  // Lift every tone by however many octaves it takes to clear the bass, rather
+  // than by one octave each. An extended chord's ninth already sits above the
+  // octave, so a single blanket shift of the notes below it leaves the root in
+  // the bass and the inversion silently does not happen.
+  const bassMidi = midiOf(tones[inv]);
+  const voiced = tones.map((p) => {
+    const octaves = Math.ceil((bassMidi - midiOf(p)) / 12);
+    return octaves > 0 ? { ...p, octave: p.octave + octaves } : p;
+  });
   voiced.sort((a, b) => midiOf(a) - midiOf(b));
   if (options.open && voiced.length >= 3) {
     // Drop-2: take the second voice from the top down an octave. It is the

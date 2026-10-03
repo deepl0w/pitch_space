@@ -18,6 +18,7 @@
  * means every component test inherits one.
  */
 import { TestResizeObserver } from './resizeObserver';
+import { installMatchMedia } from './colourScheme';
 if (typeof HTMLCanvasElement !== 'undefined') {
   const approximate = { width: 0 } as TextMetrics;
   HTMLCanvasElement.prototype.getContext = function getContext() {
@@ -46,20 +47,11 @@ if (typeof globalThis.ResizeObserver === 'undefined' && typeof document !== 'und
 
 /**
  * jsdom has no `matchMedia`, and Score asks it for the colour scheme so a
- * theme change can force a redraw. The stub reports the light scheme and
- * accepts listeners it never calls: a test that wants to drive a theme change
- * should add one here first, rather than have every component test carry a
- * dependency on media queries it does not care about.
+ * theme change can force a redraw. The stub starts in the light scheme and
+ * keeps the listeners it is given, so a test that wants to drive a theme
+ * change can call `setDarkScheme` instead of being unable to see whether the
+ * redraw happens at all.
  */
 if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
-  window.matchMedia = ((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    addListener: () => {},
-    removeListener: () => {},
-    dispatchEvent: () => false,
-  })) as typeof window.matchMedia;
+  installMatchMedia();
 }

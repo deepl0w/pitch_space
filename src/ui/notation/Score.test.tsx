@@ -8,6 +8,9 @@ import { noteValue } from '../../theory/meter';
 import { findKey } from '../../theory/key';
 import { parsePitch } from '../../theory/pitch';
 import { observedCount, resetObservers, resizeTo } from '../../testing/resizeObserver';
+import {
+  installMatchMedia, resetColourScheme, schemeListenerCount, setDarkScheme,
+} from '../../testing/colourScheme';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -42,6 +45,8 @@ let root: Root;
 
 beforeEach(() => {
   resetObservers();
+  resetColourScheme();
+  installMatchMedia();
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
@@ -148,4 +153,53 @@ describe('Score cleanup', () => {
     // afterEach unmounts again; a second unmount is harmless.
     root = createRoot(container);
   });
+});
+
+/**
+ * The ink is read from the stylesheet at draw time and handed to VexFlow,
+ * because recolouring the output afterwards cannot reach a staff line — so a
+ * theme change has to redraw rather than restyle. Whether the redraw happens
+ * is the whole of what makes that approach work.
+ */
+describe('Score when the colour scheme changes', () => {
+  it('redraws, rather than leaving ink from the old theme on the page', () => {
+    render(scale(['C4', 'D4']));
+    act(() => resizeTo(hostNode(), 800));
+    const before = svg();
+    expect(before).not.toBeNull();
+
+    act(() => setDarkScheme(true));
+
+    // A redraw replaces the host's children, so the old SVG is gone rather
+    // than restyled — which is the point, since restyling is what failed.
+    expect(hostNode().querySelectorAll('svg')).toHaveLength(1);
+    expect(svg()).not.toBe(before);
+    expect(noteheads()).toBe(2);
+  });
+
+  it('redraws again on the way back', () => {
+    render(scale(['C4']));
+    act(() => resizeTo(hostNode(), 800));
+    act(() => setDarkScheme(true));
+    const dark = svg();
+    act(() => setDarkScheme(false));
+    expect(svg()).not.toBe(dark);
+  });
+
+  it('stops listening when it goes away', () => {
+    render(scale(['C4']));
+    expect(schemeListenerCount()).toBe(1);
+    act(() => root.unmount());
+    expect(schemeListenerCount()).toBe(0);
+    root = createRoot(container);
+  });
+
+  /**
+   * The CSS honours a `data-theme` attribute as well as the media query, but
+   * Score only listens to the query. Nothing sets the attribute today — there
+   * is no theme toggle — so nothing exercises the gap. The moment a toggle
+   * exists, the ink will be read once and outlive the theme it came from, and
+   * this wants a MutationObserver on the documentElement.
+   */
+  it.todo('redraws when the data-theme attribute changes');
 });

@@ -4,7 +4,7 @@ import { drawScore, type ScoreSpec } from './toVexflow';
 import { ALL_KEYS, type Key, findKey, keyName } from '../../theory/key';
 import { CHORD_TYPES, chord, spellChord } from '../../theory/chord';
 import { SCALE_TYPES, spellScale } from '../../theory/scale';
-import { noteValue } from '../../theory/meter';
+import { noteValue, timeSignature } from '../../theory/meter';
 import {
   DIATONIC_SEVENTHS, DIATONIC_TRIADS, type Degree, numeral, realizePitches,
 } from '../../theory/roman';
@@ -22,6 +22,14 @@ function host(): HTMLDivElement {
   const div = document.createElement('div');
   document.body.append(div);
   return div;
+}
+
+function drawInk(spec: ScoreSpec, colour: string): SVGElement {
+  const div = host();
+  drawScore(div, spec, { width: 760, colour });
+  const svg = div.querySelector('svg');
+  if (!svg) throw new Error('nothing was drawn');
+  return svg;
 }
 
 function draw(spec: ScoreSpec): SVGElement {
@@ -183,4 +191,99 @@ describe('drawing a score', () => {
     }
     expect(failures).toEqual([]);
   }, 30_000);
+});
+
+/**
+ * Every mark on the page takes the ink it was given.
+ *
+ * The bug this pins reached the screen and looked nearly right: recolouring
+ * VexFlow's output with CSS caught the glyphs and missed the staff lines and
+ * stems, which are stroked paths carrying no `stroke` attribute of their own.
+ * Thirteen of thirty-three marks stayed black. Counting marks by eye is what
+ * found it; resolving the paint the way a browser does is what keeps it found.
+ *
+ * Attributes alone are not enough to ask this. A notehead sets no fill and
+ * inherits one from the group above it, so reading its own attributes says
+ * "black (the SVG default)" when it is painted correctly, and says nothing at
+ * all when it is not.
+ */
+describe('the ink every mark is drawn in', () => {
+  const INK = 'rgb(7, 11, 13)';
+
+  /** Fill or stroke as a browser would resolve it: the nearest ancestor that sets it. */
+  function painted(element: Element, property: 'fill' | 'stroke'): string | null {
+    let node: Element | null = element;
+    while (node) {
+      const value = node.getAttribute(property);
+      if (value) return value === 'none' ? null : value;
+      if (node.tagName === 'svg') break;
+      node = node.parentElement;
+    }
+    // An unset fill paints black; an unset stroke paints nothing.
+    return property === 'fill' ? 'black' : null;
+  }
+
+  function marksOffTheInk(svg: SVGElement, ink: string): string[] {
+    const off: string[] = [];
+    for (const element of svg.querySelectorAll('path, rect, text, line, circle, polygon')) {
+      for (const property of ['fill', 'stroke'] as const) {
+        const colour = painted(element, property);
+        if (colour !== null && colour !== ink) {
+          off.push(`${element.tagName} ${property}=${colour} (${element.getAttribute('d')?.slice(0, 32) ?? element.textContent ?? ''})`);
+        }
+      }
+    }
+    return off;
+  }
+
+  /** A score with one of everything that gets drawn, including ledger lines. */
+  const everything: ScoreSpec = {
+    clef: 'treble',
+    key: findKey('Eb_major'),
+    timeSignature: timeSignature('4/4'),
+    notes: [
+      // C4 sits below the treble staff and A5 above it, so both ledger lines
+      // are drawn. Middle C is the commonest ledger-line note there is.
+      { pitches: [parsePitch('C4')], value: noteValue('8') },
+      { pitches: [parsePitch('A5')], value: noteValue('8') },
+      { pitches: [], value: noteValue('q') },
+      { pitches: [parsePitch('G4'), parsePitch('B4')], value: noteValue('h', 1) },
+    ],
+  };
+
+  it('draws the marks this is meant to be checking', () => {
+    // A vacuous pass is the failure mode here: a sweep over an empty staff
+    // finds nothing off the ink because there is nothing on the page.
+    const svg = drawInk(everything, INK);
+    expect(svg.querySelectorAll('path, rect, text').length).toBeGreaterThan(20);
+    const ledger = [...svg.querySelectorAll('.vf-stavenote path')]
+      .filter((p) => /^M[\d.]+ ([\d.]+)L[\d.]+ \1$/.test(p.getAttribute('d') ?? ''));
+    expect(ledger.length, 'no ledger line was drawn').toBeGreaterThan(0);
+  });
+
+  it('paints every mark in the ink it was handed', () => {
+    expect(marksOffTheInk(drawInk(everything, INK), INK)).toEqual([]);
+  });
+
+  it('paints every mark in the default ink when none is given', () => {
+    const div = document.createElement('div');
+    document.body.append(div);
+    drawScore(div, everything, { width: 760 });
+    const svg = div.querySelector('svg')!;
+    expect(marksOffTheInk(svg, '#000000')).toEqual([]);
+  });
+
+  it('lets a note carry its own colour, for marking a performance', () => {
+    const marked: ScoreSpec = {
+      clef: 'treble',
+      notes: [
+        { pitches: [parsePitch('C4')], value: noteValue('q') },
+        { pitches: [parsePitch('E4')], value: noteValue('q'), colour: 'rgb(200, 30, 30)' },
+      ],
+    };
+    const svg = drawInk(marked, INK);
+    const off = marksOffTheInk(svg, INK);
+    expect(off.length, 'the marked note should stand out').toBeGreaterThan(0);
+    for (const mark of off) expect(mark).toContain('rgb(200, 30, 30)');
+  });
 });

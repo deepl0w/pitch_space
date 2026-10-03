@@ -4,6 +4,7 @@ import { Scales } from './ui/screens/Scales';
 import { Chords } from './ui/screens/Chords';
 import { KeyChords } from './ui/screens/KeyChords';
 import { Rhythms } from './ui/screens/Rhythms';
+import { PracticeScreen } from './ui/screens/PracticeScreen';
 import { stopSound } from './ui/sound';
 
 /**
@@ -44,8 +45,12 @@ export default function App() {
 
   return (
     <main>
-      {Screen && <button className="back" onClick={() => go('')}>&larr; Everything</button>}
-      {Screen ? <Screen /> : <Home go={go} />}
+      {(Screen || route === 'note-id') && (
+        <button className="back" onClick={() => go('')}>&larr; Everything</button>
+      )}
+      {route === 'note-id'
+        ? <PracticeScreen onLeave={() => go('')} />
+        : Screen ? <Screen /> : <Home go={go} />}
     </main>
   );
 }

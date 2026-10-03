@@ -34,7 +34,14 @@ function filesUnder(dir: string): string[] {
   return out;
 }
 
-const CORE_DIRS = ['theory', 'generate', 'audio/dsp'];
+/**
+ * `audio/testing/` is in here with the rest of the core rather than excused as
+ * test scaffolding. It synthesises the signals the dsp tests are judged
+ * against, so a clock or a `Math.random` in it would make those tests
+ * irreproducible — which is the same defect ADR 0002 guards the generator
+ * against, arriving through the fixtures instead of through the code.
+ */
+const CORE_DIRS = ['theory', 'generate', 'audio/dsp', 'audio/testing'];
 
 function coreFiles(): string[] {
   return CORE_DIRS.flatMap((d) => filesUnder(join(SRC, ...d.split('/'))));
@@ -44,11 +51,20 @@ function show(path: string): string {
   return relative(SRC, path).split(sep).join('/');
 }
 
-/** Line-by-line matches, so a failure names the line and not just the file. */
+/**
+ * Line-by-line matches, so a failure names the line and not just the file.
+ *
+ * Comment-only lines are skipped, because these rules match prose otherwise.
+ * A sentence ending "…had only partly entered the window." tripped the
+ * platform rule, which is the kind of false positive that teaches people the
+ * guard is noise. A line with code on it is still checked however it ends, so
+ * `const x = window.foo; // note` is caught.
+ */
 function hits(files: string[], pattern: RegExp): string[] {
   const found: string[] = [];
   for (const file of files) {
     readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
+      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return;
       if (pattern.test(line)) found.push(`${show(file)}:${i + 1}  ${line.trim()}`);
     });
   }
@@ -108,6 +124,24 @@ describe('ADR 0001 — a pure core', () => {
     theory: ['theory'],
     generate: ['generate', 'theory'],
     'audio/dsp': ['audio/dsp'],
+    // Everything in here exists to be analysed by audio/dsp or to verify that
+    // it was. It borrows theory/'s seeded Rng rather than carrying a second
+    // copy of mulberry32: one PRNG in the repository is one place a seed can
+    // stop reproducing.
+    'audio/testing': ['audio/testing', 'audio/dsp', 'theory'],
+  };
+
+  /**
+   * A dsp *test* may reach for its own synthesised signals; nothing that ships
+   * may. The alternative was a Karplus–Strong string copied into each test
+   * file, which costs the tests their agreement about what a plucked note is,
+   * and the agreement is the whole value of a shared fixture.
+   *
+   * `audio/testing/` is held to every other rule in this file, so the import
+   * cannot smuggle a platform call or a clock into the chain — only a signal.
+   */
+  const MAY_IMPORT_IN_TESTS: Record<string, string[]> = {
+    'audio/dsp': ['audio/testing'],
   };
   const PLATFORM_PACKAGES = ['react', 'react-dom', 'zustand', 'vexflow', '@capacitor', 'vite'];
 
@@ -115,10 +149,13 @@ describe('ADR 0001 — a pure core', () => {
     const offenders: string[] = [];
     for (const dir of CORE_DIRS) {
       for (const file of filesUnder(join(SRC, ...dir.split('/')))) {
+        const allowedHere = /\.test\.tsx?$/.test(file)
+          ? [...MAY_IMPORT[dir], ...(MAY_IMPORT_IN_TESTS[dir] ?? [])]
+          : MAY_IMPORT[dir];
         for (const specifier of importsOf(file)) {
           const target = resolveWithin(file, specifier);
           if (target === null) continue;
-          const allowed = MAY_IMPORT[dir]
+          const allowed = allowedHere
             .some((layer) => target === layer || target.startsWith(`${layer}/`));
           if (!allowed) offenders.push(`${show(file)} imports ${specifier}`);
         }
@@ -160,9 +197,7 @@ describe('ADR 0002 — generation is reproducible from its seed', () => {
   // randomSeed(); deleting the function was cheaper than documenting it, and
   // left the rule true as CLAUDE.md states it. See docs/adr/0005.
   it('lets no entropy into the core at all', () => {
-    const entropy = hits(coreFiles(), /Math\.random|crypto\.getRandomValues/)
-      .filter((h) => !/^\s*(\*|\/\/|\/\*)/.test(h.slice(h.indexOf('  ') + 2)));
-    expect(entropy).toEqual([]);
+    expect(hits(coreFiles(), /Math\.random|crypto\.getRandomValues/)).toEqual([]);
   });
 
   it('reads no clock', () => {

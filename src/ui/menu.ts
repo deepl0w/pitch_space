@@ -56,8 +56,8 @@ export const EXERCISE_MENU: readonly MenuEntry[] = [
   {
     route: 'note-id',
     name: 'Note identification',
-    blurb: 'Name a note you hear, or the interval between two of them.',
-    ready: false,
+    blurb: 'Name the interval between two notes you hear.',
+    ready: true,
   },
   {
     route: 'rhythm',

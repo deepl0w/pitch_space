@@ -1,4 +1,4 @@
-import { intervalRecognition } from './interval-id';
+import { intervalIdentification } from './interval-id';
 import type { AnyExerciseDefinition } from './types';
 
 /**
@@ -14,7 +14,7 @@ import type { AnyExerciseDefinition } from './types';
  * set of shipped exercises depend on what happened to be left in the tree.
  */
 export const EXERCISE_TYPES: readonly AnyExerciseDefinition[] = [
-  intervalRecognition,
+  intervalIdentification,
 ];
 
 export function findExerciseType(id: string): AnyExerciseDefinition | undefined {

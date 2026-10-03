@@ -7,12 +7,14 @@ import {
 } from './intervals';
 
 /**
- * Interval identification by ear. Naming an interval between two notes is
- * family; naming a single played note against a reference and identifying a
- * written note on the staff belong here too, and each is another
- * `defineExercise` call plus a prompt.
+ * Interval identification by ear: naming the distance between two notes.
+ *
+ * Distinct from note identification, which names a single note — on its own
+ * or against a reference. Naming the gap and naming the note are different
+ * skills, and a learner can be fluent at one and hopeless at the other, so
+ * they are separate exercises rather than modes of one.
  */
-export const intervalRecognition = defineExercise<
+export const intervalIdentification = defineExercise<
   IntervalSettings, IntervalExercise, IntervalResponse
 >({
   id: INTERVAL_EXERCISE_ID,

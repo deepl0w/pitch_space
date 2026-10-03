@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { entryFor } from '../menu';
 import type { ScoreNote } from '../../exercises/render/toVexflow';
 import { Panel, Picker } from '../controls';
 import { usePulsePlayer } from '../sound';
@@ -27,6 +28,9 @@ const KINDS = [
   { value: 'compound' as const, label: 'Compound time (6/8, 9/8, 12/8)' },
 ];
 
+/** Title and lede come from the menu, so the card and this page cannot drift. */
+const entry = entryFor('rhythms');
+
 export function Rhythms() {
   const [kind, setKind] = useState<'simple' | 'compound'>('simple');
   const [grade, setGrade] = useState(10);
@@ -40,12 +44,8 @@ export function Rhythms() {
   return (
     <>
       <header>
-        <h1>Rhythms</h1>
-        <p className="lede">
-          The figures bars are built from, in the order a method book meets
-          them. Nothing here is generated — this is the stock itself, and the
-          exercises draw on it.
-        </p>
+        <h1>{entry.name}</h1>
+        <p className="lede">{entry.lede}</p>
       </header>
 
       <Panel>

@@ -138,6 +138,14 @@ function figures(type: ChordType, inversion: number): string {
   if (type.family === 'seventh' || (type.family === 'altered' && size === 4)) {
     return ['7', '65', '43', '42'][inv];
   }
+  // A figure names an interval above the bass; an added sixth is a chord
+  // member. Spelling it "6" is a category error that happens to collide with
+  // one of the commonest numerals there is — I6 would mean both a major triad
+  // in first inversion and a major sixth in root position, and a quiz showing
+  // I6 could not mark either answer. "add6" says which it is. It also drops
+  // the redundancy in the minor case, where the lowercase numeral has already
+  // said minor and the old "im6" said it twice.
+  if (type.family === 'sixth') return 'add6' + (inv === 0 ? '' : ` inv${inv}`);
   return type.suffix + (inv === 0 ? '' : ` inv${inv}`);
 }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_KEYS, MAJOR_KEYS, MINOR_KEYS, findKey, keyName } from './key';
 import { type Pitch, diatonicOf, midiOf, pitchName } from './pitch';
-import { chordType, identifyChord, spellChord, voiceChord } from './chord';
+import { CHORD_TYPES, chordType, identifyChord, spellChord, voiceChord } from './chord';
 import {
   DIATONIC_SEVENTHS, DIATONIC_TRIADS, type Degree, degreeRoot, numeral,
   numeralText, realizeNumeral, realizePitches,
@@ -141,7 +141,7 @@ describe('how a numeral is written', () => {
     expect(numeralText(numeral(5, 'sus4'))).toBe('Vsus4');
     expect(numeralText(numeral(5, 'sus4', { inversion: 1 }))).toBe('Vsus4 inv1');
     expect(numeralText(numeral(1, 'dom9', { inversion: 2 }))).toBe('I9 inv2');
-    expect(numeralText(numeral(1, 'min6', { inversion: 3 }))).toBe('im6 inv3');
+    expect(numeralText(numeral(1, 'min6', { inversion: 3 }))).toBe('iadd6 inv3');
   });
 
   // The triad prints I+, so the seventh built on it should not quietly shed the
@@ -181,6 +181,44 @@ describe('how a numeral is written', () => {
         expect(numeralText(n), `${typeId} inversion ${inversion}`)
           .toBe(numeralText(numeral(1, typeId, { inversion: ((inversion % size) + size) % size })));
       }
+    }
+  });
+});
+
+describe('numerals that must be unambiguous as a prompt', () => {
+  // A figure describes an interval above the bass and leaves quality to the
+  // key, which is why maj7 and dom7 sharing I7 is correct for analysis. An
+  // added sixth is not a figure at all, so reusing the glyph collides outright.
+  it('distinguishes a first-inversion triad from an added-sixth chord', () => {
+    expect(numeralText(numeral(1, 'maj', { inversion: 1 }))).toBe('I6');
+    expect(numeralText(numeral(1, 'maj6'))).toBe('Iadd6');
+    expect(numeralText(numeral(1, 'min6'))).toBe('iadd6');
+  });
+
+  it('says minor once, not twice', () => {
+    expect(numeralText(numeral(1, 'min6'))).not.toContain('m6');
+  });
+
+  it('keeps an augmented seventh distinct from a dominant seventh', () => {
+    expect(numeralText(numeral(1, 'aug7'))).toBe('I+7');
+    expect(numeralText(numeral(5, 'dom7'))).toBe('V7');
+  });
+
+  // maj7 and dom7 both printing I7 is NOT this problem, and the distinction is
+  // the point. A figure states an interval above the bass and leaves quality to
+  // the key, so I7 in C major is Cmaj7 and V7 is G7 — the key resolves it. An
+  // added sixth is a chord member rather than a figure, so no key can resolve
+  // I6; both readings are available in the same key at the same time.
+  it('never prints a chord member as a figure a triad inversion already uses', () => {
+    const triadFigures = new Set(
+      [0, 1, 2].map((inversion) => numeralText(numeral(1, 'maj', { inversion }))),
+    );
+    expect([...triadFigures]).toEqual(['I', 'I6', 'I64']);
+
+    for (const type of CHORD_TYPES) {
+      if (type.family === 'triad') continue;
+      const text = numeralText(numeral(1, type.id));
+      expect(triadFigures.has(text), `${type.id} prints ${text}, a triad figure`).toBe(false);
     }
   });
 });

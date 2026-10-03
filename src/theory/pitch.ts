@@ -110,6 +110,38 @@ export function respell(d: number, targetMidi: number): Pitch {
   return { ...base, alter: targetMidi - midiOf(base) };
 }
 
+/**
+ * The nearest spelling of the same sounding pitch that needs no more than
+ * `maxAlter` accidentals.
+ *
+ * Theory produces triple accidentals honestly — a Cb diminished seventh
+ * contains a Bbbb — but nobody engraves one, and notation libraries do not
+ * draw one. This is the respelling a copyist would make: keep the sound, move
+ * the letter, and prefer to stay on the side the original accidental pointed
+ * so a flat chord does not suddenly sprout sharps.
+ *
+ * It belongs to notation rather than to harmony, so callers apply it at the
+ * point of drawing and leave the analysis spelled as it really is.
+ */
+export function simplifySpelling(p: Pitch, maxAlter = 2): Pitch {
+  if (Math.abs(p.alter) <= maxAlter) return p;
+  const midi = midiOf(p);
+  const direction = Math.sign(p.alter);
+  let best: Pitch | null = null;
+  for (let step = -3; step <= 3; step++) {
+    const candidate = respell(diatonicOf(p) + step, midi);
+    if (Math.abs(candidate.alter) > maxAlter) continue;
+    if (best === null) { best = candidate; continue; }
+    const better = Math.abs(candidate.alter) - Math.abs(best.alter)
+      // Tie-break towards the original accidental's direction: Bbbb becomes
+      // Ab rather than G#, which keeps a flat-spelled chord looking flat.
+      || (Math.sign(best.alter) === direction ? 1 : 0)
+         - (Math.sign(candidate.alter) === direction ? 1 : 0);
+    if (better < 0) best = candidate;
+  }
+  return best ?? p;
+}
+
 export function parsePitch(s: string): Pitch {
   const m = /^([A-Ga-g])(bb|b|##|#|x)?(-?\d+)$/.exec(s.trim());
   if (!m) throw new Error(`Unparseable pitch: ${s}`);

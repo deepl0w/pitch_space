@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import {
-  accidentalGlyph, centsOff, diatonicOf, freqOf, LETTER_NAMES, midiFromFreq,
-  midiOf, parsePitch, pitch, pitchFromDiatonic, pitchFromMidi, pitchName,
-  respell, vexKey,
-} from './pitch';
+import { LETTER_NAMES, accidentalGlyph, centsOff, diatonicOf, freqOf, midiFromFreq, midiOf, parsePitch, pitch, pitchFromDiatonic, pitchFromMidi, pitchName, respell, simplifySpelling, vexKey } from './pitch';
+import { ALL_KEYS, keyName } from './key';
+import { CHORD_TYPES, chord, spellChord } from './chord';
+import { SCALE_TYPES, spellScale } from './scale';
 
 describe('accidental glyphs', () => {
   // Regression: the glyphs were a table covering -2..+2, so anything spelled
@@ -88,5 +87,68 @@ describe('parsePitch', () => {
     for (const bad of ['H4', 'C', '4C', 'C#', 'Cbbb4', '']) {
       expect(() => parsePitch(bad)).toThrow(/Unparseable/);
     }
+  });
+});
+
+describe('simplifySpelling', () => {
+  const p = (s: string) => parsePitch(s);
+
+  it('leaves a spelling alone when it is already engravable', () => {
+    for (const name of ['C4', 'C#4', 'Cb4', 'F##3', 'Bbb5', 'G4']) {
+      expect(simplifySpelling(p(name))).toEqual(p(name));
+    }
+  });
+
+  it('never changes the sounding pitch', () => {
+    for (let alter = -4; alter <= 4; alter++) {
+      for (let letter = 0; letter < 7; letter++) {
+        const original = { letter: letter as 0, alter, octave: 4 };
+        expect(midiOf(simplifySpelling(original))).toBe(midiOf(original));
+      }
+    }
+  });
+
+  it('respells towards the accidental the original pointed at', () => {
+    // Bbbb and F### are the same key on a piano; a flat chord should not
+    // sprout sharps and a sharp chord should not sprout flats.
+    expect(pitchName(simplifySpelling({ letter: 6, alter: -3, octave: 4 }))).toBe('Ab4');
+    expect(pitchName(simplifySpelling({ letter: 3, alter: 3, octave: 4 }))).toBe('G#4');
+  });
+
+  /**
+   * The bug this pins reached the screen: a Cb diminished seventh contains a
+   * Bbbb, and VexFlow's key parser accepts at most a double accidental, so the
+   * staff refused to draw rather than respelling. Sweeping the catalogs is what
+   * finds it without a browser — the chord is legal, reachable from the shipped
+   * key list, and nothing in the engine was wrong.
+   */
+  it('makes every chord the catalogs can build engravable', () => {
+    const offenders: string[] = [];
+    for (const key of ALL_KEYS) {
+      for (const type of CHORD_TYPES) {
+        const root = { ...key.tonic, octave: 4 };
+        for (const pitch of spellChord(chord(root, type))) {
+          const engraved = simplifySpelling(pitch);
+          if (Math.abs(engraved.alter) > 2) {
+            offenders.push(`${keyName(key)} ${type.id}: ${pitchName(pitch)}`);
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('makes every scale the catalogs can build engravable', () => {
+    const offenders: string[] = [];
+    for (const key of ALL_KEYS) {
+      for (const type of SCALE_TYPES) {
+        for (const pitch of spellScale({ ...key.tonic, octave: 4 }, type)) {
+          if (Math.abs(simplifySpelling(pitch).alter) > 2) {
+            offenders.push(`${keyName(key)} ${type.id}: ${pitchName(pitch)}`);
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

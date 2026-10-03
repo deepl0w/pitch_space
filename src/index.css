@@ -1,2 +1,103 @@
-:root { color-scheme: light dark; }
-body { margin: 0; font-family: system-ui, sans-serif; }
+:root {
+  color-scheme: light dark;
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --ink: #1a1a1a;
+  --muted: #6b6762;
+  --line: #e2ded8;
+  --accent: #7a4b2a;
+  --score-ink: #1a1a1a;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15140f;
+    --surface: #1e1c17;
+    --ink: #ece7df;
+    --muted: #9a938a;
+    --line: #322e27;
+    --accent: #d8a26a;
+    --score-ink: #ece7df;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+main {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 2rem 16px 4rem;
+}
+
+h1 { font-size: 1.45rem; margin: 0 0 0.3rem; font-weight: 650; letter-spacing: -0.01em; }
+h2 { font-size: 0.95rem; margin: 0 0 0.75rem; font-weight: 600; color: var(--muted); }
+
+.tag {
+  font-size: 0.7rem; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--accent);
+  border: 1px solid currentColor; border-radius: 999px;
+  padding: 0.15rem 0.5rem; vertical-align: 0.25em;
+}
+
+.lede { color: var(--muted); margin: 0 0 1.75rem; max-width: 42rem; line-height: 1.5; font-size: 0.9rem; }
+
+.panel {
+  display: flex; flex-wrap: wrap; gap: 0.85rem;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 1rem; margin-bottom: 1.25rem;
+}
+
+.field { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 11rem; min-width: 0; }
+.field > span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+select {
+  font: inherit; font-size: 0.88rem; padding: 0.4rem 0.5rem;
+  background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 6px; width: 100%;
+}
+
+.score {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 0.5rem; overflow-x: auto;
+}
+.score-host { min-height: 170px; }
+/* VexFlow draws with explicit black; recolour it so the staff survives dark mode. */
+.score-host :is(path, rect, text) { fill: var(--score-ink); }
+.score-host :is(path, line, rect)[stroke] { stroke: var(--score-ink); }
+.score-error { color: #b4442e; font-size: 0.85rem; padding: 0 0.5rem 0.5rem; margin: 0; }
+
+.actions { display: flex; gap: 0.6rem; margin: 1rem 0 1.75rem; flex-wrap: wrap; }
+
+button {
+  font: inherit; font-size: 0.88rem; font-weight: 500;
+  padding: 0.5rem 1rem; border-radius: 7px; cursor: pointer;
+  background: var(--accent); color: var(--bg); border: 1px solid transparent;
+}
+button:hover { filter: brightness(1.08); }
+button:active { transform: translateY(1px); }
+
+.readout {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 1rem;
+}
+
+.items { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; }
+.items li {
+  display: flex; flex-direction: column; gap: 0.1rem;
+  border: 1px solid var(--line); border-radius: 7px;
+  padding: 0.45rem 0.7rem; min-width: 5.5rem;
+}
+.primary { font-weight: 600; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.secondary { font-size: 0.72rem; color: var(--muted); }
+
+@media (max-width: 34rem) {
+  main { padding-top: 1.25rem; }
+  .field { flex: 1 1 100%; }
+}

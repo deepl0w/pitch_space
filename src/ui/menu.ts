@@ -28,6 +28,7 @@ export interface MenuEntry {
  */
 const BLURBS: Record<string, string> = {
   'interval-id': 'Name the distance between two notes you hear.',
+  'key-id': 'Read a key signature and name the key.',
 };
 
 /** A card for each built exercise, titled by the exercise itself. */

@@ -5,6 +5,7 @@ import { Chords } from './ui/screens/Chords';
 import { KeyChords } from './ui/screens/KeyChords';
 import { Rhythms } from './ui/screens/Rhythms';
 import { PracticeScreen } from './ui/screens/PracticeScreen';
+import { findExerciseType } from './exercises/registry';
 import { stopSound } from './ui/sound';
 
 /**
@@ -37,6 +38,7 @@ const SCREENS: Partial<Record<string, () => React.ReactElement>> = {
 export default function App() {
   const [route, go] = useRoute();
   const Screen = SCREENS[route];
+  const exercise = findExerciseType(route);
 
   // Notes are scheduled into the future against the audio clock, so leaving a
   // screen does not stop the passage it started — it plays on over whatever
@@ -45,11 +47,10 @@ export default function App() {
 
   return (
     <main>
-      {(Screen || route === 'interval-id') && (
+      {(Screen || exercise) && (
         <button className="back" onClick={() => go('')}>&larr; Everything</button>
       )}
-      {route === 'interval-id'
-        ? <PracticeScreen />
+      {exercise ? <PracticeScreen exerciseId={route} />
         : Screen ? <Screen /> : <Home go={go} />}
     </main>
   );

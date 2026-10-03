@@ -1,4 +1,4 @@
-import { intervalRecognition } from './note-id';
+import { intervalRecognition } from './interval-id';
 import type { AnyExerciseDefinition } from './types';
 
 /**

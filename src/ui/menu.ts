@@ -54,10 +54,19 @@ export const EXERCISE_MENU: readonly MenuEntry[] = [
     ready: false,
   },
   {
+    route: 'interval-id',
+    name: 'Interval identification',
+    blurb: 'Name the distance between two notes you hear.',
+    ready: true,
+  },
+  {
+    // The other half of what the brief calls note identification: naming a
+    // pitch outright rather than the distance between two. A different skill,
+    // so a different exercise rather than a mode of the one above.
     route: 'note-id',
     name: 'Note identification',
-    blurb: 'Name the interval between two notes you hear.',
-    ready: true,
+    blurb: 'Name a pitch you hear, with or without a reference note.',
+    ready: false,
   },
   {
     route: 'rhythm',

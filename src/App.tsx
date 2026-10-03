@@ -45,10 +45,10 @@ export default function App() {
 
   return (
     <main>
-      {(Screen || route === 'note-id') && (
+      {(Screen || route === 'interval-id') && (
         <button className="back" onClick={() => go('')}>&larr; Everything</button>
       )}
-      {route === 'note-id'
+      {route === 'interval-id'
         ? <PracticeScreen />
         : Screen ? <Screen /> : <Home go={go} />}
     </main>

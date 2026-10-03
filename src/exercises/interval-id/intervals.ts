@@ -13,14 +13,14 @@ import type {
 } from '../types';
 
 /**
- * Interval recognition: two notes sound, the user says which interval it was.
+ * Interval identification: two notes sound, the user says which interval
  *
  * Everything in this file is a pure function of its arguments. The component
  * next door renders it and the screen records the result; the claims live
  * here, where a property test can reach them over ten thousand seeds.
  */
 
-export const INTERVAL_EXERCISE_ID = 'interval-recognition';
+export const INTERVAL_EXERCISE_ID = 'interval-id';
 
 export type IntervalDirection = 'up' | 'down' | 'harmonic';
 

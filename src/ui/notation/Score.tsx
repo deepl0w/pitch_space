@@ -31,18 +31,20 @@ export function Score({ spec, height = 170 }: { spec: ScoreSpec; height?: number
     if (!node || width === 0) return;
     try {
       drawScore(node, spec, { width, height });
-      // oxlint-disable-next-line react/set-state-in-effect -- the rule says an
-      // effect should synchronize React with an external system, which is
-      // exactly this: VexFlow is the external system and whether it could
-      // engrave the spec is only knowable by asking it. React bails out when
-      // the value is unchanged, so the common path costs no extra render.
+      // The rule says an effect should synchronize React with an external
+      // system, which is exactly what this is: VexFlow is the external system,
+      // and whether it could engrave the spec is only knowable by asking it.
+      // React bails out when the value is unchanged, so the common path costs
+      // no extra render.
+      // oxlint-disable-next-line react/set-state-in-effect
       setError(null);
     } catch (cause) {
       // A spec the engraver cannot lay out is a bug worth seeing on the page
       // rather than only in the console, since this view is how the generator
       // gets looked at.
       node.replaceChildren();
-      // oxlint-disable-next-line react/set-state-in-effect -- see above.
+      // Same exception as the success path above.
+      // oxlint-disable-next-line react/set-state-in-effect
       setError(cause instanceof Error ? cause.message : String(cause));
     }
   }, [spec, width, height]);

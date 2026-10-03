@@ -94,6 +94,15 @@ function toStaveNote(note: ScoreNote, clef: Clef, ink: string): StaveNote {
   // works the same way the default ink does.
   const colour = note.colour ?? ink;
   staveNote.setStyle({ fillStyle: colour, strokeStyle: colour });
+  // A ledger line is styled separately from the note it belongs to and keeps
+  // VexFlow's own grey otherwise. Middle C in the treble clef is the commonest
+  // ledger-line note there is, and against a dark background that grey is
+  // nearly invisible. Merged rather than replaced so the line width survives.
+  staveNote.setLedgerLineStyle({
+    ...staveNote.getLedgerLineStyle(),
+    fillStyle: colour,
+    strokeStyle: colour,
+  });
   return staveNote;
 }
 

@@ -210,15 +210,34 @@ describe('numerals that must be unambiguous as a prompt', () => {
   // added sixth is a chord member rather than a figure, so no key can resolve
   // I6; both readings are available in the same key at the same time.
   it('never prints a chord member as a figure a triad inversion already uses', () => {
-    const triadFigures = new Set(
-      [0, 1, 2].map((inversion) => numeralText(numeral(1, 'maj', { inversion }))),
+    // Every triad and every inversion, not just a major one in root position:
+    // the diminished and augmented triads carry a quality sign and the minor
+    // one is lowercase, so each has its own three figures to collide with, and
+    // a chord member can collide from any inversion rather than only the first.
+    const triadFigures = new Map<string, string>();
+    for (const type of CHORD_TYPES) {
+      if (type.family !== 'triad') continue;
+      for (let inversion = 0; inversion < type.semitones.length; inversion++) {
+        triadFigures.set(
+          numeralText(numeral(1, type.id, { inversion })),
+          `${type.id} inversion ${inversion}`,
+        );
+      }
+    }
+    // A rule that silently guards nothing is worse than no rule.
+    expect([...triadFigures.keys()]).toEqual(
+      ['I', 'I6', 'I64', 'i', 'i6', 'i64', 'io', 'io6', 'io64', 'I+', 'I+6', 'I+64'],
     );
-    expect([...triadFigures]).toEqual(['I', 'I6', 'I64']);
 
     for (const type of CHORD_TYPES) {
       if (type.family === 'triad') continue;
-      const text = numeralText(numeral(1, type.id));
-      expect(triadFigures.has(text), `${type.id} prints ${text}, a triad figure`).toBe(false);
+      for (let inversion = 0; inversion < type.semitones.length; inversion++) {
+        const text = numeralText(numeral(1, type.id, { inversion }));
+        expect(
+          triadFigures.get(text),
+          `${type.id} inversion ${inversion} prints ${text}, which is ${triadFigures.get(text)}`,
+        ).toBeUndefined();
+      }
     }
   });
 });

@@ -30,9 +30,15 @@ engine and the whole analysis chain run under vitest on a laptop
 Everything the platform supplies enters at the edges, and the notation library
 enters at exactly one file ([0003](0003-one-importer-for-the-notation-library.md)).
 
+The seed is drawn red deliberately. Minting one is the single act of
+nondeterminism in the whole pipeline, and since
+[0005](0005-seeds-are-minted-outside-the-core.md) it happens above the core and
+is handed in — so the arrow into `generate/` is the entropy boundary, not just
+another dependency.
+
 ```mermaid
 flowchart LR
-    seed["seed<br/>randomSeed()"] --> gen
+    seed["app/<br/>mints the seed"] --> gen
     theory["theory/<br/>pitch, interval, key,<br/>scale, chord"] --> gen["generate/<br/>harmony, rhythm,<br/>melody, exercise"]
     gen --> ex["exercises/<br/>models"]
     ex --> vex["render/toVexflow.ts<br/>the one importer"]
@@ -48,12 +54,13 @@ flowchart LR
     classDef platform fill:#f6d8d8,stroke:#9b4b4b,color:#2b1414
     classDef edge fill:#d8e2f6,stroke:#4b5f9b,color:#141c2b
     class theory,gen,dsp,ex,judge pure
-    class mic,ui,out platform
-    class seed,vex edge
+    class mic,ui,out,seed platform
+    class vex edge
 ```
 
-Both boundaries are conventions today, not module boundaries, so they are worth
-being able to re-ask rather than trust:
+None of the three is a module boundary — nothing in the language stops a later
+branch importing `document` into the generator — so each is worth being able to
+ask of the repository directly:
 
 ```bash
 # 0001 — nothing in the core reaches for the platform.

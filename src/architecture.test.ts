@@ -201,3 +201,36 @@ describe('ADR 0003 — one importer for the notation library', () => {
     for (const path of importers) expect(path).toBe(ALLOWED);
   });
 });
+
+describe('the npm scripts', () => {
+  const pkg = JSON.parse(
+    readFileSync(join(SRC, '..', 'package.json'), 'utf8'),
+  ) as { scripts: Record<string, string>; devDependencies: Record<string, string> };
+
+  /**
+   * `npx <name>` falls back to the registry when nothing local provides that
+   * binary, downloads whatever is published under the name and runs it. The
+   * android scripts called `npx cap` with no Capacitor installed, and `cap` on
+   * the registry is an unrelated native packet-capture binding — so a script
+   * documented in CLAUDE.md would have fetched and executed a stranger's code.
+   * `--no-install` makes npx refuse rather than reach out.
+   */
+  it('never lets npx reach the registry for a missing binary', () => {
+    const offenders = Object.entries(pkg.scripts)
+      .flatMap(([name, body]) =>
+        [...body.matchAll(/npx\s+(?:(-{1,2}\S+)\s+)*/g)]
+          .filter((m) => !/--no-install|--no\b/.test(m[0]))
+          .map(() => `${name}: ${body}`));
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * A declared dependency that nothing imports is usually harmless, but these
+   * two are load-bearing claims: CLAUDE.md's first paragraph says the app ships
+   * as an installable PWA and as an Android APK. Neither is true while the
+   * plugin is unwired, so the gap should be visible here rather than only in a
+   * document nobody diffs.
+   */
+  it.todo('wires vite-plugin-pwa into vite.config.ts so the PWA half is real');
+  it.todo('installs @capacitor/cli and core so the android scripts can run');
+});

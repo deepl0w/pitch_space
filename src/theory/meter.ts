@@ -20,6 +20,14 @@ export const TICKS_PER_WHOLE = TICKS_PER_QUARTER * 4;
 
 export type NoteBase = 'w' | 'h' | 'q' | '8' | '16' | '32' | '64';
 
+/**
+ * Longest first, and spelled out rather than taken from `Object.keys`, which
+ * puts the integer-like keys first in numeric order: '8','16','32','64','w',
+ * 'h','q'. Nothing today depends on the order, but an engine whose output can
+ * turn on a JavaScript key-ordering rule is the shape ADR 0002 warns about.
+ */
+export const NOTE_BASES: readonly NoteBase[] = ['w', 'h', 'q', '8', '16', '32', '64'];
+
 export const BASE_TICKS: Record<NoteBase, number> = {
   w: TICKS_PER_WHOLE,
   h: TICKS_PER_WHOLE / 2,
@@ -54,15 +62,27 @@ export function ticksOf(v: NoteValue): number {
   return scaled;
 }
 
+/**
+ * Duration to notated value. There is no tie-break here because two distinct
+ * values can never measure the same: a value is its base times 1, 3/2 or 7/4,
+ * the bases are all powers of two apart, and 3/2 and 7/4 are not powers of
+ * two. A collision would therefore mean the note-value system had changed
+ * underneath this map, which is worth failing loudly for rather than
+ * resolving by whichever entry happened to be written first.
+ */
 const VALUE_BY_TICKS = new Map<number, NoteValue>();
-for (const base of Object.keys(BASE_TICKS) as NoteBase[]) {
+for (const base of NOTE_BASES) {
   for (const dots of [0, 1, 2] as const) {
     const v = { base, dots };
     let ticks: number;
     try { ticks = ticksOf(v); } catch { continue; }
-    // Fewer dots wins, so 3360 reads as a half note and not as a dotted
-    // something that happens to measure the same.
-    if (!VALUE_BY_TICKS.has(ticks)) VALUE_BY_TICKS.set(ticks, v);
+    const clash = VALUE_BY_TICKS.get(ticks);
+    if (clash) {
+      throw new Error(
+        `${base}+${dots} and ${clash.base}+${clash.dots} both measure ${ticks} ticks`,
+      );
+    }
+    VALUE_BY_TICKS.set(ticks, v);
   }
 }
 

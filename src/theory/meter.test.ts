@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BASE_TICKS, TICKS_PER_QUARTER, TIME_SIGNATURES, beamSpanIndex, beatLevel,
-  isDownbeat, metricWeight, noteValue, ticksOf, tiedValues, timeSignature,
-  valueOfTicks, type NoteBase,
+  BASE_TICKS, NOTE_BASES, TICKS_PER_QUARTER, TIME_SIGNATURES, beamSpanIndex,
+  beatLevel, isDownbeat, metricWeight, noteValue, ticksOf, tiedValues,
+  timeSignature, valueOfTicks,
 } from './meter';
 
 describe('the tick grid', () => {
@@ -16,8 +16,28 @@ describe('the tick grid', () => {
     expect(ticksOf(noteValue('q', 1))).toBe(2520);   // dotted quarter
   });
 
+  it('lists every base, longest first, rather than relying on key order', () => {
+    expect([...NOTE_BASES].sort()).toEqual(Object.keys(BASE_TICKS).sort());
+    expect(NOTE_BASES.map((b) => BASE_TICKS[b]))
+      .toEqual([...NOTE_BASES.map((b) => BASE_TICKS[b])].sort((a, b) => b - a));
+  });
+
+  // Not merely true today: a value is its base times 1, 3/2 or 7/4, the bases
+  // are powers of two apart, and neither 3/2 nor 7/4 is a power of two.
+  it('gives every distinct value a distinct duration', () => {
+    const seen = new Map<number, string>();
+    for (const base of NOTE_BASES) {
+      for (const dots of [0, 1, 2] as const) {
+        let ticks: number;
+        try { ticks = ticksOf(noteValue(base, dots)); } catch { continue; }
+        expect(seen.get(ticks), `${base}+${dots} collides`).toBeUndefined();
+        seen.set(ticks, `${base}+${dots}`);
+      }
+    }
+  });
+
   it('gives every undotted and singly-dotted value an integral duration', () => {
-    for (const base of Object.keys(BASE_TICKS) as NoteBase[]) {
+    for (const base of NOTE_BASES) {
       expect(Number.isInteger(ticksOf(noteValue(base)))).toBe(true);
       if (base !== '64') {
         expect(Number.isInteger(ticksOf(noteValue(base, 1)))).toBe(true);

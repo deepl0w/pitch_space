@@ -11,8 +11,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --noEmit",
     "lint": "oxlint src",
-    "android:sync": "npm run build && npx cap sync android",
-    "android:run": "npm run android:sync && npx cap run android"
+    "android:sync": "npm run build && npx --no-install cap sync android",
+    "android:run": "npm run android:sync && npx --no-install cap run android"
   },
   "dependencies": {
     "react": "^19.2.8",

@@ -142,12 +142,24 @@ export function simplifySpelling(p: Pitch, maxAlter = 2): Pitch {
   return best ?? p;
 }
 
+/**
+ * The inverse of `pitchName`, accidental grammar included.
+ *
+ * Any number of flats or sharps, because `accidentalGlyph` writes any number:
+ * a Cb diminished seventh contains a Bbbb and an applied chord in A# minor a
+ * C###. A parser that stopped at the double accidental could not read back
+ * what the printer had just written, and only on the rare spellings that are
+ * worth round-tripping. Mixed accidentals are still refused — `C#b4` is not a
+ * spelling, it is a typo. `x` is accepted as the other way of writing a double
+ * sharp.
+ */
 export function parsePitch(s: string): Pitch {
-  const m = /^([A-Ga-g])(bb|b|##|#|x)?(-?\d+)$/.exec(s.trim());
+  const m = /^([A-Ga-g])(x|b+|#+)?(-?\d+)$/.exec(s.trim());
   if (!m) throw new Error(`Unparseable pitch: ${s}`);
   const letter = LETTER_NAMES.indexOf(m[1].toUpperCase() as 'C') as Letter;
-  const alter = { bb: -2, b: -1, '#': 1, '##': 2, x: 2, undefined: 0 }[
-    m[2] as string
-  ] ?? 0;
+  const accidental = m[2] ?? '';
+  const alter = accidental === 'x' ? 2
+    : accidental.startsWith('b') ? -accidental.length
+      : accidental.length;
   return { letter, alter, octave: parseInt(m[3], 10) };
 }

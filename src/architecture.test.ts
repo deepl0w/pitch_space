@@ -98,8 +98,12 @@ describe('ADR 0001 — a pure core', () => {
     expect(hits(coreFiles(), PLATFORM)).toEqual([]);
   });
 
-  // An allowlist rather than a list of the layers that exist today: a blocklist
-  // goes quietly out of date the moment someone adds a directory to src/.
+  // An allowlist rather than a list of the layers that exist today. A blocklist
+  // goes quietly out of date the moment someone adds a directory to src/, and
+  // it is hard to tell when it has: the version that matched only single quotes
+  // let `from "react"` through, and the mutation that should have exposed that
+  // was caught by the ADR 0003 rule instead, which hid the gap. Reading every
+  // import and asking where it lands has nothing to keep in step.
   const MAY_IMPORT: Record<string, string[]> = {
     theory: ['theory'],
     generate: ['generate', 'theory'],
@@ -108,10 +112,6 @@ describe('ADR 0001 — a pure core', () => {
   const PLATFORM_PACKAGES = ['react', 'react-dom', 'zustand', 'vexflow', '@capacitor', 'vite'];
 
   it('imports nothing from the layers above it', () => {
-    // An allowlist of what each directory may reach, not a denylist of names
-    // someone remembered to forbid — the denylist this replaced also matched
-    // only single quotes, so `from "react"` walked through it. importsOf takes
-    // both, and static, dynamic and require forms.
     const offenders: string[] = [];
     for (const dir of CORE_DIRS) {
       for (const file of filesUnder(join(SRC, ...dir.split('/')))) {
@@ -142,6 +142,14 @@ describe('ADR 0001 — a pure core', () => {
 });
 
 describe('ADR 0002 — generation is reproducible from its seed', () => {
+  // Test files are in scope deliberately. A suite about determinism that
+  // seeds itself randomly is a suite that fails intermittently, and the rule
+  // is easier to keep with no exclusions than with one.
+  //
+  // Test files are in scope deliberately. A suite about determinism that
+  // seeds itself randomly is a suite that fails intermittently, and the rule
+  // is easier to keep with no exclusions than with one.
+  //
   // Test files are in scope deliberately. A suite about determinism that
   // seeds itself randomly is a suite that fails intermittently, and the rule
   // is easier to keep with no exclusions than with one.

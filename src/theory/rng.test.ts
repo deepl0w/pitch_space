@@ -35,6 +35,14 @@ describe('makeRng', () => {
     for (let i = 0; i < n; i++) buckets[Math.floor(rng.next() * 10)]++;
     for (const count of buckets) expect(Math.abs(count / (n / 10) - 1)).toBeLessThan(0.05);
   });
+
+  it('takes any seed the app layer mints', () => {
+    // Seeds come from outside the core under ADR 0005, so every value a
+    // 32-bit mint can produce has to replay.
+    for (const seed of [0, 1, 0x7fffffff, 0x80000000, 0xffffffff]) {
+      expect(draws(seed, 8)).toEqual(draws(seed, 8));
+    }
+  });
 });
 
 describe('the helpers', () => {

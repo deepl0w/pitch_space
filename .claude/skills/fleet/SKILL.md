@@ -69,6 +69,35 @@ Scope creep that lands in someone else's merge is expensive. Exercise types are
 the natural unit of feature work here: one worktree per exercise keeps two
 agents out of the same file.
 
+## The review cycle
+
+Work landing in `main` is the event the fleet turns on. Nobody discovers it by
+accident: **when main merges anything, it tells every worktree**, and the first
+thing each does is `.claude/scripts/fleet.sh sync`. Reviewing a change against a
+branch that predates it wastes the review.
+
+Once synced, each role has a standing job on whatever just changed — it does not
+need to be asked:
+
+- **tester** — read the diff. Does the new code have tests, and are they the
+  tests that would have caught the defect it fixes? Try to break it. Anything you
+  find goes back to main as a **finding**, whether or not you fix it: a failing
+  test you have pinned, or a description precise enough for someone else to pin.
+- **architect** — read the diff. Does it still make sense against the records in
+  `docs/adr/`, and does it contradict one without saying so? A change that
+  narrows or supersedes a decision needs a record; a change that quietly
+  undermines one is the finding.
+
+A finding is reported twice over: in `.claude/handoff.md` so it survives you, and
+as a message to main so it arrives while main can still act on it. Say what you
+found, where, and what you did about it. "Nothing to report" is a useful answer
+and worth sending — silence is indistinguishable from not having looked.
+
+Main collects findings, acts on the ones that block, and integrates the branches
+at the end. The order is deliberate: review first against a synced tree, merge
+afterwards, so main is merging work that has already been read by someone other
+than its author.
+
 ## Commits
 
 Write the message the repository already uses: a single imperative line that says
@@ -82,6 +111,26 @@ paragraph is welcome when the reasoning will not survive without it.
 
 That stages everything and commits. Several small commits beat one that mixes a
 test, a fix and a rename.
+
+## ADR numbers
+
+```bash
+.claude/scripts/fleet.sh adr-claim "Port the tuner's YIN detector verbatim"
+```
+
+Claim before you write, never after, and never by agreeing a number in a
+message. The script allocates against every number that exists anywhere — every
+branch, every worktree's working tree including drafts nobody has committed, and
+the claims file in the main checkout — so it cannot be defeated by two agents
+reading the same state before either writes.
+
+Messages cannot do this job. A reservation and the work it was meant to protect
+can cross in flight, which is how the tuner came to claim its 0009 twice: main
+reserved it for one branch while another had already written and committed it.
+The collision was cheap only because the second record did not exist yet.
+Announce your claim by all means — but claim it with the script first.
+
+`fleet.sh adr-taken` lists every number in use and where it came from.
 
 ## Handing work back
 

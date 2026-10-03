@@ -21,3 +21,6 @@ keystore.properties
 .claude/handoff.md
 .claude/worktrees/
 .claude/settings.local.json
+
+# Coordination state: ADR numbers claimed across branches and worktrees.
+.claude/adr-claims

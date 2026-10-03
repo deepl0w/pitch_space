@@ -16,6 +16,8 @@
 #   status                every worktree: role, branch, pending commits, dirt
 #   integrate [branch]    main only: list mergeable branches, or merge one
 #   guard                 Stop-hook check: refuse to go idle with work uncommitted
+#   adr-claim "<title>"   reserve the next free ADR number, fleet-wide
+#   adr-taken             every ADR number in use anywhere, and who holds it
 set -euo pipefail
 
 MAIN_BRANCH=main
@@ -25,6 +27,8 @@ repo_root=$(git rev-parse --show-toplevel)
 main_root=$(git worktree list --porcelain | awk '/^worktree /{print substr($0, 10); exit}')
 role_file="$repo_root/.claude/role"
 handoff_file="$repo_root/.claude/handoff.md"
+# Claims live in the main checkout so every worktree reads and writes one file.
+adr_claims="$main_root/.claude/adr-claims"
 
 if [ "$repo_root" = "$main_root" ]; then in_main=1; else in_main=0; fi
 
@@ -269,6 +273,80 @@ cmd_integrate() {
     fi
 }
 
+# ---- ADR numbering -------------------------------------------------------
+#
+# Numbers are allocated against what exists, not against what anyone remembers
+# agreeing. A number is taken if it appears on any branch, in any worktree's
+# working tree — including a draft nobody has committed — or in the claims
+# file. Reserving by message does not work: a reservation and the work it was
+# meant to protect can cross, which is how the tuner came to claim 0009 twice.
+
+adr_numbers_in_use() {
+    {
+        git for-each-ref --format='%(refname:short)' refs/heads | while read -r branch; do
+            git ls-tree -r --name-only "$branch" -- docs/adr 2>/dev/null
+        done
+
+        git worktree list --porcelain | awk '/^worktree /{print substr($0, 10)}' |
+            while read -r tree; do
+                ls "$tree/docs/adr" 2>/dev/null
+            done
+    } | sed 's|.*/||' | grep -oE '^[0-9]{4}' || true
+
+    [ -f "$adr_claims" ] && grep -oE '^[0-9]{4}' "$adr_claims" || true
+}
+
+adr_next_free() {
+    local highest
+    highest=$(adr_numbers_in_use | sort -n | tail -1)
+    printf '%04d\n' $(( 10#${highest:-0} + 1 ))
+}
+
+cmd_adr_claim() {
+    local title="${1:-}"
+    [ -n "$title" ] || die 'Usage: fleet.sh adr-claim "<title>"'
+    mkdir -p "$(dirname "$adr_claims")"
+    touch "$adr_claims"
+
+    # One writer at a time, so two agents claiming together cannot both read the
+    # same highest number before either has written.
+    local number
+    if command -v flock >/dev/null 2>&1; then
+        number=$(flock "$adr_claims" bash -c "
+            $(declare -f adr_numbers_in_use adr_next_free)
+            adr_claims='$adr_claims'
+            n=\$(adr_next_free)
+            printf '%s\t%s\t%s\n' \"\$n\" \"$(git rev-parse --abbrev-ref HEAD)\" \"$title\" >> '$adr_claims'
+            printf '%s' \"\$n\"
+        ")
+    else
+        number=$(adr_next_free)
+        printf '%s\t%s\t%s\n' "$number" "$(git rev-parse --abbrev-ref HEAD)" "$title" >> "$adr_claims"
+    fi
+
+    printf '%s\n' "$number"
+    printf 'Claimed ADR %s for %s. Write docs/adr/%s-<slug>.md and tell main.\n' \
+        "$number" "$(git rev-parse --abbrev-ref HEAD)" "$number" >&2
+}
+
+cmd_adr_taken() {
+    printf '%-6s %s\n' NUMBER WHERE
+    git for-each-ref --format='%(refname:short)' refs/heads | while read -r branch; do
+        git ls-tree -r --name-only "$branch" -- docs/adr 2>/dev/null |
+            sed 's|.*/||' | grep -oE '^[0-9]{4}' |
+            while read -r n; do printf '%-6s branch %s\n' "$n" "$branch"; done
+    done || true
+    git worktree list --porcelain | awk '/^worktree /{print substr($0, 10)}' |
+        while read -r tree; do
+            ls "$tree/docs/adr" 2>/dev/null | grep -oE '^[0-9]{4}' |
+                while read -r n; do printf '%-6s worktree %s\n' "$n" "$(basename "$tree")"; done
+        done || true
+    if [ -s "$adr_claims" ]; then
+        awk -F'\t' '{printf "%-6s claimed by %s — %s\n", $1, $2, $3}' "$adr_claims"
+    fi
+    printf '\nNext free: %s\n' "$(adr_next_free)"
+}
+
 # Stop hook. Exit 2 puts the message back in front of the model and keeps the
 # turn alive; any other exit code lets the session go idle.
 cmd_guard() {
@@ -298,5 +376,7 @@ case "${1:-brief}" in
     status)    cmd_status ;;
     integrate) shift; cmd_integrate "$@" ;;
     guard)     cmd_guard ;;
-    *)         die "Usage: fleet.sh {brief|role|new|sync|save|status|integrate|guard}" ;;
+    adr-claim) shift; cmd_adr_claim "${1:-}" ;;
+    adr-taken) cmd_adr_taken ;;
+    *)         die "Usage: fleet.sh {brief|role|new|sync|save|status|integrate|guard|adr-claim|adr-taken}" ;;
 esac

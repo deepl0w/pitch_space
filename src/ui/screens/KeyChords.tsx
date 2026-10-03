@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
 import { usePlayer } from '../sound';
@@ -12,6 +13,9 @@ import { noteValue } from '../../theory/meter';
 import { CLEFS, OCTAVES, keyOptions } from './options';
 
 const DEGREES: Degree[] = [1, 2, 3, 4, 5, 6, 7];
+
+/** Title and lede come from the menu, so the card and this page cannot drift. */
+const entry = entryFor('key-chords');
 
 export function KeyChords() {
   const [keyIdValue, setKeyIdValue] = useState('C_major');
@@ -42,12 +46,8 @@ export function KeyChords() {
   return (
     <>
       <header>
-        <h1>Chords in a key</h1>
-        <p className="lede">
-          Every chord the key supplies, numbered by degree. A minor key shows
-          its natural form — the raised leading tone is a choice the harmony
-          makes, not a property of the key.
-        </p>
+        <h1>{entry.name}</h1>
+        <p className="lede">{entry.lede}</p>
       </header>
 
       <Panel>

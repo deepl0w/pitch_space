@@ -40,9 +40,20 @@ interface Round {
 
 // Navigation belongs to the router, which already puts a back control above
 // every screen; a second one here was two ways out of the same page.
-export function PracticeScreen({ audio = defaultSynth }: { audio?: AudioOut }) {
+export function PracticeScreen({ exerciseId, audio = defaultSynth }: {
+  /**
+   * Which exercise to run. The route decides, so the menu card and the URL
+   * both mean something; the stored `lastExercise` is only the fallback for
+   * arriving here without one.
+   */
+  exerciseId?: string;
+  audio?: AudioOut;
+}) {
   const lastExercise = useSettings((s) => s.doc.lastExercise);
-  const definition = useMemo(() => exerciseTypeOr(lastExercise), [lastExercise]);
+  const definition = useMemo(
+    () => exerciseTypeOr(exerciseId ?? lastExercise),
+    [exerciseId, lastExercise],
+  );
 
   const stored = useSettings((s) => s.doc.exercises[definition.id]);
   // Coerced rather than trusted: what comes back from storage was written by
@@ -98,6 +109,20 @@ export function PracticeScreen({ audio = defaultSynth }: { audio?: AudioOut }) {
     };
     void progressStore.getState().record(attempt);
   }
+
+  /**
+   * The question on the staff, for an exercise being read rather than heard.
+   *
+   * Shown before the answer and replaced by it afterwards, so a reading
+   * exercise has exactly one stave on screen at a time rather than the
+   * question and its answer stacked.
+   */
+  const questionScore = useMemo(
+    () => (round && !round.result && definition.questionScore
+      ? definition.questionScore(round.exercise)
+      : null),
+    [round, definition],
+  );
 
   const answerScore = useMemo(
     () => (round?.result && definition.answerScore
@@ -160,6 +185,7 @@ export function PracticeScreen({ audio = defaultSynth }: { audio?: AudioOut }) {
           />
         )}
 
+      {questionScore && <Score spec={questionScore} />}
       {answerScore && <Score spec={answerScore} />}
 
       {round?.result && (

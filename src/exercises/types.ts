@@ -87,8 +87,28 @@ export interface Result {
  */
 export type Difficulty = 1 | 2 | 3 | 4 | 5;
 
+/**
+ * How a question is put to the user.
+ *
+ * Nearly every exercise here can be asked either way, and they are different
+ * skills: reading a minor third off the staff and hearing one share a name
+ * and almost nothing else. A learner can be fluent at one and hopeless at
+ * the other, so this is a setting rather than a house style, and progress is
+ * tracked against the item *and* the sense it was tested through.
+ *
+ * `read` means the question is on the staff and nothing sounds. `listen`
+ * means it sounds and the staff stays empty until the answer is given.
+ */
+export type Presentation = 'read' | 'listen';
+
+export const PRESENTATION_LABELS: Record<Presentation, string> = {
+  read: 'Read it',
+  listen: 'Hear it',
+};
+
 export interface BaseSettings {
   difficulty: Difficulty;
+  presentation: Presentation;
 }
 
 /**
@@ -109,6 +129,15 @@ export interface ExerciseBase {
   /** The {@link ExerciseDefinition.id} that produced it. */
   readonly type: string;
   readonly seed: number;
+  /**
+   * How this one was asked.
+   *
+   * Carried on the exercise rather than read from settings at render time,
+   * because changing the setting mid-question must not change the question —
+   * and because an attempt is only comparable with another attempt asked the
+   * same way.
+   */
+  readonly presentation: Presentation;
   /**
    * Every item this rendering *contains*, tested or not.
    *
@@ -218,6 +247,15 @@ export interface ExerciseDefinition<S extends BaseSettings, E extends ExerciseBa
   name: string;
   /** One sentence, shown when the user is choosing what to practise. */
   description: string;
+  /**
+   * The senses this exercise can be asked through.
+   *
+   * Declared rather than assumed, because not every exercise has both: a key
+   * signature has nothing to hear, and sight reading is reading by
+   * definition. The settings panel offers only what is listed here, so an
+   * exercise cannot be put into a mode it has no question for.
+   */
+  presentations: readonly Presentation[];
   settings: SettingsSchema<S>;
   generate(spec: ExerciseSpec<S>): E;
   grade(exercise: E, response: R): Result;
@@ -233,6 +271,16 @@ export interface ExerciseDefinition<S extends BaseSettings, E extends ExerciseBa
    * key-signature one does not.
    */
   answerScore?(exercise: E): ScoreSpec;
+  /**
+   * The question, engraved, for an exercise being read rather than heard.
+   *
+   * Here rather than in the prompt for the same reason `answerScore` is: a
+   * prompt that rendered `Score` itself would have `exercises/` importing
+   * `ui/` importing `exercises/render/`, and ADR 0003's containment is
+   * easiest to keep while that arrow points one way. Returning null means
+   * there is nothing to show — which is the normal case when listening.
+   */
+  questionScore?(exercise: E): ScoreSpec | null;
 }
 
 /**

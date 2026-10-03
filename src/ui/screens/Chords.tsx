@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
 import { usePlayer } from '../sound';
@@ -10,6 +11,9 @@ import { noteValue } from '../../theory/meter';
 import { CLEFS, OCTAVES, keyOptions } from './options';
 
 const FAMILIES = ['triad', 'seventh', 'sixth', 'sus', 'extended', 'altered'] as const;
+
+/** Title and lede come from the menu, so the card and this page cannot drift. */
+const entry = entryFor('chords');
 
 export function Chords() {
   const [rootKey, setRootKey] = useState('C_major');
@@ -33,11 +37,8 @@ export function Chords() {
   return (
     <>
       <header>
-        <h1>Chords</h1>
-        <p className="lede">
-          Twenty-four chord types, in any inversion, on any root. The voicing
-          shown is the one that sounds.
-        </p>
+        <h1>{entry.name}</h1>
+        <p className="lede">{entry.lede}</p>
       </header>
 
       <Panel>

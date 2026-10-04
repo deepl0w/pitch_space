@@ -106,13 +106,13 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
   <h1>Music Practice<br>Loop One</h1>
   <p class="standfirst">The engine that was the hard part is built and tested. The
   microphone that was the point of the app is not.</p>
-  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at 5eea387 &nbsp;·&nbsp; 135 commits</p>
+  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at bac7406 &nbsp;·&nbsp; 142 commits</p>
 </header>
 
 <div class="figures">
-  <div class="fig"><b>582</b><span>tests passing</span></div>
+  <div class="fig"><b>583</b><span>tests passing</span></div>
   <div class="fig"><b>36</b><span>test files</span></div>
-  <div class="fig"><b>14</b><span>ADRs</span></div>
+  <div class="fig"><b>15</b><span>ADRs</span></div>
   <div class="fig"><b>16,922</b><span>lines in src</span></div>
   <div class="fig"><b>3 / 6</b><span>exercises asked for</span></div>
   <div class="fig"><b>0</b><span>shipping targets</span></div>
@@ -128,7 +128,7 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
 <h2>Where it stands</h2>
 
 <p>Every figure on this page is read out of the repository by
-<code>tools/report-facts.sh</code> rather than recalled. 582 tests pass, none fail,
+<code>tools/report-facts.sh</code> rather than recalled. 583 tests pass, none fail,
 three are <code>todo</code>. <code>tsc</code> and <code>oxlint</code> are clean. The
 whole history is on <code>main</code> under one author; the eight <code>claude/*</code>
 branches are all zero ahead and exist only as stale pointers.</p>
@@ -338,11 +338,32 @@ luck rather than design. There is no error boundary anywhere in <code>src</code>
 failure takes the whole page.</p>
 
 <p>It only bites when the destination has not been visited in that profile, which makes it
-a first-run crash on a very short path — the worst place to have one. And it is getting
-worse rather than staying still: degree-id arrived with two fresh instances of it, so the
-sixth exercise type will add more unless the seam is fixed rather than the four sites
-patched. A regression test over all N×(N−1) transitions is being written; it would have
-caught all four.</p>
+a first-run crash on a very short path — the worst place to have one.</p>
+
+<p><b>And there is a second instance that nothing found, because it does not throw.</b>
+The session tally has no reset path either, so answering three interval questions and
+switching to key keeps the counter running: &ldquo;7 of 9 this session&rdquo; silently
+blends two different exercises. <code>setSession</code> appears exactly twice in
+<code>PracticeScreen</code>, at its declaration and at the increment, and the only effect
+in the file loads the progress store. That is why this became ADR 0015 rather than a bug
+list — repair only the loud one and the seam is still wrong.</p>
+
+<p>What the seam actually failed at is worth stating precisely, because the registry
+promises otherwise: adding an exercise type <em>is</em> one import and one array entry,
+and that is true of the registry and false of the screen. Genericity is what the seam
+bought — one screen serves every type because it knows <code>ExerciseDefinition</code> and
+nothing about intervals — and the unpriced cost is that a generic screen holds state
+belonging to a <em>particular</em> type while the type changes underneath it. A seam cheap
+to extend but unsafe to switch between is not the seam it advertises. <code>definition</code>
+is a <code>useMemo</code> over the dropdown and changes at once; <code>round</code> is
+<code>useState</code> and does not.</p>
+
+<p>The fix is discard by remount rather than a reset path, on the grounds that a reset
+path is a list that has to be kept in step with the state it clears, and the evidence in
+front of us is that such lists are not kept in step. Session counters become per type,
+because that is what the number means. The regression test runs over all ordered pairs and
+asserts the tally resets as well as that the page survives — a fix that stops the crashes
+and leaves the tally blending would pass a crash-only test.</p>
 </div>
 </section>
 
@@ -442,16 +463,25 @@ measurement sits in front of the chord exercise.</li>
 
 <p>Two things are not on that list because neither is a work item. The Rhythms question
 now costs one log line in a real browser rather than an answer from anyone. And the
-exercise-switch crash is a seam to fix rather than a feature to build, with its regression
-test already being written — but it is the most serious thing on this page, because it is
-the one a new user hits.</p>
+exercise-switch seam is a fix rather than a feature, with its regression test being
+written — but it is the most serious thing on this page, because it is the one a new user
+hits, and it has to land before the sixth exercise type rather than after.</p>
+
+<p>One cost of that fix cuts the other way and should not be lost. A prompt that throws on
+every render currently stops the app, which is the loudest possible signal and guarantees
+someone finds it. Contained behind a boundary it becomes one broken card among five
+working ones, and a defect that only breaks the exercise nobody opened this week can
+survive a release. So the boundary has to report and not merely display — and since nothing
+in this app reports anything, that means the seed on screen and in the console. Generation
+is reproducible from seed and settings, so a crash that names its seed is a defect someone
+can reproduce exactly rather than a story about a blank page.</p>
 </section>
 
 <footer>
-Figures read from the repository by tools/report-facts.sh · main 5eea387 · 4 October 2026<br>
+Figures read from the repository by tools/report-facts.sh · main bac7406 · 4 October 2026<br>
 Revised three times the same day, by the fleet reviewing it: the DSP layer computes no
-chroma; the clock a performed note is measured against was undecided; and four of six
-exercise switches crash the app.
+chroma; the clock a performed note is measured against was undecided; and the exercise
+screen keeps state belonging to a type the user has already left.
 </footer>
 
 </div>

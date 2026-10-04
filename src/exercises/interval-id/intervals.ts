@@ -8,6 +8,7 @@ import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
+import { presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -147,17 +148,7 @@ export const intervalSettingsSchema: SettingsSchema<IntervalSettings> = {
   defaults: INTERVAL_DEFAULTS,
   coerce: coerceIntervalSettings,
   fields: [
-    // Worded as in `key-id`, because it is the same question and a learner
-    // meeting it on the second exercise should not have to work that out.
-    {
-      kind: 'choice', id: 'presentation', label: 'Asked',
-      options: [
-        { id: 'listen', label: 'By ear' },
-        { id: 'read', label: 'By eye' },
-      ],
-      selected: (s) => s.presentation,
-      apply: (s, option) => ({ ...s, presentation: option === 'read' ? 'read' : 'listen' }),
-    },
+    presentationField(),
     {
       kind: 'choice', id: 'window', label: 'Range',
       options: WINDOW_CHOICES.map((w) => ({ id: String(w), label: WINDOW_LABELS[w] })),

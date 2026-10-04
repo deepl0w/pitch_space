@@ -5,6 +5,7 @@ import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
+import { presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -218,12 +219,7 @@ export const scaleSettingsSchema: SettingsSchema<ScaleSettings> = {
   defaults: SCALE_DEFAULTS,
   coerce: coerceScaleSettings,
   fields: [
-    {
-      kind: 'choice', id: 'presentation', label: 'Asked',
-      options: [{ id: 'listen', label: 'By ear' }, { id: 'read', label: 'By eye' }],
-      selected: (s) => s.presentation,
-      apply: (s, option) => ({ ...s, presentation: option === 'read' ? 'read' : 'listen' }),
-    },
+    presentationField(),
     {
       // Twenty chips, and the whole control. There is no family picker
       // beside them: the degree exercise had a preset picker over its own

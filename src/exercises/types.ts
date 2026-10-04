@@ -91,10 +91,51 @@ export interface Result {
  */
 export type Presentation = 'read' | 'listen';
 
+/**
+ * What the two senses are called on screen.
+ *
+ * "Listening" and "Reading", and the pair is deliberately not
+ * "By ear" / "By eye" — which is what five exercises said, in three
+ * different wordings, because each had written the control out again.
+ * Hearing and seeing are what your body does; listening and reading are
+ * what a musician practises, and they are the words a teacher uses.
+ *
+ * The *stored* values stay `listen` and `read`. They key every recorded
+ * attempt and are a compatibility commitment (ADR 0010); a label is not.
+ */
 export const PRESENTATION_LABELS: Record<Presentation, string> = {
-  read: 'Read it',
-  listen: 'Hear it',
+  listen: 'Listening',
+  read: 'Reading',
 };
+
+/**
+ * The presentation control, written once.
+ *
+ * Every exercise that can be asked both ways needs exactly this field,
+ * and five of them had hand-rolled it — which is how three of them came
+ * to disagree about what to call it ("Asked", "How") and two about what
+ * to call its options. The settings schema is data, so a shared field is
+ * just a shared value, and the sixth exercise gets it for nothing.
+ *
+ * An exercise with a single presentation does not call this. A control
+ * with one option cannot change the question, and this app has a rule
+ * about those.
+ */
+export function presentationField<S extends BaseSettings>(): SettingField<S> {
+  return {
+    kind: 'choice',
+    id: 'presentation',
+    label: 'Mode',
+    options: [
+      { id: 'listen', label: PRESENTATION_LABELS.listen },
+      { id: 'read', label: PRESENTATION_LABELS.read },
+    ],
+    selected: (settings) => settings.presentation,
+    apply: (settings, option) => ({
+      ...settings, presentation: option === 'read' ? 'read' : 'listen',
+    }),
+  };
+}
 
 /**
  * The slice every exercise type shares, which is one field.

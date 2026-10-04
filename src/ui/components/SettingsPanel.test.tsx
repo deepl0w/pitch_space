@@ -81,45 +81,87 @@ function render(fields: readonly SettingField<Demo>[] = FIELDS) {
 }
 
 const panel = () => container.querySelector('.panel') as HTMLElement;
+/**
+ * A field by its caption — or, for a toggle, by the chip's own text.
+ *
+ * A toggle carries no separate caption any more: it is a chip that says
+ * what it turns on, the same as every chip in a multi-select.
+ */
 const fieldFor = (label: string) => [...container.querySelectorAll('.field')]
-  .find((f) => f.querySelector('span')?.textContent === label) as HTMLElement;
+  .find((f) => (f.querySelector('span')?.textContent ?? f.textContent) === label) as HTMLElement;
 const chip = (label: string) => [...container.querySelectorAll('.chip')]
   .find((b) => b.textContent === label) as HTMLButtonElement;
 
 describe('the shape the stylesheet is written against', () => {
-  it('is one panel of labelled fields, one per setting', () => {
+  it('is one panel, with a field for every setting', () => {
     render();
     expect(panel().tagName).toBe('SECTION');
     expect(container.querySelectorAll('.panel')).toHaveLength(1);
+    expect(container.querySelectorAll('.field')).toHaveLength(3);
+    // A choice and a multi-select carry their caption in a span; a toggle
+    // is a chip and says its own name, which is why it has none.
     expect([...container.querySelectorAll('.field > span')].map((s) => s.textContent))
-      .toEqual(['Size', 'Colours', 'Loud']);
+      .toEqual(['Size', 'Colours']);
+    expect(container.querySelector('.field-toggle')?.textContent).toBe('Loud');
   });
 
-  it('keeps every field a direct child of the panel', () => {
-    // `.panel .field:has(.chips)` gives the chip field a row of its own by
-    // setting its flex basis, which only reaches it while the panel is the
-    // flex container it sits directly inside.
+  it('keeps every field in the panel\u2019s own flex flow', () => {
+    /*
+      `.panel .field:has(.chips:not(.chips-single))` gives a multi-select a
+      row of its own by setting its flex basis, which only reaches it while
+      the panel is the flex container it sits directly inside.
+
+      Toggles are the one exception and it is deliberate: a run of them is
+      wrapped in a `.chips-toggles` row so they read as one list rather
+      than as several fields, and that wrapper is itself a direct child
+      carrying the full-width basis. So the rule is "directly in the panel,
+      or in a toggle row that is" — stated rather than relaxed, because
+      "somewhere under the panel" would permit the nesting that breaks the
+      layout.
+    */
     render();
     for (const field of container.querySelectorAll('.field')) {
-      expect(field.parentElement).toBe(panel());
+      const parent = field.parentElement!;
+      const ok = parent === panel()
+        || (parent.matches('.chips-toggles') && parent.parentElement === panel());
+      expect(ok, `${field.textContent} is nested where the stylesheet cannot reach it`)
+        .toBe(true);
     }
   });
 
   it('puts the chip list inside the field, where the selector looks for it', () => {
+    // Scoped to the multi-select's own field. Single choices are chip
+    // rows too now, so an unscoped `.chips` finds whichever came first.
     render();
-    const chips = container.querySelector('.chips') as HTMLElement;
+    const chips = fieldFor('Colours').querySelector('.chips') as HTMLElement;
     expect(chips.parentElement).toBe(fieldFor('Colours'));
-    expect(fieldFor('Colours').matches('.panel .field:has(.chips)')).toBe(true);
-    // And nowhere else, or every field would be given the full width.
-    expect(fieldFor('Size').matches(':has(.chips)')).toBe(false);
+
+    /*
+      The full-width rule is keyed on a *multi-select* chip list, which is
+      why the single choice carries `chips-single` and the selector
+      excludes it. Both are chip rows and only one wants a row to itself:
+      a two-option choice given 100% pushes everything after it down for
+      nothing. Asserted here because the stylesheet cannot be, and
+      because an unscoped `.chips` selector was already finding the wrong
+      field the moment single choices stopped being dropdowns.
+    */
+    const wide = '.panel .field:has(.chips:not(.chips-single))';
+    expect(fieldFor('Colours').matches(wide)).toBe(true);
+    expect(fieldFor('Size').matches(wide)).toBe(false);
+    expect(fieldFor('Size').matches(':has(.chips-single)')).toBe(true);
     expect(fieldFor('Loud').matches(':has(.chips)')).toBe(false);
+    // The toggle is itself a chip, inside the row that holds the run.
+    expect(fieldFor('Loud').matches('.chips-toggles > .chip')).toBe(true);
   });
 
   it('renders each kind of field as the control it describes', () => {
     render();
-    expect(fieldFor('Size').querySelector('select')).not.toBeNull();
+    expect(fieldFor('Size').querySelector('[role="radiogroup"]')).not.toBeNull();
     expect(fieldFor('Colours').querySelectorAll('.chip')).toHaveLength(3);
-    expect(fieldFor('Loud').querySelector('input[type="checkbox"]')).not.toBeNull();
+    // A chip you press, not a checkbox — one grammar for "this is in
+    // play", whether it is one of eight styles or the single question of
+    // whether sevenths are allowed.
+    expect(fieldFor('Loud').getAttribute('aria-pressed')).toBe('false');
   });
 
   it('renders nothing but an empty panel for an exercise with no settings', () => {
@@ -129,27 +171,42 @@ describe('the shape the stylesheet is written against', () => {
   });
 });
 
+/**
+ * A single choice, as a row of chips rather than a dropdown.
+ *
+ * Same argument the multi-select already made: the options are what is
+ * being chosen between, these lists are short, and a closed `select`
+ * shows one of them. Asserted through `role="radio"` and `aria-checked`
+ * rather than the `on` class, because exactly-one-selected is what makes
+ * this different from the multi-select and the class cannot say so.
+ */
 describe('a choice', () => {
-  it('shows the option the settings are on', () => {
+  const chips = () => [...fieldFor('Size').querySelectorAll('[role="radio"]')];
+
+  it('shows the option the settings are on, and only that one', () => {
     render();
-    expect((fieldFor('Size').querySelector('select') as HTMLSelectElement).value).toBe('medium');
+    expect(chips().filter((c) => c.getAttribute('aria-checked') === 'true')
+      .map((c) => c.textContent)).toEqual(['Medium']);
   });
 
   it('offers every option, labelled', () => {
     render();
-    const options = [...fieldFor('Size').querySelectorAll('option')];
-    expect(options.map((o) => [o.value, o.textContent]))
-      .toEqual([['small', 'Small'], ['medium', 'Medium']]);
+    expect(chips().map((c) => c.textContent)).toEqual(['Small', 'Medium']);
   });
 
   it('applies the option that was picked', () => {
     render();
-    const select = fieldFor('Size').querySelector('select') as HTMLSelectElement;
-    act(() => {
-      select.value = 'small';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    act(() => { (chips()[0] as HTMLButtonElement).click(); });
     expect(changes).toEqual([{ ...START, size: 'small' }]);
+  });
+
+  it('does nothing when the chosen option is picked again', () => {
+    // There is no state with none selected, so re-picking is not a toggle.
+    // A row of chips looks like the multi-select, which is exactly why
+    // this needs saying.
+    render();
+    act(() => { (chips()[1] as HTMLButtonElement).click(); });
+    expect(changes).toEqual([]);
   });
 });
 
@@ -244,14 +301,14 @@ describe('a multi-select', () => {
 describe('a toggle', () => {
   it('shows whether it is on, and applies a change either way', () => {
     render();
-    const box = () => fieldFor('Loud').querySelector('input') as HTMLInputElement;
-    expect(box().checked).toBe(false);
+    const box = () => fieldFor('Loud');
+    expect(box().getAttribute('aria-pressed')).toBe('false');
 
-    act(() => box().click());
+    act(() => (box() as HTMLButtonElement).click());
     expect(changes.at(-1)).toEqual({ ...START, loud: true });
-    expect(box().checked).toBe(true);
+    expect(box().getAttribute('aria-pressed')).toBe('true');
 
-    act(() => box().click());
+    act(() => (box() as HTMLButtonElement).click());
     expect(changes.at(-1)).toEqual({ ...START, loud: false });
   });
 });

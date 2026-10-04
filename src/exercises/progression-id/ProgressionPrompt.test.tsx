@@ -261,12 +261,12 @@ describe('answering', () => {
     render(ex, { result: gradeProgression(ex, { numerals: said }) });
 
     // ii was answered I; the other three were right.
-    expect(slots()[0].className).toBe('slot wrong');
+    expect(slots()[0].className).toBe('slot filled wrong');
     expect(slots()[0].querySelector('s')?.textContent).toBe('I');
     expect(slots()[0].textContent).toBe('I ii');
 
     for (const i of [1, 2, 3]) {
-      expect(slots()[i].className).toBe('slot right');
+      expect(slots()[i].className).toBe('slot filled right');
       expect(slots()[i].querySelector('s')).toBeNull();
       expect(slots()[i].textContent).toBe(ex.numerals[i]);
     }
@@ -279,7 +279,7 @@ describe('answering', () => {
     click(check());
     render(ex, { result: gradeProgression(ex, { numerals: [...ex.numerals] }) });
 
-    expect(slots().map((b) => b.className)).toEqual(ex.numerals.map(() => 'slot right'));
+    expect(slots().map((b) => b.className)).toEqual(ex.numerals.map(() => 'slot filled right'));
     expect(container.querySelectorAll('.slots s')).toHaveLength(0);
   });
 

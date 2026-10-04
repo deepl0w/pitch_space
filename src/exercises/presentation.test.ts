@@ -234,29 +234,73 @@ describe('every declared presentation gives the user something', () => {
  * out, tried, and abandoned rather than weakened.
  */
 describe('settings that cannot change the question', () => {
-  const keyId = EXERCISE_TYPES.find((d) => d.id === 'key-id')!;
+  /*
+    Swept over every exercise rather than demonstrated on one.
 
-  function shownWhen(presentation: Presentation): string[] {
-    const settings = keyId.settings.coerce({
-      ...(keyId.settings.defaults as object), presentation,
-    });
-    return keyId.settings.fields
-      .filter((f) => f.relevant?.(settings) ?? true)
-      .map((f) => f.id);
-  }
+    It used to be demonstrated on `key-id`, whose clef and read-source
+    were inert whenever the question was heard. That exercise has no
+    heard question any more (ADR 0028), so the example went — and an
+    example going is a bad reason for a property to stop being checked.
+    The property is about any field that declares itself conditional:
+    it has to be hidden somewhere and shown somewhere, or the predicate
+    is either hiding a working control or decorating one that is always
+    on.
+  */
+  const settingsFor = (d: AnyExerciseDefinition, over: object) =>
+    d.settings.coerce({ ...(d.settings.defaults as object), ...over });
 
-  it('hides the clef and the source when the question is heard', () => {
-    const heard = shownWhen('listen');
-    expect(heard).not.toContain('clefs');
-    expect(heard).not.toContain('readSource');
-    // And still offers the one that decides what is asked.
-    expect(heard).toContain('presentation');
+  const shown = (d: AnyExerciseDefinition, over: object) => d.settings.fields
+    .filter((f) => f.relevant?.(settingsFor(d, over)) ?? true)
+    .map((f) => f.id);
+
+  /**
+   * Settings shapes a user can actually reach.
+   *
+   * Presentation is not the only thing a field can depend on — the
+   * Picardy third waits on a minor key being in play — so a sweep over
+   * the two modes alone would call that field "never shown" and be
+   * wrong about a control that works. Widening the other axes is the
+   * same lesson the palette sweeps keep teaching.
+   */
+  const SHAPES = [
+    { presentation: 'listen' as const },
+    { presentation: 'read' as const },
+    { presentation: 'listen' as const, modes: ['major', 'minor'] },
+    { presentation: 'read' as const, modes: ['major', 'minor'] },
+  ];
+
+  it('declares a conditional field somewhere, or this sweep is idle', () => {
+    const conditional = EXERCISE_TYPES.flatMap(
+      (d) => d.settings.fields.filter((f) => f.relevant !== undefined).map((f) => `${d.id}:${f.id}`),
+    );
+    expect(conditional.length).toBeGreaterThan(2);
   });
 
-  it('shows them again when the question is read', () => {
-    // Otherwise "hides them" would pass for a field nobody ever sees.
-    const read = shownWhen('read');
-    expect(read).toContain('clefs');
-    expect(read).toContain('readSource');
+  it('hides every conditional field in at least one mode, and shows it in another', () => {
+    for (const d of EXERCISE_TYPES) {
+      const modes = d.presentations;
+      const reachable = SHAPES.filter((shape) => modes.includes(shape.presentation));
+      for (const field of d.settings.fields) {
+        if (field.relevant === undefined) continue;
+        const where = reachable.map((shape) => shown(d, shape).includes(field.id));
+        // A field conditional on something other than presentation —
+        // the Picardy third, which waits on a mode being in play — is
+        // allowed to be visible in both, so the only thing forbidden is
+        // being visible in none.
+        expect(where.some(Boolean), `${d.id}: ${field.id} is never shown`).toBe(true);
+      }
+    }
+  });
+
+  it('hides what a heard question cannot use, and shows it again when read', () => {
+    // The concrete case, kept because the sweep above would pass over an
+    // app where nothing happened to be presentation-dependent. Scale
+    // identification has one of each: a clef that only a reader needs,
+    // and a playback direction only a listener hears.
+    const scale = EXERCISE_TYPES.find((d) => d.id === 'scale-id')!;
+    expect(shown(scale, { presentation: 'listen' })).toContain('direction');
+    expect(shown(scale, { presentation: 'listen' })).not.toContain('clef');
+    expect(shown(scale, { presentation: 'read' })).toContain('clef');
+    expect(shown(scale, { presentation: 'read' })).not.toContain('direction');
   });
 });

@@ -11,6 +11,7 @@ import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
+import { presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -501,14 +502,7 @@ function coerceModes(value: unknown): readonly Mode[] {
 export const progressionSettings: SettingsSchema<ProgressionSettings> = {
   defaults: PROGRESSION_DEFAULTS,
   fields: [
-    {
-      kind: 'choice',
-      id: 'presentation',
-      label: 'How',
-      options: [{ id: 'listen', label: 'Hear it' }, { id: 'read', label: 'Read it' }],
-      selected: (s) => s.presentation,
-      apply: (s, option) => ({ ...s, presentation: option === 'read' ? 'read' : 'listen' }),
-    },
+    presentationField(),
     {
       kind: 'multi',
       id: 'styles',

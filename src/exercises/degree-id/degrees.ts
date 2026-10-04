@@ -6,6 +6,7 @@ import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
+import { presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -218,12 +219,7 @@ export const degreeSettingsSchema: SettingsSchema<DegreeSettings> = {
   defaults: DEGREE_DEFAULTS,
   coerce: coerceDegreeSettings,
   fields: [
-    {
-      kind: 'choice', id: 'presentation', label: 'Asked',
-      options: [{ id: 'listen', label: 'By ear' }, { id: 'read', label: 'By eye' }],
-      selected: (s) => s.presentation,
-      apply: (s, option) => ({ ...s, presentation: option === 'read' ? 'read' : 'listen' }),
-    },
+    presentationField(),
     {
       // The only control over which degrees are asked. There was a preset
       // picker beside it and the two went out of step the moment a chip was

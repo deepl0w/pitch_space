@@ -107,7 +107,8 @@ export function ProgressionPrompt({
             <li key={i}>
               <button
                 type="button"
-                className={`slot${right ? ' right' : ''}${wrong ? ' wrong' : ''}`}
+                className={`slot${mine ? ' filled' : ''}`
+                  + `${right ? ' right' : ''}${wrong ? ' wrong' : ''}`}
                 disabled={answered || i >= filled.length}
                 aria-label={`Chord ${i + 1}${mine ? `, ${mine}` : ', not yet named'}`}
                 onClick={() => clearFrom(i)}
@@ -124,7 +125,7 @@ export function ProgressionPrompt({
         })}
       </ol>
 
-      <div className="choices" role="group" aria-label="Chords available in this key">
+      <div className="choices palette" role="group" aria-label="Chords available in this key">
         {exercise.palette.map((numeral) => (
           <button
             key={numeral}

@@ -7,17 +7,18 @@ import {
 /**
  * Key identification by sight: read a signature, name the key.
  *
- * The only exercise so far with nothing to listen to, which is why it is
- * worth having second — it is the one that proves the contract does not
- * quietly assume every exercise sounds.
+ * The only exercise with nothing to listen to, which is why it earns its
+ * place in the registry twice over — it is the one that proves the
+ * contract does not quietly assume every exercise sounds.
  */
 export const keyIdentification = defineExercise<KeySettings, KeyExercise, KeyResponse>({
   id: KEY_EXERCISE_ID,
   name: 'Key identification',
-  description: 'Name the key — from its signature, from the notes, or by ear.',
-  // All three: the signature and the bare accidentals are read, a passage is
-  // heard. Declaring both is what puts the choice in the settings panel.
-  presentations: ['read', 'listen'],
+  description: 'Name the key — from its signature, or from the notes.',
+  // Reading only. An ear mode was offered and removed: naming a key from a
+  // cadence with no reference pitch is absolute pitch, which most
+  // musicians do not have and cannot train. See ADR 0028.
+  presentations: ['read'],
   settings: keySettingsSchema,
   generate: generateKey,
   items: keyItems,

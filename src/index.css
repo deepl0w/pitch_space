@@ -6,6 +6,8 @@
   --muted: #6b6762;
   --line: #e2ded8;
   --accent: #7a4b2a;
+  --right: #2f7d4f;
+  --wrong: #b4442e;
   --score-ink: #1a1a1a;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
@@ -18,6 +20,8 @@
     --muted: #9a938a;
     --line: #322e27;
     --accent: #d8a26a;
+    --right: #5fbf86;
+    --wrong: #e4745c;
     --score-ink: #ece7df;
   }
 }
@@ -221,9 +225,74 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 .chip:hover { color: var(--ink); filter: none; }
 .chip.on { background: var(--accent); color: var(--bg); border-color: transparent; }
 
-/* The settings panel lays its fields out in a row, but a chip list needs the
-   full width or the chips wrap into a column one at a time. */
-.panel .field:has(.chips) { flex: 1 1 100%; }
+/* The settings panel lays its fields out in a row, but a multi-select chip
+   list needs the full width or the chips wrap into a column one at a time.
+   A single choice is usually two or three short options and wants the
+   opposite — taking a whole row for "Listening / Reading" pushes
+   everything else down for nothing. */
+.panel .field:has(.chips:not(.chips-single)) { flex: 1 1 100%; }
+.panel .field:has(.chips-single) { flex: 0 1 auto; }
+
+/* The answer to a progression, chord by chord.
+
+   Laid out as a row because a progression is a row: the slots are bars in
+   time order, and an `ol` left to its own devices stacks them into a
+   column that reads as a list of unrelated questions. There were no rules
+   for either class at all, so the slots also inherited the default button
+   — the accent fill — while the palette below them carried the explicit
+   dark one, which is the wrong way round. An empty slot looked like the
+   thing to tap and the chords looked inert. */
+.slots {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  list-style: none; padding: 0; margin: 0 0 0.9rem;
+  counter-reset: slot;
+}
+.slots li { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
+.slots li::before {
+  counter-increment: slot; content: counter(slot);
+  font-size: 0.68rem; color: var(--muted);
+}
+/* Empty: a dashed outline on the page's own background, which is what a
+   blank waiting to be filled looks like everywhere else. */
+.slot {
+  min-width: 3.2rem; padding: 0.45rem 0.55rem;
+  background: var(--bg); color: var(--muted);
+  border: 1px dashed var(--line); border-radius: 6px;
+  font-size: 0.9rem;
+}
+.slot:disabled { cursor: default; }
+/* Filled: solid, and the ink colour, so the answer so far reads as text
+   rather than as more empty boxes. */
+.slot.filled {
+  background: var(--surface); color: var(--ink);
+  border-style: solid; font-weight: 600;
+}
+.slot.right { border-color: var(--right); color: var(--right); }
+.slot.wrong { border-color: var(--wrong); color: var(--wrong); }
+.slot.wrong s { color: var(--muted); font-weight: 400; }
+
+/* The palette is what you tap, so it is the coloured thing on this screen.
+   Only here: on every other exercise the answer buttons are the one
+   interactive row and there is nothing for them to be confused with. */
+.palette .choice {
+  background: var(--accent); color: var(--bg);
+  border-color: var(--accent); font-weight: 600;
+}
+.palette .choice:hover:not(:disabled) { filter: brightness(1.08); }
+.palette .choice:disabled { background: var(--surface); color: var(--muted); border-color: var(--line); }
+
+/* A toggle is a row, not a column, and is sized to its caption rather than
+   to a select's column — see `Toggle`. Without this it renders as an
+   uppercase caption floating above a centred box, and a panel with six of
+   them reads as a scatter of unlabelled checkboxes. */
+/* A toggle is a chip, so the panel has one grammar: everything you can
+   turn on looks the same whether it is one of many styles or the single
+   question of whether sevenths are in play. `.chip` already carries the
+   look; this only has to undo what `.field` would otherwise impose. */
+.field-toggle { flex: 0 0 auto; display: inline-flex; }
+/* The run of them shares a row, and takes one of its own. */
+.chips-toggles { flex: 1 1 100%; }
+
 
 .prompt { margin-bottom: 1.25rem; }
 .prompt .actions { align-items: center; }
@@ -235,11 +304,11 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 
 /* Right and wrong are carried by a word as well as a colour: a verdict that is
    only a hue is no verdict at all to a colour-blind user. */
-.choice.right { border-color: #2f7d4f; color: #2f7d4f; opacity: 1; font-weight: 650; }
-.choice.wrong { border-color: #b4442e; color: #b4442e; opacity: 1; font-weight: 650; }
+.choice.right { border-color: var(--right); color: var(--right); opacity: 1; font-weight: 650; }
+.choice.wrong { border-color: var(--wrong); color: var(--wrong); opacity: 1; font-weight: 650; }
 .verdict { font-size: 0.9rem; margin: 0.9rem 0 0; }
-.verdict.right { color: #2f7d4f; }
-.verdict.wrong { color: #b4442e; }
+.verdict.right { color: var(--right); }
+.verdict.wrong { color: var(--wrong); }
 
 .warning {
   font-size: 0.85rem; color: var(--muted); margin-top: 1rem;

@@ -1,13 +1,13 @@
 import { makeRng, pick } from '../../theory/rng';
 import { ALL_KEYS, type Key, type Mode, keyId, keyName } from '../../theory/key';
-import { midiOf, type Pitch } from '../../theory/pitch';
+import { type Pitch } from '../../theory/pitch';
 import { noteValue, timeSignature } from '../../theory/meter';
 import {
   CADENCE_NAMES, type CadenceType, type RomanNumeral, numeralText, realizePitches,
 } from '../../theory/roman';
 import { generateHarmony } from '../../generate/harmony';
-import { cadencePitches } from '../../generate/tonicize';
-import { schedule } from '../../audio/output/schedule';
+import { establishingCadence } from '../../generate/tonicize';
+import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
 import type {
@@ -97,8 +97,8 @@ export interface ProgressionExercise extends ExerciseBase {
   readonly voicings: readonly (readonly Pitch[])[];
   readonly cadence: CadenceType | null;
   readonly clef: Clef;
-  /** The cadence that puts the key in the ear before the question. */
-  readonly context: readonly Pitch[];
+  /** The cadence that puts the key in the ear, as chords. */
+  readonly context: readonly (readonly Pitch[])[];
   /** Every numeral that may be chosen, in a fixed order. */
   readonly palette: readonly string[];
 }
@@ -243,6 +243,9 @@ export function generateProgression(
   // "that was F", which is what this exercise exists not to teach.
   const key = pick(rng, ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4));
   const shape = SHAPE_AT[settings.difficulty];
+  // `shape.bars` is the fallback and not the setting: a stored length from a
+  // release that offered a different set, or a hand-edited one, lands here.
+  // See SHAPE_AT — this is the only thing still reading its `bars`.
   const bars = BAR_CHOICES.includes(settings.bars as typeof BAR_CHOICES[number])
     ? settings.bars : shape.bars;
 
@@ -280,7 +283,7 @@ export function generateProgression(
     voicings,
     cadence,
     clef: settings.clef,
-    context: cadencePitches(key),
+    context: establishingCadence(key),
     palette: paletteFor(mode, settings.appliedDominants),
   };
 }
@@ -340,16 +343,11 @@ export function keyFor(exercise: ProgressionExercise): Key {
  * and the user counts wrong before they have heard anything.
  */
 export function progressionVoices(exercise: ProgressionExercise): Voice[] {
-  const context = chunk(exercise.context, 3);
-  const voices = schedule(
-    context.map((midis) => ({ midis: midis.map(midiOf) })),
-    { eventGap: 0.55, rollGap: 0, hold: 0.5 },
-  );
-  const after = context.length * 0.55 + 0.5;
-  const body = schedule(
-    exercise.voicings.map((pitches) => ({ midis: pitches.map(midiOf) })),
-    { eventGap: 1.1, rollGap: 0, hold: 1.0 },
-  );
+  const voices = chordVoices(exercise.context, ESTABLISHING);
+  const after = exercise.context.length * ESTABLISHING.eventGap + 0.5;
+  // Slower and longer than the establishing cadence: this is the question
+  // rather than the preamble, and it has to be followable.
+  const body = chordVoices(exercise.voicings, { eventGap: 1.1, hold: 1.0 });
   return [...voices, ...body.map((v) => ({ ...v, start: v.start + after }))];
 }
 
@@ -367,11 +365,6 @@ export function progressionQuestionSpec(exercise: ProgressionExercise): ScoreSpe
   return exercise.presentation === 'read' ? progressionScoreSpec(exercise) : null;
 }
 
-function chunk(pitches: readonly Pitch[], size: number): Pitch[][] {
-  const out: Pitch[][] = [];
-  for (let i = 0; i < pitches.length; i += size) out.push(pitches.slice(i, i + size));
-  return out;
-}
 
 function coerceModes(value: unknown): readonly Mode[] {
   if (!Array.isArray(value)) return PROGRESSION_DEFAULTS.modes;

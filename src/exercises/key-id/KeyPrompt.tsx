@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { ALL_KEYS, keyId, keyName } from '../../theory/key';
-import { midiOf } from '../../theory/pitch';
-import { schedule } from '../../audio/output/schedule';
-import type { Voice } from '../../audio/output/synth';
+import { ALL_KEYS, findKey, keyId, keyName } from '../../theory/key';
+import { cadenceVoices } from '../cadence';
 import type { PromptProps } from '../types';
 import { soundingKeyName, type KeyExercise, type KeyResponse, type KeySettings } from './keys';
 
@@ -27,7 +25,7 @@ export function KeyPrompt({
   const autoplayed = useRef(false);
 
   function play() {
-    audio.play(keyVoices(exercise));
+    audio.play(cadenceVoices(findKey(exercise.keyId)));
   }
 
   useEffect(() => {
@@ -80,21 +78,4 @@ export function KeyPrompt({
       )}
     </div>
   );
-}
-
-/**
- * The cadence, as chords rather than as a run of single notes.
- *
- * `pitches` arrives as a flat list of three-note chords laid end to end,
- * which is how `cadencePitches` returns it; played one note at a time it
- * would be an arpeggio and a different question.
- */
-function keyVoices(exercise: KeyExercise): Voice[] {
-  const chords: number[][] = [];
-  for (let i = 0; i < exercise.pitches.length; i += 3) {
-    chords.push(exercise.pitches.slice(i, i + 3).map(midiOf));
-  }
-  return schedule(chords.map((midis) => ({ midis })), {
-    eventGap: 0.6, rollGap: 0, hold: 0.55,
-  });
 }

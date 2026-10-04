@@ -2,8 +2,8 @@ import { makeRng, pick } from '../../theory/rng';
 import { ALL_KEYS, type Mode, keyId, keyName, keyPitches } from '../../theory/key';
 import { midiOf, pitchName, type Pitch } from '../../theory/pitch';
 import { noteValue } from '../../theory/meter';
-import { cadencePitches } from '../../generate/tonicize';
-import { schedule } from '../../audio/output/schedule';
+import { establishingCadence } from '../../generate/tonicize';
+import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
 import type {
@@ -58,8 +58,16 @@ export interface DegreeExercise extends ExerciseBase {
   readonly degree: number;
   readonly pitch: Pitch;
   readonly clef: Clef;
-  /** The cadence that puts the key in the ear; empty when it is not resounded. */
-  readonly context: readonly Pitch[];
+  /**
+   * The cadence that puts the key in the ear, as chords; empty when it is
+   * not resounded.
+   *
+   * Chords rather than a flat list, because `establishingCadence` already
+   * returns them grouped and the flat form had to be guessed back into
+   * threes by every caller — a guess about what `spellChord` returns, and
+   * wrong the moment any chord in the progression takes a seventh.
+   */
+  readonly context: readonly (readonly Pitch[])[];
   readonly choices: readonly number[];
 }
 
@@ -137,7 +145,7 @@ export function generateDegree(spec: ExerciseSpec<DegreeSettings>): DegreeExerci
     degree,
     pitch,
     clef: settings.clef,
-    context: settings.reestablish ? cadencePitches(key) : [],
+    context: settings.reestablish ? establishingCadence(key) : [],
     choices: [...allowed].sort((a, b) => a - b),
   };
 }
@@ -166,19 +174,14 @@ export function gradeDegree(
  * than as a fifth chord.
  */
 export function degreeVoices(exercise: DegreeExercise): Voice[] {
-  const chords = exercise.context.length === 0 ? [] : chunk(exercise.context, 3);
-  const events = [...chords.map((midis) => ({ midis: midis.map(midiOf) }))];
-  const voices = schedule(events, { eventGap: 0.55, rollGap: 0, hold: 0.5 });
-  const after = exercise.context.length === 0 ? 0 : chords.length * 0.55 + 0.35;
+  const voices = chordVoices(exercise.context, ESTABLISHING);
+  const after = exercise.context.length === 0
+    ? 0
+    : exercise.context.length * ESTABLISHING.eventGap + 0.35;
   voices.push({ midi: midiOf(exercise.pitch), start: after, duration: 1.4 });
   return voices;
 }
 
-function chunk(pitches: readonly Pitch[], size: number): Pitch[][] {
-  const out: Pitch[][] = [];
-  for (let i = 0; i < pitches.length; i += size) out.push(pitches.slice(i, i + size));
-  return out;
-}
 
 /** Shown once answered, or as the question when the exercise is read. */
 export function degreeScoreSpec(exercise: DegreeExercise): ScoreSpec {

@@ -170,10 +170,14 @@ describe('what the exercise hands the rest of the app', () => {
     expect(progressionScoreSpec(e).notes).toHaveLength(e.numerals.length);
 
     const voices = progressionVoices(e);
+    // Counted in voices, not in chords: the context is four chords and
+    // twelve notes, and slicing by the chord count took a third of the
+    // cadence and called it the whole of it.
+    const contextVoices = e.context.flat().length;
     const contextEnds = Math.max(
-      ...voices.slice(0, e.context.length).map((v) => v.start + v.duration),
+      ...voices.slice(0, contextVoices).map((v) => v.start + v.duration),
     );
-    const bodyStarts = Math.min(...voices.slice(e.context.length).map((v) => v.start));
+    const bodyStarts = Math.min(...voices.slice(contextVoices).map((v) => v.start));
     // A progression that began before the establishing cadence finished
     // would be heard as one long passage, and the user would count wrong
     // before hearing anything.

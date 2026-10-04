@@ -89,6 +89,12 @@ const MINOR: readonly Mode[] = ['minor'];
 /**
  * The quality a degree takes when the template does not say.
  *
+ * Paired with {@link isBorrowedIn}, which encodes the same fact about the
+ * minor dominant for a different question — this says what you get when
+ * nobody specifies, that says whether a specified quality is a loan. They
+ * cannot be merged and they can drift: a change to the departure below
+ * needs the same change there.
+ *
  * The one departure from the diatonic table is the minor dominant. A minor v
  * has no leading tone and therefore does not cadence; raising it is what makes
  * the chord a dominant at all, so it is the default and the modal v is a style
@@ -322,7 +328,29 @@ const TRIAD_OF: Record<string, string> = {
 /**
  * Whether a step borrows from outside the mode.
  *
- * Mode-dependent, and it has to be. The first version of this read only
+ * **Borrowing in a minor key means taking from the parallel major** — a
+ * Picardy third, a major IV. A raised 5 or 7 is not that: it is harmonic
+ * minor, which is a *form of the key* rather than a loan into it, and the
+ * raised seventh exists precisely to supply a leading tone and a major
+ * dominant. So the minor dominant and leading tone are not borrowing, and
+ * would not be even if the corpus were enormous.
+ *
+ * That is the reason. The consequence — that counting them as borrowing
+ * would exclude nearly every minor template whenever the flag was off —
+ * is a symptom of the wrong definition and not an argument for the right
+ * one. Stated this way round because a carve-out justified by its
+ * consequences is the one the next reader re-litigates.
+ *
+ * The project already committed to this twice, before the question came
+ * up: `keyPitches` returns the natural minor because the raised leading
+ * tone "is a choice and not a property of the key", and
+ * {@link defaultTypeId} makes the minor dominant major by default because
+ * "a minor v has no leading tone and therefore does not cadence". **If
+ * that departure ever changes, this function will not know** — the two
+ * encode the same fact and answer different questions, so they cannot be
+ * merged, and degree 7 genuinely differs between them.
+ *
+ * Mode-dependent, and it has to be. The first version read only
  * `chromaticAlter`, which catches `#ivo7` in the jazz blues and misses the
  * `IV–iv` in rhythm changes entirely — that one is written
  * `{ degree: 4, typeId: 'min' }`, borrowed by *quality* with the degree
@@ -331,16 +359,22 @@ const TRIAD_OF: Record<string, string> = {
  *
  * Reduced to the triad before comparing, so a `dom7` on V is a seventh and
  * not a loan. Applied chords are excluded because they are the other
- * flag's business, and the minor dominant and leading tone are excluded
- * because raising them is how a minor key cadences — that is practice, not
- * borrowing, and treating it as borrowing would exclude nearly every minor
- * template whenever the flag was off.
+ * flag's business.
+ *
+ * Exported for its own tests. No template currently writes a minor 5 or 7
+ * in a way that reaches the exception — every degree-7 step in the corpus
+ * leaves the quality unspecified — so routed through `candidateTemplates`
+ * the degree-7 branch is unreachable and would be a claim nothing checks.
  */
-function isBorrowedIn(step: TemplateStep, mode: Mode): boolean {
+export function isBorrowedIn(step: TemplateStep, mode: Mode): boolean {
   if (step.appliedTo !== undefined) return false;
+  // Before the alteration check, not after: `#viio` in minor is spelled
+  // with an alteration and is still harmonic minor rather than a loan.
+  // Ordered the other way round — as it first was — the exception was
+  // dead for degree 7 and the raised leading tone counted as borrowing.
+  if (mode === 'minor' && (step.degree === 5 || step.degree === 7)) return false;
   if ((step.chromaticAlter ?? 0) !== 0) return true;
   if (step.typeId === undefined) return false;
-  if (mode === 'minor' && (step.degree === 5 || step.degree === 7)) return false;
   return (TRIAD_OF[step.typeId] ?? step.typeId) !== DIATONIC_TRIADS[mode][step.degree - 1];
 }
 

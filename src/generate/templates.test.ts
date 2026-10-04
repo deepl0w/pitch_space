@@ -6,8 +6,8 @@ import {
   type CadenceType, type RomanNumeral, numeralText, realizeNumeral,
 } from '../theory/roman';
 import {
-  TEMPLATES, type Template, candidateTemplates, defaultTypeId, endsOn, findTemplate,
-  startsOn, templateNumerals, templateWeight,
+  TEMPLATES, type Template, type TemplateStep, candidateTemplates, defaultTypeId, endsOn,
+  findTemplate, isBorrowedIn, startsOn, templateNumerals, templateWeight,
 } from './templates';
 
 /**
@@ -393,5 +393,73 @@ describe('excluding what a template contains', () => {
       expect(offered(t, 'minor', { allowBorrowed: false }), `${t.id} wrongly excluded`)
         .toBe(offered(t, 'minor'));
     }
+  });
+});
+
+/**
+ * What counts as borrowing, asserted directly.
+ *
+ * Through `candidateTemplates` only the degree-5 path is live: every
+ * degree-7 step in the corpus leaves its quality unspecified, so the
+ * leading-tone half of the exception was unreachable and — in the first
+ * version — silently in the wrong place, sitting after the alteration
+ * check that would already have returned true.
+ *
+ * The claim is about music rather than about the corpus, so it is tested
+ * as one. The corpus can then grow a template that writes `viio` in minor
+ * without this becoming wrong on the way.
+ */
+describe('what borrowing means', () => {
+  const step = (degree: number, over: Record<string, unknown> = {}) =>
+    ({ bars: 1, degree, ...over } as unknown as TemplateStep);
+
+  it('is a loan from the parallel mode, by quality', () => {
+    // iv in major: the rhythm-changes move, degree unaltered.
+    expect(isBorrowedIn(step(4, { typeId: 'min' }), 'major')).toBe(true);
+    // IV in major is simply IV.
+    expect(isBorrowedIn(step(4, { typeId: 'maj' }), 'major')).toBe(false);
+  });
+
+  it('is a loan by alteration too', () => {
+    expect(isBorrowedIn(step(4, { typeId: 'dim7', chromaticAlter: 1 }), 'major')).toBe(true);
+  });
+
+  it('sees past a seventh to the triad under it', () => {
+    // A dominant seventh on V is a seventh, not a loan.
+    expect(isBorrowedIn(step(5, { typeId: 'dom7' }), 'major')).toBe(false);
+    expect(isBorrowedIn(step(2, { typeId: 'min7' }), 'major')).toBe(false);
+  });
+
+  it('leaves an unspecified quality alone, whatever the degree', () => {
+    for (let degree = 1; degree <= 7; degree++) {
+      expect(isBorrowedIn(step(degree), 'major')).toBe(false);
+      expect(isBorrowedIn(step(degree), 'minor')).toBe(false);
+    }
+  });
+
+  it('is not what an applied chord is, which the other flag governs', () => {
+    expect(isBorrowedIn(step(5, { typeId: 'dom7', appliedTo: 4 }), 'major')).toBe(false);
+  });
+
+  /**
+   * The exception, and the half of it the corpus cannot currently reach.
+   *
+   * A raised 5 or 7 in a minor key is harmonic minor — a form of the key
+   * — and not a loan from the parallel major. Both spellings: the major
+   * dominant written as a quality, and the leading-tone triad written
+   * with an alteration.
+   */
+  it('does not count harmonic minor as a loan', () => {
+    expect(isBorrowedIn(step(5, { typeId: 'maj' }), 'minor')).toBe(false);
+    expect(isBorrowedIn(step(5, { typeId: 'dom7' }), 'minor')).toBe(false);
+    expect(isBorrowedIn(step(7, { typeId: 'dim' }), 'minor')).toBe(false);
+    expect(isBorrowedIn(step(7, { typeId: 'dim7', chromaticAlter: 1 }), 'minor')).toBe(false);
+  });
+
+  it('still counts a real loan into minor', () => {
+    // A Picardy third and a major IV are taken from the parallel major,
+    // which is what borrowing in minor actually means.
+    expect(isBorrowedIn(step(1, { typeId: 'maj' }), 'minor')).toBe(true);
+    expect(isBorrowedIn(step(4, { typeId: 'maj' }), 'minor')).toBe(true);
   });
 });

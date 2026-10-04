@@ -112,3 +112,33 @@ forever for a decision nobody makes.
   metronome is the obvious candidate. At that point there are two calibrations
   and the question is whether they are one setup step or two, which is a
   product decision rather than this one.
+
+## Addendum, 4 October 2026 — the first trigger has fired, and blocked the question
+
+The first revisit trigger above reads: "The round-trip measurement exists
+across real devices. If the spread turns out to be narrow everywhere, a
+measured median is a better default than `null`."
+
+It has fired, on one machine, and it does not answer the question it was
+written to answer. Seven runs in a real room on unchanged hardware returned
+39, 51, 59, 157, 159, 170 and 171 ms — and each reported its own uncertainty
+as between ±1 and ±21 ms.
+
+So the spread across *devices* cannot yet be asked, because the spread across
+*runs of one device* is larger than the correction being measured, and the
+number the app reports as its confidence does not see it.
+[0025](0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)
+has the evidence and what follows.
+
+**This record's central distinction is strengthened, not weakened.** `null`
+was chosen as the honest state for a setup that has not been measured, against
+the objection that a measured median might be better. The first real
+measurement says this setup cannot presently be measured at all — which is
+precisely the state `null` exists to represent, arrived at from the opposite
+direction.
+
+The cost named above — "most users will never calibrate, so most timing
+evidence will be `null`" — now has a second and worse route to the same place:
+most users may calibrate and be refused. The question that follows is no
+longer whether to move calibration into the first run, but whether acoustic
+round-trip measurement is the right instrument at all.

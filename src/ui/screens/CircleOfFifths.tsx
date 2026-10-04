@@ -45,58 +45,85 @@ function signatureText(key: Key): string {
 }
 
 /**
- * One or two labels centred in a wedge, stacked when there are two.
+ * The one or two spellings a wedge names, stacked when there are two.
  *
- * Used for all three rows a wedge carries — major names, minor names and
- * signatures — because a position with two spellings has two of each, and
- * anything printed once there belongs to only one of them.
+ * **A signature rides on the same line as the name it belongs to.** It used
+ * to be its own ring at `OUTER - 11`, a small superscript outside the names,
+ * which works perfectly while every wedge names one key and collides the
+ * moment one names two: stacking the names doubled their height and nothing
+ * moved the ring. Measured on the three enharmonic wedges, the name block
+ * and the signature block overlapped by 8 to 10 pixels at 0 to 6 pixels of
+ * horizontal separation — D♭ printed through 5♭, C♯ through 7♯.
  *
- * `dy` on the first tspan rather than on the text element, because shifting
- * the text shifts the anchor too and the pair ends up off-centre.
+ * The geometry forbids the obvious repair. The major annulus is 47px deep;
+ * two stacked rows of 11px names need 24 of it and two stacked 8px
+ * signatures another 18, so two separately-centred stacks cannot both sit
+ * inside the ring with clearance. Pairing each signature with its own name
+ * is not the cheaper fix, it is the only one that fits — and it is also the
+ * one that says what the screen means, since the whole reason this row
+ * exists is that D♭'s five flats are not C♯'s seven sharps.
  *
- * **Two `text` elements at computed `y`, not one with `dy` on its tspans.**
- * Twice now the stacking has been got wrong and the second time shipped
- * as fixed: a hardcoded 11px gap collided under 11px type, and `em` on a
- * `dy` *attribute* replaced it and changed nothing on the page. jsdom
- * implements no `SVGAnimatedLengthList`, so neither version could be
- * checked where the tests run, and both were reasoned about instead.
+ * Laid out as one text run with a `tspan`, so the browser centres the pair
+ * and no code computes a glyph width. That is what makes the collision
+ * impossible rather than guarded: a name and its signature are the same
+ * line of text, and a line of text does not overlap itself.
  *
- * Separate elements with explicit `y` need no `dy` semantics at all, and
- * the component sets the font size rather than reading it from a
- * stylesheet — which is the actual defect under both attempts. CSS owned
- * the size, the component owned the gap, and a gap is only right relative
- * to a size. One owner.
+ * Three attempts went the other way, two of them shipped as fixed. A
+ * hardcoded 11px gap collided under 11px type; `em` on a `dy` attribute
+ * replaced it and changed nothing on the page; separate `text` elements at
+ * explicit `y` fixed the names and left this. Each one tested the thing it
+ * changed instead of the thing that had to be true, which is why the test
+ * beside this now checks every pair of labels in a wedge for overlap rather
+ * than checking that the pair it just moved has different coordinates.
  */
-const ROW_SIZE = { major: 11, minor: 9.5, signature: 8 } as const;
+const ROW_SIZE = { major: 11, minor: 9.5 } as const;
+
+/**
+ * How tall a line of this type actually draws, as a multiple of its size.
+ *
+ * Measured, not assumed: `getBBox().height / font-size` in Chrome is 1.4
+ * for every label on this screen, at both sizes. The obvious guess is 1.0,
+ * and a 1.25em gap built on that guess left the three stacked pairs
+ * touching by 1.7px — invisible to a test that used the same wrong
+ * constant, visible in the browser. Exported so the test models the glyph
+ * the way the browser draws it rather than the way the gap hopes it does.
+ */
+export const GLYPH_HEIGHT = 1.4;
 
 export type WedgeRow = keyof typeof ROW_SIZE;
 
+/** A line of a wedge: what it names, and the signature that name carries. */
+export interface WedgeLine {
+  text: string;
+  signature?: string;
+}
+
 function WedgeLabel({ x, y, lines, row, className }: {
-  x: number; y: number; lines: string[]; row: WedgeRow; className: string;
+  x: number; y: number; lines: WedgeLine[]; row: WedgeRow; className: string;
 }) {
   const size = ROW_SIZE[row];
-  if (lines.length === 1) {
-    return <text x={x} y={y} fontSize={size} className={className}>{lines[0]}</text>;
-  }
-  // Centred on `y` as a pair: the first sits half a line above, the second
-  // half below, so adding a twin does not shift the wedge's single names.
-  const gap = size * 1.15;
+  // Centred on `y` as a block: a single line sits on it, a pair straddles
+  // it, so growing a twin does not shift the wedges that have none.
+  const gap = size * (GLYPH_HEIGHT + 0.15);
+  const offset = (i: number) => (lines.length === 1 ? 0 : (i === 0 ? -gap / 2 : gap / 2));
   return (
     <>
       {lines.map((line, i) => (
-        <text
-          key={i}
-          x={x}
-          y={y + (i === 0 ? -gap / 2 : gap / 2)}
-          fontSize={size}
-          className={className}
-        >
-          {line}
+        <text key={i} x={x} y={y + offset(i)} fontSize={size} className={className}>
+          {line.text}
+          {line.signature !== undefined && (
+            <tspan className="wedge-signature" fontSize={SIGNATURE_SIZE}>
+              {'\u2009'}{line.signature}
+            </tspan>
+          )}
         </text>
       ))}
     </>
   );
 }
+
+/** Small enough to read as an annotation, large enough to read at all. */
+const SIGNATURE_SIZE = 8;
 
 export function CircleOfFifths() {
   const [selectedId, setSelectedId] = useState('C_major');
@@ -143,7 +170,6 @@ export function CircleOfFifths() {
             const minor = position.minor[0];
             const [mx, my] = polar((OUTER + MIDDLE) / 2, position.index * WEDGE);
             const [nx, ny] = polar((MIDDLE + INNER) / 2, position.index * WEDGE);
-            const [sx, sy] = polar(OUTER - 11, position.index * WEDGE);
             return (
               <g key={position.index}>
                 <path
@@ -157,21 +183,27 @@ export function CircleOfFifths() {
                   onClick={() => setSelectedId(keyId(minor))}
                 />
                 {/* Stacked rather than joined by a slash. Three of the twelve
-                    positions carry two spellings, and "B / C♭" is wider than a
-                    thirty-degree wedge at this radius however small the type
-                    gets — so the enharmonic twin goes on its own line. */}
+                    positions carry two spellings, and "B♭ / C♭ 7♭" is wider
+                    than a thirty-degree wedge at this radius however small
+                    the type gets — so the enharmonic twin goes on its own
+                    line, with its own signature beside it.
+
+                    One signature per spelling, and on the spelling's own
+                    line. A wedge is a position, but a position is not a
+                    signature where two keys share it: D♭ has five flats and
+                    C♯ seven sharps, and printing only the first taught the
+                    second as a fact about the first. On a screen whose job
+                    is teaching key signatures, that is the one thing it must
+                    not do. */}
                 <WedgeLabel x={mx} y={my} row="major" className="wedge-label"
-                            lines={position.major.map((k) => keyName(k).replace(' major', ''))} />
+                            lines={position.major.map((k) => ({
+                              text: keyName(k).replace(' major', ''),
+                              signature: signatureText(k),
+                            }))} />
                 <WedgeLabel x={nx} y={ny} row="minor" className="wedge-label wedge-label-minor"
-                            lines={position.minor.map((k) => `${keyName(k).replace(' minor', '')}m`)} />
-                {/* One per spelling, in the same order as the names above it.
-                    A wedge is a position, but a position is not a signature
-                    where two keys share it: D♭ has five flats and C♯ seven
-                    sharps, and printing only the first taught the second as
-                    a fact about the first. On a screen whose job is teaching
-                    key signatures, that is the one thing it must not do. */}
-                <WedgeLabel x={sx} y={sy} row="signature" className="wedge-signature"
-                            lines={position.major.map(signatureText)} />
+                            lines={position.minor.map((k) => ({
+                              text: `${keyName(k).replace(' minor', '')}m`,
+                            }))} />
               </g>
             );
           })}

@@ -2,7 +2,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CircleOfFifths } from './CircleOfFifths';
+import { CircleOfFifths, GLYPH_HEIGHT } from './CircleOfFifths';
 import { CIRCLE } from '../../theory/circle';
 import { keyName } from '../../theory/key';
 
@@ -46,23 +46,35 @@ afterEach(() => {
 });
 
 /**
- * Every label of one kind, grouped by the wedge it sits on.
+ * Every label of one kind, in the order they are drawn down the wedge.
  *
  * A stacked pair is two `text` elements sharing an `x` and differing in
  * `y`, so a wedge is identified by its `x` rather than by a single
- * element. Assertions stay about what a wedge *says* rather than about
- * which branch drew it.
+ * element. A signature is a `tspan` inside its key's name and has no `y`
+ * of its own, so it is ordered by the line it sits on. Assertions stay
+ * about what a wedge *says* rather than about which branch drew it.
  */
 function lines(scope: Element | null, selector: string): string[] {
   if (scope === null) return [];
   return [...scope.querySelectorAll(selector)]
-    .sort((a, b) => Number(a.getAttribute('y')) - Number(b.getAttribute('y')))
-    .map((t) => t.textContent ?? '');
+    .map((el) => ({ el, y: Number((el.closest('text') ?? el).getAttribute('y')) }))
+    .sort((a, b) => a.y - b.y)
+    .map(({ el }) => el.textContent ?? '');
+}
+
+/** A name without the signature its own tspan contributes to `textContent`. */
+function nameOf(el: Element): string {
+  const signature = el.querySelector('.wedge-signature');
+  return (el.textContent ?? '').replace(signature?.textContent ?? '\u0000', '').trim();
 }
 
 /** The signature a key actually has, spelled the way the wedge spells it. */
 const expected = (accidentals: number) =>
   accidentals === 0 ? '—' : `${Math.abs(accidentals)}${accidentals > 0 ? '♯' : '♭'}`;
+
+/** Signatures as drawn, with the thin space that separates them from the name. */
+const drawn = (scope: Element) =>
+  lines(scope, '.wedge-signature').map((t) => t.replace('\u2009', ''));
 
 const wedges = () => [...container.querySelectorAll('svg.circle > g')];
 
@@ -71,14 +83,14 @@ describe('every wedge of the circle', () => {
     expect(wedges()).toHaveLength(CIRCLE.length);
 
     for (const [i, position] of CIRCLE.entries()) {
-      const signatures = lines(wedges()[i], '.wedge-signature');
+      const signatures = drawn(wedges()[i]);
       expect(signatures).toHaveLength(position.major.length);
     }
   });
 
   it('gives each spelling its own count, not its neighbour\'s', () => {
     for (const [i, position] of CIRCLE.entries()) {
-      const signatures = lines(wedges()[i], '.wedge-signature');
+      const signatures = drawn(wedges()[i]);
 
       expect(signatures).toEqual(position.major.map((k) => expected(k.accidentals)));
     }
@@ -90,8 +102,10 @@ describe('every wedge of the circle', () => {
     // would be worse than printing one, because it would look deliberate.
     for (const [i, position] of CIRCLE.entries()) {
       const wedge = wedges()[i];
-      const names = lines(wedge, '.wedge-label:not(.wedge-label-minor)');
-      const signatures = lines(wedge, '.wedge-signature');
+      const names = [...wedge.querySelectorAll('.wedge-label:not(.wedge-label-minor)')]
+        .sort((a, b) => Number(a.getAttribute('y')) - Number(b.getAttribute('y')))
+        .map(nameOf);
+      const signatures = drawn(wedge);
 
       expect(names).toEqual(position.major.map((k) => keyName(k).replace(' major', '')));
       expect(signatures).toHaveLength(names.length);
@@ -123,39 +137,95 @@ describe('the enharmonic positions', () => {
 });
 
 /**
+ * Nothing a wedge draws may sit on top of anything else it draws.
+ *
+ * This is the assertion three attempts at this screen did without, and all
+ * three shipped something that still overlapped. The first stacked two
+ * names 11px apart under 11px type; the second moved the gap to `em` on a
+ * `dy` attribute and changed nothing on the page; the third separated the
+ * names properly and left the signature ring, drawn at a fixed radius for
+ * one line of names, printing straight through the two.
+ *
+ * Each of those was checked by a test about the thing that had just been
+ * moved — do the two names differ in `y` — and each passed while the wedge
+ * was still unreadable. The property that actually has to hold is about
+ * every pair of labels in the wedge, not about the pair under repair, and
+ * it is the one worth paying a box-intersection test for.
+ *
+ * A signature is now a `tspan` inside its name, so it is one text run with
+ * it and cannot collide with it by construction; what remains checkable
+ * here is the stacking, and it is checked exhaustively.
+ */
+describe('what a wedge draws', () => {
+  /**
+   * An approximate ink box for an SVG label.
+   *
+   * jsdom measures no text, so both dimensions are modelled. The width is
+   * a generous estimate — 0.62em per character is wide for digits and
+   * narrow for nothing in this alphabet. The height is not an estimate but
+   * {@link GLYPH_HEIGHT}, read off `getBBox` in Chrome, and using it here
+   * is the whole point: the first version of this test modelled a line as
+   * 1.0em tall, agreed with a layout that left the stacked pairs touching
+   * by 1.7px, and passed. A box test is only as good as its box.
+   */
+  function box(el: Element) {
+    const size = Number(el.getAttribute('font-size'));
+    const x = Number(el.getAttribute('x'));
+    const y = Number(el.getAttribute('y'));
+    const width = (el.textContent ?? '').length * size * 0.62;
+    const height = size * GLYPH_HEIGHT;
+    return { l: x - width / 2, r: x + width / 2, t: y - height / 2, b: y + height / 2 };
+  }
+
+  const overlaps = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) =>
+    a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+
+  it('keeps every label clear of every other label on the same wedge', () => {
+    for (const [i, position] of CIRCLE.entries()) {
+      const labels = [...wedges()[i].querySelectorAll('text')];
+      for (const [j, first] of labels.entries()) {
+        for (const second of labels.slice(j + 1)) {
+          expect(
+            overlaps(box(first), box(second)),
+            `on the ${position.major.map((k) => keyName(k)).join('/')} wedge, `
+            + `"${first.textContent}" overlaps "${second.textContent}"`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
+  it('has wedges that draw enough labels for that to mean something', () => {
+    // Twelve positions, three of which name two keys: fifteen names and
+    // fifteen minors. A wedge drawing one label can never fail the sweep
+    // above, so the sweep is only worth having if most of them draw more.
+    const counts = CIRCLE.map((_, i) => wedges()[i].querySelectorAll('text').length);
+    expect(counts.filter((n) => n > 2).length).toBe(3);
+    expect(Math.min(...counts)).toBe(2);
+  });
+});
+
+/**
  * The stack spacing has to follow the type size, because one component
- * sets three rows at three sizes.
+ * sets two rows at two sizes.
  *
  * It was a fixed 11px: comfortable under an 8px signature, and exactly the
  * glyph height under an 11px major name — so the three enharmonic majors
- * printed B over Cb, Gb over F#, Db over C# at the same point, while the
+ * printed B over C♭, G♭ over F♯, D♭ over C♯ at the same point, while the
  * minor ring one step in, with identical markup, read cleanly. Found by
  * the user role, by comparing the two rings rather than reading either
  * alone; a test that checked only "two lines are present" passed
- * throughout, and this is the assertion that would not have.
+ * throughout.
  */
 describe('stacking two spellings on one wedge', () => {
-  /**
-   * Drawn apart, asserted in the coordinates the browser uses.
-   *
-   * Two earlier versions stacked with `dy` on tspans — once a hardcoded
-   * pixel gap that collided under the largest of the three type sizes,
-   * once `em` on a `dy` attribute, which shipped as fixed and changed
-   * nothing on the page. Neither could be checked here: jsdom implements
-   * no `SVGAnimatedLengthList`, so a `dy` is an opaque string to this
-   * suite however it is written.
-   *
-   * Separate `text` elements at explicit `y` need no `dy` semantics, and
-   * `y` is a number this test can compare.
-   */
   it('gives the two spellings different y, on every row that stacks', () => {
     const stacked = [...container.querySelectorAll('g')]
-      .flatMap((wedge) => ['.wedge-label:not(.wedge-label-minor)', '.wedge-label-minor', '.wedge-signature']
+      .flatMap((wedge) => ['.wedge-label:not(.wedge-label-minor)', '.wedge-label-minor']
         .map((sel) => [...wedge.querySelectorAll(sel)])
         .filter((group) => group.length > 1));
 
-    // Three wedges carry two spellings, and each has three rows.
-    expect(stacked.length).toBe(9);
+    // Three wedges carry two spellings, and each stacks both of its rows.
+    expect(stacked.length).toBe(6);
 
     for (const group of stacked) {
       const ys = group.map((t) => Number(t.getAttribute('y')));
@@ -169,12 +239,30 @@ describe('stacking two spellings on one wedge', () => {
 
   it('puts both spellings of every shared wedge on their own line', () => {
     const all = [...container.querySelectorAll('g')]
-      .map((wedge) => lines(wedge, '.wedge-label:not(.wedge-label-minor)'))
+      .map((wedge) => [...wedge.querySelectorAll('.wedge-label:not(.wedge-label-minor)')]
+        .sort((a, b) => Number(a.getAttribute('y')) - Number(b.getAttribute('y')))
+        .map(nameOf))
       .filter((l) => l.length > 1);
 
     for (const pair of [['B', 'Cb'], ['Gb', 'F#'], ['Db', 'C#']]) {
       expect(all, `${pair.join('/')} is not stacked`)
         .toContainEqual(expect.arrayContaining(pair));
+    }
+  });
+
+  it('keeps each signature on the line of the key it belongs to', () => {
+    // The defect this screen exists to not have: D♭'s five flats printed
+    // against C♯. Checked as containment within one text run rather than
+    // as two coordinates that happen to agree.
+    for (const [i, position] of CIRCLE.entries()) {
+      const names = [...wedges()[i].querySelectorAll('.wedge-label:not(.wedge-label-minor)')]
+        .sort((a, b) => Number(a.getAttribute('y')) - Number(b.getAttribute('y')));
+
+      for (const [j, key] of position.major.entries()) {
+        const signature = names[j].querySelector('.wedge-signature');
+        expect(signature, `${keyName(key)} has no signature on its own line`).not.toBeNull();
+        expect(signature!.textContent?.replace('\u2009', '')).toBe(expected(key.accidentals));
+      }
     }
   });
 });

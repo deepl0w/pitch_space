@@ -106,15 +106,15 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
   <h1>Music Practice<br>Loop One</h1>
   <p class="standfirst">The engine that was the hard part is built and tested. The
   microphone that was the point of the app is not.</p>
-  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at ec7076e &nbsp;·&nbsp; 167 commits</p>
+  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at f79e379 &nbsp;·&nbsp; 171 commits</p>
 </header>
 
 <div class="figures">
-  <div class="fig"><b>619</b><span>tests passing</span></div>
-  <div class="fig"><b>40</b><span>test files</span></div>
+  <div class="fig"><b>649</b><span>tests passing</span></div>
+  <div class="fig"><b>41</b><span>test files</span></div>
   <div class="fig"><b>15</b><span>ADRs</span></div>
-  <div class="fig"><b>17,920</b><span>lines in src</span></div>
-  <div class="fig"><b>3 / 6</b><span>exercises asked for</span></div>
+  <div class="fig"><b>18,944</b><span>lines in src</span></div>
+  <div class="fig"><b>2 / 6</b><span>kinds of practice built</span></div>
   <div class="fig"><b>0</b><span>shipping targets</span></div>
 </div>
 
@@ -128,7 +128,7 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
 <h2>Where it stands</h2>
 
 <p>Every figure on this page is read out of the repository by
-<code>tools/report-facts.sh</code> rather than recalled. 619 tests pass, none fail,
+<code>tools/report-facts.sh</code> rather than recalled. 649 tests pass, none fail,
 three are <code>todo</code>. <code>tsc</code> and <code>oxlint</code> are clean. The
 whole history is on <code>main</code> under one author; the eight <code>claude/*</code>
 branches are all zero ahead and exist only as stale pointers.</p>
@@ -185,29 +185,39 @@ the whole app rests on, and which does not exist in any form.</p>
 <section>
 <h2>The six exercises, against the brief</h2>
 
-<p>Three exercise types exist, but that number flatters the position. Only one of them is
-on the original list; the other two were added because they could be built without a
-microphone and without a melody generator.</p>
+<p>Four exercise types exist across three cards, because the home screen now lists
+<em>kinds of practice</em> rather than ways of asking them. Naming the distance to a
+reference, naming a note outright and naming what a note is doing in a key are three ways
+of asking one question, and listing two of them beside "chord progression identification"
+described the implementation instead of the subject. Each type keeps its own id, so the
+regrouping cost no recorded history.</p>
 
 <div class="scroll">
 <table>
 <thead><tr><th>Asked for</th><th>State</th><th>What it needs</th></tr></thead>
 <tbody>
-<tr><td>Note ID (relative)</td><td><span class="chip ok">built</span></td><td>Shipped as interval identification, by eye and by ear.</td></tr>
-<tr><td>Note ID (absolute)</td><td><span class="chip none">not built</span></td><td>Nothing new — it is the smallest remaining one.</td></tr>
+<tr><td>Note ID</td><td><span class="chip part">two of three</span></td>
+  <td>One card, three ways of asking. Relative (intervals) and scale degree
+  are built; absolute is not, and needs nothing new.</td></tr>
+<tr><td>Progression ID</td><td><span class="chip ok">built</span></td>
+  <td>Name each chord of a progression by degree, by ear or on the staff.</td></tr>
 <tr><td>Sight reading</td><td><span class="chip none">not built</span></td><td>The melody generator, then capture.</td></tr>
 <tr><td>Rhythm</td><td><span class="chip none">not built</span></td><td>Capture. The generator and the aligner are both done.</td></tr>
 <tr><td>Chord ID</td><td><span class="chip none">not built</span></td><td>Chroma extraction; the chord catalogue already exists.</td></tr>
-<tr><td>Progression ID</td><td><span class="chip none">not built</span></td><td>Nothing new — the harmony generator covers it.</td></tr>
 <tr><td>Scale ID</td><td><span class="chip none">not built</span></td><td>Nothing new — the scale catalogue covers it.</td></tr>
 </tbody>
 </table>
 </div>
 
-<p>Two of the five unbuilt ones need no new machinery at all. Progression and scale
-identification are assembly work on top of catalogues that are already written and
-tested, and absolute note identification is smaller still. That is the cheapest route to
-making the home screen look like the app that was described.</p>
+<p>Progression identification is the one that landed, and it cost no new music: the
+corpus, the phrase planner and the cadence enforcement were all already there. It also
+settled what ADR 0011 deferred — the three unreachable templates were unreachable because
+the planner only ever asks for a half or a perfect authentic cadence, so the exercise gained
+a setting that varies the close. A deletion was the other option and the worse one, since a
+learner who only ever hears V–I never learns to hear a deceptive close as deceptive.</p>
+
+<p>Two remain that need nothing new: scale identification, and absolute note
+identification, which joins the card the other two are already on.</p>
 </section>
 
 <svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
@@ -601,7 +611,7 @@ can reproduce exactly rather than a story about a blank page.</p>
 </section>
 
 <footer>
-Figures read from the repository by tools/report-facts.sh · main ec7076e · 4 October 2026<br>
+Figures read from the repository by tools/report-facts.sh · main f79e379 · 4 October 2026<br>
 Revised three times the same day, by the fleet reviewing it: the DSP layer computes no
 chroma; the clock a performed note is measured against was undecided; the exercise screen
 kept state belonging to a type the user had already left, since fixed; and two claims this

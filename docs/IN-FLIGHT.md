@@ -16,47 +16,36 @@ integrates everything else this file would need to stay correct about.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
-### `main` — `Difficulty` has left the codebase; landed, not yet reviewed
+### `main` — difficulty has left the codebase entirely; landed, not yet reviewed
 
-**Branch:** `main`. Landed in `2a99afe`, `71f6735` and `2592501`. Kept here
-until tester and architect have reviewed it, because three of the entries
-in `docs/adr/` now describe a state the code is no longer in.
+**Branch:** `main`. Landed across `2a99afe`, `71f6735`, `2592501`, `7b9ee50`
+and `7ca12ea`, with [ADR 0027](adr/0027-configure-by-naming-what-an-exercise-contains.md)
+recording the decision. Kept here until tester and architect have reviewed
+it, because it supersedes one record and changes what another is about.
 
-**What changed.** `BaseSettings.difficulty` is gone and `BaseSettings`
-keeps only `presentation`. Each exercise names the quantity its private
-table was hiding: `key-id` has `maxAccidentals` (0–7), `interval-id` has
-`window` (semitones either side of the staff), `progression-id` has
-`grade` (1–8, read off the template corpus) and `borrowed`, and
-`degree-id` lost a field nothing read. No schema bump — a stored
-`difficulty` is dropped on load like any unknown key.
+**What changed.** No exercise has a difficulty setting and no catalogue has
+a difficulty ordering. `BaseSettings` keeps only `presentation`.
+`maxAccidentals`, `window`, styles and five capability switches replaced
+the dials; `minGrade` has left `TEMPLATES` and the harmony pools and
+`grade` has left `CELLS`. A spaced-repetition scheduler reads the attempt
+log for the first time (`src/state/schedule.ts`), and `ExerciseDefinition`
+gained `items(settings)` as its denominator.
 
-**For architect**, three records to look at, in order of how much they
-move:
+**For architect.** ADR 0027 supersedes 0021 and is written; the index is
+updated. 0011's third obligation survives with a different query and the
+template corpus now has nothing unreachable. The thing worth a second
+opinion is 0027's "What this costs": the catalogues no longer carry any
+notion of ordering, so if the app ever wants to *suggest* where to start
+it has to earn one from the attempt log rather than from a field. I have
+asserted that is the right trade; it is the part of the record I am least
+able to check myself.
 
-- **ADR 0021** recorded two rhythm cells stranded above the top grade the
-  app could ask for, and blamed the grade table. The reason was wrong:
-  the grades it measured through were the *progression* exercise's, and
-  that exercise does not generate rhythm. Nothing in `src/` outside
-  `generate/` queries the cell catalogue at all. The finding stands —
-  those cells are unreached — but so is every other cell, and the cause
-  is that the rhythm exercise does not exist. `catalogues.test.ts` now
-  says this and fails the day an exercise starts producing rhythm items.
-  This is the proxy error `docs/process/` already has a note about,
-  found inside a test written to measure reachability honestly.
-- **ADR 0011/0017's template measurement.** Templates no query could
-  reach: 5 → 0. Three left when the preset table did, with no change to
-  `generate/`; the last two went when `borrowed` became a setting.
-- **ADR 0016.** A later note read `varyCadence` as rescuing six templates
-  against 0016's three and called 0016 an undercount. 0016 was right.
-  The extra three are eight-bar templates that were out of reach because
-  eight bars only arrived at grades 5, 7 and 9 — an artefact of measuring
-  through the preset table, not of the cadence setting.
-
-**For tester.** The palette containment sweep had a hole worth
-generalising from: it swept 300 seeds over grades and modes while holding
-`bars` and `varyCadence` at their defaults, so it covered one
-configuration deeply and 479 not at all. A live defect sat in it —
-minor, applied dominants on, sixteen bars produced `V/VII` with no button
-for it. It now crosses the real product of the controls at 25 seeds each.
-**A new user-facing control is a new dimension of that sweep**, and
-`bars` had become one without the sweep following.
+**For tester.** Three sweeps found three real defects in two days, all of
+the same shape — a sweep that held a user-facing control at its default.
+`V/VII` had no button in minor at sixteen bars; `tupletId` came from a
+module-level counter so the same seed did not reproduce; turning
+diminished triads off did not turn them off, because a quoted template
+and the borrowing pass both supplied them. **A new user-facing control is
+a new dimension of every existing sweep.** `bars`, then `styles` and the
+five switches, each arrived without the sweeps following. That is the
+property worth a guard somewhere, if one can be written.

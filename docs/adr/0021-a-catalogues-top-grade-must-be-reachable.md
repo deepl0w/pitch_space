@@ -1,6 +1,6 @@
 # ADR 0021 — A catalogue's top grade must be reachable, and cell ids are not frozen yet
 
-- **Status:** Accepted
+- **Status:** Superseded by [0027](0027-configure-by-naming-what-an-exercise-contains.md)
 - **Date:** 2026-10-04
 
 Applies [0011](0011-what-a-catalogue-owes.md)'s third obligation to the second

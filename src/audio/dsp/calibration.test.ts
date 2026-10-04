@@ -166,6 +166,23 @@ describe('refusing to answer', () => {
     if (!out.ok) expect(out.reason).toBe('implausible');
   });
 
+  /**
+   * One click is not a measurement, and the first version said it was.
+   *
+   * The guard read `deltas.length < Math.min(MIN_TRIALS, sent)`, which
+   * lowers the bar to whatever was asked for — so a single trial passed and
+   * came back `ok` with a spread of exactly zero, which is the most
+   * confident thing the type can express. Found by the tester.
+   */
+  it('refuses a run too short to have a middle, however few were sent', () => {
+    for (const count of [1, 2]) {
+      const { samples, trials } = recording({ count, latencySeconds: 0.075 });
+      const out = estimateInputLatency({ samples, sampleRate: RATE, trials });
+      expect(out.ok, `${count} trial(s) was accepted`).toBe(false);
+      if (!out.ok) expect(out.reason).toBe('too-few');
+    }
+  });
+
   it('refuses an empty run rather than dividing by nothing', () => {
     const out = estimateInputLatency({ samples: silence(1, RATE), sampleRate: RATE, trials: [] });
     expect(out.ok).toBe(false);
@@ -191,6 +208,10 @@ describe('matching clicks to what came back', () => {
     const { samples } = recording({ count: 1, latencySeconds: 0.05 });
     const { onsets } = detectOnsets(samples, { sampleRate: RATE });
     const trials = Array.from({ length: 8 }, (_, i) => ({ emittedAtSeconds: 0.25 + i * 0.05 }));
+
+    // Pins the premise the comment states, and stops both assertions below
+    // passing trivially on a recording where the detector found nothing.
+    expect(onsets.length).toBeGreaterThan(1);
 
     const out = estimateInputLatency({ samples, sampleRate: RATE, trials });
     expect(out.heard).toBeLessThanOrEqual(onsets.length);

@@ -80,16 +80,22 @@ export type CalibrationFailure =
 const MAX_SPREAD_SECONDS = 0.025;
 
 /**
- * The range a real round trip can occupy.
+ * The longest a real round trip can take.
  *
- * The floor is zero and not negative: a click cannot be heard before it is
- * played, so a negative result means the trials and the recording are not on
- * the same clock and nothing here can repair that. The ceiling is generous
- * because Bluetooth genuinely is bad — 300 ms is a real figure for a cheap
- * headset — but a second is not latency, it is the detector having found the
- * next click, or a cough.
+ * Generous because Bluetooth genuinely is bad — 300 ms is a real figure for
+ * a cheap headset — but a second is not latency, it is the detector having
+ * found the next click, or a cough.
+ *
+ * There is no floor, and the first version's `MIN_PLAUSIBLE_SECONDS = 0` was
+ * dead code: `matchDeltas` drops every negative delta, so the median cannot
+ * be below zero and the check could not fire. It was there for a real
+ * hazard — a negative result would mean the trials and the recording are not
+ * on the same clock, which is the one correspondence this file says it
+ * cannot verify — but a guard that cannot fire does not cover it. What
+ * actually happens to a mismatched clock is `nothing-heard`, whose message
+ * then offers the wrong remedy; that is recorded rather than fixed, because
+ * detecting it needs something this function is not given.
  */
-const MIN_PLAUSIBLE_SECONDS = 0;
 const MAX_PLAUSIBLE_SECONDS = 0.5;
 
 /** Below this many usable trials a median is one opinion wearing a crowd's hat. */
@@ -114,7 +120,13 @@ export function estimateInputLatency(input: CalibrationInput): CalibrationOutcom
 
   const deltas = matchDeltas(trials, onsets);
   if (deltas.length === 0) return { ok: false, reason: 'nothing-heard', heard: 0, sent };
-  if (deltas.length < Math.min(MIN_TRIALS, sent)) {
+  // Not `Math.min(MIN_TRIALS, sent)`, which was the first version: it lowers
+  // the bar to whatever was asked for, so a single click cleared it and came
+  // back ok with a spread of exactly zero — the most confident claim the type
+  // can make, from one sample, applied silently to every attempt afterwards.
+  // The caller sends six, so it was latent; the function is exported and the
+  // next caller need not.
+  if (deltas.length < MIN_TRIALS) {
     return { ok: false, reason: 'too-few', heard: deltas.length, sent };
   }
 
@@ -124,7 +136,7 @@ export function estimateInputLatency(input: CalibrationInput): CalibrationOutcom
   // trial should widen the reported uncertainty, not dominate it.
   const spreadSeconds = (quantile(sorted, 0.75) - quantile(sorted, 0.25)) / 2;
 
-  if (latencySeconds < MIN_PLAUSIBLE_SECONDS || latencySeconds > MAX_PLAUSIBLE_SECONDS) {
+  if (latencySeconds > MAX_PLAUSIBLE_SECONDS) {
     return { ok: false, reason: 'implausible', heard: deltas.length, sent };
   }
   if (spreadSeconds > MAX_SPREAD_SECONDS) {

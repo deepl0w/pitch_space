@@ -164,3 +164,32 @@ about `generate/tonicize.ts` and is not settled here.
 - **Someone proposes collapsing the reading paths too**, for symmetry. The
   answer is no, and the reason is in the Context: spelled accidentals separate
   enharmonics and that is a skill the exercise exists to teach.
+
+## Addendum, 4 October 2026
+
+Found by reading this record in sequence with
+[0012](0012-the-judge-consumes-performed-notes-not-audio.md),
+[0013](0013-knowing-the-answer-narrows-what-judging-has-to-do.md) and
+[0018](0018-uncalibrated-is-not-zero.md), which the decision above did not do.
+Nothing here changes it; it adds a trigger the Revisit list should have had.
+
+**This record's mechanism depends on the answer being a choice from a list, and
+the app is heading away from that.** 0012 decides that exercises are answered by
+playing, with `grade` consuming a stream of performed notes. There is no pool to
+collapse when the answer is a performance: the user plays a cadence and the
+grader must accept the sounding tonic however it is spelled, which is
+one-to-many in `grade` — exactly what the Decision above rejects for the
+clicking case.
+
+The two are not in conflict, and the reason is a distinction neither record
+states: **equivalence belongs in `grade` when the input space is open, and in
+the answer set when the input space is yours.** 0012's chord-voicing case is the
+first; this record's button list is the second. Both will exist in the app at
+once.
+
+So: **revisit when key identification can be answered by playing.** Expect a
+record that narrows this one rather than superseding it, and expect the
+enharmonic set to be the same six pairs — the ambiguity is in the ear, not in
+the input device.
+
+The longer reading is in [`docs/judging-chain.md`](../judging-chain.md).

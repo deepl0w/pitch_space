@@ -77,6 +77,10 @@ enough to be noisy and a claim nobody ever checks fail in the same place: at the
 moment someone decides the signal is not worth reading. The third says which
 kind of thing you are holding before you apply either.
 
+[`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
+0018 and 0020 as one argument, because five of them are the same rule meeting a
+new kind of ignorance and no single record says so.
+
 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) describes the system as it stands
 today and links back to these records. It is a living document: when a record
 and it disagree, the record says what was decided and ARCHITECTURE.md says what

@@ -49,6 +49,24 @@ describe('the stylesheet', () => {
     }
   });
 
+  /**
+   * Hit targets, which are a different question from overflow and the one a
+   * desktop browser never asks. 24x24 is the floor WCAG 2.5.8 sets for any
+   * pointer; 44 is what Apple and WCAG 2.5.5 ask of a finger.
+   */
+  it('gives every control a floor no pointer struggles with', () => {
+    const code = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
+    const base = code.slice(0, code.indexOf('@media (pointer: coarse)'));
+    expect(base, 'a universal min-height for controls').toMatch(/min-height:\s*24px/);
+  });
+
+  it('raises them for a finger, keyed to the pointer and not to a width', () => {
+    // A touchscreen laptop is the case a width breakpoint gets wrong.
+    expect(CSS).toContain('@media (pointer: coarse)');
+    const block = CSS.slice(CSS.indexOf('@media (pointer: coarse)'));
+    expect(block.slice(0, 600)).toMatch(/min-height:\s*44px/);
+  });
+
   it('keeps the drawn stave from deciding its container width', () => {
     const block = CSS.slice(CSS.indexOf('.score-host svg'));
     expect(block.slice(0, block.indexOf('}'))).toContain('max-width: 100%');

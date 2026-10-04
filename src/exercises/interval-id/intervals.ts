@@ -124,6 +124,17 @@ export const intervalSettingsSchema: SettingsSchema<IntervalSettings> = {
   defaults: INTERVAL_DEFAULTS,
   coerce: coerceIntervalSettings,
   fields: [
+    // Worded as in `key-id`, because it is the same question and a learner
+    // meeting it on the second exercise should not have to work that out.
+    {
+      kind: 'choice', id: 'presentation', label: 'Asked',
+      options: [
+        { id: 'listen', label: 'By ear' },
+        { id: 'read', label: 'By eye' },
+      ],
+      selected: (s) => s.presentation,
+      apply: (s, option) => ({ ...s, presentation: option === 'read' ? 'read' : 'listen' }),
+    },
     {
       kind: 'choice', id: 'difficulty', label: 'Range',
       options: [

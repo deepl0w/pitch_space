@@ -29,6 +29,14 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0012](0012-the-judge-consumes-performed-notes-not-audio.md) | The judge consumes performed notes, not audio | Accepted |
 | [0013](0013-knowing-the-answer-narrows-what-judging-has-to-do.md) | Knowing the answer narrows what judging has to do | Accepted |
 
+**Check a claim about the code against the code, not against the record that
+made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in
+two days: 0012 read a description of what `audio/dsp/` is *for* as a statement
+of what it holds, 0013 cited 0012, this index drew it, and the published report
+repeated it. No single step looked like an invention, and the claim — that the
+DSP layer computes chroma, which it does not — was load-bearing for an exercise
+about to be built on it. Both records now carry dated corrections.
+
 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) describes the system as it stands
 today and links back to these records. It is a living document: when a record
 and it disagree, the record says what was decided and ARCHITECTURE.md says what
@@ -57,7 +65,7 @@ flowchart LR
     ex --> vex["render/toVexflow.ts<br/>the one importer"]
     vex --> ui["ui/<br/>notation, screens"]
 
-    mic["capture/<br/>microphone, worklet"] --> dsp["audio/dsp/<br/>pitch, chroma, onsets"]
+    mic["capture/<br/>microphone, worklet"] --> dsp["audio/dsp/<br/>fft, pitch, onsets,<br/>rhythm alignment"]
     dsp --> judge["exercises/<br/>judging"]
     ex --> judge
     judge --> ui

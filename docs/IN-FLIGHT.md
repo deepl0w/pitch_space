@@ -16,6 +16,56 @@ integrates everything else this file would need to stay correct about.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
+### `main` — `prefer`: the schedule asks, the generator answers honestly
+
+**Branch:** `main`, not started. Written here first because the tester
+is writing the contract test against this shape before it exists, which
+is what this file is for.
+
+**The problem.** `schedule.ts` decides which item should come next and
+nothing can act on it: `generate(spec)` takes a seed and settings and
+picks from the pool itself. The obvious seam is a `focus(settings,
+item)` returning settings narrowed so that item is what gets asked.
+
+**Why that seam is wrong**, which the tester established and I accept.
+The exercises divide three ways on whether `items(settings)` is
+invertible:
+
+| | Exercises | Why |
+| --- | --- | --- |
+| **Invertible** | `interval-id`, `scale-id`, `chord-id` | the askable set is a projection of one setting, so narrowing to a single item is exact |
+| **Lossy** | `key-id`, `degree-id` | narrowing gets close and cannot isolate — `maxAccidentals` narrows the circle but never to one key, and `degree-id`'s `key:` item is drawn from any key within four accidentals with no setting over it |
+| **Not an input** | `progression-id`, `rhythm-id` | a numeral is an outcome of harmony generation and a cell an outcome of the filler; there is no setting meaning "ask me a `viio`" and there could not be one without the generator becoming a search |
+
+A `focus` every definition implements would make four of them promise
+something they cannot do — and it would not fail loudly. A progression
+exercise asked to aim at `viio` would return settings making it *more
+likely*, the schedule would record that it aimed, and nothing could
+detect the difference. That is a palette listing a chord it cannot
+produce, one layer up.
+
+**The shape instead.** `generate(spec, { prefer?: ItemId })`. A
+generator that can aim does; one that cannot ignores the hint. The
+schedule reconciles against `exercise.items`, which already exists and
+is already trusted, rather than assuming it got what it asked for.
+
+**The cost, named rather than discovered later:** the schedule cannot
+promise progress on a specific item. It cannot promise that for
+progressions and rhythm under any design, so this makes an existing
+limit visible rather than creating one.
+
+**For tester.** The claim to pin: *a hint that aims at an item must
+produce that item, for any exercise that claims it can aim.* Two things
+that come out of the measurement already done:
+
+- The seed budget is load-bearing and per-exercise. Four unreachable
+  chords at 400 seeds were all luck; at 1500 there are none.
+  `chord-id` has ninety-nine askable items and `interval-id` twelve.
+- A generator that ignores the hint must pass. The test cannot assert
+  "the preferred item appeared" — it has to assert "if it claims to
+  aim, it hit", with a guard that at least one exercise claims it or
+  the whole thing passes vacuously.
+
 ### Owed to `process` — a third instance of the stale-reading pattern
 
 No process session is running, so this is parked here rather than sent.

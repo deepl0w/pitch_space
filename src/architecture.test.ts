@@ -341,8 +341,12 @@ describe('the npm scripts', () => {
  * validates links, not assertions about a codebase — but the convention's own
  * survival is, so it is checked here.
  *
- * This asserts presence, not wording. Rewriting the paragraph is fine and
- * deleting it should be deliberate.
+ * This asserts presence, not wording — for the paragraph. Not quite for the
+ * sentence: what is matched is one distinctive clause of it, because an idea
+ * cannot be asserted and a clause is the practical approximation. So rewriting
+ * the prose around the convention is free, and rewording the convention itself
+ * will go red. That is allowed. Change the clause here to match, and keep the
+ * habit; the test defends a phrasing only because it cannot defend a meaning.
  */
 describe('the conventions the ADR index carries', () => {
   it('still tells the next author to check a claim against the code', () => {

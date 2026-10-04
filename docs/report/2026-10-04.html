@@ -110,7 +110,7 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
 </header>
 
 <div class="figures">
-  <div class="fig"><b>601</b><span>tests passing</span></div>
+  <div class="fig"><b>606</b><span>tests passing</span></div>
   <div class="fig"><b>38</b><span>test files</span></div>
   <div class="fig"><b>15</b><span>ADRs</span></div>
   <div class="fig"><b>16,922</b><span>lines in src</span></div>
@@ -128,7 +128,7 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
 <h2>Where it stands</h2>
 
 <p>Every figure on this page is read out of the repository by
-<code>tools/report-facts.sh</code> rather than recalled. 601 tests pass, none fail,
+<code>tools/report-facts.sh</code> rather than recalled. 606 tests pass, none fail,
 three are <code>todo</code>. <code>tsc</code> and <code>oxlint</code> are clean. The
 whole history is on <code>main</code> under one author; the eight <code>claude/*</code>
 branches are all zero ahead and exist only as stale pointers.</p>
@@ -319,12 +319,34 @@ audio device and its clock ran about 12% slow over the window, and a null sink m
 faster or slower than a real sound card — which is precisely the quantity that decides
 whether 60 ms of lead is enough.</p>
 
-<p>One cheap test settles which half to pursue. <code>src/testing/audioContext.ts</code>
-already carries a <code>resumeCost</code> knob, built for exactly this: notes scheduled
-against a stale <code>currentTime</code> going missing. Set it above 60 ms and assert the
-Rhythms path still sounds every note. Red means the defect is the front-of-bar margin and
-the fix is to schedule further ahead on a cold context. Green means the lost last note is
-something else, and this page should stop attributing it to the clock at all.</p>
+<p>That test has now been run, and it found a real defect — <b>a different one</b>.
+<code>play()</code> times a passage from <code>currentTime + 0.06</code>, and on a context
+still opening that clock is about to jump by however long the device takes; 200 ms is
+unremarkable, so the front of the bar lands behind the clock. Fixed by awaiting the resume
+the code already fires, rather than guessing at a larger headroom — which would only move
+the question to how large. Warm plays are unchanged.</p>
+
+<p><b>The apparatus had to be corrected before it could show anything, and that is half the
+finding.</b> The <code>resumeCost</code> knob had never been called from anywhere in
+<code>src</code>, and its <code>resume()</code> advanced the clock <em>synchronously</em> —
+closing the exact gap its own comment says it exists to model. The real caller does not
+await, so it reads the clock before the hardware starts; the fake handed back a post-start
+reading no browser can produce. Any test written against it would have been green and
+meaningless.</p>
+
+<p>Deferring the schedule also re-opened a hole that had already been closed once: a
+passage waiting on the hardware can arrive <em>after</em> the stop that was meant to
+silence it — the "notes playing over the next screen" defect, with a wake-up in front of
+it. Plays and stops now take a ticket and only the newest survives the wait. That was found
+because the original defect's reasoning was written down in the code rather than
+remembered.</p>
+
+<p><b>None of this closes the reported defect.</b> It is the front-of-bar margin, and it
+bites on any platform where a context starts suspended — iOS Safari among them, which makes
+it worth having fixed. But Chrome creates the context already running, so that path never
+engages there, and Chrome playback is byte-identical after the change. The lost
+<em>last</em> note still cannot be reproduced and still has no explanation. This page should
+not be read as having resolved it.</p>
 </div>
 </section>
 
@@ -404,6 +426,40 @@ and <code>questionScore</code>/<code>answerScore</code> call into the definition
 render — which is where two of the four crashes came from — so computing them above the
 boundary would have put the likeliest throw out of its reach.</p>
 </div>
+</section>
+
+<section>
+<h2>Four things the app currently gets wrong in front of the user</h2>
+
+<p>Found in the same sweep, listed by how badly each misleads rather than by effort. The
+first two matter more than their size suggests, because this is an app for learning music
+and both of them teach something false.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>What</th><th></th><th>Why it matters</th></tr></thead>
+<tbody>
+<tr><td>Dead clef control</td><td><span class="chip none">says something untrue</span></td>
+  <td>The home card and the exercise's own subtitle both advertise reading intervals off
+  the staff, and there is no way to get there. The exercise declares both presentations;
+  the route does not offer the choice.</td></tr>
+<tr><td>Circle-of-fifths counts</td><td><span class="chip none">wrong as theory</span></td>
+  <td>A wedge carries two spellings and one signature, so "D♭ / C♯" prints 5♭ — right for
+  D♭, wrong for C♯, which has seven sharps. On the screen whose job is teaching key
+  signatures.</td></tr>
+<tr><td>Key selector mode label</td><td><span class="chip part">wrong as theory</span></td>
+  <td>Same family, milder: "A♭ minor (7 flats)" with the scale set to Major renders
+  "A♭ Major", which has four.</td></tr>
+<tr><td>Mobile touch targets</td><td><span class="chip part">unusable on a phone</span></td>
+  <td>Rhythms has 31 buttons at 25 px. It ships as a PWA and an APK, so this is the
+  primary target rather than an edge case.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Seven more are recorded and can wait: raw clef values and item ids shown to the user, a
+single-item readout, a silent no-op that does the right thing, a tab title, a template
+README and a dev-server port. Cosmetic or confusing rather than false.</p>
 </section>
 
 <section>

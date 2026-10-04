@@ -51,6 +51,12 @@ code, .m { font-family: var(--mono); font-size: 0.88em; }
               color: var(--ink-soft); margin: 1.2rem 0 0; }
 .dateline { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.04em;
             color: var(--ink-soft); margin: 1.4rem 0 0; }
+/* A snapshot has to say so where the reader starts, not in a footer they may
+   never reach. ADR 0023: this page is a dated artefact and is not updated. */
+.snapshot { font-family: var(--mono); font-size: 0.78rem; line-height: 1.6;
+            color: var(--ink-soft); margin: 1.4rem 0 0; padding: 0.85rem 1rem;
+            border: 1px solid currentColor; border-radius: 3px; }
+.snapshot strong { color: var(--ink); }
 
 /* Five hairlines, spaced as a stave. The only ornament on the page, and the
    one the subject actually owns. */
@@ -106,7 +112,8 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
   <h1>Music Practice<br>Loop One</h1>
   <p class="standfirst">The engine that was the hard part is built and tested. The
   microphone that was the point of the app is not.</p>
-  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at 901e3d6 &nbsp;·&nbsp; 188 commits</p>
+  <p class="dateline">Written 4 October 2026 &nbsp;·&nbsp; describing 901e3d6 &nbsp;·&nbsp; 188 commits at that point</p>
+  <p class="snapshot"><strong>This is a snapshot, not a status page.</strong> It describes the repository at one commit and is not updated; its figures and its conclusions both belong to the day it was written. For current numbers run <code>tools/report-facts.sh</code>. A later report is a new file beside this one. Why it works this way: ADR 0023, a document cannot cite its own commit.</p>
 </header>
 
 <div class="figures">
@@ -627,7 +634,7 @@ can reproduce exactly rather than a story about a blank page.</p>
 </section>
 
 <footer>
-Figures read from the repository by tools/report-facts.sh · main 901e3d6 · 4 October 2026<br>
+Figures read from the repository by tools/report-facts.sh · describing 901e3d6 · written 4 October 2026<br>
 Revised three times the same day, by the fleet reviewing it: the DSP layer computes no
 chroma; the clock a performed note is measured against was undecided; the exercise screen
 kept state belonging to a type the user had already left, since fixed; and two claims this

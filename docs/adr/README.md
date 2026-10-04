@@ -40,6 +40,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0023](0023-a-document-cannot-cite-its-own-commit.md) | A document cannot cite its own commit | Accepted |
 | [0024](0024-the-progress-view-lists-what-was-tested.md) | The progress view lists what was tested, not what was shown | Accepted |
 | [0025](0025-agreement-among-trials-that-share-an-error-is-not-confidence.md) | Agreement among trials that share an error is not confidence | Accepted |
+| [0026](0026-a-measurement-signal-does-not-inherit-a-listening-level.md) | A measurement signal does not inherit a listening level | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in

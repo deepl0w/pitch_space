@@ -13,9 +13,39 @@ import { assertStepsCoverVersions, type MigrationStep, type Versioned } from './
 /* -- settings ------------------------------------------------------------- */
 
 export const SETTINGS_KEY = 'music-practice:settings';
-export const SETTINGS_SCHEMA = 1;
+export const SETTINGS_SCHEMA = 2;
 
-export interface SettingsDocV1 {
+/**
+ * Where an input-latency correction came from.
+ *
+ * Measured and typed-in are both legitimate and are not the same evidence:
+ * a measured figure can be re-measured and compared, a typed one is the
+ * user's judgement and re-offering to measure over the top of it is
+ * presumptuous. One field, read at one place, and it is on probation — if
+ * nothing ever branches on it, it is a column carried forever for a
+ * decision nobody makes.
+ */
+export type LatencySource = 'measured' | 'manual';
+
+export interface AudioSettings {
+  /**
+   * What the round trip costs, in milliseconds, or **null for not known**.
+   *
+   * Null is not zero and the difference is the whole point (ADR 0018). Zero
+   * is a device that measured at zero; null is a device nobody has measured.
+   * A reader that conflates them treats every uncalibrated setup as a
+   * perfect one, which is a claim about hardware the app has no business
+   * making — and calibration is offered rather than required, so null is
+   * the normal case and not an edge.
+   */
+  inputLatencyMs: number | null;
+  /** Null exactly when `inputLatencyMs` is. */
+  source: LatencySource | null;
+  /** Epoch milliseconds, so a stale calibration can be noticed. */
+  measuredAt: number | null;
+}
+
+interface SettingsDocV1 {
   /**
    * Per-exercise settings, keyed by `ExerciseDefinition.id`.
    *
@@ -29,7 +59,24 @@ export interface SettingsDocV1 {
   lastExercise: string | null;
 }
 
-export type SettingsDoc = SettingsDocV1;
+/**
+ * Version 2 adds the audio correction.
+ *
+ * An extension rather than a widened v1, for the reason `AttemptV2` is: the
+ * migration step is the only thing allowed to know the old shape, and a type
+ * named for the old one that is quietly the new one misleads exactly the
+ * reader who went looking for what changed.
+ */
+export interface SettingsDocV2 extends SettingsDocV1 {
+  audio: AudioSettings;
+}
+
+export type SettingsDoc = SettingsDocV2;
+
+/** Nothing measured. The shape every first run and every decline has. */
+export const UNCALIBRATED: AudioSettings = {
+  inputLatencyMs: null, source: null, measuredAt: null,
+};
 
 /**
  * A fresh defaults document, built rather than shared.
@@ -40,20 +87,24 @@ export type SettingsDoc = SettingsDocV1;
  * changed what every later first run was given.
  */
 export function settingsDefaults(): SettingsDoc {
-  return { exercises: {}, lastExercise: null };
+  return { exercises: {}, lastExercise: null, audio: { ...UNCALIBRATED } };
 }
 
 /** The defaults as a value, for comparison. Call {@link settingsDefaults} to own one. */
 export const SETTINGS_DEFAULTS: SettingsDoc = settingsDefaults();
 
 /**
- * Empty at version 1, and checked to be the right kind of empty.
- *
  * `steps[n - 1]` takes a version-`n` document to version `n + 1`, so a
  * release that bumps {@link SETTINGS_SCHEMA} without appending a step fails
  * here rather than in the field.
  */
-export const SETTINGS_MIGRATIONS: readonly MigrationStep[] = [];
+export const SETTINGS_MIGRATIONS: readonly MigrationStep[] = [
+  // 1 -> 2: nobody who wrote a v1 document had calibrated, because there
+  // was nothing to calibrate with. Uncalibrated is what happened rather
+  // than a default, which is the same reasoning the attempt migration used
+  // for 'listen' — and the same reason it must be null and not zero.
+  (data) => ({ ...(data as Record<string, unknown>), audio: { ...UNCALIBRATED } }),
+];
 
 /**
  * Repair towards the defaults, field by field.
@@ -65,14 +116,44 @@ export const SETTINGS_MIGRATIONS: readonly MigrationStep[] = [];
  */
 export function coerceSettings(data: unknown): SettingsDoc {
   if (typeof data !== 'object' || data === null) return settingsDefaults();
-  const doc = data as Partial<SettingsDocV1>;
+  const doc = data as Partial<SettingsDocV2>;
   const exercises = typeof doc.exercises === 'object' && doc.exercises !== null
     ? { ...doc.exercises }
     : {};
   return {
     exercises,
     lastExercise: typeof doc.lastExercise === 'string' ? doc.lastExercise : null,
+    audio: coerceAudio(doc.audio),
   };
+}
+
+/**
+ * Repairs towards uncalibrated, and towards it *completely*.
+ *
+ * The three fields are one fact in three parts, so a document with a
+ * latency and no source is not two thirds of a calibration — it is a
+ * document nobody can say the provenance of, and keeping the number while
+ * dropping the provenance is how a dragged slider becomes indistinguishable
+ * from a measurement. Any inconsistency resets all three.
+ */
+function coerceAudio(value: unknown): AudioSettings {
+  if (typeof value !== 'object' || value === null) return { ...UNCALIBRATED };
+  const a = value as Partial<AudioSettings>;
+
+  // Explicitly finite, so NaN and Infinity do not survive as a "measurement".
+  const ms = typeof a.inputLatencyMs === 'number' && Number.isFinite(a.inputLatencyMs)
+    ? a.inputLatencyMs : null;
+  const source = a.source === 'measured' || a.source === 'manual' ? a.source : null;
+  if (ms === null || source === null) return { ...UNCALIBRATED };
+
+  // A negative correction would move a played note earlier than it was
+  // heard, which is not a latency; and a stored figure past the plausible
+  // range is a measurement that should have been refused.
+  if (ms < 0 || ms > 500) return { ...UNCALIBRATED };
+
+  const measuredAt = typeof a.measuredAt === 'number' && Number.isFinite(a.measuredAt)
+    ? a.measuredAt : null;
+  return { inputLatencyMs: ms, source, measuredAt };
 }
 
 /* -- attempts ------------------------------------------------------------- */

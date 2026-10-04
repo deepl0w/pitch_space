@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   ATTEMPT_MIGRATIONS, ATTEMPT_SCHEMA, SETTINGS_DEFAULTS, SETTINGS_MIGRATIONS,
-  SETTINGS_SCHEMA, attemptRow, coerceAttempt, coerceSettings, settingsDefaults,
-  type Attempt,
+  SETTINGS_SCHEMA, UNCALIBRATED, attemptRow, coerceAttempt, coerceSettings, settingsDefaults,
+  type Attempt, type SettingsDoc,
 } from './schema';
 import { assertStepsCoverVersions, migrate, versioned } from './migrate';
 
@@ -41,7 +41,8 @@ describe('coercing a settings document', () => {
   it('repairs anything at all into a usable document', () => {
     const rubbish = [undefined, null, 0, '', 'nonsense', [], true, () => {}];
     for (const value of rubbish) {
-      expect(coerceSettings(value)).toEqual({ exercises: {}, lastExercise: null });
+      expect(coerceSettings(value))
+        .toEqual({ exercises: {}, lastExercise: null, audio: { ...UNCALIBRATED } });
     }
   });
 
@@ -89,6 +90,116 @@ describe('coercing a settings document', () => {
     expect(coerceSettings(SETTINGS_DEFAULTS)).toEqual(SETTINGS_DEFAULTS);
     expect(settingsDefaults()).toEqual(SETTINGS_DEFAULTS);
     expect(settingsDefaults()).not.toBe(settingsDefaults());
+  });
+});
+
+/**
+ * The audio correction, where the distinction ADR 0018 draws has to survive
+ * a round trip through a device.
+ *
+ * Null means nobody measured; zero means somebody measured and got zero.
+ * A reader that cannot tell them apart treats every uncalibrated setup as a
+ * perfect one — and since calibration is offered rather than required, that
+ * is most setups rather than an edge case.
+ */
+describe('the input-latency correction', () => {
+  it('starts out not known, rather than at zero', () => {
+    const audio = settingsDefaults().audio;
+    expect(audio.inputLatencyMs).toBeNull();
+    expect(audio.source).toBeNull();
+    // The assertion that fails if anyone ever "tidies" null to 0.
+    expect(audio.inputLatencyMs).not.toBe(0);
+  });
+
+  it('keeps a measured zero, which is a different fact from no measurement', () => {
+    const doc = coerceSettings({
+      exercises: {}, lastExercise: null,
+      audio: { inputLatencyMs: 0, source: 'measured', measuredAt: 1_700_000_000_000 },
+    });
+    expect(doc.audio.inputLatencyMs).toBe(0);
+    expect(doc.audio.source).toBe('measured');
+  });
+
+  it('keeps a measurement and its provenance', () => {
+    for (const source of ['measured', 'manual'] as const) {
+      const doc = coerceSettings({
+        exercises: {}, lastExercise: null,
+        audio: { inputLatencyMs: 83.5, source, measuredAt: 42 },
+      });
+      expect(doc.audio).toEqual({ inputLatencyMs: 83.5, source, measuredAt: 42 });
+    }
+  });
+
+  /**
+   * All three fields are one fact in three parts. A latency with no
+   * provenance is not two thirds of a calibration — it is a number nobody
+   * can say the origin of, and keeping it would make a dragged slider
+   * indistinguishable from a measurement.
+   */
+  it('resets the whole correction when any part of it is unusable', () => {
+    const broken: unknown[] = [
+      { inputLatencyMs: 80 },
+      { inputLatencyMs: 80, source: 'guessed' },
+      { source: 'measured' },
+      { inputLatencyMs: '80', source: 'measured' },
+      { inputLatencyMs: Number.NaN, source: 'measured' },
+      { inputLatencyMs: Number.POSITIVE_INFINITY, source: 'measured' },
+      // A negative correction would move a played note earlier than it was
+      // heard, which is not a latency.
+      { inputLatencyMs: -5, source: 'measured' },
+      // Past what the estimator would ever return.
+      { inputLatencyMs: 9000, source: 'measured' },
+      'nonsense', 42, [], null, undefined,
+    ];
+    for (const audio of broken) {
+      const doc = coerceSettings({ exercises: {}, lastExercise: null, audio });
+      expect(doc.audio, JSON.stringify(audio)).toEqual(UNCALIBRATED);
+    }
+  });
+
+  it('tolerates a measurement with no timestamp rather than discarding it', () => {
+    // The time is for noticing a stale calibration; losing it is worth less
+    // than losing the number it describes.
+    const doc = coerceSettings({
+      exercises: {}, lastExercise: null,
+      audio: { inputLatencyMs: 40, source: 'manual' },
+    });
+    expect(doc.audio.inputLatencyMs).toBe(40);
+    expect(doc.audio.measuredAt).toBeNull();
+  });
+
+  it('hands back a correction nobody else holds a reference to', () => {
+    const first = settingsDefaults();
+    first.audio.inputLatencyMs = 99;
+    expect(settingsDefaults().audio.inputLatencyMs).toBeNull();
+    expect(UNCALIBRATED.inputLatencyMs).toBeNull();
+  });
+});
+
+describe('upgrading settings from v1 to v2', () => {
+  const v1 = { exercises: { 'interval-id': { difficulty: 4 } }, lastExercise: 'interval-id' };
+
+  it('gives a document written before the field existed one it can be read by', () => {
+    const out = migrate<SettingsDoc>(versioned(1, v1), {
+      current: SETTINGS_SCHEMA, steps: SETTINGS_MIGRATIONS, validate: coerceSettings,
+    });
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    // Uncalibrated is what happened, not a default: there was nothing to
+    // calibrate with when these documents were written.
+    expect(out.value.audio).toEqual(UNCALIBRATED);
+    expect(out.migrated).toBe(true);
+  });
+
+  it('leaves everything else about the document alone', () => {
+    const out = migrate<SettingsDoc>(versioned(1, v1), {
+      current: SETTINGS_SCHEMA, steps: SETTINGS_MIGRATIONS, validate: coerceSettings,
+    });
+    expect(out.ok).toBe(true);
+    if (out.ok) {
+      expect(out.value.exercises).toEqual({ 'interval-id': { difficulty: 4 } });
+      expect(out.value.lastExercise).toBe('interval-id');
+    }
   });
 });
 

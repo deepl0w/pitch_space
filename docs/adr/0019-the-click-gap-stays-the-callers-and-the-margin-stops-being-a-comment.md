@@ -158,3 +158,33 @@ constant, and the argument this record rejected gets materially stronger.
   headroom is stated against ordinary hardware; a Bluetooth path crowding
   `MAX_PLAUSIBLE_SECONDS` moves the ceiling, and both inequalities need
   re-checking against the new value rather than against today's.
+
+## Addendum, 4 October 2026 — why a constant did move down, and this is not a reversal
+
+`RECORDER_BUFFER_FRAMES` now lives in
+[`dsp/calibration.ts`](../../src/audio/dsp/calibration.ts) and
+`capture/measureLatency.ts` imports it upward — which is precisely the
+alternative the Decision above considered and rejected for `GAP_SECONDS`. A
+reader comparing the two will see a contradiction. There is none, and the
+difference is worth stating because it is the rule this record should have
+written down.
+
+The Decision rejected moving the gap down because "it puts a product decision
+in a maths file: how long a user waits at a settings screen is not a
+signal-processing question". That reason is about *what kind of question the
+constant answers*, not about the direction of travel. Stated properly:
+
+**A constant lives with the layer whose question it answers.** The click gap
+answers "how long should this take for the person waiting", which is the
+capture layer's and above. The recorder's buffer size answers "how far can the
+recording's zero be wrong", which is a signal-processing fact, bounds the error
+[0025](0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)
+measures, and is needed by the estimator's own tests. It belongs in `dsp/`.
+
+Both halves needing it is what settles it. Written out twice in files that
+cannot see each other, changing one leaves the other silently stale — and the
+tests measuring this very defect would then be measuring it wrongly, which is
+the failure mode least likely to be noticed.
+
+The layering rule is unaffected: `capture/` importing from `dsp/` is the
+permitted direction, and a number is not a platform import.

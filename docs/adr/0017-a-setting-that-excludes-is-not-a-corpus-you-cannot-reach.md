@@ -101,6 +101,33 @@ turns applied dominants off to concentrate will get a smaller pool of
 progressions than they would expect from the label. That is the right behaviour
 and it is still a surprise.
 
+## Correction, 5 October 2026
+
+**The borrowed column of the table above is undercounted, and the mechanism it
+was computed from is wrong.** It counted a borrowed chord as a non-zero
+`chromaticAlter`, which is how `blues-jazz` spells its `#ivo7` and is not how
+`rhythm-a` spells its `IV–iv`: that one is `{ degree: 4, typeId: 'min' }`,
+borrowed by *quality* with the degree unaltered. A filter built on the table's
+definition let a borrowed chord through whenever a template spelled it the other
+way, which is what happened — the first implementation inherited this error and
+the progression exercise's containment test caught it.
+
+The corrected counts come from
+[`isBorrowedIn`](../../src/generate/templates.ts), the shipped predicate, which
+compares a step's triad against the mode's and is per-mode because borrowing is
+relative to the mode borrowed into.
+
+**The decision is unaffected and so is the argument for it.** The carriers are
+the same three templates — `rhythm-a`, `rhythm-b`, `blues-jazz` — all at grade 6
+or above, so filtering still costs nothing below difficulty 4. The applied
+column reproduces exactly. Only the borrowed mechanism was wrong, and it was
+wrong in a way that made the corpus look cleaner than it is.
+
+Worth naming what it cost, since it is the second measurement in this record's
+lineage to be taken on an assumption: a filter was built on it and shipped
+before a test found the gap. A number that is checked is not the same as a
+definition that is checked, and this table had the first without the second.
+
 ## Revisit when
 
 - **A third property has to be filtered this way.** Two is a pair; three means

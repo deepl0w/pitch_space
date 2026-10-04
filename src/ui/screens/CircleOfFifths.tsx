@@ -45,21 +45,28 @@ function signatureText(key: Key): string {
 }
 
 /**
- * One or two names centred in a wedge, stacked when there are two.
+ * One or two labels centred in a wedge, stacked when there are two.
+ *
+ * Used for all three rows a wedge carries — major names, minor names and
+ * signatures — because a position with two spellings has two of each, and
+ * anything printed once there belongs to only one of them.
  *
  * `dy` on the first tspan rather than on the text element, because shifting
  * the text shifts the anchor too and the pair ends up off-centre.
  */
-function WedgeNames({ x, y, names, className }: {
-  x: number; y: number; names: string[]; className: string;
+function WedgeLabel({ x, y, lines, className }: {
+  x: number; y: number; lines: string[]; className: string;
 }) {
-  if (names.length === 1) {
-    return <text x={x} y={y} className={className}>{names[0]}</text>;
+  if (lines.length === 1) {
+    return <text x={x} y={y} className={className}>{lines[0]}</text>;
   }
   return (
     <text x={x} y={y} className={className}>
-      {names.map((name, i) => (
-        <tspan key={name} x={x} dy={i === 0 ? -5.5 : 11}>{name}</tspan>
+      {/* Keyed by position: two signatures on one wedge can read alike
+          (C has no twin, but nothing in the arithmetic forbids it), and a
+          duplicate key would drop a line rather than draw it. */}
+      {lines.map((line, i) => (
+        <tspan key={i} x={x} dy={i === 0 ? -5.5 : 11}>{line}</tspan>
       ))}
     </text>
   );
@@ -127,11 +134,18 @@ export function CircleOfFifths() {
                     positions carry two spellings, and "B / C♭" is wider than a
                     thirty-degree wedge at this radius however small the type
                     gets — so the enharmonic twin goes on its own line. */}
-                <WedgeNames x={mx} y={my} className="wedge-label"
-                            names={position.major.map((k) => keyName(k).replace(' major', ''))} />
-                <WedgeNames x={nx} y={ny} className="wedge-label wedge-label-minor"
-                            names={position.minor.map((k) => `${keyName(k).replace(' minor', '')}m`)} />
-                <text x={sx} y={sy} className="wedge-signature">{signatureText(major)}</text>
+                <WedgeLabel x={mx} y={my} className="wedge-label"
+                            lines={position.major.map((k) => keyName(k).replace(' major', ''))} />
+                <WedgeLabel x={nx} y={ny} className="wedge-label wedge-label-minor"
+                            lines={position.minor.map((k) => `${keyName(k).replace(' minor', '')}m`)} />
+                {/* One per spelling, in the same order as the names above it.
+                    A wedge is a position, but a position is not a signature
+                    where two keys share it: D♭ has five flats and C♯ seven
+                    sharps, and printing only the first taught the second as
+                    a fact about the first. On a screen whose job is teaching
+                    key signatures, that is the one thing it must not do. */}
+                <WedgeLabel x={sx} y={sy} className="wedge-signature"
+                            lines={position.major.map(signatureText)} />
               </g>
             );
           })}

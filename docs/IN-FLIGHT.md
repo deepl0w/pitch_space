@@ -16,56 +16,47 @@ integrates everything else this file would need to stay correct about.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
-### `main` — `Difficulty` leaves the codebase; each exercise gets the parameter it was hiding
+### `main` — `Difficulty` has left the codebase; landed, not yet reviewed
 
-**Branch:** `main`, directly, because it touches all four exercises at once
-and the field cannot leave `BaseSettings` in stages.
+**Branch:** `main`. Landed in `2a99afe`, `71f6735` and `2592501`. Kept here
+until tester and architect have reviewed it, because three of the entries
+in `docs/adr/` now describe a state the code is no longer in.
 
-**Why.** The user's direction for the app: *"hardcoded things like
-easy/hard difficulty have no place here. everything in the exercises should
-be configurable."* `Difficulty` is a 1–5 ordinal that every exercise uses as
-a secret index into a private table — it does not name a property of the
-exercise, it names a row. A user who wants six accidentals cannot ask for
-six accidentals; they can ask for "level 5" and find out afterwards.
+**What changed.** `BaseSettings.difficulty` is gone and `BaseSettings`
+keeps only `presentation`. Each exercise names the quantity its private
+table was hiding: `key-id` has `maxAccidentals` (0–7), `interval-id` has
+`window` (semitones either side of the staff), `progression-id` has
+`grade` (1–8, read off the template corpus) and `borrowed`, and
+`degree-id` lost a field nothing read. No schema bump — a stored
+`difficulty` is dropped on load like any unknown key.
 
-**Changes**, exercise by exercise. In each case the table goes and the thing
-it was looking up becomes the setting:
+**For architect**, three records to look at, in order of how much they
+move:
 
-| Exercise | Was | Becomes |
-| --- | --- | --- |
-| `degree-id` | `difficulty` → `DEGREES_AT` | nothing; `degrees` already *is* the setting, so this is dead state |
-| `key-id` | `difficulty` → `ACCIDENTAL_LIMIT` | `maxAccidentals: number` |
-| `interval-id` | `difficulty` → `SPREAD` | `window: number` (semitones either side of the clef's centre) |
-| `progression-id` | `difficulty` → `SHAPE_AT` | `grade: number`; `bars` is already its own setting |
+- **ADR 0021** recorded two rhythm cells stranded above the top grade the
+  app could ask for, and blamed the grade table. The reason was wrong:
+  the grades it measured through were the *progression* exercise's, and
+  that exercise does not generate rhythm. Nothing in `src/` outside
+  `generate/` queries the cell catalogue at all. The finding stands —
+  those cells are unreached — but so is every other cell, and the cause
+  is that the rhythm exercise does not exist. `catalogues.test.ts` now
+  says this and fails the day an exercise starts producing rhythm items.
+  This is the proxy error `docs/process/` already has a note about,
+  found inside a test written to measure reachability honestly.
+- **ADR 0011/0017's template measurement.** Templates no query could
+  reach: 5 → 0. Three left when the preset table did, with no change to
+  `generate/`; the last two went when `borrowed` became a setting.
+- **ADR 0016.** A later note read `varyCadence` as rescuing six templates
+  against 0016's three and called 0016 an undercount. 0016 was right.
+  The extra three are eight-bar templates that were out of reach because
+  eight bars only arrived at grades 5, 7 and 9 — an artefact of measuring
+  through the preset table, not of the cadence setting.
 
-`BaseSettings` is left holding only `presentation`. The `Difficulty` type,
-`presetFor`, `DIFFICULTY_BLURBS` and four hand-rolled 1-to-5 validators go
-with it.
-
-**What does *not* change, and must not.** `grade` on `CELLS` and `minGrade`
-on `TEMPLATES` are the catalogues' own ordering and are untouched — ADRs
-0011 and 0021 are about those, not about this. 0021's open question is
-*resolved* by this rather than threatened: if `grade` becomes directly
-settable there is no difficulty-to-grade mapping left to extend, and nothing
-is stranded. `SHAPE_AT` is the only such mapping in the codebase and
-`catalogues.test.ts` reads it, so that test re-anchors onto `GRADE_CHOICES`.
-
-**No `SETTINGS_SCHEMA` bump.** Per-exercise settings are stored as
-`Record<string, unknown>` and every exercise has a `coerce` that ignores
-what it does not recognise, so a stored `difficulty: 4` is dropped on load
-the same way any other unknown key is. The defaults are chosen to match what
-level 2 produced, so nobody's saved settings change meaning.
-
-**For tester:** four things to expect. Every `{ ...defaults, difficulty: n }`
-in a test becomes the named field — `itemLabel.test.ts` and
-`settingsStore.test.ts` both do this, the latter only as an opaque payload
-where any key would do. `catalogues.test.ts`'s reachability sweep currently
-walks `SHAPE_AT`'s five rows and will walk `GRADE_CHOICES` instead; the
-*claim* it makes is unchanged and the five-unreachable-templates figure
-should survive, so if it moves, that is a real finding and not bookkeeping.
-The monotonicity property worth having afterwards is new and did not exist
-before: a larger `maxAccidentals`, `window` or `grade` must admit a superset
-of what a smaller one admits, which was true of the tables by construction
-and is now a thing the code has to earn. And there is nothing to write
-against `degree-id`: its settings lose a field that no test asserts on,
-because nothing ever read it.
+**For tester.** The palette containment sweep had a hole worth
+generalising from: it swept 300 seeds over grades and modes while holding
+`bars` and `varyCadence` at their defaults, so it covered one
+configuration deeply and 479 not at all. A live defect sat in it —
+minor, applied dominants on, sixteen bars produced `V/VII` with no button
+for it. It now crosses the real product of the controls at 25 seeds each.
+**A new user-facing control is a new dimension of that sweep**, and
+`bars` had become one without the sweep following.

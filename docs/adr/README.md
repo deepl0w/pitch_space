@@ -51,6 +51,21 @@ against `HEAD` rather than against the files that can change it, and once
 counting test files that are never bundled. Each was narrowed after it had
 already taught someone to skim past it.
 
+**But distinguish a guard from a definition, because this convention read
+carelessly argues for deleting the wrong things.** A guard asserts a property of
+the system as it stands, so scope it to what can change that property — and if
+nothing can, it is a tautology and should go, which is why the menu test that
+compared a derived name against the name it was derived from was deleted rather
+than kept as documentation. A definition answers a question over a domain, and
+is tested over that domain rather than over the inputs its current callers
+happen to produce. `isBorrowedIn` says whether a chord is a loan from the
+parallel mode; that `vii°` in minor is not one is true whether or not any
+template writes it today, so the branch is an untested corner and not dead code.
+
+The test that separates them: **can this fail for some input in its domain, or
+only for inputs the present system cannot construct?** The first is a corner
+worth covering. The second is a tautology wearing a corner's clothes.
+
 The two conventions pull in opposite directions, and that is the point. The
 first says check more; the second says check *exactly*. A guard that is broad
 enough to be noisy and a claim that is never checked at all fail in the same

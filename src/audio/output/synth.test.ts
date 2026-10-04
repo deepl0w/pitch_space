@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Synth, type Voice } from './synth';
 import {
   advanceAudioClock, audioClock, audioClosed, contextCount, gains, installAudioContext,
-  masterGain, oscillators, resetAudio, soundingAfter,
+  attackTimes, masterGain, oscillators, resetAudio, soundingAfter, suspendUntilResumed,
 } from '../../testing/audioContext';
 
 /**
@@ -210,5 +210,142 @@ describe('close', () => {
     expect(audioClosed()).toBe(true);
     synth.play(notes(1));
     expect(contextCount()).toBe(2);
+  });
+});
+
+/**
+ * The first play of the page, when the context has to be woken first.
+ *
+ * `ensure` fires `resume()` without awaiting it and `play` then times the
+ * passage from `currentTime + 0.06`. On a context that is already running
+ * that is a beat of headroom; on one that is still starting, the clock it
+ * read is about to jump by however long the hardware takes to open, and
+ * anything inside that jump is already behind by the time a sample is played.
+ *
+ * Measured on Chrome 126 for the Rhythms "first play loses a note" report: a
+ * context created under a user gesture comes up `running` with `currentTime`
+ * 0, and its clock then sits at 0 for 30–40 ms before advancing. That clears
+ * the 60 ms of headroom, which is why Chrome does not lose a note — by 20–30
+ * ms. Where a context starts *suspended* instead, as one does without a
+ * gesture and as iOS Safari is strict about, the cost is a device opening
+ * rather than a clock settling and there is no reason it fits inside 60 ms.
+ *
+ * So the margin is real, it is at the *front* of the bar rather than the end,
+ * and nothing was asserting it: `suspendUntilResumed` was built for exactly
+ * this and had no callers.
+ */
+describe('the first play, on a context that is still waking up', () => {
+  /**
+   * Let the context finish starting, as the hardware would.
+   *
+   * A turn of the task queue rather than a microtask or two: the resume
+   * settles, and only then does the passage get laid down against the clock
+   * it uncovered. Counting the exact number of ticks between those would be
+   * asserting how the fix is spelled rather than that it works.
+   */
+  const woken = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  /** A bar of even quavers at about 112bpm, as the Rhythms screen plays one. */
+  const bar = (): Voice[] =>
+    Array.from({ length: 8 }, (_, i) => ({ midi: 72, start: i * 0.268, duration: 0.24 }));
+
+  /**
+   * Attacks the clock has already passed once the context is running.
+   *
+   * Counted as notes rather than as oscillators, because one note is seven of
+   * them — `PARTIALS` stacks a struck-string timbre — and "seven lost" where
+   * a listener heard one note go missing is a failure message that sends the
+   * next reader looking in the wrong place.
+   *
+   * Deliberately not `scheduledInThePast`, which asks whether a note was
+   * behind *at the moment it was scheduled*. Nothing ever is: the jump
+   * happens afterwards. The question an ear asks is this one — when the first
+   * sample finally plays, is this attack still ahead of the clock?
+   */
+  const missed = () => attackTimes().filter((at) => at < audioClock());
+
+  it('keeps every note ahead of the clock when waking is quick', async () => {
+    suspendUntilResumed(0.02);
+    synth.play(bar());
+    await woken();
+
+    expect(missed()).toEqual([]);
+  });
+
+  it('keeps every note ahead of the clock when waking is slow', async () => {
+    // 200 ms to open an audio device is unremarkable, and it is more than the
+    // 60 ms of headroom the passage was timed with.
+    suspendUntilResumed(0.2);
+    synth.play(bar());
+    await woken();
+
+    // The front of the bar is what goes: the later attacks are far enough out
+    // to survive, so the defect is a passage that starts clipped rather than
+    // one that fails outright — which is why it reads as "a note went
+    // missing" rather than as "play is broken".
+    expect(missed()).toEqual([]);
+    // And all eight are still there to be heard, rather than merely not late.
+    expect(attackTimes()).toHaveLength(8);
+  });
+
+  it('is not charging for a wake-up that never happened', async () => {
+    // The guard against the pair above passing vacuously: with no suspension
+    // there is no jump, so a bug that lost notes for some other reason would
+    // show here too rather than hiding behind the knob.
+    synth.play(bar());
+    await woken();
+
+    expect(audioClock()).toBe(0);
+    expect(missed()).toEqual([]);
+  });
+});
+
+/**
+ * Deferring the first passage re-opens a hole that was already closed once.
+ *
+ * `stopAll` exists because notes are scheduled into the future and leaving a
+ * screen left the rest of the passage playing over whatever came next. A
+ * passage that waits for the hardware is a passage that can arrive *after*
+ * that stop, or after a second press meant to replace it — the same defect
+ * with a wake-up in front of it.
+ */
+describe('a passage waiting on a cold context', () => {
+  const woken = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const bar = (): Voice[] =>
+    Array.from({ length: 8 }, (_, i) => ({ midi: 72, start: i * 0.268, duration: 0.24 }));
+
+  it('never arrives if the screen went away while it was waking', async () => {
+    suspendUntilResumed(0.2);
+    synth.play(bar());
+    synth.stopAll(); // the user navigates before a sample has played
+    await woken();
+
+    expect(oscillators()).toEqual([]);
+  });
+
+  it('is replaced by a second press rather than layered under it', async () => {
+    // Calibrated against one bar rather than against a literal, because two
+    // bars laid on the same clock share their attack *times* — counting those
+    // would pass whether or not they were stacked. The oscillators are what
+    // doubles, and how many of them a note costs is the timbre's business.
+    suspendUntilResumed(0.2);
+    synth.play(bar());
+    await woken();
+    const oneBar = oscillators().length;
+    expect(oneBar).toBeGreaterThan(0);
+
+    resetAudio();
+    installAudioContext();
+    synth = new Synth();
+
+    suspendUntilResumed(0.2);
+    synth.play(bar());
+    synth.play(bar());
+    await woken();
+
+    // Pressing play again cuts what is already sounding; waiting for the
+    // hardware must not turn it into a way to double it instead.
+    expect(oscillators()).toHaveLength(oneBar);
+    expect(attackTimes()).toHaveLength(8);
   });
 });

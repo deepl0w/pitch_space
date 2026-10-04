@@ -136,3 +136,33 @@ as many of the target devices as can be reached.
 - **MIDI and audio disagree in the same session.** A user with both connected
   gives two timestamps for one event, which is the cheapest calibration
   measurement the app will ever have access to, and worth taking if it happens.
+
+## Correction, 4 October 2026
+
+**The Context above says "there is no standard input-latency property". There
+is one.** [Media Capture and Streams](https://www.w3.org/TR/mediacapture-streams/)
+defines `latency` on `MediaTrackSettings`, read through
+`track.getSettings().latency`, and specifies it as the time from the start of
+processing to the data being available to the next step — the quantity this
+record says nothing reports.
+
+The decision stands, and the evidence for it is stronger than the argument
+that was made. The property is implemented as something else: on a
+[chromium-dev thread](https://groups.google.com/a/chromium.org/g/chromium-dev/c/YCywOaFTSm8)
+a Chromium engineer identifies the returned value as a fixed internal buffer
+size, and the reporter observes `latency × sampleRate ≈ 128` holding across
+sample rates. Measuring rather than reading was the right call for a reason
+this record did not give: not that the platform is silent, but that it answers
+confidently and wrongly, which is worse.
+
+The distinction matters to anyone revisiting this. "No property exists" invites
+a periodic check of whether one has landed; "the property exists and is a
+buffer size" says what to check instead — whether implementations have moved,
+and the min/max/avg latency statistics now under review in the spec.
+
+Figures, provenance and what they imply for the constants are in
+[`docs/research/2026-10-04-round-trip-audio-latency.md`](../research/2026-10-04-round-trip-audio-latency.md).
+The same note supplies what the Consequences call for and admit they lack — the
+claim that round-trip latency is "of that order" is now backed by published
+loopback measurements rather than by general knowledge, and it holds for wired
+paths while Bluetooth is considerably worse.

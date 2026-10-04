@@ -24,6 +24,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0007](0007-an-attempt-records-per-event-item-attribution.md) | An attempt records per-event item attribution | Accepted |
 | [0008](0008-an-onset-is-a-rise-in-the-frames-own-spectrum.md) | An onset is a rise in the frame's own spectrum | Accepted |
 | [0009](0009-align-a-performance-by-dynamic-programming.md) | Align a performance by dynamic programming, not by nearest neighbour | Accepted |
+| [0010](0010-presentation-is-part-of-what-an-attempt-means.md) | Presentation is part of what an attempt means | Accepted |
 
 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) describes the system as it stands
 today and links back to these records. It is a living document: when a record

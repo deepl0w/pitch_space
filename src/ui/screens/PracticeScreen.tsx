@@ -114,7 +114,9 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
   return (
     <main>
       <header>
-        <h1>{family.name} <span className="tag">practice</span></h1>
+        {/* No "practice" tag. You are on the practice screen; saying so
+            is the heading telling you where you already are. */}
+        <h1>{family.name}</h1>
         <p className="lede">{definition.description}</p>
         <div className="nav">
           {/*
@@ -258,13 +260,32 @@ function ExerciseRound({ definition, audio, tally }: {
   }
 
   return (
-    <>
-      <SettingsPanel
-        fields={definition.settings.fields}
-        settings={settings}
-        onChange={(next) => settingsStore.getState().setExerciseSettings(definition.id, next)}
-      />
+    /*
+      Two columns where there is room, stacked where there is not.
 
+      The settings and the question are different kinds of thing: one is
+      a standing configuration you adjust occasionally, the other is what
+      you are looking at. Stacked, every glance at the question travels
+      past a panel that has not changed — and the panel grew to a dozen
+      controls once difficulty stopped standing in for them, so on a
+      laptop the exercise was below the fold on a screen that was two
+      thirds empty.
+
+      Side by side above the breakpoint, with the settings scrolling
+      independently so a long panel cannot push the question off; stacked
+      below it, settings first, which is the phone reading and the one
+      the narrow layout already had.
+    */
+    <div className="practice-layout">
+      <div className="practice-settings">
+        <SettingsPanel
+          fields={definition.settings.fields}
+          settings={settings}
+          onChange={(next) => settingsStore.getState().setExerciseSettings(definition.id, next)}
+        />
+      </div>
+
+      <div className="practice-main">
       <div className="actions">
         <button type="button" onClick={start}>
           {round === null ? 'Start' : round.result ? 'Next' : 'Skip to the next'}
@@ -326,7 +347,8 @@ function ExerciseRound({ definition, audio, tally }: {
           <p className="secondary">Seed {round.exercise.seed}</p>
         </section>
       )}
-    </>
+      </div>
+    </div>
   );
 }
 

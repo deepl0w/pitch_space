@@ -40,6 +40,43 @@ main {
   padding: 2rem 16px 4rem;
 }
 
+/* Wide enough for two columns: use the screen rather than centring a
+   phone-width column in the middle of it. The measure is still capped
+   where it has to be — `.lede` stays at 42rem — so what fills the space
+   is the things that come in quantities, not the prose. */
+@media (min-width: 60rem) {
+  main { max-width: none; padding-left: 2rem; padding-right: 2rem; }
+}
+
+/* The practice screen's two columns.
+
+   Settings left and the question right, because they are different kinds
+   of thing: one is a standing configuration, the other is what you are
+   looking at. The panel grew to a dozen controls when difficulty stopped
+   standing in for them, and stacked that put the exercise below the fold
+   on a laptop with two thirds of the screen empty.
+
+   The settings column scrolls on its own and sticks, so a long panel
+   cannot push the question out of view and scrolling the question does
+   not take the controls with it. */
+.practice-layout { display: grid; gap: 1.5rem; align-items: start; }
+
+@media (min-width: 60rem) {
+  .practice-layout { grid-template-columns: minmax(17rem, 22rem) minmax(0, 1fr); }
+  .practice-settings {
+    position: sticky; top: 1.5rem;
+    max-height: calc(100vh - 3rem); overflow-y: auto;
+    /* Room for the scrollbar, so a chip never sits under it. */
+    padding-right: 0.25rem;
+  }
+  .practice-settings .panel { margin-bottom: 0; }
+}
+
+/* Below it, settings first and the question under them — the reading a
+   phone already had, stated rather than left to the grid's default. */
+.practice-layout > .practice-settings { order: 0; }
+.practice-layout > .practice-main { order: 1; }
+
 /*
  * Above sixty rems the column stops growing and the page starts looking
  * like a phone screenshot on a desktop — the user role's words were that
@@ -52,19 +89,11 @@ main {
  * the things that come in quantities — cards, chips, readout rows — so
  * those get more columns and the measure stays where it is.
  */
-@media (min-width: 72rem) {
-  main { max-width: 72rem; }
-}
+
 
 h1 { font-size: 1.45rem; margin: 0 0 0.3rem; font-weight: 650; letter-spacing: -0.01em; }
 h2 { font-size: 0.95rem; margin: 0 0 0.75rem; font-weight: 600; color: var(--muted); }
 
-.tag {
-  font-size: 0.7rem; font-weight: 500; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--accent);
-  border: 1px solid currentColor; border-radius: 999px;
-  padding: 0.15rem 0.5rem; vertical-align: 0.25em;
-}
 
 .lede { color: var(--muted); margin: 0 0 1.75rem; max-width: 42rem; line-height: 1.5; font-size: 0.9rem; }
 

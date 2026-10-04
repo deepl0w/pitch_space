@@ -322,3 +322,35 @@ describe('the npm scripts', () => {
   it.todo('wires vite-plugin-pwa into vite.config.ts so the PWA half is real');
   it.todo('installs @capacitor/cli and core so the android scripts can run');
 });
+
+/**
+ * The one convention in `docs/adr/README.md` that is not a row in a table.
+ *
+ * Four of the fifteen records exist because someone checked a claim about the
+ * code against the code instead of against the record that made it: a chroma
+ * feature two ADRs asserted and the repository never had, a tempo crossover
+ * reasoned about from memory rather than evaluated, a session tally that
+ * blends across an exercise change, and four exercise transitions that blank
+ * the page. The paragraph naming that habit cost one edit and is the cheapest
+ * thing in the index.
+ *
+ * It is also the most losable. The index is a living document that gets
+ * rewritten whenever the table grows, and a paragraph between a table and a
+ * diagram is what a tidying edit removes without anyone deciding to. The
+ * *claims* a record makes are not mechanically checkable — a link checker
+ * validates links, not assertions about a codebase — but the convention's own
+ * survival is, so it is checked here.
+ *
+ * This asserts presence, not wording. Rewriting the paragraph is fine and
+ * deleting it should be deliberate.
+ */
+describe('the conventions the ADR index carries', () => {
+  it('still tells the next author to check a claim against the code', () => {
+    // Whitespace collapsed first: the sentence is hard-wrapped in the source,
+    // so matching it line by line would pass or fail on where the paragraph
+    // happens to break. It did, on the first run of this test.
+    const index = readFileSync(join(SRC, '..', 'docs', 'adr', 'README.md'), 'utf8')
+      .replace(/\s+/g, ' ');
+    expect(index).toContain('against the code, not against the record that made it');
+  });
+});

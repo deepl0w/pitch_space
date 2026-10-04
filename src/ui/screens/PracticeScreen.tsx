@@ -73,6 +73,7 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
 
   const status = useProgress((s) => s.status);
   const unreadable = useProgress((s) => s.unreadable);
+  const fromNewerRelease = useProgress((s) => s.fromNewerRelease);
   const attempts = useProgress((s) => s.attempts);
   const tally = useMemo(() => tallyItems(attempts), [attempts]);
 
@@ -239,6 +240,23 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
         <p className="warning">
           {unreadable} stored {unreadable === 1 ? 'attempt' : 'attempts'} could not be
           read back and {unreadable === 1 ? 'is' : 'are'} being ignored.
+        </p>
+      )}
+      {/*
+        Said separately from the one above, and deliberately not as a warning
+        about the data: these rows are intact. This build is older than they
+        are, which happens between two tabs on different deploys or after a
+        downgrade. Telling the user it "could not be read" invites them to
+        clear the history, which is the only thing here that would really lose
+        it.
+      */}
+      {fromNewerRelease > 0 && (
+        <p className="note">
+          {fromNewerRelease} stored {fromNewerRelease === 1 ? 'attempt was' : 'attempts were'} written
+          by a newer version of the app, so {fromNewerRelease === 1 ? 'it is' : 'they are'} not shown
+          here. Nothing has been lost — {fromNewerRelease === 1 ? 'it' : 'they'} will read again once
+          this device is up to date. Clearing the history would delete
+          {fromNewerRelease === 1 ? ' it' : ' them'}.
         </p>
       )}
     </main>

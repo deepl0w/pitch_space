@@ -229,6 +229,17 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   border-left: 3px solid var(--accent); padding-left: 0.7rem;
 }
 
+/*
+ * Deliberately quieter than .warning, and not accented. It says something is
+ * not on screen, not that anything is wrong — and a row from a newer release
+ * that looks like an alarm invites the user to clear a history that is
+ * perfectly intact.
+ */
+.note {
+  font-size: 0.85rem; color: var(--muted); margin-top: 1rem;
+  border-left: 3px solid var(--line); padding-left: 0.7rem;
+}
+
 /* ---- The circle of fifths ----------------------------------------------- */
 
 .circle-layout { display: grid; gap: 1.25rem; align-items: start; margin-bottom: 1.25rem; }

@@ -274,3 +274,50 @@ value in a report about measurement error; the name was an artefact describing
 the thing, mistaken for the thing. That is the fourth convention in
 [the index](README.md) once more, and this record is now an instance of it as
 well as a user of it.
+
+## Addendum, 4 October 2026 — the lead is confirmed, and it points the other way
+
+The first revisit trigger — "the recording-zero correspondence is tested" — has
+been met, by the tester, with no device. One recording, interpreted with the
+zero right and with the zero one buffer out: **159.7 ms against 66.8 ms, with
+the spread identical to six decimal places.** Both returned `ok`, both heard
+6 of 6. The error is **53 times the confidence printed beside it**. Asserted
+across 512 to 8192 frames, so it is the structure and not the constant.
+
+The Context above calls this "a lead and not a conclusion". It is now a
+measured mechanism, and this record's central claim has stopped being an
+argument: a systematic shift is invisible to a dispersion statistic, demonstrated
+rather than reasoned.
+
+**The direction matters and it reverses the reading of the Snowball data.** A
+zero that is *late* makes the measured latency *smaller* — the sound's sample
+index is counted from a start that is actually later than assumed. So of the
+Snowball's two clusters it is the **low** one, around 50 ms, that carries the
+artefact, and around 165 ms that is the unshifted reading.
+
+That lands where the other microphone did. The webcam's four agreeing successes
+were 161–173 ms, the same population as the Snowball's upper cluster. **Two
+microphones with nothing in common agreeing on ~165 points at a cause outside
+the microphone**, which is what the unshifted reading should look like.
+
+**What it does not do is rescue the webcam's agreement as evidence.** Four runs
+within 12 ms is consistent with four runs sharing the same zero state, and
+nothing in the output distinguishes that from four correct runs. The
+correction above narrowed this record for the severity and that stands; the
+agreement still does not establish correctness, which is the record's whole
+point arriving on the data that was supposed to settle it.
+
+**Unexplained, and recorded as such:** one buffer is 92.9 ms at 44.1 kHz and
+the observed clustering was about 115, leaving roughly 20 ms. 48 kHz gives
+85.3 ms and widens the gap rather than closing it, so the obvious candidate
+fails. About 20 ms is 7 m of air, which is an ordinary wall bounce and would be
+a second, acoustic mechanism on top of the first — a guess, offered only to say
+that one mechanism does not have to explain everything.
+
+**The severity is a property of the rig's granularity.** The zero error is
+bounded by roughly one recorder callback, so the 4096-frame ScriptProcessor
+bounds it at 92.9 ms where an AudioWorklet's 128-frame quantum would bound the
+same fault at 2.9 ms. That does not fix the correspondence, and it means the
+capture layer [0012](0012-the-judge-consumes-performed-notes-not-audio.md)
+anticipates would shrink this failure by a factor of thirty-two as a side
+effect of being written.

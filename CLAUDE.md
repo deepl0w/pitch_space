@@ -21,6 +21,13 @@ agent works in this checkout, owns `main`, and is the only one that may push;
 everyone else works in a worktree under `.claude/worktrees/` on `claude/<name>`,
 syncs before starting, commits before going idle, and never pushes.
 
+A worktree and its branch are named after the role — `fleet.sh new tester`
+gives `.claude/worktrees/tester` on `claude/tester`, and two worktrees in one
+role take `feature-melody`, `feature-capture`. `status` and `announce` list
+the fleet by that name, so a randomly-named worktree makes the roster
+unreadable. If you are given a role and find yourself in one, ask main to
+rename it rather than carrying on.
+
 **The three roles this project runs**, and what each may change:
 
 | Role | Changes |
@@ -75,7 +82,7 @@ src/
   theory/     facts about music: pitch, interval, scale, key, chord, meter, roman
   generate/   choices about music: templates, harmony, rhythm, melody, exercise
   audio/
-    dsp/      pitch detection, chroma, onsets — pure maths
+    dsp/      pitch detection, onsets, rhythm alignment — pure maths
     capture/  microphone, AudioWorklet, analysis worker
     output/   the one AudioContext, instruments, metronome, scheduler
   exercises/  one directory per exercise type, plus render/toVexflow.ts
@@ -83,6 +90,13 @@ src/
   state/      zustand stores and persistence
   app/        composition root
 ```
+
+The tree above is what each directory *holds*, not what it is for. The
+distinction cost two ADRs and a published report: the previous version listed
+chroma under `dsp/`, meaning that is where chroma will go, and three documents
+read it as a statement that chroma was there. It is not — a chord exercise
+needs it written first. If you add a planned component here, say that it is
+planned.
 
 **`theory/`, `generate/` and `audio/dsp/` import nothing above themselves and
 nothing from the platform — no DOM, no `AudioContext`, no React.** That is what

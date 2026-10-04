@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_TYPES } from './registry';
 import type { AnyExerciseDefinition, Presentation } from './types';
@@ -124,4 +127,67 @@ describe('how an exercise is asked', () => {
   it('covers an exercise that can be asked both ways', () => {
     expect(EXERCISE_TYPES.some((d) => d.presentations.length === 2)).toBe(true);
   });
+});
+
+/**
+ * A declared presentation has to produce a question, not just an option.
+ *
+ * The check above asks whether the settings panel offers each presentation
+ * the exercise declares. That is the shallow half, and it passed while key
+ * identification's heard mode showed nothing at all: no staff, because
+ * `questionScore` returns null for a heard question by design, and no
+ * sound, because its prompt had been written as a reading exercise and
+ * never took `audio`. The option was pickable and the screen behind it was
+ * empty.
+ *
+ * So this asks the deeper question. **Whatever the presentation, something
+ * has to reach the user.** Read means a score to look at; heard means audio
+ * actually played. Nothing about an exercise's own internals is asserted —
+ * only that choosing a mode the app offers gives you something to answer.
+ *
+ * Rendering the prompt is the only way to ask it, because "does this
+ * sound" is not in `ExerciseDefinition` and should not be: an exercise
+ * sounds by calling `audio.play`, which is behaviour rather than a
+ * declaration, and a flag saying "I make noise" would be one more thing
+ * that can disagree with the code.
+ */
+describe('every declared presentation gives the user something', () => {
+  const SEEDS = [1, 7919, 104_729];
+
+  for (const definition of EXERCISE_TYPES) {
+    for (const presentation of definition.presentations) {
+      it(`${definition.id} asked by ${presentation}`, () => {
+        for (const seed of SEEDS) {
+          const settings = definition.settings.coerce({
+            ...(definition.settings.defaults as object), presentation,
+          });
+          const exercise = definition.generate({ seed, settings });
+
+          const score = definition.questionScore?.(exercise) ?? null;
+          const played: unknown[][] = [];
+          const audio = { play: (voices: readonly unknown[]) => { played.push([...voices]); } };
+
+          const root = createRoot(document.createElement('div'));
+          // `createElement` rather than JSX so this stays a .ts file, which
+          // the rest of it is.
+          act(() => root.render(createElement(definition.Prompt, {
+            exercise, settings, result: null, onRespond: () => {}, audio,
+          })));
+          const sounded = played.some((v) => v.length > 0);
+          act(() => root.unmount());
+
+          expect(
+            score !== null || sounded,
+            `${definition.id} asked by ${presentation} (seed ${seed}) shows no score and plays nothing`,
+          ).toBe(true);
+
+          // And the right one for the mode: a heard question that only
+          // draws a staff is a reading question wearing the wrong label.
+          if (presentation === 'listen') {
+            expect(sounded, `${definition.id} by ear is silent`).toBe(true);
+          }
+        }
+      });
+    }
+  }
 });

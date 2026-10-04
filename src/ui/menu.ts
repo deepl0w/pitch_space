@@ -129,10 +129,10 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
   {
     route: 'rhythms',
     name: 'Rhythms',
-    blurb: 'The named figures bars are built from, notated and played.',
-    lede: 'The figures bars are built from, in the order a method book meets '
-      + 'them. Nothing here is generated — this is the stock itself, and the '
-      + 'exercises draw on it.',
+    blurb: 'Named patterns and the figures bars are built from, metre by metre.',
+    lede: 'Pick a time signature to hear what it sounds like: the patterns '
+      + 'players know by name, and the beat-level figures its bars are built '
+      + 'from. Nothing here is generated — this is the stock itself.',
     ready: true,
   },
 ];

@@ -334,6 +334,13 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    whole distinction, though — a tick on every selected pill as well was
    saying it twice, in a row where most pills are usually on. */
 .chips-single {
+  /* Never stretched by its container. `.field` is a column flex box, so a
+     child with `align-items: stretch` in force fills its width — which the
+     panel's own `flex: 0 1 auto` happened to prevent and nothing else did.
+     The exercise picker sits in the sidebar *outside* the panel and so got
+     a track the width of the column with two chips rattling in it. The
+     control knowing its own shape fixes it wherever it is used. */
+  align-self: flex-start;
   display: inline-flex; flex-wrap: wrap;
   gap: 0.15rem;
   /* A rounded box, not a pill. A pill-shaped border is right around one

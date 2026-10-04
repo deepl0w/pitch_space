@@ -17,6 +17,23 @@ function declarations(property: string): string[] {
   return [...code.matchAll(new RegExp(`${property}\\s*:([^;}]+)`, 'g'))].map((m) => m[1].trim());
 }
 
+/**
+ * Bodies of every rule whose *whole* selector is this one.
+ *
+ * Matching on a substring is what this did first, and it broke the moment a
+ * grouped selector ended in the same class: `main .practice-main > .prompt,
+ * main .practice-main > .score { max-width: 60rem }` contains `.score` and
+ * is not the `.score` rule, so the assertion read a block that was never
+ * supposed to carry the declaration and failed on a stylesheet that was
+ * correct. Compare the selector, not the characters before the brace.
+ */
+function rulesFor(selector: string): string[] {
+  const code = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
+  return [...code.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+    .filter((m) => m[1].split(',').some((s) => s.trim() === selector))
+    .map((m) => m[2]);
+}
+
 describe('the stylesheet', () => {
   /**
    * A bare `1fr` is `minmax(auto, 1fr)`, so the track refuses to shrink below
@@ -43,9 +60,11 @@ describe('the stylesheet', () => {
    */
   it('lets everything that holds a stave be narrower than one', () => {
     for (const selector of ['.score', '.score-host']) {
-      const block = CSS.slice(CSS.indexOf(selector));
-      expect(block.slice(0, block.indexOf('}')), `${selector} needs min-width: 0`)
-        .toContain('min-width: 0');
+      const bodies = rulesFor(selector);
+      expect(bodies.length, `no rule whose whole selector is ${selector}`)
+        .toBeGreaterThan(0);
+      expect(bodies.some((b) => b.includes('min-width: 0')), `${selector} needs min-width: 0`)
+        .toBe(true);
     }
   });
 

@@ -142,7 +142,22 @@ main .practice-main .actions > button:first-child {
  * capped at 42rem for the reason prose always is. What wants the space is
  * the things that come in quantities — cards, chips, readout rows — so
  * those get more columns and the measure stays where it is.
+ *
+ * Measured at 1440px before this existed: the pane is 1104px and every
+ * direct child sat at exactly 704px, the 44rem cap above — the stave
+ * included. That is the whole of the complaint, and it is worth being
+ * precise about why it kept being re-reported as "the question pane does
+ * not grow". It does not grow in any mode; a Reading-mode screen merely
+ * looks like it does, because a stave drawn to 686px fills its box
+ * edge-to-edge while a sentence and two buttons leave white inside the
+ * same box. Looking fuller is not being wider, and three sweeps read the
+ * first as the second.
  */
+main .practice-main > .prompt,
+main .practice-main > .score { max-width: 60rem; }
+/* Prose keeps its measure inside the wider box: the chips and slots are
+   what wanted the room, not the sentence above them. */
+main .practice-main .question { max-width: 44rem; margin-inline: auto; }
 
 
 h1 { font-size: 1.45rem; margin: 0 0 0.3rem; font-weight: 650; letter-spacing: -0.01em; }

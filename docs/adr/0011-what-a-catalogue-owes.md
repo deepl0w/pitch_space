@@ -124,3 +124,32 @@ which — it says the mismatch must be *visible*, not that the corpus wins.
   arithmetic. At that point it is a registry rather than a catalogue, and
   [`registry.ts`](../../src/exercises/registry.ts) is the model to follow
   instead of this one.
+
+## Correction, 4 October 2026
+
+**Obligation 2 says "a rhythmic cell becomes `rhythm:dotted_e_s` in an
+`ItemId`". No such id is constructed, and none can be.**
+
+```bash
+grep -rn 'rhythm:' src/ | grep -v '\.test\.'    # nothing
+```
+
+[`RhythmEvent`](../../src/generate/rhythm.ts) carries tick positions,
+durations, rest and tie flags, tuplet and beam grouping — and no cell identity.
+`chooseCells` knows which cell produced each span and discards it on the way
+out, so there is nothing an `ItemId` could be built from. There is also no
+rhythm exercise: `generateRhythm` has no production callers, which is the same
+vacuum this record found around the harmony generator.
+
+The obligation itself is unaffected — ids are not editorial *once they reach a
+history*. What is wrong is the tense, and it matters in the useful direction:
+**cell ids are still editorial today**, and they stop being so on the first
+recorded attempt of the first rhythm exercise. This record reads as though that
+window has shut. It has not, and [0021](0021-a-catalogues-top-grade-must-be-reachable.md)
+argues it is the only chance the catalogue gets.
+
+Obligation 3 has now been measured against `cells.ts`, which this record left
+undone: all 37 reachable across grades 1–10, 35 at the five grades the only
+difficulty mapping in the codebase uses. The two stranded are the grade-10
+tuplets. [0021](0021-a-catalogues-top-grade-must-be-reachable.md) has the
+measurement and what follows from it.

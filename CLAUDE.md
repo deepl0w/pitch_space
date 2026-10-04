@@ -77,8 +77,9 @@ and the guards that could not fail were invisible from the outside.
 
 So a **user** works from the built app and the brief, and nothing else:
 
-- **Does not read `src/` to form a finding.** Reading it to write a test
-  afterwards is fine; reading it to decide what is wrong is how the role
+- **Does not read `src/` to form a finding, nor `docs/IN-FLIGHT.md` below.**
+  Reading `src/` to write a test afterwards is fine; reading it, or the plan
+  of what is about to change in it, to decide what is wrong is how the role
   collapses into the tester's. If a finding cannot be stated in terms of
   what the app did, it is not this role's finding.
 - **Reports what happened, not what to change.** "The home card says I can
@@ -133,6 +134,33 @@ A worktree that was never told is not stuck, though: `fleet.sh brief` runs at
 every session start and now prints the subject lines of whatever landed while
 you were away, so a cold session can begin its standing review from the brief
 alone.
+
+**`docs/IN-FLIGHT.md` says what is coming, the same way `announce` says what
+came.** Before architect or feature starts something that will change an
+interface another role depends on — generated output shapes, what a
+function returns, anything a test could be written against before the code
+exists — main writes a short entry there: which role, what is changing, and
+what it implies for whoever reacts to it. Main is the only writer, the same
+shape as the protocol's own files and as `main` itself, so two roles never
+contend for the same lines; a role that wants an entry says so to main
+rather than writing one. Committed to `main`, so the next `fleet.sh sync`
+carries it to every worktree whether or not anyone remembered to message
+about it — though message anyway, the same as any announcement, since a
+synced file nobody was told to read is the gap this whole section exists to
+close. An entry is removed once the change has merged and been reviewed,
+not left to accumulate; it describes work still in flight, not a history of
+it.
+
+This is what gives **tester** a prospective half to the standing job the
+skill already describes: after a sync, check `docs/IN-FLIGHT.md` as well as
+what just landed, and where it names something checkable before it exists —
+a generator's new output shape, an interface a feature is about to change —
+write toward it ahead of the merge rather than only after.
+
+**The user role does not read `docs/IN-FLIGHT.md`, for the same reason it
+does not read `src/`.** Telling the black-box role what is about to change
+is how it stops being a black-box role; it works from the built app and the
+brief, and this is neither.
 
 Exercise types are the natural unit of feature work — one worktree per
 exercise keeps two agents out of the same file.

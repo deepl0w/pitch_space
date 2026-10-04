@@ -95,8 +95,17 @@ export async function measureInputLatency(deps: MeasureDeps): Promise<MeasureOut
 }
 
 async function run(synth: Synth, stream: MediaStream): Promise<MeasureOutcome> {
-  const context = synth.audioContext;
-  if (!context) return { ok: false, reason: 'unsupported' };
+  // `prepare` rather than reading `audioContext`, which is null until
+  // something has played. Calibration records before it hears anything, so
+  // on a fresh page that read gave null and this reported the browser as
+  // unable to record — in a browser that was perfectly willing. Found by
+  // the user role, against a real microphone, on the first sweep.
+  let context: AudioContext;
+  try {
+    context = await synth.prepare();
+  } catch {
+    return { ok: false, reason: 'unsupported' };
+  }
 
   const source = context.createMediaStreamSource(stream);
   const recorder = context.createScriptProcessor?.(4096, 1, 1);

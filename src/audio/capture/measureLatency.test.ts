@@ -19,8 +19,45 @@ import type { Synth } from '../output/synth';
  * pinning exactly there.
  */
 
-/** A synth that has never sounded, which is what a fresh page has. */
-const coldSynth = { audioContext: null } as unknown as Synth;
+/**
+ * A synth on a device with no audio at all — `prepare` rejects, as it does
+ * under node and jsdom where there is no `AudioContext` to construct.
+ *
+ * **Not** "a synth that has never sounded", which is what this used to be
+ * and which was the bug. The module read `synth.audioContext`, null until
+ * something had played, and a fresh page therefore reported the browser as
+ * unable to record — in a browser that was willing. The old fake had
+ * `audioContext: null` and the tests below called that the failure path, so
+ * the defect was pinned as behaviour. Found by the user role in a real
+ * browser with a real microphone, which is the only place it was visible.
+ */
+const deadSynth = { prepare: () => Promise.reject(new Error('no AudioContext')) } as unknown as Synth;
+
+/** A synth that has never sounded — what every first calibration meets. */
+function freshSynth(): { synth: Synth; prepared: () => number } {
+  let calls = 0;
+  // An audio clock that runs, like a real one. `run` waits until the last
+  // click's echo would have arrived — about 5.4 s of wall clock against a
+  // stopped clock, which is longer than the suite's patience. Advancing it
+  // a second per read makes the wait resolve immediately without faking
+  // away the arithmetic being tested.
+  let now = 0;
+  const context = {
+    sampleRate: 44_100,
+    get currentTime() { now += 1; return now; },
+    // Enough of a graph for `run` to get past construction; the recording
+    // itself still needs a device and is not claimed here.
+    createMediaStreamSource: () => ({ connect() {}, disconnect() {} }),
+    createScriptProcessor: () => ({ connect() {}, disconnect() {}, onaudioprocess: null }),
+    createGain: () => ({ gain: { value: 0 }, connect() {}, disconnect() {} }),
+    destination: {},
+  };
+  const synth = {
+    prepare: () => { calls += 1; return Promise.resolve(context as unknown as AudioContext); },
+    play: () => {},
+  } as unknown as Synth;
+  return { synth, prepared: () => calls };
+}
 
 /** A stream whose tracks remember whether anybody stopped them. */
 function fakeStream(): { stream: MediaStream; stopped: () => number } {
@@ -42,7 +79,7 @@ describe('what the user is told when calibration cannot run', () => {
    * one sends them to fix something that is not broken.
    */
   it('says unsupported when there is no capture API at all', async () => {
-    const out = await measureInputLatency({ synth: coldSynth, getMedia: undefined });
+    const out = await measureInputLatency({ synth: deadSynth, getMedia: undefined });
     // Only meaningful where the environment has no navigator.mediaDevices
     // either, which is the case under node.
     expect(out.ok).toBe(false);
@@ -58,7 +95,7 @@ describe('what the user is told when calibration cannot run', () => {
     ];
     for (const [thrown, expected] of cases) {
       const out = await measureInputLatency({
-        synth: coldSynth, getMedia: rejecting(thrown),
+        synth: deadSynth, getMedia: rejecting(thrown),
       });
       expect(out.ok, thrown).toBe(false);
       if (!out.ok) expect(out.reason, thrown).toBe(expected);
@@ -75,10 +112,36 @@ describe('what the user is told when calibration cannot run', () => {
    */
   it('guesses no-device for an error it does not recognise', async () => {
     const out = await measureInputLatency({
-      synth: coldSynth, getMedia: rejecting('SomeFutureError'),
+      synth: deadSynth, getMedia: rejecting('SomeFutureError'),
     });
     expect(out.ok).toBe(false);
     if (!out.ok) expect(out.reason).toBe('no-device');
+  });
+});
+
+describe('a page where nothing has played yet', () => {
+  /**
+   * The bug the user role found, as a test.
+   *
+   * Calibration records the room *before* it hears anything back, so on
+   * every first attempt the synth has never sounded. Reading a context that
+   * is created lazily gives null, and the module reported "this browser
+   * will not let the app record" to a browser that had just granted the
+   * microphone. The fix is to ask the synth to wake rather than to look at
+   * whether it is awake.
+   */
+  it('wakes the audio graph instead of declaring the browser incapable', async () => {
+    const { synth, prepared } = freshSynth();
+    const { stream } = fakeStream();
+    const out = await measureInputLatency({
+      synth, getMedia: () => Promise.resolve(stream),
+    });
+
+    expect(prepared(), 'the synth was never asked to wake').toBe(1);
+    // It gets as far as recording and finds nothing, because there is no
+    // device here. What it must not say is `unsupported`.
+    expect(out.ok).toBe(false);
+    if (!out.ok) expect(out.reason).not.toBe('unsupported');
   });
 });
 
@@ -94,7 +157,7 @@ describe('letting go of the microphone', () => {
   it('stops every track even when the measurement never starts', async () => {
     const { stream, stopped } = fakeStream();
     const out = await measureInputLatency({
-      synth: coldSynth, getMedia: () => Promise.resolve(stream),
+      synth: deadSynth, getMedia: () => Promise.resolve(stream),
     });
 
     // The run bails on a null context — the point is that it bailed *and*
@@ -106,7 +169,7 @@ describe('letting go of the microphone', () => {
   it('does not leave a stream open when permission was refused', async () => {
     // Nothing to stop here, but the call must not throw on the way out.
     const out = await measureInputLatency({
-      synth: coldSynth, getMedia: rejecting('NotAllowedError'),
+      synth: deadSynth, getMedia: rejecting('NotAllowedError'),
     });
     expect(out.ok).toBe(false);
   });

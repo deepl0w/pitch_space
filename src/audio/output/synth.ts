@@ -56,6 +56,25 @@ export class Synth {
   }
 
   /**
+   * Create the context if it does not exist, wake it, and hand it over.
+   *
+   * For a caller that needs the audio graph *before* it has anything to
+   * play — calibration records the room before it hears anything back, so
+   * reading {@link audioContext} gave it null and the measurement reported
+   * the browser as incapable of recording. On a page where nothing has
+   * sounded yet, that is every first attempt.
+   *
+   * Safe to call from a click, which is the only place it is called: a
+   * context created outside a user gesture starts suspended and some
+   * browsers never resume it.
+   */
+  async prepare(): Promise<AudioContext> {
+    const { context, waking } = this.ensure();
+    if (waking) await waking;
+    return context;
+  }
+
+  /**
    * The one `AudioContext`, for the capture layer.
    *
    * Not a widening of the containment but the reason for it. ADR 0005 says

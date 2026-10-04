@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { useEffect, useState, act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PracticeScreen } from './PracticeScreen';
 import { EXERCISE_TYPES } from '../../exercises/registry';
 import type { AudioOut } from '../../exercises/types';
@@ -212,6 +212,16 @@ describe('the session tally', () => {
  * the second one is what the user sees.
  */
 describe('the readout under an answered question', () => {
+  /*
+    Faked for the whole block, because one exercise answers on a timer and
+    the sweep is over all of them. Everything else here presses buttons and
+    does not notice; the progression prompt reads `Date.now()` for its
+    latency and gets a frozen clock, which it reports as an instant answer
+    and nothing in this file asserts.
+  */
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
   /**
    * Answer whatever prompt is on screen, however many taps it takes.
    *
@@ -226,43 +236,57 @@ describe('the readout under an answered question', () => {
         (b) => !(b as HTMLButtonElement).disabled,
       ) as HTMLButtonElement | undefined;
 
-    for (let tap = 0; tap < 24; tap += 1) {
+    for (let tap = 0; tap < 40; tap += 1) {
       if ((container.textContent ?? '').includes('this session')) return true;
-      const submit = [...container.querySelectorAll('.actions button')]
-        .find((b) => b.textContent === 'Check') as HTMLButtonElement | undefined;
-      const next = (submit && !submit.disabled) ? submit : live('.choices button');
-      if (next === undefined) return false;
+      const named = (text: string) => [...container.querySelectorAll('.actions button')]
+        .find((b) => b.textContent === text) as HTMLButtonElement | undefined;
+
+      // A pad on screen means an attempt is already running: tap it, and
+      // let the window close on its own rather than looking for a submit
+      // that does not exist.
+      const pad = container.querySelector('.tap-pad') as HTMLButtonElement | null;
+      if (pad) {
+        act(() => pad.click());
+        act(() => { vi.advanceTimersByTime(30_000); });
+        continue;
+      }
+
+      const submit = named('Check');
+      const perform = named('Tap it back');
+      const next = (submit && !submit.disabled) ? submit
+        : live('.choices button') ?? (perform && !perform.disabled ? perform : undefined);
+
+      if (next === undefined) {
+        // Nothing live to press. Either the question is still sounding or
+        // a window is still open, and both end on a timer rather than on
+        // anything this driver can do.
+        act(() => { vi.advanceTimersByTime(30_000); });
+        continue;
+      }
       act(() => next.click());
     }
     return (container.textContent ?? '').includes('this session');
   }
 
   /*
-    Exercises this driver can answer: the ones whose answer is a choice.
+    There is no exemption here any more, and that is the point of the
+    clock above.
 
-    Rhythm is not one. Its answer is a performance — a count-in, taps
-    against a clock, and a window that closes on a timer — so there is
-    no button to press that constitutes answering, which is the whole
-    point of the exercise rather than a gap in it. Driving it here would
-    mean a second driver that fakes time, and the thing this case is
-    about (the readout naming a figure instead of printing `cell:s_e_s`)
-    is already covered item by item in `itemLabel.test.ts`, which sweeps
-    every item every exercise produces.
+    Rhythm used to be excluded by name: its answer is a performance — a
+    count-in, taps against a clock, and a window that closes on a timer —
+    so no single press constitutes answering, and this driver only knew
+    how to press things. The comment that stood here said the exclusion
+    should go the day someone could drive it, and `vi.useFakeTimers()` is
+    that day. Nothing on screen waits on anything but `setTimeout`, so
+    advancing the clock is the whole of it.
 
-    Named rather than detected, and guarded below, so the exemption
-    cannot outlive the exercise.
+    Keeping every exercise in one sweep matters more than the one case it
+    covers: an exemption is a list, and a list is the thing that stops
+    being true quietly.
   */
-  const NOT_ANSWERED_BY_CHOOSING = new Set(['rhythm-id']);
-
-  it('exempts only exercises that exist', () => {
-    for (const id of NOT_ANSWERED_BY_CHOOSING) {
-      expect(EXERCISE_TYPES.map((t) => t.id), `${id} is exempted and does not exist`).toContain(id);
-    }
-  });
 
   it('names what was practised instead of showing its storage key', () => {
     for (const type of EXERCISE_TYPES) {
-      if (NOT_ANSWERED_BY_CHOOSING.has(type.id)) continue;
       const s = screen(type.id);
       s.start();
       expect(answerFully(s.container), `${type.id} could not be answered`).toBe(true);

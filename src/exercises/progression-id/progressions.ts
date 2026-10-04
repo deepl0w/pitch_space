@@ -49,6 +49,20 @@ export const PROGRESSION_EXERCISE_ID = 'progression-id';
 export const CLEFS: readonly Clef[] = ['treble', 'bass'];
 
 export interface ProgressionSettings extends BaseSettings {
+  /**
+   * How long the progression is, asked for directly.
+   *
+   * Its own control rather than a consequence of difficulty. The dial
+   * used to decide both, so a learner who wanted six bars picked "3",
+   * got eight, and was told afterwards — and moving to "4" changed
+   * something invisible while the bar count stayed the same. A setting
+   * whose only concrete fact is not the one that tracks it teaches the
+   * user to stop touching it.
+   *
+   * The generator always supported any length; nothing but this field
+   * was missing.
+   */
+  bars: number;
   modes: readonly Mode[];
   /**
    * Extends the palette with V/x.
@@ -104,6 +118,14 @@ export interface ProgressionResponse {
  * top grade. Asserting that against the real table rather than a copy of its
  * numbers is what makes the finding fail if someone narrows a band.
  */
+/**
+ * The lengths worth offering. The generator takes any of them — checked
+ * from two to sixteen bars, every one generating cleanly — so this list is
+ * a judgement about what is useful to practise and not a limit of the
+ * engine.
+ */
+export const BAR_CHOICES = [2, 4, 6, 8, 12, 16] as const;
+
 export const SHAPE_AT: Record<Difficulty, { bars: number; grade: number }> = {
   1: { bars: 4, grade: 2 },
   2: { bars: 4, grade: 4 },
@@ -112,18 +134,24 @@ export const SHAPE_AT: Record<Difficulty, { bars: number; grade: number }> = {
   5: { bars: 8, grade: 9 },
 };
 
-/** What actually differs between the five, in the user's terms. */
+/**
+ * What actually differs between the five, in the user's terms.
+ *
+ * Length is no longer among them — it has its own control — so these say
+ * what the dial is for: how much of the harmonic corpus is in play.
+ */
 const DIFFICULTY_BLURBS: Record<Difficulty, string> = {
-  1: 'four bars, the plainest progressions',
-  2: 'four bars, a wider corpus',
-  3: 'eight bars',
-  4: 'eight bars, sevenths and inversions',
-  5: 'eight bars, everything',
+  1: 'the plainest progressions',
+  2: 'a wider corpus',
+  3: 'most of the corpus',
+  4: 'sevenths and richer cadences',
+  5: 'everything the generator has',
 };
 
 export const PROGRESSION_DEFAULTS: ProgressionSettings = {
   difficulty: 2,
   presentation: 'listen',
+  bars: 4,
   modes: ['major'],
   appliedDominants: false,
   varyCadence: false,
@@ -215,11 +243,13 @@ export function generateProgression(
   // "that was F", which is what this exercise exists not to teach.
   const key = pick(rng, ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4));
   const shape = SHAPE_AT[settings.difficulty];
+  const bars = BAR_CHOICES.includes(settings.bars as typeof BAR_CHOICES[number])
+    ? settings.bars : shape.bars;
 
   const harmony = generateHarmony(rng, {
     key,
     timeSignature: timeSignature('4/4'),
-    bars: shape.bars,
+    bars,
     grade: shape.grade,
     // All three exclude rather than merely decline to add (ADR 0017), so
     // the palette is exactly what can be heard.
@@ -378,6 +408,14 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       apply: (s, option) => ({ ...s, difficulty: coerceDifficulty(Number(option)) }),
     },
     {
+      kind: 'choice',
+      id: 'bars',
+      label: 'Length',
+      options: BAR_CHOICES.map((b) => ({ id: `${b}`, label: `${b} bars` })),
+      selected: (s) => `${s.bars}`,
+      apply: (s, option) => ({ ...s, bars: Number(option) }),
+    },
+    {
       kind: 'multi',
       id: 'modes',
       label: 'Modes',
@@ -414,6 +452,8 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     return {
       difficulty: coerceDifficulty(raw.difficulty),
       presentation: raw.presentation === 'read' ? 'read' : 'listen',
+      bars: BAR_CHOICES.includes(raw.bars as typeof BAR_CHOICES[number])
+        ? raw.bars as number : PROGRESSION_DEFAULTS.bars,
       modes: coerceModes(raw.modes),
       appliedDominants: raw.appliedDominants === true,
       varyCadence: raw.varyCadence === true,

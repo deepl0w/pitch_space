@@ -126,7 +126,13 @@ describe('every chord on the palette is reachable', () => {
   it('at the difficulty that reaches furthest', () => {
     for (const mode of ['major', 'minor'] as const) {
       for (const applied of [false, true]) {
-        const s = settings({ modes: [mode], difficulty: 5, appliedDominants: applied });
+        // Eight bars as well as difficulty 5: length is the user's own
+        // setting now, and a four-bar progression reaches less of the
+        // corpus — so "every palette entry is reachable" has to name the
+        // configuration it is reachable under rather than assume one.
+        const s = settings({
+          modes: [mode], difficulty: 5, bars: 8, appliedDominants: applied,
+        });
         const produced = new Set(
           SEEDS.flatMap((seed) => generateProgression({ seed, settings: s }).numerals),
         );

@@ -38,6 +38,20 @@ export interface RhythmBar {
   startTick: number;
   ticks: number;
   events: RhythmEvent[];
+  /**
+   * The cells this bar was built from, in the order they were placed.
+   *
+   * Carried out of the generator because the cell is what a learner
+   * practises: "the syncopated beat" is a figure you get better at, and
+   * the bar it landed in is not. Without it an attempt can only be
+   * credited to the bar as a whole, which teaches a schedule nothing
+   * about which figure went wrong.
+   *
+   * `events` cannot recover it. Two sixteenths and an eighth look the
+   * same whether they came from one cell or two, and a tie across a
+   * beat erases the boundary entirely.
+   */
+  cellIds: string[];
 }
 
 export interface RhythmOptions {
@@ -260,7 +274,11 @@ export function generateRhythm(rng: Rng, options: RhythmOptions): RhythmBar[] {
     }
     const startTick = index * ts.barTicks;
     bars.push({
-      index, startTick, ticks: ts.barTicks, events: layOut(placements, ts, startTick, nextTupletId),
+      index,
+      startTick,
+      ticks: ts.barTicks,
+      events: layOut(placements, ts, startTick, nextTupletId),
+      cellIds: placements.map((p) => p.cell.id),
     });
   }
   return bars;

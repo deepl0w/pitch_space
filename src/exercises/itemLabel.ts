@@ -3,6 +3,7 @@ import { ALL_KEYS, keyId, keyName } from '../theory/key';
 import { CADENCE_NAMES, type CadenceType } from '../theory/roman';
 import { SCALE_TYPES } from '../theory/scale';
 import { CHORD_TYPES, INVERSION_LABELS } from '../theory/chord';
+import { CELLS } from '../generate/cells';
 import { INTERVAL_SLUGS } from './interval-id/intervals';
 import type { ItemId } from './types';
 
@@ -78,6 +79,10 @@ export function itemLabel(item: ItemId): string {
         ? `${type.name}, ${INVERSION_LABELS[inv]}`
         : type.name;
     }
+    case 'cell':
+      // A rhythm figure, named as the catalogue names it — "Syncopated
+      // beat" rather than `s_e_s`.
+      return CELLS.find((c) => c.id === rest[0])?.name ?? item;
     case 'scale':
       // Named as the catalogue names it, so the readout and the button
       // that answered the question say the same words.

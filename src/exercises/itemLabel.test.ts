@@ -88,7 +88,8 @@ describe('naming an item for the user', () => {
     const kinds = new Set(everyItem().map((item) => item.split(':')[0]));
     expect([...kinds].sort())
       .toEqual([
-        'cadence', 'chord', 'degree', 'interval', 'key', 'progression', 'scale', 'signature',
+        'cadence', 'cell', 'chord', 'degree', 'interval', 'key', 'progression', 'scale',
+        'signature',
       ]);
   });
 

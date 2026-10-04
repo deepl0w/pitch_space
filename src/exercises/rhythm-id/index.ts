@@ -1,0 +1,35 @@
+import { defineExercise } from '../types';
+import { RhythmPrompt } from './RhythmPrompt';
+import {
+  RHYTHM_EXERCISE_ID, coerceRhythmSettings, generateRhythmExercise, gradeRhythm, rhythmItems,
+  rhythmQuestionSpec, rhythmScoreSpec, rhythmSettingsSchema,
+  type RhythmExercise, type RhythmResponse, type RhythmSettings,
+} from './rhythms';
+
+/**
+ * Read or hear a rhythm, then play it back in time.
+ *
+ * The one exercise whose answer is a performance rather than a choice,
+ * which is why it is the only one with no row of buttons. Naming a
+ * rhythm off a list tests reading one; what a musician practises is
+ * placing it, so the user taps it and the alignment that grades a
+ * microphone will grade the taps — `alignRhythm` does not care where
+ * the attacks came from.
+ */
+export const rhythmIdentification = defineExercise<
+  RhythmSettings, RhythmExercise, RhythmResponse
+>({
+  id: RHYTHM_EXERCISE_ID,
+  name: 'Rhythm',
+  description: 'Read or hear a rhythm, then play it back in time.',
+  presentations: ['listen', 'read'],
+  settings: rhythmSettingsSchema,
+  generate: generateRhythmExercise,
+  items: rhythmItems,
+  grade: gradeRhythm,
+  Prompt: RhythmPrompt,
+  questionScore: rhythmQuestionSpec,
+  answerScore: rhythmScoreSpec,
+});
+
+export { RHYTHM_EXERCISE_ID, coerceRhythmSettings };

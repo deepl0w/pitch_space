@@ -8,6 +8,7 @@ import type { CadenceType } from './theory/roman';
 import { BAR_CHOICES, STYLE_CHOICES } from './exercises/progression-id/progressions';
 import type { StyleTag } from './generate/templates';
 import { EXERCISE_TYPES } from './exercises/registry';
+import { METER_CHOICES } from './exercises/rhythm-id/rhythms';
 import { TIME_SIGNATURES, timeSignature } from './theory/meter';
 import { makeRng } from './theory/rng';
 
@@ -37,8 +38,6 @@ const CONSTRAINTS = [
   { allowRests: true, allowTuplets: true, syncopationsPerBar: 3, allowAdjacentTuplets: true },
 ];
 
-/** Enough to see what each exercise's defaults produce; this is a shape check. */
-const SEEDS_FOR_ITEMS = Array.from({ length: 40 }, (_, i) => i * 7919 + 1);
 /**
  * ADR 0011's third obligation, applied to the cell catalogue.
  *
@@ -105,45 +104,77 @@ describe('reaching the cell catalogue', () => {
   });
 
   /**
-   * There is no app-side query to measure this against, and saying so is
-   * the whole of this case.
+   * ADR 0011's obligation on this catalogue, measured against the
+   * exercise that now asks for it.
    *
-   * ADR 0021 recorded two cells — the irrational subdivisions, the
-   * highest-graded material in the library — as out of reach of anything
-   * the app could ask for, and attributed it to a `SHAPE_AT` table that
-   * reached grade 9 against a catalogue graded to 10. Removing that table
-   * appeared to resolve it, and this file briefly said so.
+   * This case used to assert the opposite — that *no* shipped exercise
+   * queried the cell catalogue — and said in its own comment that it
+   * existed to fail the day one did and ask for the real measurement.
+   * It did, when the rhythm exercise shipped, and this is the
+   * measurement it was asking for.
    *
-   * It did not, and the error is the one `docs/process/`'s note on
-   * proxies is about. The grades `SHAPE_AT` offered were the *progression*
-   * exercise's, and that exercise does not generate rhythm: nothing in
-   * `src/` outside `generate/` and these tests calls `chooseCells` or
-   * `generateRhythm` at all. Measuring the cell catalogue through a
-   * progression setting was never a query against it — it was a number of
-   * the right shape standing in for one.
+   * Worth keeping the history straight, because it is the second time
+   * the answer has moved. ADR 0021 read two unreachable cells as a fact
+   * about the catalogue; it was a fact about a difficulty table. ADR
+   * 0027 removed the table, and the apparent resolution was itself
+   * wrong — the grades being measured through belonged to the
+   * *progression* exercise, which does not generate rhythm, so the
+   * measurement had no referent at all. Now it has one.
    *
-   * So 0021's finding holds, with its reason corrected. The cells are not
-   * stranded above a grade band; they are unreached because **the rhythm
-   * exercise does not exist yet**, and so is every other cell in the
-   * catalogue. That is a roadmap item and not a defect.
-   *
-   * This case exists to fail the day it stops being true. When an exercise
-   * ships that queries the cell catalogue, this goes red and asks for the
-   * real measurement — against that exercise's own settings, which is
-   * what the template section below does for the exercise that exists.
+   * Measured through `rhythmItems`, which is the exercise's own
+   * statement of what its settings admit, crossed with every metre the
+   * panel offers. `registry.test.ts` separately holds that list to what
+   * the generator actually produces, in both directions, so this does
+   * not have to re-derive it.
    */
-  it('is not queried by any exercise the app ships', () => {
-    const queries = EXERCISE_TYPES.filter((type) => {
-      const items = SEEDS_FOR_ITEMS.flatMap(
-        (seed) => type.generate({ seed, settings: type.settings.defaults }).items,
-      );
-      return items.some((item) => item.startsWith('cell:') || item.startsWith('rhythm:'));
+  describe('as the rhythm exercise asks for it', () => {
+    const rhythm = EXERCISE_TYPES.find((t) => t.id === 'rhythm-id')!;
+
+    /** Every figure any setting of the exercise admits. */
+    const ASKABLE = new Set(
+      METER_CHOICES.flatMap((meter) => [0, 3].flatMap((syncopation) => [false, true].flatMap(
+        (tuplets) => rhythm.items(rhythm.settings.coerce({
+          ...(rhythm.settings.defaults as object), meter, syncopation, tuplets, rests: true,
+        })) as string[],
+      ))).map((id) => id.replace('cell:', '')),
+    );
+
+    it('asks for every cell in the library that makes a sound', () => {
+      /*
+        The obligation itself. A figure of nothing but rests is
+        excluded and that is not a carve-out: the user plays nothing
+        for it, so grading has nothing to credit and it cannot be an
+        item however reachable it is. It is still *in* the bars — a
+        beat of rest is ordinary, a bar of them is refused by the
+        selector — which is the contained-but-not-tested distinction
+        the degree exercise makes about the key it happens to pick.
+      */
+      const sounding = CELLS.filter((c) => !c.events.every((e) => e.rest));
+      const missing = sounding.filter((c) => !ASKABLE.has(c.id)).map((c) => c.id);
+      expect(missing).toEqual([]);
     });
-    expect(
-      queries.map((t) => t.id),
-      'an exercise now asks for rhythm — measure the cell catalogue against its settings, '
-      + 'the way the template section measures against the progression exercise',
-    ).toEqual([]);
+
+    it('excludes exactly the silent figures, and there are some', () => {
+      // The guard on the carve-out: if nothing in the library were
+      // silent the exclusion above would be doing nothing and the
+      // claim would be weaker than it reads.
+      const silent = CELLS.filter((c) => c.events.every((e) => e.rest)).map((c) => c.id);
+      expect(silent.length).toBeGreaterThan(0);
+      for (const id of silent) expect(ASKABLE.has(id), `${id} is silent and askable`).toBe(false);
+    });
+
+    it('narrows when the settings do, rather than always offering everything', () => {
+      // Otherwise the sweep above would pass over an `items` that
+      // ignores its argument, which is the failure mode a denominator
+      // has.
+      const plain = rhythm.items(rhythm.settings.coerce({
+        ...(rhythm.settings.defaults as object), tuplets: false, syncopation: 0, rests: false,
+      }));
+      const everything = rhythm.items(rhythm.settings.coerce({
+        ...(rhythm.settings.defaults as object), tuplets: true, syncopation: 3, rests: true,
+      }));
+      expect(everything.length).toBeGreaterThan(plain.length);
+    });
   });
 });
 

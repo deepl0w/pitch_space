@@ -126,8 +126,12 @@ describe('every exercise type’s settings', () => {
       `m7b5`, `dom7b13` — and a number is never that. The unit lives in
       the field's caption, which is what stopped these controls saying
       "bars" six times and wrapping onto two rows.
+
+      A time signature is the same case one step on: `4/4` is the id and
+      it is also exactly how a musician writes it, so spelling it out
+      would be the invention.
     */
-    const written = /^(ii|iii|vi|vii|[IVX]+o?|\d{1,2})$/;
+    const written = /^(ii|iii|vi|vii|[IVX]+o?|\d{1,3}|\d{1,2}\/\d{1,2})$/;
     each((d) => {
       for (const field of d.settings.fields) {
         if (field.kind === 'toggle') continue;
@@ -310,6 +314,9 @@ describe('every exercise type’s generator', () => {
 describe('every exercise type’s askable items', () => {
   const WIDE: Record<string, unknown> = {
     maxAccidentals: 7, window: 24, bars: 16,
+    // The rhythm exercise's own axes. Every control is a dimension of
+    // this sweep; these were the third set to arrive without it.
+    tuplets: true, rests: true, syncopation: 3, tempo: 60,
     modes: ['major', 'minor'], varyCadence: true, appliedDominants: true, borrowed: true,
     sevenths: true, diminished: true, picardy: true, neapolitan: true,
     degrees: [1, 2, 3, 4, 5, 6, 7], directions: ['up', 'down'],
@@ -366,6 +373,8 @@ describe('every exercise type’s askable items', () => {
     'key-id': () => ({ keyId: 'not-a-key' }),
     'scale-id': () => ({ typeId: 'not-a-scale' }),
     'chord-id': () => ({ typeId: 'not-a-chord', inversion: -1 }),
+    // Nothing tapped: every written note missed, which is a real answer.
+    'rhythm-id': () => ({ taps: [] }),
     // One blank per slot: the slots are what carry the numerals, so a
     // shorter list would test fewer items than the exercise contains.
     'progression-id': (e) => ({ numerals: (e.numerals ?? []).map(() => '') }),

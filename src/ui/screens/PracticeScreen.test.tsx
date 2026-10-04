@@ -237,8 +237,32 @@ describe('the readout under an answered question', () => {
     return (container.textContent ?? '').includes('this session');
   }
 
+  /*
+    Exercises this driver can answer: the ones whose answer is a choice.
+
+    Rhythm is not one. Its answer is a performance — a count-in, taps
+    against a clock, and a window that closes on a timer — so there is
+    no button to press that constitutes answering, which is the whole
+    point of the exercise rather than a gap in it. Driving it here would
+    mean a second driver that fakes time, and the thing this case is
+    about (the readout naming a figure instead of printing `cell:s_e_s`)
+    is already covered item by item in `itemLabel.test.ts`, which sweeps
+    every item every exercise produces.
+
+    Named rather than detected, and guarded below, so the exemption
+    cannot outlive the exercise.
+  */
+  const NOT_ANSWERED_BY_CHOOSING = new Set(['rhythm-id']);
+
+  it('exempts only exercises that exist', () => {
+    for (const id of NOT_ANSWERED_BY_CHOOSING) {
+      expect(EXERCISE_TYPES.map((t) => t.id), `${id} is exempted and does not exist`).toContain(id);
+    }
+  });
+
   it('names what was practised instead of showing its storage key', () => {
     for (const type of EXERCISE_TYPES) {
+      if (NOT_ANSWERED_BY_CHOOSING.has(type.id)) continue;
       const s = screen(type.id);
       s.start();
       expect(answerFully(s.container), `${type.id} could not be answered`).toBe(true);

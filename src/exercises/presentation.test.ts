@@ -192,18 +192,50 @@ describe('every declared presentation gives the user something', () => {
             // that satisfies "it sounded" and produces nothing a person
             // can hear — which is the same defect one layer down, and the
             // user role could not settle it from a microphone in a real
-            // room. MIDI 21 to 108 is a piano; a quarter of a second is
-            // the shortest thing worth calling a note here.
+            // room. MIDI 21 to 108 is a piano.
+            //
+            // The length floor is 40ms, not a quarter of a second. A
+            // quarter second was right while every exercise played
+            // pitches — you cannot hear what a note *is* in less — and
+            // it is wrong for one that plays time: a metronome click is
+            // meant to be a click, and at 160bpm a sixteenth is 93ms, so
+            // a 250ms attack would run over the next two. The quarter
+            // second is kept below for the exercises it is about, told
+            // apart by whether they sound more than one pitch.
             for (const voice of played.flat()) {
               expect(
                 voice.midi >= 21 && voice.midi <= 108,
                 `${definition.id} plays MIDI ${voice.midi}, outside a piano`,
               ).toBe(true);
               expect(
-                voice.duration >= 0.25,
-                `${definition.id} plays a note lasting ${voice.duration}s`,
+                voice.duration >= 0.04,
+                `${definition.id} plays something lasting ${voice.duration}s, which is silence`,
               ).toBe(true);
               expect(Number.isFinite(voice.start) && voice.start >= 0).toBe(true);
+            }
+
+            /*
+              And the quarter second, for the exercises it is actually
+              about: the ones asking what a pitch *is*, which cannot be
+              heard in less.
+
+              Named rather than detected. The obvious detection — "it
+              only ever sounds one pitch" — is wrong for the rhythm
+              exercise, which sounds two: the figure and a count-in
+              click an octave above it, so the count-in is not mistaken
+              for the rhythm. A rule that tried to infer the intent from
+              the output would have to understand that, and would be
+              guessing. The list below is a fact about the test, like
+              `registry.test.ts`'s table of wrong answers, and the case
+              after it fails if an entry stops naming a real exercise.
+            */
+            if (!PERCUSSIVE.has(definition.id)) {
+              for (const voice of played.flat()) {
+                expect(
+                  voice.duration >= 0.25,
+                  `${definition.id} plays a pitch for only ${voice.duration}s`,
+                ).toBe(true);
+              }
             }
           }
         }
@@ -233,6 +265,26 @@ describe('every declared presentation gives the user something', () => {
  * apart would either pass vacuously or fail on a working control. Written
  * out, tried, and abandoned rather than weakened.
  */
+/**
+ * Exercises whose sound is struck rather than sustained.
+ *
+ * One, so far. Its attacks have to be shorter than the gap to the next
+ * one or the rhythm is unreadable — at 160bpm a sixteenth is 93ms — and
+ * its count-in is a click, which is a click on purpose.
+ */
+const PERCUSSIVE = new Set(['rhythm-id']);
+
+describe('what a percussive exercise is exempt from', () => {
+  it('names only exercises that exist', () => {
+    // So the exemption cannot outlive the thing it exempts, which is how
+    // a carve-out quietly becomes a hole.
+    for (const id of PERCUSSIVE) {
+      expect(EXERCISE_TYPES.map((d) => d.id), `${id} is exempted and does not exist`)
+        .toContain(id);
+    }
+  });
+});
+
 describe('settings that cannot change the question', () => {
   /*
     Swept over every exercise rather than demonstrated on one.

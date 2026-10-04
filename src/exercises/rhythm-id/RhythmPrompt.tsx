@@ -26,6 +26,20 @@ import {
  * what the flow does anyway.
  */
 
+/**
+ * A moment after the last note before the controls come back.
+ *
+ * Fixed seconds, and deliberately not a fraction of a beat — every
+ * other duration in this file is derived from the tempo and this one is
+ * not, which the tester rightly asked about. Re-enabling a button is
+ * not a musical event: it is the pause that stops a control flickering
+ * back to life under the sound still decaying, and that pause is the
+ * same length whether the piece was slow or fast. Derived from the
+ * tempo it would be 1.5s at the bottom of the range and 0.28s at the
+ * top, which is too long to wait and too short to read.
+ */
+const SETTLE = 0.6;
+
 /** Space and Enter, because a rhythm is tapped with a thumb or a key. */
 const TAP_KEYS = new Set([' ', 'Spacebar', 'Enter']);
 
@@ -47,7 +61,7 @@ export function RhythmPrompt({
   function listen() {
     setPhase('listening');
     audio.play(rhythmVoices(exercise, { silent: reading }));
-    window.setTimeout(() => setPhase('ready'), (total + 0.6) * 1000);
+    window.setTimeout(() => setPhase('ready'), (total + SETTLE) * 1000);
   }
 
   /*
@@ -125,11 +139,21 @@ export function RhythmPrompt({
 
       <div className="actions">
         {/*
-          Both buttons say what they are doing rather than going quiet.
+          Something on screen names what is happening at every instant
+          the controls are disabled. Not both buttons — the tester
+          wrote a case from the sentence that used to be here, "both
+          buttons say what they are doing", and it failed at once:
+          while the rhythm sounds the hear button reads "Playing…" and
+          the answer button sits disabled still reading "Tap it back".
+          That is the right behaviour and the sentence was the wrong
+          claim. One control speaking is legible; two saying it is
+          noise.
+
           They are disabled while the rhythm is sounding — you cannot
           usefully tap over the thing you are copying — and a disabled
-          button with its ordinary label is indistinguishable from a
-          broken one, which is what this looked like for the nine
+          button with its ordinary label and nothing beside it is
+          indistinguishable from a broken one, which is what this
+          looked like for the nine
           seconds a two-bar question takes at 84bpm.
         */}
         <button type="button" onClick={listen} disabled={phase !== 'ready' || answered}>

@@ -16,7 +16,29 @@ if (!existsSync(SW)) {
 }
 
 const source = readFileSync(SW, 'utf8');
-const entries = [...source.matchAll(/"(?:url|revision)":\s*"([^"]+)"/g)].map((m) => m[1]);
+
+/*
+  Workbox minifies its precache manifest, so the keys are bare
+  identifiers: `{url:"index.html",revision:"6f40..."}` and not
+  `{"url": "index.html"}`.
+
+  This matched quoted keys and therefore matched nothing, which went
+  unnoticed for as long as it did because the check exits early with
+  "no dist/sw.js" whenever the PWA plugin is unwired — which it was,
+  from the scaffold until the app was deployed. The first run against
+  a real service worker reported all four requirements missing while
+  every one of them was present. A check written against an imagined
+  format is a check that has never run.
+
+  Only `url` now, not `revision`: a revision is a content hash and
+  matching it put thirty hex strings into the list being searched for
+  file paths.
+*/
+const entries = [...source.matchAll(/\burl:\s*"([^"]+)"/g)].map((m) => m[1]);
+if (entries.length === 0) {
+  console.error(`No precache entries found in ${SW} — has Workbox changed its output format?`);
+  process.exit(1);
+}
 
 /** Each entry is a description and a predicate over the precached paths. */
 const REQUIRED = [

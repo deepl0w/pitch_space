@@ -202,3 +202,63 @@ describe('the session tally', () => {
     expect(s.text()).not.toContain('this session');
   });
 });
+
+/**
+ * The readout is the one place the app tells a learner what they know, and
+ * it was printing the storage key it keys that knowledge by.
+ *
+ * Asserted here rather than only over `itemLabel`, because the formatter
+ * being correct and the screen calling it are two different claims and only
+ * the second one is what the user sees.
+ */
+describe('the readout under an answered question', () => {
+  /**
+   * Answer whatever prompt is on screen, however many taps it takes.
+   *
+   * The sweep above has its own one-tap version; this one has to cope with
+   * the progression prompt, where the answer is built a chord at a time and
+   * tapping a filled slot rewinds it. Picking options until a submit goes
+   * live is the one rule that fits both.
+   */
+  function answerFully(container: HTMLElement): boolean {
+    const live = (selector: string) =>
+      [...container.querySelectorAll(selector)].find(
+        (b) => !(b as HTMLButtonElement).disabled,
+      ) as HTMLButtonElement | undefined;
+
+    for (let tap = 0; tap < 24; tap += 1) {
+      if ((container.textContent ?? '').includes('this session')) return true;
+      const submit = [...container.querySelectorAll('.actions button')]
+        .find((b) => b.textContent === 'Check') as HTMLButtonElement | undefined;
+      const next = (submit && !submit.disabled) ? submit : live('.choices button');
+      if (next === undefined) return false;
+      act(() => next.click());
+    }
+    return (container.textContent ?? '').includes('this session');
+  }
+
+  it('names what was practised instead of showing its storage key', () => {
+    for (const type of EXERCISE_TYPES) {
+      const s = screen(type.id);
+      s.start();
+      expect(answerFully(s.container), `${type.id} could not be answered`).toBe(true);
+
+      const readout = s.container.querySelector('.readout');
+      expect(readout, `${type.id} showed no readout`).not.toBeNull();
+      const named = [...readout!.querySelectorAll('.primary')];
+      expect(named.length, `${type.id} listed no items`).toBeGreaterThan(0);
+      for (const item of named) {
+        // Every item id is colon-joined (see registry.test.ts), so a colon
+        // on screen is a slug that escaped.
+        expect(item.textContent, `${type.id} readout shows a raw id`).not.toContain(':');
+      }
+
+      // One card per thing practised. A progression repeats a chord more
+      // often than not, and the second card carries the same name and the
+      // same figures as the first under a duplicate React key.
+      const labels = named.map((n) => n.textContent);
+      expect(new Set(labels).size, `${type.id} readout repeats a card`)
+        .toBe(labels.length);
+    }
+  });
+});

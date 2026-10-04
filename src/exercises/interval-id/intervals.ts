@@ -177,7 +177,7 @@ export const intervalSettingsSchema: SettingsSchema<IntervalSettings> = {
     },
     {
       kind: 'choice', id: 'clef', label: 'Clef',
-      options: CLEFS.map((c) => ({ id: c, label: c })),
+      options: CLEFS.map((c) => ({ id: c, label: c[0].toUpperCase() + c.slice(1) })),
       selected: (s) => s.clef,
       apply: (s, option) => ({ ...s, clef: option as Clef }),
     },

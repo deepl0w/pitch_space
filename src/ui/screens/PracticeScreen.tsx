@@ -3,6 +3,7 @@ import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { ExerciseBoundary } from '../components/ExerciseBoundary';
 import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registry';
+import { itemLabel } from '../../exercises/itemLabel';
 import { newAttemptId, newSeed } from '../../exercises/seed';
 import type { AnyExerciseDefinition, AudioOut, ExerciseBase, Result } from '../../exercises/types';
 import { appSynth } from '../sound';
@@ -299,13 +300,22 @@ function ExerciseRound({ definition, audio, tally }: {
         <section className="readout">
           <h2>How this has gone</h2>
           <ol className="items">
-            {round.exercise.items.map((item) => {
+            {/*
+              Distinct items, because a progression names the same chord
+              twice as often as not: ii–V–V–I exercises `progression:major:V`
+              in two of its four slots. Both belong in `exercise.items` —
+              the schedule is counting chords, not kinds — but the readout
+              is a list of what was practised, and the same card printed
+              twice says nothing the first one did not, under a React key
+              that is no longer unique.
+            */}
+            {[...new Set(round.exercise.items)].map((item) => {
               // Counted per sense (ADR 0010), so the figure shown is for the
               // way this exercise was actually asked.
               const counts = tally.get(tallyKey(item, round.exercise.presentation));
               return (
                 <li key={item}>
-                  <span className="primary">{item}</span>
+                  <span className="primary">{itemLabel(item)}</span>
                   <span className="secondary">
                     {counts ? `${counts.correct} of ${counts.seen} right` : 'not recorded yet'}
                   </span>

@@ -1,4 +1,4 @@
-import { EXERCISE_MENU, REFERENCE_MENU, type MenuEntry } from '../menu';
+import { EXERCISE_MENU, REFERENCE_MENU, SETUP_MENU, type MenuEntry } from '../menu';
 
 /**
  * The way in. Two halves, because the app does two different things: a
@@ -25,6 +25,19 @@ export function Home({ go }: { go: (route: string) => void }) {
       <h2 className="section">Theory reference</h2>
       <ul className="menu">
         {REFERENCE_MENU.map((entry) => (
+          <MenuCard key={entry.route} entry={entry} go={go} />
+        ))}
+      </ul>
+
+      {/*
+        Last, and that is the point. Calibration is offered rather than
+        required (ADR 0018): a musician who never opens it has done nothing
+        wrong, so it sits after the things they came for rather than in
+        front of them.
+      */}
+      <h2 className="section">Setup</h2>
+      <ul className="menu">
+        {SETUP_MENU.map((entry) => (
           <MenuCard key={entry.route} entry={entry} go={go} />
         ))}
       </ul>

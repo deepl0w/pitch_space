@@ -83,6 +83,23 @@ export const EXERCISE_MENU: readonly MenuEntry[] = [
   ...PLANNED.filter((entry) => !BUILT.some((built) => built.route === entry.route)),
 ];
 
+/**
+ * Not an exercise and not a reference, so it gets its own list rather than
+ * being wedged into one of theirs. One entry today; the shape is here so the
+ * next thing that is neither does not have to invent it.
+ */
+export const SETUP_MENU: readonly MenuEntry[] = [
+  {
+    route: 'calibration',
+    name: 'Audio calibration',
+    blurb: 'Measure what your device\'s microphone delay costs, so timing is judged fairly.',
+    lede: 'Your device takes a moment to get sound from the microphone into '
+      + 'the app, and it will not say how long. Measuring it once makes rhythm '
+      + 'judged against what you played rather than against your hardware.',
+    ready: true,
+  },
+];
+
 export const REFERENCE_MENU: readonly MenuEntry[] = [
   {
     route: 'scales',
@@ -131,7 +148,8 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
 
 /** The entry for a route, so a screen can title itself from the same object. */
 export function entryFor(route: string): MenuEntry {
-  const found = [...EXERCISE_MENU, ...REFERENCE_MENU].find((e) => e.route === route);
+  const found = [...EXERCISE_MENU, ...REFERENCE_MENU, ...SETUP_MENU]
+    .find((e) => e.route === route);
   if (!found) throw new Error(`No menu entry for route: ${route}`);
   return found;
 }

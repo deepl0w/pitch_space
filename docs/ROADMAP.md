@@ -4,6 +4,21 @@ What is planned but not built. Decisions that turn out to be expensive to
 reverse graduate from here into `docs/adr/`; everything else stays here until
 it ships or is dropped.
 
+## Contents
+
+- [Spaced repetition](#spaced-repetition)
+  - [What an item is](#what-an-item-is)
+  - [The problem that is not in the textbooks](#the-problem-that-is-not-in-the-textbooks)
+  - [The algorithm](#the-algorithm)
+  - [How it meets the generator](#how-it-meets-the-generator)
+  - [Storage and honesty](#storage-and-honesty)
+- [Following the music on the staff](#following-the-music-on-the-staff)
+  - [How it has to work](#how-it-has-to-work)
+- [Importing sheet music](#importing-sheet-music)
+  - [What a score is for, once it is in](#what-a-score-is-for-once-it-is-in)
+  - [The parts that will actually be hard](#the-parts-that-will-actually-be-hard)
+- [Also planned, not yet designed](#also-planned-not-yet-designed)
+
 ## Spaced repetition
 
 The app currently generates exercises from a difficulty setting and a set of

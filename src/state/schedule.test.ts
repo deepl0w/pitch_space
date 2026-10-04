@@ -102,13 +102,49 @@ describe('ordering what is worth asking', () => {
   });
 
   it('gives the same history the same order every time', () => {
-    // Two items equally due is the common case at the start of a session,
-    // not an edge one, so the tie-break has to be total rather than
-    // whatever order the map happened to be built in.
+    // Two items equally due is the common case at the start of a
+    // session, not an edge one, so the tie-break has to be total rather
+    // than whatever order the map happened to be built in.
     const tallies = map(ITEMS.map((i) => [i, tally({ lastSeenAt: 0 })]));
     const once = schedule(ITEMS, tallies, 'listen', DAY).map((r) => r.item);
-    const again = schedule([...ITEMS].reverse(), tallies, 'listen', DAY).map((r) => r.item);
+    const again = schedule(ITEMS, tallies, 'listen', DAY).map((r) => r.item);
     expect(again).toEqual(once);
+  });
+
+  it('introduces unseen items in the order the exercise lists them', () => {
+    /*
+      The cold-start half of the job, and the reason the tie-break is
+      the input order rather than the item id.
+
+      History answers *review* order and cannot answer *introduction*
+      order: a new user has none, on the first session, which is when an
+      order matters most. `items(settings)` returns the catalogue's own
+      order, and every catalogue here is written deliberately — common
+      scales before modes before octatonics, triads before sevenths
+      before altered dominants. Sorted by id instead, a learner met the
+      twenty-four chord qualities alphabetically, starting at the
+      augmented triad.
+
+      This test is the one that would have passed under the old
+      behaviour only by accident, so it is written with an order that
+      alphabetical gets wrong.
+    */
+    const catalogue = ['chord:maj', 'chord:min', 'chord:dim', 'chord:aug'] as ItemId[];
+    expect(schedule(catalogue, new Map(), 'listen', DAY).map((r) => r.item))
+      .toEqual(catalogue);
+    expect([...catalogue].sort(), 'alphabetical would give a different answer')
+      .not.toEqual(catalogue);
+  });
+
+  it('still prefers a forgotten item to an unmet one it lists earlier', () => {
+    // Introduction order decides between items with no history. It must
+    // not outrank history where there is some — the unseen-first rule
+    // comes before the tie-break, and both come after it for items that
+    // have been seen.
+    const catalogue = ['chord:maj', 'chord:min'] as ItemId[];
+    const seen = map([['chord:maj' as ItemId, tally({ streak: 1, lastSeenAt: 0 })]]);
+    expect(schedule(catalogue, seen, 'listen', 365 * DAY).map((r) => r.item))
+      .toEqual(['chord:min', 'chord:maj']);
   });
 
   it('proposes only what the settings allow', () => {

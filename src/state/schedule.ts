@@ -103,9 +103,29 @@ export interface ScheduledItem {
  * also what a learner wants: the fastest route to knowing where they stand
  * is to be asked each thing once.
  *
- * Ties are broken by the item id so the order is total and the same
- * history always produces the same queue. Two items equally due is the
- * common case at the start of a session, not an edge one.
+ * **Ties are broken by the order `askable` came in, not by the item id.**
+ * That is the whole of the cold-start answer and it is worth saying why
+ * alphabetical was wrong rather than merely arbitrary.
+ *
+ * A schedule has two jobs and the attempt log can only do one of them.
+ * *Review* order comes from history — what you have forgotten, and when.
+ * *Introduction* order cannot: a new user has no history, on the first
+ * session, which is exactly when an order matters most. Sorting the
+ * unseen by id meant a learner met the twenty-four chord qualities
+ * alphabetically, starting at the augmented triad.
+ *
+ * The order `items(settings)` returns is the catalogue's own, and every
+ * catalogue in this project is written in a deliberate order — the
+ * common scales before the modes before the octatonics, the triads
+ * before the sevenths before the altered dominants, intervals by
+ * widening span. That is an author's judgement about where to start,
+ * which is the one thing a grade column was ever good for and the half
+ * worth keeping (ADR 0027's addendum). It differs from a grade in that
+ * nothing *filters* on it: it decides what you meet first and never what
+ * you are allowed to meet.
+ *
+ * The order stays total and deterministic, which is what the tie-break
+ * is for: the same history always produces the same queue.
  */
 export function schedule(
   askable: readonly ItemId[],
@@ -113,9 +133,9 @@ export function schedule(
   presentation: Presentation,
   now: number,
 ): ScheduledItem[] {
-  const rows = askable.map((item): ScheduledItem => {
+  const rows = askable.map((item, index): ScheduledItem & { index: number } => {
     const tally = tallies.get(tallyKey(item, presentation)) ?? null;
-    return { item, tally, due: tally === null || dueAt(tally) <= now };
+    return { item, tally, due: tally === null || dueAt(tally) <= now, index };
   });
 
   return rows.sort((a, b) => {
@@ -124,8 +144,8 @@ export function schedule(
       const byOverdue = overdueRatio(b.tally, now) - overdueRatio(a.tally, now);
       if (byOverdue !== 0) return byOverdue;
     }
-    return a.item < b.item ? -1 : a.item > b.item ? 1 : 0;
-  });
+    return a.index - b.index;
+  }).map(({ item, tally, due }) => ({ item, tally, due }));
 }
 
 /**

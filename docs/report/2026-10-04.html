@@ -1,0 +1,347 @@
+<title>Music Practice Loop One</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+
+<style>
+/* Layout: one reading column under a masthead, sections parted by a five-line
+   staff rule. Figures sit in a tabular strip, not in tiles. */
+:root {
+  --paper:      #f2f3f6;
+  --surface:    #ffffff;
+  --ink:        #15181f;
+  --ink-soft:   #4e5564;
+  --rule:       #c9ced9;
+  --accent:     #2d4ea8;
+  --ok:         #1f6f45;
+  --part:       #8a5a09;
+  --none:       #9a3340;
+
+  --display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --body:    "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --mono:    "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #101319; --surface: #171b23; --ink: #e7eaf0; --ink-soft: #99a1b2;
+    --rule: #2d343f; --accent: #8fa9ee; --ok: #5bbd8a; --part: #d8a349; --none: #e2808c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #101319; --surface: #171b23; --ink: #e7eaf0; --ink-soft: #99a1b2;
+  --rule: #2d343f; --accent: #8fa9ee; --ok: #5bbd8a; --part: #d8a349; --none: #e2808c;
+  color-scheme: dark;
+}
+
+body { background: var(--paper); color: var(--ink); font-family: var(--body); line-height: 1.6; }
+.page { max-width: 46rem; margin: 0 auto; padding-inline: 20px; padding-block: 3rem 5rem; }
+
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(2.6rem, 9vw, 4rem);
+     line-height: 1.02; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-family: var(--display); font-weight: 400; font-size: clamp(1.5rem, 4.5vw, 1.95rem);
+     line-height: 1.15; margin: 0 0 0.6rem; text-wrap: balance; }
+h3 { font-family: var(--body); font-weight: 600; font-size: 0.82rem; letter-spacing: 0.09em;
+     text-transform: uppercase; color: var(--ink-soft); margin: 1.8rem 0 0.5rem; }
+p { margin: 0 0 1rem; }
+a { color: var(--accent); }
+code, .m { font-family: var(--mono); font-size: 0.88em; }
+
+.standfirst { font-family: var(--display); font-style: italic; font-size: 1.3rem; line-height: 1.45;
+              color: var(--ink-soft); margin: 1.2rem 0 0; }
+.dateline { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.04em;
+            color: var(--ink-soft); margin: 1.4rem 0 0; }
+
+/* Five hairlines, spaced as a stave. The only ornament on the page, and the
+   one the subject actually owns. */
+.stave { display: block; width: 100%; height: 13px; margin: 3.2rem 0 1.6rem; overflow: visible; }
+.stave line { stroke: var(--rule); stroke-width: 1; }
+
+section { margin: 0; }
+
+.figures { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+           display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+           margin: 2.4rem 0 0; }
+.fig { padding: 0.9rem 0.9rem 0.9rem 0; min-width: 0; }
+.fig b { display: block; font-family: var(--mono); font-weight: 500; font-size: 1.45rem;
+         font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.fig span { display: block; font-size: 0.78rem; color: var(--ink-soft); letter-spacing: 0.03em; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.scroll { overflow-x: auto; margin: 0 0 1.2rem; }
+th { text-align: left; font-size: 0.74rem; letter-spacing: 0.09em; text-transform: uppercase;
+     color: var(--ink-soft); font-weight: 600; padding: 0 0.8rem 0.45rem 0;
+     border-bottom: 1px solid var(--rule); white-space: nowrap; }
+td { padding: 0.55rem 0.8rem 0.55rem 0; border-bottom: 1px solid var(--rule);
+     vertical-align: top; }
+td:first-child { font-family: var(--mono); font-size: 0.85rem; white-space: nowrap; }
+tbody tr:last-child td { border-bottom: none; }
+
+.chip { display: inline-block; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em;
+        text-transform: uppercase; padding: 0.12rem 0.45rem; border-radius: 2px;
+        border: 1px solid currentColor; white-space: nowrap; }
+.chip.ok   { color: var(--ok); }
+.chip.part { color: var(--part); }
+.chip.none { color: var(--none); }
+
+/* The one element on the page that is set off, because it is the one thing
+   still unresolved. */
+.open { background: var(--surface); border: 1px solid var(--rule);
+        border-left: 3px solid var(--none); padding: 1.2rem 1.3rem; margin: 1.4rem 0; }
+.open p:last-child { margin-bottom: 0; }
+.q { font-family: var(--display); font-style: italic; font-size: 1.15rem; color: var(--ink);
+     margin: 0.9rem 0; padding-left: 1rem; border-left: 1px solid var(--rule); }
+
+ol.next { margin: 0; padding-left: 1.3rem; }
+ol.next li { margin-bottom: 0.7rem; }
+ol.next b { font-weight: 600; }
+
+footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule);
+         font-family: var(--mono); font-size: 0.76rem; color: var(--ink-soft); }
+</style>
+
+<div class="page">
+
+<header>
+  <h1>Music Practice<br>Loop One</h1>
+  <p class="standfirst">The engine that was the hard part is built and tested. The
+  microphone that was the point of the app is not.</p>
+  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at 2e9af03 &nbsp;·&nbsp; 124 commits</p>
+</header>
+
+<div class="figures">
+  <div class="fig"><b>582</b><span>tests passing</span></div>
+  <div class="fig"><b>36</b><span>test files</span></div>
+  <div class="fig"><b>13</b><span>ADRs</span></div>
+  <div class="fig"><b>16,922</b><span>lines in src</span></div>
+  <div class="fig"><b>3 / 6</b><span>exercises asked for</span></div>
+  <div class="fig"><b>0</b><span>shipping targets</span></div>
+</div>
+
+<svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+  <line x1="0" y1="0.5" x2="100" y2="0.5"/><line x1="0" y1="3.5" x2="100" y2="3.5"/>
+  <line x1="0" y1="6.5" x2="100" y2="6.5"/><line x1="0" y1="9.5" x2="100" y2="9.5"/>
+  <line x1="0" y1="12" x2="100" y2="12"/>
+</svg>
+
+<section>
+<h2>Where it stands</h2>
+
+<p>Every figure on this page is read out of the repository by
+<code>tools/report-facts.sh</code> rather than recalled. 582 tests pass, none fail,
+three are <code>todo</code>. <code>tsc</code> and <code>oxlint</code> are clean. The
+whole history is on <code>main</code> under one author; the eight <code>claude/*</code>
+branches are all zero ahead and exist only as stale pointers.</p>
+
+<p>The project set out to make exercises that <em>follow real patterns that exist, not
+random</em>. That requirement is what the loop spent itself on, and it is the part that
+came out well. What it did not spend itself on is the microphone — which is the premise
+the whole app rests on, and which does not exist in any form.</p>
+
+<h3>By layer</h3>
+<div class="scroll">
+<table>
+<thead><tr><th>Layer</th><th>State</th><th>What is actually there</th></tr></thead>
+<tbody>
+<tr><td>theory/</td><td><span class="chip ok">done</span></td>
+  <td>Spelled pitches, intervals, 20 scale types, all 30 keys, 24 chord types, roman
+  numerals, the circle of fifths derived rather than tabulated, and integer tick
+  arithmetic at 1680 per quarter so 64ths, triplets, quintuplets and septuplets are all
+  exact.</td></tr>
+<tr><td>generate/</td><td><span class="chip part">part</span></td>
+  <td>Rhythm and harmony are complete: 37 rhythm cells with a backtracking bar filler, 26
+  named whole-bar patterns, 35 progression templates and a four-stage harmony generator.
+  Melody is not built at all — no <code>motif.ts</code>, no <code>melody.ts</code>, no
+  beam search.</td></tr>
+<tr><td>audio/dsp/</td><td><span class="chip ok">done</span></td>
+  <td>FFT, YIN pitch detection ported from the tuner, a spectral-flux onset detector with
+  a measured absolute floor, and Needleman–Wunsch rhythm alignment. All tested under
+  Node. All unused by the app.</td></tr>
+<tr><td>audio/capture/</td><td><span class="chip none">none</span></td>
+  <td>The directory does not exist. No <code>getUserMedia</code>, no worklet, no worker.</td></tr>
+<tr><td>exercises/</td><td><span class="chip part">part</span></td>
+  <td>Three types, answered by tapping buttons: interval identification, key
+  identification, scale-degree identification.</td></tr>
+<tr><td>state/</td><td><span class="chip ok">done</span></td>
+  <td>Settings in localStorage, attempts in IndexedDB, per-record versioning with one
+  migration already run (v1→v2, adding presentation), and a reader that reports rows from
+  a newer release separately from rows it cannot parse.</td></tr>
+<tr><td>ui/</td><td><span class="chip ok">done</span></td>
+  <td>Seven screens — home, practice, and a theory reference split into scales, chords,
+  chords-in-key, rhythms and the circle of fifths. Engraved notation throughout, behind
+  one VexFlow importer. No horizontal overflow from 320×640 to 1920×1080.</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+  <line x1="0" y1="0.5" x2="100" y2="0.5"/><line x1="0" y1="3.5" x2="100" y2="3.5"/>
+  <line x1="0" y1="6.5" x2="100" y2="6.5"/><line x1="0" y1="9.5" x2="100" y2="9.5"/>
+  <line x1="0" y1="12" x2="100" y2="12"/>
+</svg>
+
+<section>
+<h2>The six exercises, against the brief</h2>
+
+<p>Three exercise types exist, but that number flatters the position. Only one of them is
+on the original list; the other two were added because they could be built without a
+microphone and without a melody generator.</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Asked for</th><th>State</th><th>What it needs</th></tr></thead>
+<tbody>
+<tr><td>Note ID (relative)</td><td><span class="chip ok">built</span></td><td>Shipped as interval identification, by eye and by ear.</td></tr>
+<tr><td>Note ID (absolute)</td><td><span class="chip none">not built</span></td><td>Nothing new — it is the smallest remaining one.</td></tr>
+<tr><td>Sight reading</td><td><span class="chip none">not built</span></td><td>The melody generator, then capture.</td></tr>
+<tr><td>Rhythm</td><td><span class="chip none">not built</span></td><td>Capture. The generator and the aligner are both done.</td></tr>
+<tr><td>Chord ID</td><td><span class="chip none">not built</span></td><td>Chroma extraction; the chord catalogue already exists.</td></tr>
+<tr><td>Progression ID</td><td><span class="chip none">not built</span></td><td>Nothing new — the harmony generator covers it.</td></tr>
+<tr><td>Scale ID</td><td><span class="chip none">not built</span></td><td>Nothing new — the scale catalogue covers it.</td></tr>
+</tbody>
+</table>
+</div>
+
+<p>Two of the five unbuilt ones need no new machinery at all. Progression and scale
+identification are assembly work on top of catalogues that are already written and
+tested, and absolute note identification is smaller still. That is the cheapest route to
+making the home screen look like the app that was described.</p>
+</section>
+
+<svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+  <line x1="0" y1="0.5" x2="100" y2="0.5"/><line x1="0" y1="3.5" x2="100" y2="3.5"/>
+  <line x1="0" y1="6.5" x2="100" y2="6.5"/><line x1="0" y1="9.5" x2="100" y2="9.5"/>
+  <line x1="0" y1="12" x2="100" y2="12"/>
+</svg>
+
+<section>
+<h2>What the loop actually bought</h2>
+
+<p>The musical assets are the result worth keeping: 37 rhythm cells, 26 named whole-bar
+patterns and 35 progression templates, each validated at construction and tested as data
+rather than one generated seed at a time. A wrong template is wrong in every key at once,
+so it is found once.</p>
+
+<p>Two structural decisions did most of the work. Pitches are stored as a letter, an
+alteration and an octave rather than as MIDI numbers, which is why G♯ and A♭ stay
+distinct and why a C blues scale spells G♭ and G instead of F♯ and G. And roman numerals
+stay symbolic until the last moment, so the degree fixes the root's <em>letter</em> before
+any accidental is chosen — which is the whole reason V/V in C comes out D–F♯–A.</p>
+
+<p>The generators are tested by breaking what the guards protect and watching the test go
+red. That repeatedly found guards that could not fail. It also found a real defect: a
+plagal close produced the exact V–IV retrogression the harmony generator exists to
+prevent, in 358 of 600 runs, and the existing repair could not fix it because both chords
+were locked by cadence writes.</p>
+</section>
+
+<svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+  <line x1="0" y1="0.5" x2="100" y2="0.5"/><line x1="0" y1="3.5" x2="100" y2="3.5"/>
+  <line x1="0" y1="6.5" x2="100" y2="6.5"/><line x1="0" y1="9.5" x2="100" y2="9.5"/>
+  <line x1="0" y1="12" x2="100" y2="12"/>
+</svg>
+
+<section>
+<h2>Not built</h2>
+
+<p><b>No audio capture.</b> The app cannot hear anything. The analysis chain that would
+process the sound is finished and tested off-device, and the seam it will plug into is
+decided (ADR 0012: judging consumes performed notes, never audio, so the same grader
+serves both a microphone and a MIDI keyboard). But nothing captures. Every exercise is
+answered by tapping a button, which is not the app that was asked for.</p>
+
+<p><b>No melody generator.</b> The largest single piece of the original design — contour
+planning, motivic development, and a beam search that makes every note record why it
+belongs — does not exist. Sight reading cannot be built until it does, and it is the part
+that decides whether generated music sounds like music or merely obeys the rules.</p>
+
+<p><b>Neither shipping target.</b> There is no service worker and no Android project. Both
+are pinned as <code>todo</code> tests in <code>src/architecture.test.ts</code>, so they
+fail the moment someone claims otherwise, but today the app runs in a dev server and
+nowhere else.</p>
+</section>
+
+<svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+  <line x1="0" y1="0.5" x2="100" y2="0.5"/><line x1="0" y1="3.5" x2="100" y2="3.5"/>
+  <line x1="0" y1="6.5" x2="100" y2="6.5"/><line x1="0" y1="9.5" x2="100" y2="9.5"/>
+  <line x1="0" y1="12" x2="100" y2="12"/>
+</svg>
+
+<section>
+<h2>Open: the missing last note</h2>
+
+<div class="open">
+<p>On the Rhythms reference screen, the first press of a play button appears to drop the
+final note of the figure. It is reproducible for the person who reported it and has not
+been reproduced in a test.</p>
+
+<p>Four explanations have been eliminated with evidence: the scheduling arithmetic was
+checked against every figure in every metre, cold-graph headroom was measured at 4.5 ms against 60 ms
+available with no note starting in the past, 92 envelopes were checked for malformation,
+and the master-gain stop window was ruled out. None of them accounts for it.</p>
+
+<p>Progress now depends on one answer, which has not come back:</p>
+
+<p class="q">Does it happen on the first press after a page reload whatever the figure is,
+or on the first press of each particular figure?</p>
+
+<p>The two point at different causes. The first implicates the audio graph waking up; the
+second implicates something cached per figure. Until it is known which, any fix is a
+guess.</p>
+</div>
+</section>
+
+<section>
+<h3>Also open</h3>
+<p><b>The notation bundle is 377 kB gzipped and loads on the home screen.</b> It is split
+into its own chunk, but the import is static, so the built <code>index.html</code>
+modulepreloads it: the split bought nothing on first load. Total JS is 465 kB gzipped
+against a planned 91 kB — the gap is the Bravura font, chosen deliberately, costed
+wrongly. Making the import dynamic would take 377 kB off the first paint for a reader who
+opens the home screen and stops there.</p>
+
+<p><b>Three progression templates are unreachable</b> on the default settings path, and
+<code>leading-tone-close</code> is one of them. The decision was deferred to when the
+progression exercise is built, which is now the next piece of work rather than a distant
+one.</p>
+
+<p><b>ADR 0013 makes an unmeasured claim</b> about pitch-class presence being a weaker
+question than transcription. It is almost certainly right and it is still unmeasured, so
+it should be checked against real audio before anything is built on it.</p>
+</section>
+
+<svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
+  <line x1="0" y1="0.5" x2="100" y2="0.5"/><line x1="0" y1="3.5" x2="100" y2="3.5"/>
+  <line x1="0" y1="6.5" x2="100" y2="6.5"/><line x1="0" y1="9.5" x2="100" y2="9.5"/>
+  <line x1="0" y1="12" x2="100" y2="12"/>
+</svg>
+
+<section>
+<h2>Next</h2>
+<ol class="next">
+<li><b>Capture, end to end, on one exercise.</b> <code>getUserMedia</code> with echo
+cancellation, noise suppression and gain control all off, a worklet, and a note assembler
+feeding the seam ADR 0012 already specifies. Rhythm is the exercise to prove it on: the
+onset detector and the aligner are both finished, so it tests the plumbing and not the
+algorithms.</li>
+<li><b>The three exercises that need no new machinery</b> — progression ID, scale ID,
+absolute note ID. This is the cheapest way to close the gap between the home screen and
+the brief, and it settles the <code>leading-tone-close</code> question as a side
+effect.</li>
+<li><b>The melody generator</b>, built motif-first rather than bolted onto a
+legal-but-dull walk. Its real failure mode is blandness, which no test catches, so it
+needs listening as well as invariants.</li>
+<li><b>Sight reading</b>, which is the first exercise that uses everything at once.</li>
+<li><b>The two shipping targets</b>, taking the two <code>todo</code> tests green.</li>
+</ol>
+
+<p>Answering the Rhythms question is not on that list because it costs one sentence rather
+than a work item, but it blocks the only user-reported defect currently open.</p>
+</section>
+
+<footer>
+Figures read from the repository by tools/report-facts.sh · main 2e9af03 · 4 October 2026
+</footer>
+
+</div>

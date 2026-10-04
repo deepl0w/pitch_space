@@ -39,7 +39,22 @@ export function SettingsPanel<S>({ fields, settings, onChange }: {
             of them off the end of whatever chip row came before.
           */
           ? (
-            <div className="chips chips-toggles" key={`toggles-${index}`}>
+            /*
+              A caption and the run under it. Deliberately not a
+              `Field`: a toggle *is* a setting and already carries the
+              `field` class, so wrapping the run in another one would
+              put two fields on the screen for one control and break
+              the panel's own count of itself. This is a layout group,
+              which is what it looks like.
+            */
+            <div
+              className="chips-group"
+              key={`toggles-${index}`}
+              role="group"
+              aria-label={(run[0].kind === 'toggle' && run[0].group) || undefined}
+            >
+              {run[0].kind === 'toggle' && run[0].group && <span>{run[0].group}</span>}
+            <div className="chips chips-toggles">
               {run.map((field) => (
                 <Toggle
                   key={field.id}
@@ -50,6 +65,7 @@ export function SettingsPanel<S>({ fields, settings, onChange }: {
                   }}
                 />
               ))}
+            </div>
             </div>
           )
           : run.map((field) => renderField(field))

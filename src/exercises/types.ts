@@ -233,6 +233,24 @@ export type SettingField<S> =
   }
   | {
     kind: 'toggle'; id: string; label: string;
+    /**
+     * A caption for the run of toggles this one opens.
+     *
+     * Set on the first toggle of a run and left off the rest. The panel
+     * draws consecutive toggles as one row of chips, and that row was
+     * the only group on the screen with no caption over it — no
+     * heading, and no labelled group for a screen reader either, where
+     * the clef picker directly above had both. Found by the user role,
+     * twice: once as a gap in the layout and once as a gap in the
+     * markup.
+     *
+     * Optional because the caption has to come from the exercise. The
+     * panel cannot write one: "Sevenths, diminished triads, borrowed
+     * chords" is a harmonic vocabulary and "re-establish the key each
+     * time" is how the question is put, and a generic word covering
+     * both would be filler.
+     */
+    group?: string;
     relevant?: FieldRelevance<S>;
     selected(settings: S): boolean;
     apply(settings: S, on: boolean): S;

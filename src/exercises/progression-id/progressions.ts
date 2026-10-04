@@ -560,6 +560,8 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       kind: 'toggle',
       id: 'appliedDominants',
       label: 'Applied dominants',
+      // Captions the whole run; the rest of it says nothing.
+      group: 'Harmony in play',
       selected: (s) => s.appliedDominants,
       apply: (s, on) => ({ ...s, appliedDominants: on }),
     },

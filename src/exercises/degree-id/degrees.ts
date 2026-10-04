@@ -253,6 +253,7 @@ export const degreeSettingsSchema: SettingsSchema<DegreeSettings> = {
     },
     {
       kind: 'toggle', id: 'reestablish', label: 'Re-establish the key each time',
+      group: 'How it is set',
       selected: (s) => s.reestablish,
       apply: (s, on) => ({ ...s, reestablish: on }),
     },

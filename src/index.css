@@ -421,6 +421,14 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    look; this only has to undo what `.field` would otherwise impose. */
 .field-toggle { flex: 0 0 auto; display: inline-flex; }
 /* The run of them shares a row, and takes one of its own. */
+/* A captioned run of toggles. Takes its own row and styles its caption
+   like every other field's, so a group of switches reads as a group
+   rather than as loose pills after whatever came before. */
+.chips-group { flex: 1 1 100%; display: flex; flex-direction: column; gap: 0.3rem; }
+.chips-group > span {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+
 .chips-toggles {
   flex: 1 1 100%;
   /* A run of toggles is the one group in the panel with no caption over

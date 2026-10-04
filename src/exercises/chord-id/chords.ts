@@ -271,7 +271,13 @@ export const chordSettingsSchema: SettingsSchema<ChordSettings> = {
       }),
     },
     {
-      kind: 'toggle', id: 'inversions', label: 'Ask which note is in the bass',
+      kind: 'toggle', id: 'inversions', label: 'Which note is in the bass',
+      // Its own caption, because it is the one toggle that changes what
+      // is *asked* rather than what the generator may use — the home
+      // card calls it "the harder question" and inside the panel it
+      // was a pill in the middle of the chord list, styled exactly like
+      // "Major" and "Dominant 7th".
+      group: 'Also ask',
       selected: (s) => s.inversions,
       apply: (s, on) => ({ ...s, inversions: on }),
     },
@@ -288,6 +294,7 @@ export const chordSettingsSchema: SettingsSchema<ChordSettings> = {
     },
     {
       kind: 'toggle', id: 'openVoicing', label: 'Spread the voicing (drop-2)',
+      group: 'How it sounds',
       selected: (s) => s.openVoicing,
       apply: (s, on) => ({ ...s, openVoicing: on }),
     },

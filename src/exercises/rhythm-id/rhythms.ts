@@ -434,6 +434,7 @@ export const rhythmSettingsSchema: SettingsSchema<RhythmSettings> = {
     },
     {
       kind: 'toggle', id: 'rests', label: 'Rests',
+      group: 'Figures in play',
       selected: (s) => s.rests,
       apply: (s, on) => ({ ...s, rests: on }),
     },

@@ -246,6 +246,7 @@ export const scaleSettingsSchema: SettingsSchema<ScaleSettings> = {
     },
     {
       kind: 'toggle', id: 'transpose', label: 'Start from a different note each time',
+      group: 'How it is set',
       selected: (s) => s.transpose,
       apply: (s, on) => ({ ...s, transpose: on }),
     },

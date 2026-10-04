@@ -111,19 +111,22 @@ describe('the shape the stylesheet is written against', () => {
       row of its own by setting its flex basis, which only reaches it while
       the panel is the flex container it sits directly inside.
 
-      Toggles are the one exception and it is deliberate: a run of them is
-      wrapped in a `.chips-toggles` row so they read as one list rather
-      than as several fields, and that wrapper is itself a direct child
-      carrying the full-width basis. So the rule is "directly in the panel,
-      or in a toggle row that is" — stated rather than relaxed, because
-      "somewhere under the panel" would permit the nesting that breaks the
-      layout.
+      Toggles are the one exception and it is deliberate: a run of them
+      sits in a `.chips-toggles` row inside a `.chips-group`, which
+      carries the run's caption and the full-width basis. Two levels,
+      because the caption and the row are different things — the group
+      is a column and the row wraps. So the rule is "directly in the
+      panel, or inside a toggle group that is" — stated rather than
+      relaxed to "somewhere under the panel", which would permit the
+      nesting that breaks the layout.
     */
     render();
     for (const field of container.querySelectorAll('.field')) {
-      const parent = field.parentElement!;
-      const ok = parent === panel()
-        || (parent.matches('.chips-toggles') && parent.parentElement === panel());
+      const row = field.parentElement!;
+      const ok = row === panel()
+        || (row.matches('.chips-toggles')
+          && row.parentElement?.matches('.chips-group') === true
+          && row.parentElement.parentElement === panel());
       expect(ok, `${field.textContent} is nested where the stylesheet cannot reach it`)
         .toBe(true);
     }
@@ -152,6 +155,7 @@ describe('the shape the stylesheet is written against', () => {
     expect(fieldFor('Loud').matches(':has(.chips)')).toBe(false);
     // The toggle is itself a chip, inside the row that holds the run.
     expect(fieldFor('Loud').matches('.chips-toggles > .chip')).toBe(true);
+    expect(fieldFor('Loud').closest('.chips-group')).not.toBeNull();
   });
 
   it('renders each kind of field as the control it describes', () => {

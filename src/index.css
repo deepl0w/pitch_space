@@ -36,6 +36,22 @@ main {
   padding: 2rem 16px 4rem;
 }
 
+/*
+ * Above sixty rems the column stops growing and the page starts looking
+ * like a phone screenshot on a desktop — the user role's words were that
+ * it "reads like a page built and only ever looked at on a phone". The
+ * column is centred rather than pinned, so the complaint is not that the
+ * content is in the wrong place; it is that nothing uses the room.
+ *
+ * Widening `main` alone would only stretch the prose, which is already
+ * capped at 42rem for the reason prose always is. What wants the space is
+ * the things that come in quantities — cards, chips, readout rows — so
+ * those get more columns and the measure stays where it is.
+ */
+@media (min-width: 72rem) {
+  main { max-width: 72rem; }
+}
+
 h1 { font-size: 1.45rem; margin: 0 0 0.3rem; font-weight: 650; letter-spacing: -0.01em; }
 h2 { font-size: 0.95rem; margin: 0 0 0.75rem; font-weight: 600; color: var(--muted); }
 
@@ -124,6 +140,7 @@ button:active { transform: translateY(1px); }
    past the page instead of wrapping. An engraved stave has a real intrinsic
    width, which is how that stopped being theoretical. */
 @media (min-width: 40rem) { .menu { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 64rem) { .menu { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 .card {
   display: flex; flex-direction: column; gap: 0.25rem; width: 100%;

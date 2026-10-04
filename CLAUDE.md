@@ -8,42 +8,46 @@ the generation works; this file is about working on it.
 
 ## Several agents work here at once
 
-One **main** agent works in the original checkout at
-`/home/deeplow/workspace/music_practice`, owns `main`, and is the only one that
-may push. Every other agent works in a worktree under `.claude/worktrees/` on its
-own `claude/<name>` branch.
+The protocol is generic and lives in your user config: `~/.claude/skills/fleet/SKILL.md`
+for the rules, `~/.claude/scripts/fleet.sh` for the plumbing, and `/role`,
+`/sync`, `/wrap-up` and `/integrate` as commands. `.claude/scripts/fleet.sh`
+here is a shim onto it, so every reference keeps working. What is particular
+to this repository is `.claude/fleet.conf` — the roles, the test and check
+commands, and how a fresh worktree installs itself — and the rest of this
+section.
 
-If you are in a worktree:
+Read the skill for the four rules and the review cycle. In short: one **main**
+agent works in this checkout, owns `main`, and is the only one that may push;
+everyone else works in a worktree under `.claude/worktrees/` on `claude/<name>`,
+syncs before starting, commits before going idle, and never pushes.
 
-- **Never push.** Not with any flag, not for any reason.
-- **Sync before you start**: `.claude/scripts/fleet.sh sync` merges `main` in,
-  and installs `node_modules` the first time.
-- **Commit before you go idle**: `.claude/scripts/fleet.sh save "<message>"`. A
-  Stop hook will not let you finish a turn with changes uncommitted.
-- Your role lives in `.claude/role`; `/role tester|architect|feature` sets it.
+**The three roles this project runs**, and what each may change:
 
-The main agent merges those branches with `/integrate`, runs the suite, and pushes.
+| Role | Changes |
+| --- | --- |
+| **tester** | tests, and the fixes those tests pin down |
+| **architect** | `docs/`, chiefly `docs/adr/`; source only by exception |
+| **feature** | whatever the feature needs, with tests |
 
-When main merges anything it tells every worktree, and each syncs before doing
-anything else. A tester then checks whether the change is tested and tries to
-break it; an architect checks whether it still agrees with `docs/adr/`. Both
-report what they found back to main — including finding nothing — and main
-integrates at the end. The cycle is in the `fleet` skill under *The review cycle*.
+A **tester** should invoke the `test-engineer` skill and an **architect** the
+`architect` skill; a **feature** session needs neither.
 
-ADR numbers are claimed with `.claude/scripts/fleet.sh adr-claim "<title>"`,
-never agreed in a message: a reservation and the work it protects can cross in
-flight. `adr-taken` shows who holds what.
+The music theory core under `src/theory/` and `src/generate/` is where the
+tester role earns its keep. It is pure, deterministic given a seed, and makes
+claims that are checkable against theory rather than against a snapshot — a
+generated progression either cadences or it does not, a spelled interval
+either is an augmented fourth or it is not. Prefer property tests over
+thousands of seeds to example tests over one, and **assert constraints, never
+aesthetics**: the generators' weights are a tuning problem with no ground
+truth, and a test that pins them makes tuning impossible.
 
-`.claude/scripts/fleet.sh brief` prints where you are and where your branch
-stands — the SessionStart hook runs it for you. The protocol in full, including
-what each role may change, is in `.claude/skills/fleet/SKILL.md`; commands are
-`/role`, `/sync`, `/wrap-up` and `/integrate`.
+Exercise types are the natural unit of feature work — one worktree per
+exercise keeps two agents out of the same file.
 
-Two hazards worth knowing. The git **stash stack is shared** across every
-worktree, so never use a bare `git stash` / `git stash pop` — use a WIP commit
-instead. And `node_modules` is git-ignored, so a fresh worktree cannot run a
-single npm script until `sync` has installed it; after a merge that moved
-`package.json`, install again before you trust a green run.
+The hazard worth repeating from the skill, because it has bitten here:
+`node_modules` is git-ignored, so a fresh worktree cannot run a single npm
+script until `sync` has installed it, and after a merge that moved
+`package.json` you must install again before trusting a green run.
 
 ## Building and testing
 

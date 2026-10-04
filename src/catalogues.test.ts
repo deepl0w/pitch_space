@@ -11,6 +11,7 @@ import { EXERCISE_TYPES } from './exercises/registry';
 import { METER_CHOICES } from './exercises/rhythm-id/rhythms';
 import { TIME_SIGNATURES, timeSignature } from './theory/meter';
 import { makeRng } from './theory/rng';
+import { widestSettings } from './testing/settingsSpace';
 
 /**
  * What the catalogues owe, measured against the queries the app can make.
@@ -453,6 +454,96 @@ describe('reaching the template corpus', () => {
     for (const id of ['blues-12', 'blues-quick-change', 'blues-jazz']) {
       expect(TEMPLATES.find((t) => t.id === id)!.bars).toBe(12);
       expect(EVERYTHING.has(id), `${id} is still out of reach`).toBe(true);
+    }
+  });
+});
+
+/**
+ * The askable list, against the settings a user actually practises at.
+ *
+ * `items(settings)` is a catalogue the schedule reads, so ADR 0011's
+ * obligation applies to it: everything listed must be reachable by a query
+ * the app makes, or the list promises work that can never be done.
+ *
+ * `registry.test.ts` asserts that, and unions the reachable set across bar
+ * counts while doing it — so what it establishes is *reachable at some bar
+ * count*. **A user picks a bar count and it stays picked**, which makes that
+ * union a dimension the test crosses and the user does not. It is the same
+ * shape as every other defect this week, and it hid a real one: at four bars
+ * with the vocabulary opened up, three listed numerals cannot be generated at
+ * all.
+ *
+ * Pinned at the default bar count only. The others were measured and are not
+ * asserted here, because a second bar count costs another half-second of
+ * generation and a *comment* recording what they said would be a measurement
+ * going stale on its own — which is the failure that produced this finding in
+ * the first place.
+ */
+describe('what the schedule is told it can ask', () => {
+  const progression = EXERCISE_TYPES.find((t) => t.id === 'progression-id')!;
+
+  /**
+   * Seeds, and why this many rather than more.
+   *
+   * The *size* of the unreachable set is budget-sensitive in a way that makes
+   * asserting it exactly a bad trade. Measured at four bars: seven items look
+   * unreachable at 1000 seeds, five at 5000, and three from 15000 out to
+   * 60000. The four that drop out are rare rather than absent, two of them
+   * desperately so — `minor:#viio` appears nine times in sixty thousand
+   * four-bar progressions and `major:viio` eleven, about one in six thousand.
+   *
+   * So a test pinning the exact set would need a budget big enough to see a
+   * one-in-six-thousand event reliably, which is either slow or flaky: at
+   * 30000 seeds each of those two is still missed about once in a hundred
+   * runs, and two such items make that a flake worth having an opinion about.
+   *
+   * What is *not* budget-sensitive is the three below. They are absent at
+   * every budget from 1000 to 60000, because they cannot be generated at all.
+   * Asserting those by name is robust at any budget, so this one is chosen
+   * for speed rather than for discrimination.
+   */
+  const SEEDS = 1_000;
+
+  /** Everything the vocabulary switches allow, at the bar count users start on. */
+  const settings = progression.settings.coerce({
+    ...(widestSettings(progression) as object), bars: 4,
+  });
+
+  const produced = (() => {
+    const listed = new Set(progression.items(settings));
+    const seen = new Set<string>();
+    for (let seed = 0; seed < SEEDS; seed += 1) {
+      for (const item of progression.generate({ seed, settings }).items) {
+        if (listed.has(item)) seen.add(item);
+      }
+    }
+    return { listed, seen };
+  })();
+
+  it('is sweeping a list long enough for the question to mean anything', () => {
+    expect(produced.listed.size).toBeGreaterThan(20);
+    expect(produced.seen.size).toBeGreaterThan(20);
+  });
+
+  it('lists three numerals four-bar progressions cannot produce', () => {
+    /*
+      Named, because a count would be a claim about the budget and these are
+      a claim about the generator. Each fails here if it becomes reachable,
+      which is what fixing this looks like from one direction.
+
+      The fix is not obvious and is not a tester's to pick. Narrowing `items`
+      with the settings is what the palette deliberately refuses — a row of
+      buttons that grew with the setting would tell the user how many chords
+      are in play before they had named one — so the alternative is that the
+      schedule learns askable and reachable are different sets.
+    */
+    for (const item of [
+      'progression:major:#ivo',
+      'progression:major:ii/IV',
+      'progression:minor:V/VII',
+    ]) {
+      expect(produced.listed.has(item), `${item} is no longer even listed`).toBe(true);
+      expect(produced.seen.has(item), `${item} is now reachable at four bars`).toBe(false);
     }
   });
 });

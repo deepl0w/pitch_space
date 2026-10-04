@@ -153,10 +153,19 @@ main .practice-main .actions > button:first-child {
  * same box. Looking fuller is not being wider, and three sweeps read the
  * first as the second.
  */
-main .practice-main > .prompt,
-main .practice-main > .score { max-width: 60rem; }
-/* Prose keeps its measure inside the wider box: the chips and slots are
-   what wanted the room, not the sentence above them. */
+main .practice-main > * { max-width: 60rem; }
+/* Prose keeps its own measure inside that one, which is the whole of the
+   arrangement: one column, with the reading matter narrower inside it.
+   Two outer measures was the first attempt and it read worse than the
+   problem it fixed — the title and the button row stayed at 44rem while
+   the stave went to 60, so the eye crossed narrow, wide, narrow going
+   down a single question. A hierarchy is legible; alternation is not.
+
+   Set here rather than on `.lede` itself because `.lede` writes a
+   `margin` shorthand, which sets `margin-inline` to zero and would
+   left-align the sentence in the wider box — the same specificity trap
+   the note above this block describes, arriving by a different door. */
+main .practice-main .lede,
 main .practice-main .question { max-width: 44rem; margin-inline: auto; }
 
 

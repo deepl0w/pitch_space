@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  GRADE_CHOICES, PROGRESSION_DEFAULTS, generateProgression, gradeProgression, paletteFor, progressionScoreSpec, progressionVoices, type ProgressionSettings,
+  BAR_CHOICES, GRADE_CHOICES, PROGRESSION_DEFAULTS, generateProgression, gradeProgression, paletteFor, progressionScoreSpec, progressionVoices, type ProgressionSettings,
 } from './progressions';
 import { ALL_KEYS, keyId } from '../../theory/key';
 
@@ -14,6 +14,19 @@ import { ALL_KEYS, keyId } from '../../theory/key';
  */
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => i * 7919 + 1);
+
+/**
+ * The seed budget for the sweep that crosses every control.
+ *
+ * 300 seeds against one configuration became 300 against 480 of them when
+ * `bars` and `varyCadence` joined the sweep, which is 144,000 progressions
+ * and a timeout. The trade is deliberate and goes the right way: the
+ * defect this sweep exists to catch is a *configuration* the palette does
+ * not cover, not a rare seed within one — `V/VII` turned up on the third
+ * seed of the configuration that reaches it. Breadth over depth, and the
+ * 300-seed depth is kept where it still costs nothing, below.
+ */
+const SWEEP_SEEDS = SEEDS.slice(0, 25);
 
 /**
  * The furthest the settings panel can now reach.
@@ -41,18 +54,38 @@ describe('the palette contains every answer', () => {
    * progression they had heard correctly. Inversions and borrowed chords
    * are off at generation for exactly this reason; this is the assertion
    * that the switches do what their names say.
+   *
+   * **Over every setting, not every seed.** This swept seeds, grades and
+   * modes and held `bars` and `varyCadence` at their defaults — and it had
+   * to be the whole settings object, because the claim is about what a
+   * *user* can reach and those two are things a user sets. The hole was
+   * not hypothetical: with applied dominants on, in minor, at sixteen
+   * bars, the generator produced `V/VII` and the palette had no button for
+   * it. Found by sweeping the real product of the controls; invisible to
+   * every sweep that fixed one of them.
+   *
+   * `bars` became a setting recently, when it stopped being inferred from
+   * a difficulty preset. A new control is a new dimension of this sweep,
+   * and that is the thing to remember rather than the particular numeral.
    */
-  it('over every seed, grade and mode', () => {
+  it('over every seed, grade, mode and setting a user can reach', () => {
     for (const mode of ['major', 'minor'] as const) {
       for (const grade of GRADE_CHOICES) {
-        for (const applied of [false, true]) {
-          const s = settings({ modes: [mode], grade, appliedDominants: applied });
-          const palette = new Set(paletteFor(mode, applied));
-          for (const seed of SEEDS) {
-            const exercise = generateProgression({ seed, settings: s });
-            for (const numeral of exercise.numerals) {
-              expect(palette.has(numeral), `${mode} grade ${grade}: ${numeral} is not offered`)
-                .toBe(true);
+        for (const applied of [false, true]) for (const varyCadence of [false, true]) {
+          for (const bars of BAR_CHOICES) {
+            const s = settings({
+              modes: [mode], grade, bars, varyCadence, appliedDominants: applied,
+            });
+            const palette = new Set(paletteFor(mode, applied));
+            for (const seed of SWEEP_SEEDS) {
+              const exercise = generateProgression({ seed, settings: s });
+              for (const numeral of exercise.numerals) {
+                expect(
+                  palette.has(numeral),
+                  `${mode} grade ${grade} ${bars}b applied=${applied} vary=${varyCadence}: `
+                  + `${numeral} is not offered`,
+                ).toBe(true);
+              }
             }
           }
         }
@@ -135,16 +168,17 @@ describe('every chord on the palette is reachable', () => {
   it('at the grade that reaches furthest', () => {
     for (const mode of ['major', 'minor'] as const) {
       for (const applied of [false, true]) {
-        // Eight bars as well as the top grade: length is the user's own
-        // setting now, and a four-bar progression reaches less of the
-        // corpus — so "every palette entry is reachable" has to name the
-        // configuration it is reachable under rather than assume one.
-        const s = settings({
-          modes: [mode], grade: TOP_GRADE, bars: 8, appliedDominants: applied,
-        });
-        const produced = new Set(
-          SEEDS.flatMap((seed) => generateProgression({ seed, settings: s }).numerals),
-        );
+        // Every length at the top grade, not one of them. Length is the
+        // user's own setting, and a progression's reach reads off it: the
+        // minor `V/VII` is produced at sixteen bars and not at eight, so
+        // pinning eight here claimed it was unreachable while the
+        // containment sweep was meeting it. Two tests that are supposed to
+        // be each other's converse have to ask over the same ground, or
+        // they can both be green and contradict one another.
+        const produced = new Set(BAR_CHOICES.flatMap((bars) => {
+          const s = settings({ modes: [mode], grade: TOP_GRADE, bars, appliedDominants: applied });
+          return SWEEP_SEEDS.flatMap((seed) => generateProgression({ seed, settings: s }).numerals);
+        }));
         for (const numeral of paletteFor(mode, applied)) {
           expect(produced.has(numeral), `${mode}: nothing ever produces ${numeral}`).toBe(true);
         }

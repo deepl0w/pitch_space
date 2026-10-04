@@ -209,12 +209,24 @@ const PALETTE: Record<Mode, readonly string[]> = {
 };
 
 /**
- * What the applied-dominant setting adds. V/I is just V, and V/vii would
- * tonicise a diminished triad, which is not a key anything modulates to.
+ * What the applied-dominant setting adds.
+ *
+ * V/I is just V, and in major V/vii would tonicise a diminished triad,
+ * which is not a key anything modulates to. **In minor the seventh degree
+ * is not diminished** — it is the subtonic, a major triad, and tonicising
+ * it is how a minor key reaches its relative major. `V/VII` was missing
+ * here for one commit too many because the major-mode reason was applied
+ * to a mode it is not true of.
+ *
+ * Found by sweeping the settings a user can set rather than the ones the
+ * containment test swept. It was reachable in minor with applied dominants
+ * at sixteen bars from grade 4 — so the generator asked for a chord with
+ * no button under it, and a listener who named it correctly had no way to
+ * say so.
  */
 const APPLIED: Record<Mode, readonly string[]> = {
   major: ['V/II', 'V/III', 'V/IV', 'V/V', 'V/VI'],
-  minor: ['V/III', 'V/IV', 'V/V', 'V/VI'],
+  minor: ['V/III', 'V/IV', 'V/V', 'V/VI', 'V/VII'],
 };
 
 /**

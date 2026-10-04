@@ -438,7 +438,38 @@ describe('what borrowing means', () => {
   });
 
   it('is not what an applied chord is, which the other flag governs', () => {
+    /*
+      V/IV was the only case here, and it could not fail. Its root is degree
+      5, already major in the mode, so the quality comparison at the bottom
+      of the predicate returns false on its own and the applied exemption
+      above it never decides anything — delete that line and this test stayed
+      green.
+
+      The exemption earns its place on an applied dominant whose root sits on
+      a degree the mode makes minor or diminished, which is four of the five:
+      V/V on 2, V/vi on 3, V/ii on 6, V/iii on 7. Those read as loans without
+      it, and `allowBorrowed` would then exclude templates that borrow
+      nothing.
+    */
     expect(isBorrowedIn(step(5, { typeId: 'dom7', appliedTo: 4 }), 'major')).toBe(false);
+    for (const [degree, target] of [[2, 5], [3, 6], [6, 2], [7, 3]] as const) {
+      expect(
+        isBorrowedIn(step(degree, { typeId: 'dom7', appliedTo: target }), 'major'),
+        `V/${target} is rooted on degree ${degree} and read as a loan`,
+      ).toBe(false);
+    }
+
+    // And over the corpus rather than over examples chosen here, so a
+    // template that writes an applied chord some new way is covered too.
+    for (const t of TEMPLATES) {
+      for (const s of t.steps) {
+        if (s.appliedTo === undefined) continue;
+        for (const mode of t.modes) {
+          expect(isBorrowedIn(s, mode), `${t.id} step on degree ${s.degree} in ${mode}`)
+            .toBe(false);
+        }
+      }
+    }
   });
 
   /**

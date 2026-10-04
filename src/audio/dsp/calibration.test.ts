@@ -229,3 +229,143 @@ describe('matching clicks to what came back', () => {
     if (!out.ok) expect(out.heard).toBe(0);
   });
 });
+
+/**
+ * ADR 0025's open lead, settled against the pure estimator.
+ *
+ * Seven calibration runs in one room on unchanged hardware reported 39, 51,
+ * 59, 157, 159, 170 and 171 ms — bimodal rather than scattered — and each run
+ * reported a narrow ± of its own, two of them ±1 ms. The record names a
+ * mechanism and calls it a lead rather than a conclusion: `measureLatency.ts`
+ * takes `startedAt = context.currentTime` *before* `source.connect(recorder)`
+ * and treats it as the recording's first sample, while the ScriptProcessor's
+ * buffer is 4096 frames. If the recording's true zero is sometimes one buffer
+ * away from the assumed one, every delta in that run shifts by the same
+ * amount.
+ *
+ * That is checkable here with no device at all, because it is a claim about
+ * arithmetic: build one recording, interpret it with the zero right and with
+ * the zero one buffer out, and see what each half of the answer does.
+ *
+ * The buffer size is written out rather than imported. `audio/dsp/` may not
+ * import from `audio/capture/` — that containment is what lets this file run
+ * under vitest on a laptop — so the coupling is a comment, which is the
+ * honest form of it: if `measureLatency.ts` changes its buffer, this number
+ * is stale and nothing will say so.
+ */
+const PROCESSOR_FRAMES = 4096;
+const ONE_BUFFER_SECONDS = PROCESSOR_FRAMES / RATE;
+
+/**
+ * The same physical run, told that its first sample is `frames` later than it
+ * is — the recorder having started a buffer after the clock was read.
+ *
+ * Realised by dropping that many leading samples, which is what the estimator
+ * sees: every click now sits that much earlier in the array than the trial
+ * times say it should, so every delta comes out short by the same amount.
+ */
+function zeroLateBy(samples: Float32Array, frames: number): Float32Array {
+  return samples.slice(frames);
+}
+
+describe('a recording whose zero is one buffer out', () => {
+  /** Six clicks with ordinary per-trial jitter, so the spread is a real one. */
+  const run = () => recording({
+    count: 6,
+    latencySeconds: 0.16,
+    jitter: [0, 0.002, -0.001, 0.003, -0.002, 0.001],
+  });
+
+  it('moves the whole answer by exactly one buffer', () => {
+    const { samples, trials } = run();
+    const honest = estimateInputLatency({ samples, sampleRate: RATE, trials });
+    const late = estimateInputLatency({
+      samples: zeroLateBy(samples, PROCESSOR_FRAMES), sampleRate: RATE, trials,
+    });
+    expect(honest.ok && late.ok).toBe(true);
+    if (!honest.ok || !late.ok) return;
+
+    // Quantised, not scattered: the shift is the buffer, to within the
+    // detector's own resolution on where an attack begins.
+    expect(honest.latencySeconds - late.latencySeconds).toBeCloseTo(ONE_BUFFER_SECONDS, 2);
+  });
+
+  it('reports the same confidence either way, because every trial moved together', () => {
+    // The finding, and the reason the record is named what it is. The spread
+    // is half an interquartile range over the six deltas *within* a run, and
+    // a constant added to all six leaves every quantile shifted and every
+    // difference between them identical. The statistic cannot see this error
+    // in principle — not by being badly tuned.
+    const { samples, trials } = run();
+    const honest = estimateInputLatency({ samples, sampleRate: RATE, trials });
+    const late = estimateInputLatency({
+      samples: zeroLateBy(samples, PROCESSOR_FRAMES), sampleRate: RATE, trials,
+    });
+    if (!honest.ok || !late.ok) throw new Error('both should answer');
+
+    expect(late.spreadSeconds).toBeCloseTo(honest.spreadSeconds, 6);
+    expect(late.heard).toBe(honest.heard);
+  });
+
+  it('answers confidently in both cases, so nothing refuses the wrong one', () => {
+    // Both land inside MAX_PLAUSIBLE_SECONDS and inside MAX_SPREAD_SECONDS,
+    // which is what makes this worse than a crash: the user is shown a
+    // number and an error bar, and the error bar is not about the error.
+    const { samples, trials } = run();
+    for (const frames of [0, PROCESSOR_FRAMES]) {
+      const out = estimateInputLatency({
+        samples: zeroLateBy(samples, frames), sampleRate: RATE, trials,
+      });
+      expect(out.ok, `frames ${frames}`).toBe(true);
+    }
+  });
+
+  it('is wrong by far more than the ± it prints', () => {
+    // The ratio is the thing to quote. An error bar is a claim about how
+    // wrong the answer might be, and this one is out by more than an order
+    // of magnitude.
+    const { samples, trials } = run();
+    const honest = estimateInputLatency({ samples, sampleRate: RATE, trials });
+    const late = estimateInputLatency({
+      samples: zeroLateBy(samples, PROCESSOR_FRAMES), sampleRate: RATE, trials,
+    });
+    if (!honest.ok || !late.ok) throw new Error('both should answer');
+
+    const error = Math.abs(honest.latencySeconds - late.latencySeconds);
+    expect(error / late.spreadSeconds).toBeGreaterThan(10);
+  });
+});
+
+describe('an error every trial shares', () => {
+  it('is invisible to the spread at any size, which is the general shape', () => {
+    /*
+      0019 reached this by argument for a different cause — "the spread check
+      cannot catch the failure, because mis-attributed deltas agree with each
+      other" — and 0025 measured it for this one. Stated here as the property
+      rather than as the single 4096-frame instance, because the buffer is
+      what made it happen and the structure is what makes it undetectable.
+
+      Swept over offsets rather than asserted at one, since the claim is that
+      the size does not matter.
+    */
+    const { samples, trials } = recording({
+      count: 6,
+      latencySeconds: 0.2,
+      jitter: [0, 0.002, -0.001, 0.003, -0.002, 0.001],
+    });
+    const honest = estimateInputLatency({ samples, sampleRate: RATE, trials });
+    if (!honest.ok) throw new Error('the undisturbed run should answer');
+
+    for (const frames of [512, 1024, 2048, 4096, 8192]) {
+      const out = estimateInputLatency({
+        samples: zeroLateBy(samples, frames), sampleRate: RATE, trials,
+      });
+      expect(out.ok, `frames ${frames}`).toBe(true);
+      if (!out.ok) continue;
+      // The answer moves by the offset...
+      expect(honest.latencySeconds - out.latencySeconds).toBeCloseTo(frames / RATE, 2);
+      // ...and the confidence does not move at all.
+      expect(out.spreadSeconds).toBeCloseTo(honest.spreadSeconds, 6);
+    }
+  });
+});

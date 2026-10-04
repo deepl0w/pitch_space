@@ -500,6 +500,29 @@ function planCadence(ctx: Context, slots: readonly Slot[], indices: readonly num
   return writes;
 }
 
+/**
+ * Write a slot unless a cadence owns it.
+ *
+ * Every transformation is supposed to leave locked slots alone, and four
+ * of the five checked. `repairRetrogressions` did not: its `else` branch
+ * rewrote the *second* chord of a pair with no check at all, so a locked
+ * predominant following a locked dominant was silently overwritten — and
+ * once the end-of-pipeline assertion existed, that became a thrown error
+ * out of `generateHarmony` rather than a slightly odd chord.
+ *
+ * The invariant belongs on the write rather than on a sweep afterwards.
+ * Routed through here a pass cannot forget the check, because there is
+ * nowhere left to forget it, and a pass that tries becomes "this write
+ * did nothing" instead of a crash three calls later.
+ *
+ * Found by the altitude review, against the comment one line above the
+ * assertion claiming every mutator already checked.
+ */
+function writeSlot(slot: Slot, numeral: RomanNumeral): void {
+  if (slot.locked) return;
+  slot.numeral = numeral;
+}
+
 function applyCadences(slots: Slot[], writes: readonly CadenceWrite[]): void {
   for (const write of writes) {
     slots[write.index].numeral = write.numeral;
@@ -534,7 +557,7 @@ function applyAppliedDominants(ctx: Context, slots: Slot[], rate: number): void 
     if (target.appliedTo !== undefined || target.chromaticAlter !== 0) continue;
     if (!TONICISABLE[ctx.mode].includes(target.degree)) continue;
     if (!chance(ctx.rng, rate)) continue;
-    here.numeral = numeral(5, ctx.grade >= 6 ? 'dom7' : 'maj', { appliedTo: target.degree });
+    writeSlot(here, numeral(5, ctx.grade >= 6 ? 'dom7' : 'maj', { appliedTo: target.degree }));
   }
 }
 
@@ -723,8 +746,11 @@ function repairRetrogressions(ctx: Context, slots: Slot[]): void {
     if (a.numeral.fn !== 'dominant' || a.numeral.appliedTo !== undefined) continue;
     if (b.numeral.fn !== 'predominant' || b.numeral.appliedTo !== undefined) continue;
     if (a.tags.includes('blues') && b.tags.includes('blues')) continue;
-    if (!a.locked) a.numeral = tonicNumeral(ctx);
-    else b.numeral = tonicNumeral(ctx);
+    // Prefer rewriting the dominant; fall back to the predominant. Where
+    // a cadence owns both, neither moves and the retrogression stands —
+    // which is honest, and is what the lock means.
+    if (!a.locked) writeSlot(a, tonicNumeral(ctx));
+    else writeSlot(b, tonicNumeral(ctx));
   }
 }
 

@@ -145,15 +145,10 @@ required no change to the screen, the settings panel or the attempt log —
 [`registry.ts`](../src/exercises/registry.ts) gained one import and one array
 entry. That is the claim holding up under its first real test.
 
-One leak, though. [`ui/menu.ts`](../src/ui/menu.ts) keys a `BLURBS` table by
-exercise id and falls back to `''`, so a sixth exercise whose author does not
-also edit that file ships with a blank card and nothing says so. The definition
-already carries a `description` — whose doc comment says it is "shown when the
-user is choosing what to practise", although it is actually rendered as the lede
-on the practice screen — and the two strings say the same thing in different
-words for both existing exercises. Either the blurb belongs on the definition
-or the invariant belongs in `registry.test.ts`, which today asserts every
-definition has a non-empty `description` but nothing about blurbs.
+One leak is closed: a card whose blurb is not listed in
+[`ui/menu.ts`](../src/ui/menu.ts) now falls back to the definition's own
+`description` rather than to the empty string, so a sixth exercise cannot ship
+with a blank card.
 
 ### Presentation
 
@@ -166,8 +161,16 @@ and a definition declares which senses it supports.
 It is carried on the generated exercise rather than read from settings at render
 time, because changing the setting mid-question must not change the question,
 and because **an attempt is only comparable with another attempt asked the same
-way**. The spaced-repetition design in [`docs/ROADMAP.md`](ROADMAP.md) leans on
-that directly.
+way** ([ADR 0010](adr/0010-presentation-is-part-of-what-an-attempt-means.md)).
+
+That is now carried through: `presentation` is a named, validated field on the
+stored attempt rather than something dug out of an opaque settings blob, and
+[`tallyItems`](../src/state/progressStore.ts) keys on `(presentation, item)`
+through `tallyKey`, so reading a third and hearing one are counted separately.
+The presentation stays *outside* the `ItemId`, because ids are a compatibility
+commitment and one encoding two orthogonal things cannot change along one axis
+without breaking the other. Making it a field meant the app's first schema
+migration, v1 to v2.
 
 ## What an attempt records
 
@@ -248,6 +251,18 @@ Because `generate/` has no ground truth, its tests assert constraints and never
 aesthetics: that a suspension resolves down by step, not that a particular seed
 produces a particular tune. A test that pinned the weights would make tuning
 impossible.
+
+Three of its files are catalogues of musical data rather than code —
+[`cells.ts`](../src/generate/cells.ts) (the figures a bar is built from),
+[`templates.ts`](../src/generate/templates.ts) (33 progressions) and
+[`patterns.ts`](../src/generate/patterns.ts) (26 named whole-bar rhythms). The
+catalogue is the product and the generator is plumbing: twenty correct
+templates are worth more than any cleverness in the thing that reads them.
+[ADR 0011](adr/0011-what-a-catalogue-owes.md) says what one owes — construction-time
+well-formedness, stable ids, asserted musical claims, and reachability. That
+last is the one none of them pays: three of the thirty-three templates declare
+a closing cadence the phrase planner never asks for by default, so on the
+default path they cannot be shown.
 
 ## What is not built
 

@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_FAMILIES, EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
 import { itemLabel } from './itemLabel';
+import { SCALE_TYPES } from '../theory/scale';
+import { CHORD_TYPES } from '../theory/chord';
 import type { AnyExerciseDefinition } from './types';
 
 /**
@@ -300,8 +302,26 @@ describe('every exercise type’s askable items', () => {
     modes: ['major', 'minor'], varyCadence: true, appliedDominants: true, borrowed: true,
     sevenths: true, diminished: true, picardy: true, neapolitan: true,
     degrees: [1, 2, 3, 4, 5, 6, 7], directions: ['up', 'down'],
+    // Every scale type. Read off the catalogue rather than listed, so a
+    // twenty-first type widens this sweep by existing — the way `bars`,
+    // `styles` and the vocabulary switches each did not, and each had to
+    // be noticed afterwards.
+    types: [...SCALE_TYPES.map((t) => t.id), ...CHORD_TYPES.map((t) => t.id)],
+    inversions: true,
   };
-  const SWEEP_SEEDS = Array.from({ length: 220 }, (_, i) => i * 7919 + 1);
+  /**
+   * Enough seeds that the reachability half is about the selector and not
+   * about luck.
+   *
+   * Chord identification has the largest askable set — twenty-four
+   * qualities times each one's inversions, about eighty-five items — and
+   * at 220 seeds a given one is missed roughly seven times in a hundred
+   * by chance alone, which failed this sweep naming an item that is
+   * perfectly reachable. The budget is set from the largest set rather
+   * than guessed: at 1500 seeds the chance of missing any reachable item
+   * anywhere is far below the chance of a real defect.
+   */
+  const SWEEP_SEEDS = Array.from({ length: 1500 }, (_, i) => i * 7919 + 1);
 
   /** The item kinds an exercise tests, as opposed to merely contains. */
   function tested(type: AnyExerciseDefinition, settings: unknown): Set<string> {
@@ -333,6 +353,8 @@ describe('every exercise type’s askable items', () => {
     'degree-id': () => ({ degree: -1 }),
     'interval-id': () => ({ semitones: -1 }),
     'key-id': () => ({ keyId: 'not-a-key' }),
+    'scale-id': () => ({ typeId: 'not-a-scale' }),
+    'chord-id': () => ({ typeId: 'not-a-chord', inversion: -1 }),
     // One blank per slot: the slots are what carry the numerals, so a
     // shorter list would test fewer items than the exercise contains.
     'progression-id': (e) => ({ numerals: (e.numerals ?? []).map(() => '') }),

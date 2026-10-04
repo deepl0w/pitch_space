@@ -1,6 +1,8 @@
 import { SIMPLE_INTERVAL_NAMES } from '../theory/interval';
 import { ALL_KEYS, keyId, keyName } from '../theory/key';
 import { CADENCE_NAMES, type CadenceType } from '../theory/roman';
+import { SCALE_TYPES } from '../theory/scale';
+import { CHORD_TYPES, INVERSION_LABELS } from '../theory/chord';
 import { INTERVAL_SLUGS } from './interval-id/intervals';
 import type { ItemId } from './types';
 
@@ -65,6 +67,21 @@ export function itemLabel(item: ItemId): string {
       return rest[1] ? `${rest[1]} in ${rest[0]}` : item;
     case 'cadence':
       return CADENCE_NAMES[rest[0] as CadenceType] ?? item;
+    case 'chord': {
+      // `chord:dom7` and `chord:dom7:inv2` are different items, because
+      // naming the quality and hearing which note is in the bass are
+      // different skills. Both are said in the words the buttons used.
+      const type = CHORD_TYPES.find((t) => t.id === rest[0]);
+      if (!type) return item;
+      const inv = rest[1]?.startsWith('inv') ? Number(rest[1].slice(3)) : 0;
+      return inv > 0 && INVERSION_LABELS[inv]
+        ? `${type.name}, ${INVERSION_LABELS[inv]}`
+        : type.name;
+    }
+    case 'scale':
+      // Named as the catalogue names it, so the readout and the button
+      // that answered the question say the same words.
+      return SCALE_TYPES.find((t) => t.id === rest[0])?.name ?? item;
     default:
       return item;
   }

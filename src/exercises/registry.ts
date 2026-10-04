@@ -1,5 +1,7 @@
 import { intervalIdentification } from './interval-id';
 import { keyIdentification } from './key-id';
+import { scaleIdentification } from './scale-id';
+import { chordIdentification } from './chord-id';
 import { degreeIdentification } from './degree-id';
 import { progressionIdentification } from './progression-id';
 import type { AnyExerciseDefinition } from './types';
@@ -62,6 +64,16 @@ export const EXERCISE_FAMILIES: readonly ExerciseFamily[] = [
     id: 'key-id',
     name: keyIdentification.name,
     members: [keyIdentification],
+  },
+  {
+    id: 'chord-id',
+    name: chordIdentification.name,
+    members: [chordIdentification],
+  },
+  {
+    id: 'scale-id',
+    name: scaleIdentification.name,
+    members: [scaleIdentification],
   },
 ];
 

@@ -87,7 +87,9 @@ describe('naming an item for the user', () => {
     // coverage quietly shrinks and the real test passes vacuously.
     const kinds = new Set(everyItem().map((item) => item.split(':')[0]));
     expect([...kinds].sort())
-      .toEqual(['cadence', 'degree', 'interval', 'key', 'progression', 'signature']);
+      .toEqual([
+        'cadence', 'chord', 'degree', 'interval', 'key', 'progression', 'scale', 'signature',
+      ]);
   });
 
   it('never shows a storage key to the user', () => {
@@ -126,7 +128,12 @@ describe('naming an item for the user', () => {
 
   it('shows an id it does not recognise rather than losing the row', () => {
     // An item kind from a later release is still in this user's history.
-    expect(itemLabel('chord:m7b5')).toBe('chord:m7b5');
+    // `chord:m7b5` stood here until the chord exercise shipped and made it
+    // a real id, which is the hazard with using a *planned* kind as the
+    // unknown example — these are kinds nothing is ever going to claim.
+    expect(itemLabel('tablature:fret-7')).toBe('tablature:fret-7');
+    expect(itemLabel('chord:not-a-chord')).toBe('chord:not-a-chord');
+    expect(itemLabel('scale:not-a-scale')).toBe('scale:not-a-scale');
     expect(itemLabel('interval:not-an-interval:up')).toBe('interval:not-an-interval:up');
     expect(itemLabel('key:H_major')).toBe('key:H_major');
     expect(itemLabel('signature:many')).toBe('signature:many');

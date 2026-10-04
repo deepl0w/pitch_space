@@ -31,6 +31,8 @@ const BLURBS: Record<string, string> = {
     + 'doing in a key. By ear or on the staff.',
   'key-id': 'Name the key, from its signature, from the notes, or by ear.',
   'progression-id': 'Hear a progression and name what each chord is doing in the key.',
+  'scale-id': 'Name a scale from twenty types, in any key — by ear or off the staff.',
+  'chord-id': 'Name a chord\u2019s quality, and its bass note if you want the harder question.',
 };
 
 /**
@@ -61,18 +63,6 @@ const PLANNED: MenuEntry[] = [
     route: 'rhythm',
     name: 'Rhythm',
     blurb: 'Clap or play a rhythm back — read from the staff, or copied by ear.',
-    ready: false,
-  },
-  {
-    route: 'chord-id',
-    name: 'Chord identification',
-    blurb: 'Name the quality of a chord — by ear, or read off the staff.',
-    ready: false,
-  },
-  {
-    route: 'scale-id',
-    name: 'Scale identification',
-    blurb: 'Name a scale — by ear, or read off the staff.',
     ready: false,
   },
 ];

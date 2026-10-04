@@ -66,7 +66,15 @@ select {
 .score {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 10px; padding: 0.5rem; overflow-x: auto;
+  /* Needed as well as minmax(0, 1fr) on the track: without it the flex/grid
+     item's own min-content floor is the stave's width. */
+  min-width: 0;
 }
+
+/* The stave is redrawn at the measured width rather than scaled, so it should
+   never be the thing that decides how wide its container is. */
+.score-host { min-width: 0; }
+.score-host svg { display: block; max-width: 100%; }
 /* --score-ink is read by Score.tsx and handed to VexFlow, which is the only
    way to colour the whole drawing: see the note there on why recolouring the
    emitted SVG from here leaves some marks black. */
@@ -111,7 +119,11 @@ button:active { transform: translateY(1px); }
 .section:first-of-type { margin-top: 1rem; }
 
 .menu { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
-@media (min-width: 40rem) { .menu { grid-template-columns: 1fr 1fr; } }
+/* minmax(0, 1fr) rather than 1fr: a bare 1fr is minmax(auto, 1fr), so a track
+   refuses to shrink below its content's min-content width and the grid pushes
+   past the page instead of wrapping. An engraved stave has a real intrinsic
+   width, which is how that stopped being theoretical. */
+@media (min-width: 40rem) { .menu { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .card {
   display: flex; flex-direction: column; gap: 0.25rem; width: 100%;
@@ -147,7 +159,7 @@ button:active { transform: translateY(1px); }
 .count { color: var(--muted); font-size: 0.8rem; margin: 0 0 0.8rem; }
 
 .figures { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
-@media (min-width: 52rem) { .figures { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 52rem) { .figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .figure {
   background: var(--surface); border: 1px solid var(--line);
@@ -279,3 +291,53 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 .relation:hover { border-color: var(--accent); filter: none; }
 .relation-name { font-weight: 600; font-size: 0.88rem; }
 .relation-kind { font-size: 0.72rem; color: var(--muted); }
+
+/* ---- Touch ---------------------------------------------------------------
+   A pointer that is a finger needs a bigger target than one that is a mouse,
+   and the difference is large: a chip comfortable to click at 26px tall is a
+   miss waiting to happen at arm's length on a phone. Keyed to `pointer:
+   coarse` rather than to a width, because the question is what is pointing at
+   the screen and not how wide it is — a touchscreen laptop is the case a
+   breakpoint gets wrong.
+
+   44px is the figure Apple and the WCAG 2.5.5 guidance agree on; Material
+   says 48. Applied as a minimum so nothing that is already large shrinks. */
+/* The floor for any pointer, mouse included: WCAG 2.5.8 asks 24x24, and a
+   control smaller than that is awkward to hit with a trackpad too. The coarse
+   rules below raise it, they do not introduce it. */
+button,
+select,
+.chip,
+.choice,
+.figure-play,
+.back {
+  min-height: 24px;
+}
+
+@media (pointer: coarse) {
+  button,
+  select,
+  .chip,
+  .choice,
+  .figure-play,
+  .back {
+    min-height: 44px;
+  }
+
+  .chip,
+  .figure-play {
+    padding-inline: 0.85rem;
+  }
+
+  /* The back control is text rather than a box, so it needs the room above
+     and below instead of a taller border. */
+  .back {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 0.25rem 0.75rem 0;
+  }
+
+  /* Two rows of chips at 44px each is most of a phone screen, so give the
+     list a little more room to breathe rather than cramming it. */
+  .chips { gap: 0.45rem; }
+}

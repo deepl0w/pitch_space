@@ -46,18 +46,18 @@ afterEach(() => {
 });
 
 /**
- * The lines of one label, whether it was drawn as one line or stacked.
+ * Every label of one kind, grouped by the wedge it sits on.
  *
- * A single label is bare text; two are tspans. Reading both the same way
- * keeps the assertions about what the wedge *says* rather than about which
- * branch drew it.
+ * A stacked pair is two `text` elements sharing an `x` and differing in
+ * `y`, so a wedge is identified by its `x` rather than by a single
+ * element. Assertions stay about what a wedge *says* rather than about
+ * which branch drew it.
  */
-function lines(label: Element | null): string[] {
-  if (label === null) return [];
-  const parts = [...label.querySelectorAll('tspan')];
-  return parts.length > 0
-    ? parts.map((p) => p.textContent ?? '')
-    : [label.textContent ?? ''];
+function lines(scope: Element | null, selector: string): string[] {
+  if (scope === null) return [];
+  return [...scope.querySelectorAll(selector)]
+    .sort((a, b) => Number(a.getAttribute('y')) - Number(b.getAttribute('y')))
+    .map((t) => t.textContent ?? '');
 }
 
 /** The signature a key actually has, spelled the way the wedge spells it. */
@@ -71,14 +71,14 @@ describe('every wedge of the circle', () => {
     expect(wedges()).toHaveLength(CIRCLE.length);
 
     for (const [i, position] of CIRCLE.entries()) {
-      const signatures = lines(wedges()[i].querySelector('.wedge-signature'));
+      const signatures = lines(wedges()[i], '.wedge-signature');
       expect(signatures).toHaveLength(position.major.length);
     }
   });
 
   it('gives each spelling its own count, not its neighbour\'s', () => {
     for (const [i, position] of CIRCLE.entries()) {
-      const signatures = lines(wedges()[i].querySelector('.wedge-signature'));
+      const signatures = lines(wedges()[i], '.wedge-signature');
 
       expect(signatures).toEqual(position.major.map((k) => expected(k.accidentals)));
     }
@@ -90,8 +90,8 @@ describe('every wedge of the circle', () => {
     // would be worse than printing one, because it would look deliberate.
     for (const [i, position] of CIRCLE.entries()) {
       const wedge = wedges()[i];
-      const names = lines(wedge.querySelector('.wedge-label:not(.wedge-label-minor)'));
-      const signatures = lines(wedge.querySelector('.wedge-signature'));
+      const names = lines(wedge, '.wedge-label:not(.wedge-label-minor)');
+      const signatures = lines(wedge, '.wedge-signature');
 
       expect(names).toEqual(position.major.map((k) => keyName(k).replace(' major', '')));
       expect(signatures).toHaveLength(names.length);
@@ -135,30 +135,45 @@ describe('the enharmonic positions', () => {
  * throughout, and this is the assertion that would not have.
  */
 describe('stacking two spellings on one wedge', () => {
-  it('offsets them in em, so the gap scales with whatever size the row is', () => {
-    const stacked = [...container.querySelectorAll('text')]
-      .filter((t) => t.querySelectorAll('tspan').length > 1);
+  /**
+   * Drawn apart, asserted in the coordinates the browser uses.
+   *
+   * Two earlier versions stacked with `dy` on tspans — once a hardcoded
+   * pixel gap that collided under the largest of the three type sizes,
+   * once `em` on a `dy` attribute, which shipped as fixed and changed
+   * nothing on the page. Neither could be checked here: jsdom implements
+   * no `SVGAnimatedLengthList`, so a `dy` is an opaque string to this
+   * suite however it is written.
+   *
+   * Separate `text` elements at explicit `y` need no `dy` semantics, and
+   * `y` is a number this test can compare.
+   */
+  it('gives the two spellings different y, on every row that stacks', () => {
+    const stacked = [...container.querySelectorAll('g')]
+      .flatMap((wedge) => ['.wedge-label:not(.wedge-label-minor)', '.wedge-label-minor', '.wedge-signature']
+        .map((sel) => [...wedge.querySelectorAll(sel)])
+        .filter((group) => group.length > 1));
 
-    // Three major names, three minors, three signatures.
-    expect(stacked.length).toBeGreaterThanOrEqual(9);
+    // Three wedges carry two spellings, and each has three rows.
+    expect(stacked.length).toBe(9);
 
-    for (const text of stacked) {
-      for (const span of text.querySelectorAll('tspan')) {
-        const dy = span.getAttribute('dy') ?? '';
-        expect(dy, `"${span.textContent}" is offset by ${dy}`).toMatch(/em$/);
-      }
+    for (const group of stacked) {
+      const ys = group.map((t) => Number(t.getAttribute('y')));
+      const sizes = group.map((t) => Number(t.getAttribute('font-size')));
+      expect(new Set(ys).size, `${group.map((t) => t.textContent)} share a y`).toBe(ys.length);
+      // And far enough apart to clear the glyphs: the gap has to beat the
+      // type size, which is the thing the first version got wrong.
+      expect(Math.abs(ys[1] - ys[0])).toBeGreaterThan(Math.max(...sizes));
     }
   });
 
   it('puts both spellings of every shared wedge on their own line', () => {
-    // The pairs, by name, so a reordering of ALL_KEYS that changed which
-    // spelling leads is visible rather than silent.
-    const lines = [...container.querySelectorAll('text')]
-      .map((t) => [...t.querySelectorAll('tspan')].map((s) => s.textContent))
+    const all = [...container.querySelectorAll('g')]
+      .map((wedge) => lines(wedge, '.wedge-label:not(.wedge-label-minor)'))
       .filter((l) => l.length > 1);
 
     for (const pair of [['B', 'Cb'], ['Gb', 'F#'], ['Db', 'C#']]) {
-      expect(lines, `${pair.join('/')} is not stacked`)
+      expect(all, `${pair.join('/')} is not stacked`)
         .toContainEqual(expect.arrayContaining(pair));
     }
   });

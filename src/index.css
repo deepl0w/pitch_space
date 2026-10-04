@@ -266,13 +266,16 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 .wedge-subdominant { fill: color-mix(in oklab, var(--accent) 24%, var(--surface)); }
 .wedge-enharmonic { fill: color-mix(in oklab, var(--accent) 14%, var(--surface)); }
 
+/* No font-size here: CircleOfFifths sets it, because it also computes the
+   gap between two stacked spellings and a gap is only right relative to a
+   size. Two owners is how the two rings came to disagree. */
 .wedge-label {
-  font-size: 11px; font-weight: 600; fill: var(--ink);
+  font-weight: 600; fill: var(--ink);
   text-anchor: middle; dominant-baseline: middle; pointer-events: none;
 }
-.wedge-label-minor { font-size: 9.5px; font-weight: 500; fill: var(--muted); }
+.wedge-label-minor { font-weight: 500; fill: var(--muted); }
 .wedge-signature {
-  font-size: 8px; fill: var(--muted);
+  fill: var(--muted);
   text-anchor: middle; dominant-baseline: middle; pointer-events: none;
 }
 .circle-centre {

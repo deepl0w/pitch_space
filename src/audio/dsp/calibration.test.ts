@@ -271,19 +271,28 @@ function zeroLateBy(samples: Float32Array, frames: number): Float32Array {
 }
 
 describe('a recording whose zero is one buffer out', () => {
-  /** Six clicks with ordinary per-trial jitter, so the spread is a real one. */
-  const run = () => recording({
+  /**
+   * Six clicks with ordinary per-trial jitter, so the spread is a real one
+   * — and **one** recording, read twice, which is the entire claim. Two
+   * recordings differing by a buffer would be a different and
+   * uninteresting statement.
+   *
+   * At `describe` scope rather than rebuilt per case: the synthesis and
+   * the two STFT analyses cost 90 ms each time, and the four cases were
+   * paying for four recordings and eight analyses to examine two
+   * interpretations of one. 361 ms against 88 ms.
+   */
+  const { samples, trials } = recording({
     count: 6,
     latencySeconds: 0.16,
     jitter: [0, 0.002, -0.001, 0.003, -0.002, 0.001],
   });
+  const honest = estimateInputLatency({ samples, sampleRate: RATE, trials });
+  const late = estimateInputLatency({
+    samples: zeroLateBy(samples, PROCESSOR_FRAMES), sampleRate: RATE, trials,
+  });
 
   it('moves the whole answer by exactly one buffer', () => {
-    const { samples, trials } = run();
-    const honest = estimateInputLatency({ samples, sampleRate: RATE, trials });
-    const late = estimateInputLatency({
-      samples: zeroLateBy(samples, PROCESSOR_FRAMES), sampleRate: RATE, trials,
-    });
     expect(honest.ok && late.ok).toBe(true);
     if (!honest.ok || !late.ok) return;
 
@@ -298,11 +307,6 @@ describe('a recording whose zero is one buffer out', () => {
     // a constant added to all six leaves every quantile shifted and every
     // difference between them identical. The statistic cannot see this error
     // in principle — not by being badly tuned.
-    const { samples, trials } = run();
-    const honest = estimateInputLatency({ samples, sampleRate: RATE, trials });
-    const late = estimateInputLatency({
-      samples: zeroLateBy(samples, PROCESSOR_FRAMES), sampleRate: RATE, trials,
-    });
     if (!honest.ok || !late.ok) throw new Error('both should answer');
 
     expect(late.spreadSeconds).toBeCloseTo(honest.spreadSeconds, 6);
@@ -313,7 +317,6 @@ describe('a recording whose zero is one buffer out', () => {
     // Both land inside MAX_PLAUSIBLE_SECONDS and inside MAX_SPREAD_SECONDS,
     // which is what makes this worse than a crash: the user is shown a
     // number and an error bar, and the error bar is not about the error.
-    const { samples, trials } = run();
     for (const frames of [0, PROCESSOR_FRAMES]) {
       const out = estimateInputLatency({
         samples: zeroLateBy(samples, frames), sampleRate: RATE, trials,
@@ -326,11 +329,6 @@ describe('a recording whose zero is one buffer out', () => {
     // The ratio is the thing to quote. An error bar is a claim about how
     // wrong the answer might be, and this one is out by more than an order
     // of magnitude.
-    const { samples, trials } = run();
-    const honest = estimateInputLatency({ samples, sampleRate: RATE, trials });
-    const late = estimateInputLatency({
-      samples: zeroLateBy(samples, PROCESSOR_FRAMES), sampleRate: RATE, trials,
-    });
     if (!honest.ok || !late.ok) throw new Error('both should answer');
 
     const error = Math.abs(honest.latencySeconds - late.latencySeconds);

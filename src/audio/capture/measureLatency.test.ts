@@ -36,15 +36,21 @@ const deadSynth = { prepare: () => Promise.reject(new Error('no AudioContext')) 
 /** A synth that has never sounded — what every first calibration meets. */
 function freshSynth(): { synth: Synth; prepared: () => number } {
   let calls = 0;
-  // An audio clock that runs, like a real one. `run` waits until the last
-  // click's echo would have arrived — about 5.4 s of wall clock against a
-  // stopped clock, which is longer than the suite's patience. Advancing it
-  // a second per read makes the wait resolve immediately without faking
-  // away the arithmetic being tested.
+  // An audio clock that runs, like a real one, and runs fast enough that
+  // the wait is already over.
+  //
+  // `run` reads it twice — once for the recording's zero, once inside
+  // `waitUntil` — and waits until the last click's echo would have
+  // arrived, 5.35 s later. At one second per read that leaves 4.35 s
+  // still to wait and the test genuinely slept for it: 4.4 s of a 5 s
+  // default timeout, 88% of the budget, doing nothing. The comment here
+  // used to claim the opposite. Ten seconds a read clears the target on
+  // the second read, so the arithmetic is still exercised and the clamp
+  // to zero does the waiting.
   let now = 0;
   const context = {
     sampleRate: 44_100,
-    get currentTime() { now += 1; return now; },
+    get currentTime() { now += 10; return now; },
     // Enough of a graph for `run` to get past construction; the recording
     // itself still needs a device and is not claimed here.
     createMediaStreamSource: () => ({ connect() {}, disconnect() {} }),

@@ -54,31 +54,47 @@ function signatureText(key: Key): string {
  * `dy` on the first tspan rather than on the text element, because shifting
  * the text shifts the anchor too and the pair ends up off-centre.
  *
- * **In `em`, not pixels.** The same component sets all three rows and CSS
- * gives each a different size — 11px for a major name, 9.5px for a minor,
- * 8px for a signature. A fixed 11px gap is comfortable under 8px type and
- * is exactly the type's own height under 11px, so the major names printed
- * their two spellings on top of each other while the minor ring one step
- * in, with identical markup, read cleanly. Found by the user role, which
- * compared the two rings rather than reading either alone. An `em` is a
- * fraction of whatever size the row turns out to be, so the component
- * stops needing to know.
+ * **Two `text` elements at computed `y`, not one with `dy` on its tspans.**
+ * Twice now the stacking has been got wrong and the second time shipped
+ * as fixed: a hardcoded 11px gap collided under 11px type, and `em` on a
+ * `dy` *attribute* replaced it and changed nothing on the page. jsdom
+ * implements no `SVGAnimatedLengthList`, so neither version could be
+ * checked where the tests run, and both were reasoned about instead.
+ *
+ * Separate elements with explicit `y` need no `dy` semantics at all, and
+ * the component sets the font size rather than reading it from a
+ * stylesheet — which is the actual defect under both attempts. CSS owned
+ * the size, the component owned the gap, and a gap is only right relative
+ * to a size. One owner.
  */
-function WedgeLabel({ x, y, lines, className }: {
-  x: number; y: number; lines: string[]; className: string;
+const ROW_SIZE = { major: 11, minor: 9.5, signature: 8 } as const;
+
+export type WedgeRow = keyof typeof ROW_SIZE;
+
+function WedgeLabel({ x, y, lines, row, className }: {
+  x: number; y: number; lines: string[]; row: WedgeRow; className: string;
 }) {
+  const size = ROW_SIZE[row];
   if (lines.length === 1) {
-    return <text x={x} y={y} className={className}>{lines[0]}</text>;
+    return <text x={x} y={y} fontSize={size} className={className}>{lines[0]}</text>;
   }
+  // Centred on `y` as a pair: the first sits half a line above, the second
+  // half below, so adding a twin does not shift the wedge's single names.
+  const gap = size * 1.15;
   return (
-    <text x={x} y={y} className={className}>
-      {/* Keyed by position: two signatures on one wedge can read alike
-          (C has no twin, but nothing in the arithmetic forbids it), and a
-          duplicate key would drop a line rather than draw it. */}
+    <>
       {lines.map((line, i) => (
-        <tspan key={i} x={x} dy={i === 0 ? '-0.52em' : '1.12em'}>{line}</tspan>
+        <text
+          key={i}
+          x={x}
+          y={y + (i === 0 ? -gap / 2 : gap / 2)}
+          fontSize={size}
+          className={className}
+        >
+          {line}
+        </text>
       ))}
-    </text>
+    </>
   );
 }
 
@@ -144,9 +160,9 @@ export function CircleOfFifths() {
                     positions carry two spellings, and "B / C♭" is wider than a
                     thirty-degree wedge at this radius however small the type
                     gets — so the enharmonic twin goes on its own line. */}
-                <WedgeLabel x={mx} y={my} className="wedge-label"
+                <WedgeLabel x={mx} y={my} row="major" className="wedge-label"
                             lines={position.major.map((k) => keyName(k).replace(' major', ''))} />
-                <WedgeLabel x={nx} y={ny} className="wedge-label wedge-label-minor"
+                <WedgeLabel x={nx} y={ny} row="minor" className="wedge-label wedge-label-minor"
                             lines={position.minor.map((k) => `${keyName(k).replace(' minor', '')}m`)} />
                 {/* One per spelling, in the same order as the names above it.
                     A wedge is a position, but a position is not a signature
@@ -154,7 +170,7 @@ export function CircleOfFifths() {
                     sharps, and printing only the first taught the second as
                     a fact about the first. On a screen whose job is teaching
                     key signatures, that is the one thing it must not do. */}
-                <WedgeLabel x={sx} y={sy} className="wedge-signature"
+                <WedgeLabel x={sx} y={sy} row="signature" className="wedge-signature"
                             lines={position.major.map(signatureText)} />
               </g>
             );

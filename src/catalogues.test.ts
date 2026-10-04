@@ -33,12 +33,31 @@ const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
  * model of it, which is the part 0011's obligation is actually about.
  */
 describe('reaching the cell catalogue', () => {
+  /**
+   * Seeds per meter per grade.
+   *
+   * Measured rather than guessed, which the 400 this started with was not —
+   * that was an exploration budget, where being sure costs nothing, carried
+   * into a suite where it cost a test that failed about one run in three on
+   * timeout under worker contention. A check that red-lights for reasons
+   * unconnected to what it checks teaches people to re-run rather than to
+   * read, and this one guards a finding nobody will have independent reason
+   * to doubt for months.
+   *
+   * The reached set stops growing at 10 seeds over all grades and 15 over the
+   * askable ones; 60 is four times the worse of those. Too small a budget
+   * cannot pass quietly — a cell left unreached fails the first case and
+   * lengthens the stranded list in the third — so the number is a cost
+   * decision and not a correctness one.
+   */
+  const SEEDS = 60;
+
   /** Every cell id `chooseCells` will actually hand back at these grades. */
   function reachedAt(grades: readonly number[]): Set<string> {
     const reached = new Set<string>();
     for (const ts of TIME_SIGNATURES) {
       for (const grade of grades) {
-        for (let seed = 0; seed < 400; seed += 1) {
+        for (let seed = 0; seed < SEEDS; seed += 1) {
           const placements = chooseCells(makeRng(seed), { timeSignature: ts, bars: 1, grade });
           for (const placement of placements ?? []) reached.add(placement.cell.id);
         }
@@ -47,10 +66,18 @@ describe('reaching the cell catalogue', () => {
     return reached;
   }
 
+  /**
+   * Swept once at module scope, like `harmony.test.ts`'s own sweep.
+   *
+   * Two cases read these, and a sweep inside each `it` puts the whole cost
+   * inside a per-test timeout where it competes with 47 other files for
+   * workers. Here it is paid once, during collection.
+   */
+  const REACHED_ANYWHERE = reachedAt(GRADES);
+
   it('holds nothing dead — every cell is reachable by some query', () => {
     // The obligation itself, and the thing templates could not claim.
-    const missing = CELLS.filter((c) => !reachedAt(GRADES).has(c.id));
-    expect(missing.map((c) => c.id)).toEqual([]);
+    expect(CELLS.filter((c) => !REACHED_ANYWHERE.has(c.id)).map((c) => c.id)).toEqual([]);
   });
 
   /**
@@ -61,6 +88,7 @@ describe('reaching the cell catalogue', () => {
    * asserting a mapping that no longer exists.
    */
   const ASKABLE = [...new Set(Object.values(SHAPE_AT).map((s) => s.grade))].sort((a, b) => a - b);
+  const REACHED_ASKABLE = reachedAt(ASKABLE);
 
   it('is queried over a range that stops one grade short of the catalogue', () => {
     // The cause, named separately from its effect: the catalogue reaches 10
@@ -82,8 +110,7 @@ describe('reaching the cell catalogue', () => {
       two becoming reachable, which is what building the rhythm exercise
       against a mapping that reaches grade 10 would do.
     */
-    const reached = reachedAt(ASKABLE);
-    const stranded = CELLS.filter((c) => !reached.has(c.id)).map((c) => c.id).sort();
+    const stranded = CELLS.filter((c) => !REACHED_ASKABLE.has(c.id)).map((c) => c.id).sort();
     expect(stranded).toEqual(['quintuplet_s', 'septuplet_s']);
     for (const id of stranded) {
       expect(CELLS.find((c) => c.id === id)!.grade, `${id} is stranded for some other reason`)

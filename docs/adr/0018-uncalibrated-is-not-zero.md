@@ -127,6 +127,12 @@ as between ±1 and ±21 ms.
 So the spread across *devices* cannot yet be asked, because the spread across
 *runs of one device* is larger than the correction being measured, and the
 number the app reports as its confidence does not see it.
+
+**Narrowed the same day:** that device was a directional condenser. On the
+same machine's webcam microphone, four successes agreed within 12 ms
+(161–173). The question is narrowed rather than blocked, and 0025 carries a
+dated correction saying which of its conclusions survive — the mechanism does,
+the severity does not.
 [0025](0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)
 has the evidence and what follows.
 

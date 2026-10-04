@@ -185,3 +185,86 @@ That question is now blocked rather than answered.
 - **A MIDI device is connected while audio capture is running.** 0014's third
   trigger, which this evidence promotes from opportunistic to the most
   promising path left.
+
+## Correction, 4 October 2026 — one microphone, and what it was
+
+The evidence above was gathered on a single input device, and the device was
+not what anyone thought. Its ALSA card name reads "Trust USB microphone";
+PipeWire's own description says Blue Snowball — a directional condenser,
+pointed however it happened to be pointed. A loudspeaker-to-microphone timing
+measurement in a room with hard surfaces is close to a worst case for a narrow
+pickup pattern, and nothing rules out that the seven runs were exactly that.
+
+Re-run on the same machine with the webcam microphone as default input:
+
+| | Snowball | Webcam |
+| --- | --- | --- |
+| At 85%, the app's normal volume | never resolved in 40 s | **11 runs, all resolved inside 10 s** |
+| Volume needed for any success | 150% | 120% |
+| Successes, and their agreement | 39–171 ms | **161–173 ms, a 12 ms span** |
+
+### What stands, and it is the part that matters
+
+**The mechanism argument does not depend on the magnitude and never did.** An
+interquartile range over six trials that are all shifted by the same amount is
+unchanged, so the statistic cannot see the error that dominates. That is true
+of a Snowball wrong by 120 ms and of a webcam wrong by 3 ms, and it was true
+before any measurement existed. The title stands, the Decision's first clause
+stands, and [0019](0019-the-click-gap-stays-the-callers-and-the-margin-stops-being-a-comment.md)
+still predicted the shape.
+
+"Relocated, not met" stands and reads more sharply after the narrowing: we
+produce a confidence that cannot see its dominant error whatever the
+microphone, which is the thing 0014 objected to in the platform.
+
+**The ScriptProcessor lead gets more interesting, not less.** If a sometimes-late
+recording zero explains the Snowball's 115 ms clustering, the same fault on a
+good microphone is small, uniform, and reported as tight — invisible exactly
+where everything else looks healthy. It remains testable with no device, and
+it is now the first thing to do rather than the cheapest.
+
+### What was too strong, and should not be built on
+
+- **"No number has been measured that 0018 can use" and "0018's question is
+  blocked."** Both wrong. Four runs agreeing within 12 ms is the beginning of
+  an answer for this machine, and 0018's question is narrowed, not blocked.
+- **"Refusal is an expected outcome and may be the common one."** On the
+  webcam, every run resolved within ten seconds and each non-success named its
+  reason. Repeat-and-refuse is therefore a cheap safeguard rather than a
+  feature-killer: on hardware that works, runs agree and it will pass.
+- **"At a volume anyone would listen at, it never finishes."** That is a
+  Snowball sentence. The feature finishes promptly on a reasonable microphone.
+
+### What the new evidence adds in the estimator's favour
+
+The `inconsistent` refusal fired, repeatedly, in plain words — "the clicks came
+back at different delays, so there is no one number to use". The within-run
+guard works for the thing it is for, and this record under-credited it by
+treating a statistic that cannot catch *uniform* error as though it caught
+nothing. The screen also omits the error bar rather than printing "give or take
+0" when all six clicks agree exactly, which is the right instinct in the place
+this record is most critical of.
+
+### What the narrowing does not rescue
+
+The stimulus is still marginal at the volume the app ships at. On the good
+microphone, **no run succeeded at 85% and four of ten succeeded at 120%**. That
+is not a fact about the Snowball. The clicks-and-onsets instrument needs the
+user to turn their speakers past comfortable before it works at all, and the
+surveyed tools cross-correlate a spread signal precisely to avoid that. The
+Decision's last clause stands.
+
+### The fault in how this record was reached
+
+This record carried a revisit trigger reading "one room cannot distinguish
+'this instrument does not work' from 'this room does not work'" — and then its
+Consequences were written as though it could. **Naming a caveat in one section
+and arguing past it in another is worse than not having noticed**, because the
+document looks careful while reaching an unsupported conclusion, and the
+trigger made the limitation available to the author at the time of writing.
+
+The device name is the other half. "Trust USB microphone" was taken at face
+value in a report about measurement error; the name was an artefact describing
+the thing, mistaken for the thing. That is the fourth convention in
+[the index](README.md) once more, and this record is now an instance of it as
+well as a user of it.

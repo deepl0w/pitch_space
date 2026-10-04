@@ -258,10 +258,17 @@ export function coerceKeySettings(stored: unknown): KeySettings {
 export const ACCIDENTAL_CHOICES: readonly number[] =
   Array.from({ length: MAX_ACCIDENTALS + 1 }, (_, n) => n);
 
+/**
+ * The number, and only the number.
+ *
+ * These read "C major and A minor only", "Up to 3 accidentals", "All
+ * fifteen keys" — eight sentences that wrapped a single choice over four
+ * rows and said the same word six times. The caption carries the sense
+ * once; each option only has to carry what distinguishes it, which is a
+ * digit.
+ */
 function accidentalLabel(n: number): string {
-  if (n === 0) return 'C major and A minor only';
-  if (n === MAX_ACCIDENTALS) return 'All fifteen keys';
-  return `Up to ${n} accidental${n === 1 ? '' : 's'}`;
+  return String(n);
 }
 
 function clampAccidentals(value: unknown): number {
@@ -292,7 +299,7 @@ export const keySettingsSchema: SettingsSchema<KeySettings> = {
       }),
     },
     {
-      kind: 'choice', id: 'maxAccidentals', label: 'How far round the circle',
+      kind: 'choice', id: 'maxAccidentals', label: 'Up to how many accidentals',
       options: ACCIDENTAL_CHOICES.map((n) => ({ id: String(n), label: accidentalLabel(n) })),
       selected: (s) => String(s.maxAccidentals),
       apply: (s, option) => ({ ...s, maxAccidentals: clampAccidentals(Number(option)) }),

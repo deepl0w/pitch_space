@@ -17,7 +17,7 @@ export const degreeIdentification = defineExercise<
   DegreeSettings, DegreeExercise, DegreeResponse
 >({
   id: DEGREE_EXERCISE_ID,
-  name: 'Scale degree identification',
+  name: 'Scale degrees',
   description: 'Hear a key established, then name what a note is doing in it.',
   presentations: ['listen', 'read'],
   settings: degreeSettingsSchema,

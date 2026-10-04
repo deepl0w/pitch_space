@@ -116,7 +116,18 @@ describe('every exercise type’s settings', () => {
     // option id leaking into the dropdown. The ids are a storage format and
     // the labels are the only part the user reads, so they are allowed to
     // coincide only where the id is already how a musician writes it.
-    const written = /^(ii|iii|vi|vii|[IVX]+o?|[1-7])$/;
+    /*
+      Any plain number counts as written out, not just a scale degree.
+
+      This allowed 1 to 7 and nothing else, which was the range the
+      degree buttons needed and became wrong twice in one sitting: an
+      accidental count starts at 0 and a bar count reaches 16. What the
+      rule is actually for is a *slug* reaching the screen — `treble`,
+      `m7b5`, `dom7b13` — and a number is never that. The unit lives in
+      the field's caption, which is what stopped these controls saying
+      "bars" six times and wrapping onto two rows.
+    */
+    const written = /^(ii|iii|vi|vii|[IVX]+o?|\d{1,2})$/;
     each((d) => {
       for (const field of d.settings.fields) {
         if (field.kind === 'toggle') continue;

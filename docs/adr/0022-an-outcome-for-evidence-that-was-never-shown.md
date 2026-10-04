@@ -1,6 +1,6 @@
 # ADR 0022 — An outcome for evidence that was never shown
 
-- **Status:** Accepted
+- **Status:** Superseded by [0028](0028-a-question-only-absolute-pitch-can-answer.md)
 - **Date:** 2026-10-04
 
 Found by the tester while implementing

@@ -16,7 +16,7 @@ export const intervalIdentification = defineExercise<
   IntervalSettings, IntervalExercise, IntervalResponse
 >({
   id: INTERVAL_EXERCISE_ID,
-  name: 'Interval identification',
+  name: 'Intervals',
   // Both: the same interval read off the staff and heard are different
   // skills, and a learner is routinely fluent at one and lost at the other.
   presentations: ['listen', 'read'],

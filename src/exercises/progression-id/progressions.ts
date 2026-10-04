@@ -522,8 +522,12 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     {
       kind: 'choice',
       id: 'bars',
-      label: 'Length',
-      options: BAR_CHOICES.map((b) => ({ id: `${b}`, label: `${b} bars` })),
+      // The unit goes in the caption and the options carry the number,
+      // for the reason the accidental count does: "2 bars 4 bars 6 bars
+      // 8 bars 12 bars 16 bars" says "bars" six times and wraps a single
+      // choice onto two rows to do it.
+      label: 'Length (bars)',
+      options: BAR_CHOICES.map((b) => ({ id: `${b}`, label: `${b}` })),
       selected: (s) => `${s.bars}`,
       apply: (s, option) => ({ ...s, bars: Number(option) }),
     },

@@ -1,6 +1,6 @@
 # ADR 0020 — By ear, the unit is the sounding key
 
-- **Status:** Accepted
+- **Status:** Superseded by [0028](0028-a-question-only-absolute-pitch-can-answer.md)
 - **Date:** 2026-10-04
 
 Applies [0007](0007-an-attempt-records-per-event-item-attribution.md)'s rule

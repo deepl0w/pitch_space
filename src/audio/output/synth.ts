@@ -55,6 +55,23 @@ export class Synth {
     return { context: this.context, master: this.master!, waking };
   }
 
+  /**
+   * The one `AudioContext`, for the capture layer.
+   *
+   * Not a widening of the containment but the reason for it. ADR 0005 says
+   * there is one context, and ADR 0014 says input and output have to be on
+   * one clock or a measured round trip means nothing — so capture cannot
+   * mint its own, and the only way for it to share this one is to be handed
+   * it. Null before the first sound, because the context is created lazily
+   * on a user gesture.
+   *
+   * Read, never owned: closing or suspending it from outside would silence
+   * the app, and nothing outside this class may do that.
+   */
+  get audioContext(): AudioContext | null {
+    return this.context;
+  }
+
   get currentTime(): number {
     return this.context?.currentTime ?? 0;
   }

@@ -4,7 +4,7 @@ import { localStorageSlot, type Slot } from './persistence';
 import { migrate, versioned, type Versioned } from './migrate';
 import {
   coerceSettings, settingsDefaults, SETTINGS_KEY, SETTINGS_MIGRATIONS, SETTINGS_SCHEMA,
-  type SettingsDoc,
+  UNCALIBRATED, type LatencySource, type SettingsDoc,
 } from './schema';
 
 /**
@@ -34,6 +34,13 @@ export interface SettingsState {
   persisting: boolean;
   setExerciseSettings(exerciseId: string, settings: unknown): void;
   setLastExercise(exerciseId: string | null): void;
+  /**
+   * Record, or forget, what the round trip costs.
+   *
+   * Passing null forgets it — which is a real action and not a reset to
+   * zero (ADR 0018), and is what the user needs after changing headphones.
+   */
+  setInputLatency(latencyMs: number | null, source: LatencySource): void;
   reset(): void;
 }
 
@@ -69,6 +76,15 @@ export function createSettingsStore(
       },
       setLastExercise(exerciseId) {
         commit({ ...get().doc, lastExercise: exerciseId });
+      },
+      setInputLatency(latencyMs, source) {
+        // Stamped here rather than by the caller: the time is for noticing a
+        // stale calibration, and a caller passing its own would let two
+        // routes into this disagree about what "when" means.
+        const audio = latencyMs === null
+          ? { ...UNCALIBRATED }
+          : { inputLatencyMs: latencyMs, source, measuredAt: Date.now() };
+        commit({ ...get().doc, audio });
       },
       reset() {
         // Clearing is the one thing a non-persisting store may still write,

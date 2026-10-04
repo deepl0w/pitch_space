@@ -235,6 +235,18 @@ Aligning by dynamic programming rather than by nearest-neighbour matters because
 a player who drops a note should be told they dropped a note, not have every
 subsequent onset counted wrong.
 
+Nothing here transcribes. The app generated the exercise, so it holds the
+symbolic answer and the question is *does this match* rather than *what is
+this* — which is score following, and is why dynamic programming against a
+known reference is the right family. The judge therefore consumes performed
+notes rather than audio, from either a microphone or a MIDI instrument
+([ADR 0012](adr/0012-the-judge-consumes-performed-notes-not-audio.md)); Web
+MIDI is unavailable on Safari and iOS, so neither source can be the only one.
+Knowing the answer also means a chord localises to per-tone outcomes without
+polyphonic transcription, and that an inconclusive hearing reports *no*
+outcome rather than a wrong one
+([ADR 0013](adr/0013-knowing-the-answer-narrows-what-judging-has-to-do.md)).
+
 ## Generation
 
 `generate/` chooses; `theory/` knows. The division is that `theory/` contains

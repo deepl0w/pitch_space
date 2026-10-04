@@ -22,11 +22,11 @@ declare global {
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-function mount() {
+function mount(props: Parameters<typeof Calibration>[0] = {}) {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
-  act(() => root.render(<Calibration />));
+  act(() => root.render(<Calibration {...props} />));
   return {
     container,
     text: () => container.textContent ?? '',
@@ -127,6 +127,30 @@ describe('setting it by hand', () => {
   it('will not submit an empty box', () => {
     screen = mount();
     expect(screen.button('Use this')?.disabled).toBe(true);
+  });
+});
+
+/**
+ * The screen has to come back, whatever the audio did.
+ *
+ * `measureInputLatency` resolves with a refusal for every failure it
+ * anticipates, which made the handler read as though it could not reject.
+ * The audio graph it builds can throw, and then the button sat on
+ * "Listening…" for ever — no error, no way back, on the one screen whose
+ * job is to be optional. A user watched it hang past forty seconds
+ * against a measurement that takes five.
+ */
+describe('when the measurement goes wrong', () => {
+  it('comes back to a button the user can press again', async () => {
+    const broken = () => Promise.reject(new Error('the audio graph threw'));
+    screen = mount({ measureWith: broken });
+
+    await act(async () => { screen.button('Measure it')?.click(); });
+
+    expect(screen.button('Measure it'), 'still listening').toBeDefined();
+    expect(screen.text()).not.toContain('Listening…');
+    // And says something, rather than failing silently.
+    expect(screen.container.querySelector('.verdict')).not.toBeNull();
   });
 });
 

@@ -26,6 +26,17 @@ const LEAD_SECONDS = 0.35;
 /** Long enough for the last click's echo to arrive however slow the device. */
 const TAIL_SECONDS = 0.8;
 
+/**
+ * The longest the whole thing may take, whatever the audio graph is doing.
+ *
+ * The run is 5.35 s of scheduled sound and the wait is computed from the
+ * audio clock, so in principle it cannot overrun. In practice a user
+ * watched it sit past forty seconds, and a setup screen with no way out is
+ * worse than one that admits defeat. A ceiling costs nothing when the
+ * normal path takes a third of it.
+ */
+const DEADLINE_SECONDS = 20;
+
 /** A bright, short click. High, because a room's noise is mostly low. */
 const CLICK_MIDI = 93;
 
@@ -35,7 +46,9 @@ export type MeasureFailure =
   /** No microphone at all, or it was taken by something else. */
   | 'no-device'
   /** The browser has no capture API — an old WebView, or an insecure origin. */
-  | 'unsupported';
+  | 'unsupported'
+  /** The audio graph never finished, however long it was given. */
+  | 'timed-out';
 
 export type MeasureOutcome = CalibrationOutcome | { ok: false; reason: MeasureFailure };
 
@@ -85,7 +98,18 @@ export async function measureInputLatency(deps: MeasureDeps): Promise<MeasureOut
   }
 
   try {
-    return await run(deps.synth, stream);
+    return await Promise.race([
+      run(deps.synth, stream),
+      // Resolves rather than rejects: a timeout is a thing to tell the user
+      // about, not an exception for a boundary to swallow — the same rule
+      // every other failure here follows.
+      new Promise<MeasureOutcome>((resolve) => {
+        setTimeout(
+          () => resolve({ ok: false, reason: 'timed-out' }),
+          DEADLINE_SECONDS * 1000,
+        );
+      }),
+    ]);
   } finally {
     // Always, including when the estimate throws: a live microphone after a
     // settings screen has closed is the kind of thing a user notices in
@@ -186,4 +210,7 @@ export const MEASURE_MESSAGES: Record<MeasureFailure, string> = {
     'No microphone was available. Plug one in, or set the delay by hand.',
   unsupported:
     'This browser will not let the app record. You can set the delay by hand.',
+  'timed-out':
+    'The measurement did not finish. Try turning the volume up, or set the '
+    + 'delay by hand.',
 };

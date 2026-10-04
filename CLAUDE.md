@@ -242,6 +242,10 @@ reproduce exactly.
   this file said "the three roles" over a table of four for two days. Put the
   argument where it belongs and point at it from everywhere else; the ADR
   index already carries this as its first convention, for claims about code.
+- **When a mechanism exists to answer a question directly, a correlate of
+  the answer is not a substitute for running it.** A matching test count is
+  not `git merge-base`; telling one agent is not `fleet.sh announce`. See
+  [docs/process/2026-10-04-a-proxy-is-not-the-mechanism.md](docs/process/2026-10-04-a-proxy-is-not-the-mechanism.md).
 - **A document over about a hundred lines opens with a contents block**, as
   links, so an agent can find the one section it needs and read that. Write
   headings that say what is under them rather than gesturing at it, and keep

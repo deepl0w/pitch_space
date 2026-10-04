@@ -29,21 +29,49 @@ const entry = entryFor('calibration');
  * the failure text is as carefully written as the success text and says what
  * to do differently.
  */
-export function Calibration() {
+export function Calibration({ measureWith = measureInputLatency }: {
+  /**
+   * Injected so a test can make the measurement fail, which is the one
+   * path that cannot be reached otherwise — the same reason a prompt is
+   * handed its `audio` and `measureInputLatency` is handed its `getMedia`.
+   */
+  measureWith?: typeof measureInputLatency;
+} = {}) {
   const audio = useSettings((s) => s.doc.audio);
   const [state, setState] = useState<'idle' | 'measuring'>('idle');
   const [outcome, setOutcome] = useState<MeasureOutcome | null>(null);
   const [typed, setTyped] = useState('');
 
+  /**
+   * Always returns the button to a state the user can act from.
+   *
+   * It did not. `measureInputLatency` resolves with a refusal for every
+   * failure it anticipates, so this read as though it could not reject —
+   * but the audio graph it builds can throw, and then the await rejected,
+   * `setState('idle')` never ran, and the button sat on "Listening…" for
+   * ever with no error and no way back. Found by the user role, which saw
+   * it hang past forty seconds in a real room against a measurement that
+   * takes five.
+   *
+   * The `finally` is the fix and the `catch` is the courtesy: a screen
+   * that stops responding tells the user nothing, and the one thing it can
+   * always say is that the automatic path did not work and the box below
+   * still does.
+   */
   async function measure() {
     setState('measuring');
     setOutcome(null);
-    const result = await measureInputLatency({ synth: appSynth });
-    setOutcome(result);
-    if (result.ok) {
-      settingsStore.getState().setInputLatency(result.latencySeconds * 1000, 'measured');
+    try {
+      const result = await measureWith({ synth: appSynth });
+      setOutcome(result);
+      if (result.ok) {
+        settingsStore.getState().setInputLatency(result.latencySeconds * 1000, 'measured');
+      }
+    } catch {
+      setOutcome({ ok: false, reason: 'unsupported' });
+    } finally {
+      setState('idle');
     }
-    setState('idle');
   }
 
   function applyTyped() {

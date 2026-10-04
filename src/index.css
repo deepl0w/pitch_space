@@ -103,19 +103,31 @@ main {
 
    A column rather than the full width: the exercise is a handful of
    short rows and a stave, and left-aligned in a 1400px track it sits in
-   the corner of an empty screen. */
-.practice-main > * { width: 100%; max-width: 44rem; margin-inline: auto; }
-.practice-main header { text-align: center; }
-.practice-main .lede { margin-inline: auto; }
-.practice-main .actions,
-.practice-main .choices,
-.practice-main .slots,
-.practice-main .nav { justify-content: center; }
-.practice-main .prompt { text-align: center; }
+   the corner of an empty screen.
+
+   Written as `main .practice-main` rather than `.practice-main`, which
+   is not decoration. `.lede` and `.actions` both set a `margin`
+   shorthand of their own, further down the file and at the same
+   specificity, so `margin-inline: auto` lost on source order alone and
+   three things ended up centred on three different axes: the heading on
+   the column's centre, the Start button hard against the left, and the
+   lede somewhere between. Adding the element selector decides it by
+   specificity instead of by which rule happens to come last. */
+main .practice-main > * { width: 100%; max-width: 44rem; margin-inline: auto; }
+main .practice-main > header,
+main .practice-main > .lede,
+main .practice-main > .prompt { text-align: center; }
+/* Centring the block is not centring the text: the lede is capped at
+   42rem of its own, so a centred box still left-aligns a short sentence
+   inside it and the sentence reads off-centre. */
+main .practice-main .actions,
+main .practice-main .choices,
+main .practice-main .slots,
+main .practice-main .nav { justify-content: center; }
 
 /* The one button there is before a question exists. It is the whole of
    what the screen is asking you to do, so it says so. */
-.practice-main .actions > button:first-child {
+main .practice-main .actions > button:first-child {
   font-size: 1rem; font-weight: 650; padding: 0.6rem 1.5rem;
 }
 
@@ -402,7 +414,17 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    look; this only has to undo what `.field` would otherwise impose. */
 .field-toggle { flex: 0 0 auto; display: inline-flex; }
 /* The run of them shares a row, and takes one of its own. */
-.chips-toggles { flex: 1 1 100%; }
+.chips-toggles {
+  flex: 1 1 100%;
+  /* A run of toggles is the one group in the panel with no caption over
+     it, so the panel's between-group gap plus the blank where a caption
+     would be reads as a hole — it is 18px of nothing against the 14px
+     that separates every other group, and the eye counts the missing
+     line as well. Pulled up to roughly the gap a caption gets from the
+     pills under it, which is the right claim: an uncaptioned run should
+     not be separated harder than a captioned one. */
+  margin-top: -0.3rem;
+}
 
 
 .prompt { margin-bottom: 1.25rem; }

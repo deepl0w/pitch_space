@@ -72,13 +72,36 @@ rather than over the inputs its current callers happen to produce.
 `vii°` in minor is not one is true whether or not any template writes it today,
 so that branch is an untested corner and not dead code.
 
+**A comment that states a constraint is a test that cannot fail, so check the
+constraint and not the comment.** Three instances in one day, and the first two
+caused the defects they described. `keys.ts` opens by forbidding exactly the
+enharmonic marking the by-ear path then did — "An exercise that showed two
+sharps and accepted only 'D major' would be marking a correct answer wrong" —
+and [0020](0020-by-ear-the-unit-is-the-sounding-key.md) is that comment being
+true and unenforced. `KeyPrompt.tsx` opened "the prompt is deliberately silent:
+this is a reading exercise, so there is nothing to play", which was true when
+written and was falsified by `presentations: ['read', 'listen']` being added
+past it; the exercise then advertised a listening mode and sounded nothing. The
+third was a test rather than a comment — the applied-chord exemption in
+`isBorrowedIn`, whose only example was the one applied chord that returns false
+with the exemption deleted.
+
+All three are confidence without a check, and the confidence is what did the
+damage: a comment stating a constraint reads like an assurance that somebody is
+enforcing it, so the next reader does not look. **A constraint worth writing in
+a comment is worth a test, and the comment should point at the test.** Where
+that is not possible, say what is unenforced rather than stating the rule as
+though it holds.
+
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code
 rides on the record that made it. The second says check exactly — a guard fires
 only on what can change the thing it guards. They meet because a guard broad
 enough to be noisy and a claim nobody ever checks fail in the same place: at the
 moment someone decides the signal is not worth reading. The third says which
-kind of thing you are holding before you apply either.
+kind of thing you are holding before you apply either, and the fourth is the
+first one again, pointed at prose: a comment is a claim about the code, and it
+goes stale exactly the way a record does.
 
 [`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
 0018 and 0020 as one argument, because five of them are the same rule meeting a

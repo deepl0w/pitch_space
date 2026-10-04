@@ -99,3 +99,31 @@ and is not the only defensible place.
   the user.** This is the second instance in one grader; a third anywhere makes
   it a check worth running over the registry rather than a decision per
   exercise.
+
+## Addendum, 4 October 2026
+
+Found by the tester implementing this record. It is a consequence this record
+creates and did not foresee, and it needs a decision that is not this record's
+to take.
+
+**The readout renders `exercise.items` directly, so withholding the outcome
+makes a permanent empty row.** A by-ear learner now sees a line under "How this
+has gone" reading "5 sharps — not recorded yet", and it will say that forever,
+because nothing by ear will ever record it.
+
+That is this record working. `items` keeps the signature because the rendering
+contained it, the outcome is withheld because the listener was not tested on
+it, and "shown and not tested" is precisely the state
+[0007](0007-an-attempt-records-per-event-item-attribution.md) keeps two lists
+to express. The decision above is unchanged.
+
+**What is wrong is the view.** A progress list is read as "here is how you are
+doing", and an item this presentation can never move does not belong in it —
+the distinction `items` carries is for a scheduler, which wants to know what
+was shown, not for a learner, who wants to know what they can improve. The
+readout is shared by every exercise, so this is one decision about what a
+progress list is for rather than a patch to key identification.
+
+Left undecided here deliberately: it is a view-level question, the readout
+belongs to no record yet, and guessing at it from inside a grading record is
+how a shared component acquires an exercise-specific rule.

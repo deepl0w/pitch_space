@@ -5,10 +5,9 @@ import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
 import { usePlayer } from '../sound';
 import { pitchName } from '../../theory/pitch';
-import { ALL_KEYS, keyId } from '../../theory/key';
 import { SCALE_TYPES, degreeLabel, spellScale } from '../../theory/scale';
 import { noteValue } from '../../theory/meter';
-import { CLEFS, OCTAVES, keyOptions } from './options';
+import { CLEFS, OCTAVES, signatureKey, tonicFor, tonicOptions } from './options';
 
 const FAMILIES = ['common', 'mode', 'pentatonic', 'symmetric', 'exotic'] as const;
 
@@ -16,21 +15,29 @@ const FAMILIES = ['common', 'mode', 'pentatonic', 'symmetric', 'exotic'] as cons
 const entry = entryFor('scales');
 
 export function Scales() {
-  const [keyIdValue, setKeyIdValue] = useState('C_major');
+  const [tonicName, setTonicName] = useState('C');
   const [scaleId, setScaleId] = useState('major');
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();
 
-  const key = ALL_KEYS.find((k) => keyId(k) === keyIdValue)!;
+  const tonicPitch = tonicFor(tonicName);
   const type = SCALE_TYPES.find((s) => s.id === scaleId)!;
+  /*
+    The signature of the scale on screen, not of a key chosen beside it.
+    Picking a *key* here and a scale separately let the two disagree: A♭
+    minor with the major scale drew seven flats over A♭ major and then three
+    naturals to take them back, which is not how anyone writes A♭ major.
+    Most scales have no signature at all, and `undefined` says so.
+  */
+  const key = signatureKey(tonicPitch, scaleId);
 
   const pitches = useMemo(() => {
-    const tonic = { ...key.tonic, octave };
+    const tonic = { ...tonicPitch, octave };
     const one = spellScale(tonic, type);
     // Close the octave, so it sounds finished rather than cut off.
     return [...one, { ...one[0], octave: one[0].octave + 1 }];
-  }, [key, type, octave]);
+  }, [tonicPitch, type, octave]);
 
   const notes = useMemo(
     () => pitches.map((p) => ({ pitches: [p], value: noteValue('q') })),
@@ -46,7 +53,10 @@ export function Scales() {
       </header>
 
       <Panel>
-        <Picker label="Key" value={keyIdValue} onChange={setKeyIdValue} options={keyOptions()} />
+        {/* Annotated with the signature this tonic gives *this* scale, so the
+            number beside the name is the number on the stave. */}
+        <Picker label="Tonic" value={tonicName} onChange={setTonicName}
+                options={tonicOptions(scaleId)} />
         <Picker
           label="Scale"
           value={scaleId}
@@ -67,7 +77,7 @@ export function Scales() {
       </Actions>
 
       <Readout
-        title={`${pitchName(key.tonic, false)} ${type.name}`}
+        title={`${tonicName} ${type.name}`}
         items={pitches.map((p, i) => ({
           primary: pitchName(p),
           secondary: i === pitches.length - 1 ? '8' : degreeLabel(type, i),

@@ -110,8 +110,8 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
 </header>
 
 <div class="figures">
-  <div class="fig"><b>606</b><span>tests passing</span></div>
-  <div class="fig"><b>38</b><span>test files</span></div>
+  <div class="fig"><b>619</b><span>tests passing</span></div>
+  <div class="fig"><b>40</b><span>test files</span></div>
   <div class="fig"><b>15</b><span>ADRs</span></div>
   <div class="fig"><b>16,922</b><span>lines in src</span></div>
   <div class="fig"><b>3 / 6</b><span>exercises asked for</span></div>
@@ -128,7 +128,7 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
 <h2>Where it stands</h2>
 
 <p>Every figure on this page is read out of the repository by
-<code>tools/report-facts.sh</code> rather than recalled. 606 tests pass, none fail,
+<code>tools/report-facts.sh</code> rather than recalled. 619 tests pass, none fail,
 three are <code>todo</code>. <code>tsc</code> and <code>oxlint</code> are clean. The
 whole history is on <code>main</code> under one author; the eight <code>claude/*</code>
 branches are all zero ahead and exist only as stale pointers.</p>
@@ -429,33 +429,51 @@ boundary would have put the likeliest throw out of its reach.</p>
 </section>
 
 <section>
-<h2>Four things the app currently gets wrong in front of the user</h2>
+<h2>Four things the app told the user wrongly; three are fixed</h2>
 
 <p>Found in the same sweep, listed by how badly each misleads rather than by effort. The
-first two matter more than their size suggests, because this is an app for learning music
-and both of them teach something false.</p>
+first two mattered more than their size suggested, because this is an app for learning
+music and both of them taught something false. One of the two turned out to be much worse
+than its triage.</p>
 
 <div class="scroll">
 <table>
 <thead><tr><th>What</th><th></th><th>Why it matters</th></tr></thead>
 <tbody>
-<tr><td>Dead clef control</td><td><span class="chip none">says something untrue</span></td>
-  <td>The home card and the exercise's own subtitle both advertise reading intervals off
-  the staff, and there is no way to get there. The exercise declares both presentations;
-  the route does not offer the choice.</td></tr>
-<tr><td>Circle-of-fifths counts</td><td><span class="chip none">wrong as theory</span></td>
-  <td>A wedge carries two spellings and one signature, so "D♭ / C♯" prints 5♭ — right for
-  D♭, wrong for C♯, which has seven sharps. On the screen whose job is teaching key
-  signatures.</td></tr>
-<tr><td>Key selector mode label</td><td><span class="chip part">wrong as theory</span></td>
-  <td>Same family, milder: "A♭ minor (7 flats)" with the scale set to Major renders
-  "A♭ Major", which has four.</td></tr>
-<tr><td>Mobile touch targets</td><td><span class="chip part">unusable on a phone</span></td>
-  <td>Rhythms has 31 buttons at 25 px. It ships as a PWA and an APK, so this is the
-  primary target rather than an edge case.</td></tr>
+<tr><td>Circle-of-fifths counts</td><td><span class="chip ok">fixed</span></td>
+  <td>A wedge carried two spellings and one signature, so "D♭ / C♯" printed 5♭ — right for
+  D♭, wrong for C♯, which has seven sharps. Each spelling now carries its own, stacked in
+  the order of the names above it: B/C♭ reads 5♯/7♭, G♭/F♯ reads 6♭/6♯.</td></tr>
+<tr><td>Scales drew the wrong signature</td><td><span class="chip ok">fixed</span></td>
+  <td>Triaged as a label and it was the stave. The screen passed the <em>picked key</em> to
+  the score while the notes came from the <em>picked scale</em>, so the two could disagree
+  outright — A♭ minor with the scale set to Major engraved seven flats and then three
+  naturals cancelling them, against four clean flats when the pair agreed. It now picks a
+  tonic and derives the signature from what is drawn.</td></tr>
+<tr><td>Dead clef control</td><td><span class="chip ok">fixed</span></td>
+  <td>The home card and the exercise's own subtitle both advertised reading intervals off
+  the staff, and there was no way to get there. Everything was built — both presentations
+  declared, the engraving written, the prompt already suppressing playback when reading —
+  and the settings field was missing, so none of it was reachable.</td></tr>
+<tr><td>Mobile touch targets</td><td><span class="chip part">open</span></td>
+  <td>Rhythms has 31 buttons at 25 px against a 44 px guideline. It ships as a PWA and an
+  APK, so this is the primary target rather than an edge case.</td></tr>
 </tbody>
 </table>
 </div>
+
+<p>Two of the three fixes came with a test that names no screen. The circle's sweeps every
+position rather than the three that pair today, with a guard against passing vacuously if
+the enumeration ever stopped producing pairs. The scales one asserts the general claim —
+for every tonic and every scale type, where a signature is offered the scale shown must be
+that key's own scale, note for note and spelling included.</p>
+
+<p><b>The third is the one worth keeping.</b> The guard that should have caught the
+unreachable reading presentation could not: it checked that every <em>offered</em> option
+is declared, then skipped any exercise with no field at all — so declaring two
+presentations and offering neither passed. It now checks both directions. That is the
+third guard this week found unable to fail, after a chroma claim nothing verified and a
+clock fake that closed the gap it existed to model.</p>
 
 <p>Seven more are recorded and can wait: raw clef values and item ids shown to the user, a
 single-item readout, a silent no-op that does the right thing, a tab title, a template

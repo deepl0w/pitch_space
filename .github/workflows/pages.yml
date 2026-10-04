@@ -1,0 +1,56 @@
+# Publish the built app to GitHub Pages.
+#
+# Separate from ci.yml on purpose. CI answers "is this correct" and runs
+# on every push and pull request; this answers "is this live" and runs
+# only for main. Folding them together would mean a deploy job sitting
+# permanently skipped on every PR, and a red deploy would read as a
+# failed test run.
+name: Pages
+
+on:
+  push: { branches: [main] }
+  # So a broken deploy can be retried without an empty commit.
+  workflow_dispatch:
+
+# Pages needs these; nothing else in this file does.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time, and never cancel one half-done — an interrupted
+# deploy can leave the site serving a partial build.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The same checks CI runs. A site that builds but does not pass is
+      # not worth publishing, and this workflow can reach Pages without
+      # ci.yml having finished.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

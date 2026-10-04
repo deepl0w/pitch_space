@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createProgressStore, defaultAttemptLog, tallyItems } from './progressStore';
+import { createProgressStore, defaultAttemptLog, tallyItems, tallyKey } from './progressStore';
 import { memoryLog, type Log } from './persistence';
+import type { ItemId } from '../exercises/types';
 import { versioned } from './migrate';
 import { ATTEMPT_SCHEMA, attemptRow, type Attempt, type AttemptRow } from './schema';
 
@@ -18,6 +19,7 @@ function attempt(over: Partial<Attempt> = {}): Attempt {
     exerciseType: 'interval-id',
     seed: 1,
     settings: {},
+    presentation: 'listen',
     startedAt: 1_000,
     answeredAt: 2_000,
     items: ['interval:m3:up'],
@@ -215,17 +217,17 @@ describe('folding a history into per-item counts', () => {
       attempt({ outcomes: [{ item: m3, correct: false }] }),
       attempt({ outcomes: [{ item: p5, correct: true }] }),
     ]);
-    expect(tally.get(m3)).toEqual({ seen: 2, correct: 1, lastSeenAt: 2000 });
-    expect(tally.get(p5)).toEqual({ seen: 1, correct: 1, lastSeenAt: 2000 });
+    expect(tally.get(tallyKey(m3, 'listen'))).toEqual({ seen: 2, correct: 1, lastSeenAt: 2000 });
+    expect(tally.get(tallyKey(p5, 'listen'))).toEqual({ seen: 1, correct: 1, lastSeenAt: 2000 });
   });
 
   it('counts every item one attempt tested, not just the first', () => {
     const tally = tallyItems([attempt({
       outcomes: [{ item: m3, correct: true }, { item: p5, correct: false }],
     })]);
-    expect(tally.get(m3)?.correct).toBe(1);
-    expect(tally.get(p5)?.correct).toBe(0);
-    expect(tally.get(p5)?.seen).toBe(1);
+    expect(tally.get(tallyKey(m3, 'listen'))?.correct).toBe(1);
+    expect(tally.get(tallyKey(p5, 'listen'))?.correct).toBe(0);
+    expect(tally.get(tallyKey(p5, 'listen'))?.seen).toBe(1);
   });
 
   it('credits only what was tested, never what the exercise merely contained', () => {
@@ -235,8 +237,8 @@ describe('folding a history into per-item counts', () => {
       items: [m3, p5],
       outcomes: [{ item: m3, correct: true }],
     })]);
-    expect(tally.get(m3)).toEqual({ seen: 1, correct: 1, lastSeenAt: 2000 });
-    expect(tally.has(p5)).toBe(false);
+    expect(tally.get(tallyKey(m3, 'listen'))).toEqual({ seen: 1, correct: 1, lastSeenAt: 2000 });
+    expect(tally.has(tallyKey(p5, 'listen'))).toBe(false);
   });
 
   it('remembers the most recent sighting, whatever order the attempts arrive in', () => {
@@ -244,8 +246,35 @@ describe('folding a history into per-item counts', () => {
     // a history that only ever runs one way.
     const seen = (times: number[]) => tallyItems(
       times.map((answeredAt) => attempt({ answeredAt, outcomes: [{ item: m3, correct: true }] })),
-    ).get(m3)?.lastSeenAt;
+    ).get(tallyKey(m3, 'listen'))?.lastSeenAt;
     expect(seen([500, 100])).toBe(500);
     expect(seen([100, 500])).toBe(500);
+  });
+});
+
+describe('tallying by eye and by ear', () => {
+  const m3 = 'interval:m3:up' as ItemId;
+
+  /**
+   * ADR 0010: progress is tracked against the item *and* the sense it was
+   * tested through. The contract already said so; the code summed them, so
+   * a user fluent by eye and hopeless by ear showed as middling at both —
+   * hiding exactly the weakness the schedule exists to find.
+   */
+  it('keeps a read attempt and a heard attempt at one item apart', () => {
+    const tally = tallyItems([
+      attempt({ id: 'r', presentation: 'read', outcomes: [{ item: m3, correct: true }] }),
+      attempt({ id: 'l', presentation: 'listen', outcomes: [{ item: m3, correct: false }] }),
+    ]);
+    expect(tally.get(tallyKey(m3, 'read'))).toEqual({ seen: 1, correct: 1, lastSeenAt: 2000 });
+    expect(tally.get(tallyKey(m3, 'listen'))).toEqual({ seen: 1, correct: 0, lastSeenAt: 2000 });
+    expect(tally.size).toBe(2);
+  });
+
+  // The key is built, not concatenated at each call site, and the item id
+  // stays free of the presentation so either can change without the other.
+  it('builds a key that keeps the item id intact', () => {
+    expect(tallyKey(m3, 'read')).toBe('read:interval:m3:up');
+    expect(tallyKey(m3, 'listen')).toBe('listen:interval:m3:up');
   });
 });

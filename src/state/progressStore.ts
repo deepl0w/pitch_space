@@ -1,6 +1,6 @@
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import type { ItemId } from '../exercises/types';
+import type { ItemId, Presentation } from '../exercises/types';
 import { memoryLog, type Log } from './persistence';
 import { indexedDbAvailable, indexedDbLog } from './indexedDbLog';
 import { migrate } from './migrate';
@@ -152,15 +152,38 @@ export interface ItemTally {
  * Keyed by a Map in insertion order, which is fine: nothing musical is being
  * decided here, so ADR 0002's rule about iteration order does not apply.
  */
-export function tallyItems(attempts: readonly Attempt[]): Map<ItemId, ItemTally> {
-  const tally = new Map<ItemId, ItemTally>();
+/**
+ * The key a tally is kept under: an item, and the sense it was tested through.
+ *
+ * Not an ItemId with the presentation baked into the string. An id is a
+ * compatibility commitment — it keys a user's history across releases — and
+ * one encoding two orthogonal things cannot be changed along either axis
+ * without breaking the other. See ADR 0010.
+ */
+export type TallyKey = `${Presentation}:${ItemId}`;
+
+export function tallyKey(item: ItemId, presentation: Presentation): TallyKey {
+  return `${presentation}:${item}`;
+}
+
+/**
+ * How each item has gone, counted separately by eye and by ear.
+ *
+ * Summing the two was wrong and the contract already said so: reading a minor
+ * third off the staff and hearing one are different skills, and a learner is
+ * routinely fluent at one and lost at the other. Blending them hides exactly
+ * the weakness the schedule exists to find.
+ */
+export function tallyItems(attempts: readonly Attempt[]): Map<TallyKey, ItemTally> {
+  const tally = new Map<TallyKey, ItemTally>();
   for (const attempt of attempts) {
     for (const outcome of attempt.outcomes) {
-      const entry = tally.get(outcome.item) ?? { seen: 0, correct: 0, lastSeenAt: 0 };
+      const key = tallyKey(outcome.item, attempt.presentation);
+      const entry = tally.get(key) ?? { seen: 0, correct: 0, lastSeenAt: 0 };
       entry.seen++;
       if (outcome.correct) entry.correct++;
       entry.lastSeenAt = Math.max(entry.lastSeenAt, attempt.answeredAt);
-      tally.set(outcome.item, entry);
+      tally.set(key, entry);
     }
   }
   return tally;

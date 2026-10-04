@@ -1,4 +1,4 @@
-import type { ItemId, ItemOutcome } from '../exercises/types';
+import type { ItemId, ItemOutcome, Presentation } from '../exercises/types';
 import { assertStepsCoverVersions, type MigrationStep, type Versioned } from './migrate';
 
 /**
@@ -77,7 +77,7 @@ export function coerceSettings(data: unknown): SettingsDoc {
 
 /* -- attempts ------------------------------------------------------------- */
 
-export const ATTEMPT_SCHEMA = 1;
+export const ATTEMPT_SCHEMA = 2;
 
 /**
  * One answered exercise, in the shape a spaced-repetition scheduler will
@@ -99,6 +99,15 @@ export interface AttemptV1 {
    */
   seed: number;
   settings: unknown;
+  /**
+   * Which sense the question was put to, read or heard.
+   *
+   * A named field rather than a reach into `settings`, which is `unknown` and
+   * validated by nothing. ADR 0010 makes this part of what an attempt means —
+   * progress is tracked per item *and* per presentation — and a schedule
+   * keyed on a field no reader checks is the fragile kind.
+   */
+  presentation: Presentation;
   /** Epoch milliseconds. */
   startedAt: number;
   answeredAt: number;
@@ -116,9 +125,23 @@ export interface AttemptV1 {
   correct: boolean;
 }
 
-export type Attempt = AttemptV1;
+export type Attempt = AttemptV2;
+export type AttemptV2 = AttemptV1;
 
-export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [];
+export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [
+  // 1 -> 2: give every attempt a presentation of its own.
+  //
+  // Attempts written before the field existed were all heard — reading was
+  // not an option any exercise offered — so 'listen' is what happened rather
+  // than a guess. A few late v1 rows carry it inside `settings`; prefer that
+  // where it is there. Leaving them unlabelled would have merged a user's
+  // whole history into whichever bucket the reader defaulted to.
+  (data) => {
+    const a = data as Record<string, unknown>;
+    const stored = (a.settings as { presentation?: unknown } | null)?.presentation;
+    return { ...a, presentation: stored === 'read' ? 'read' : 'listen' };
+  },
+];
 
 /**
  * The row as IndexedDB stores it: the versioned payload, plus the two fields
@@ -157,6 +180,9 @@ export function coerceAttempt(data: unknown): Attempt {
   const a = data as Partial<AttemptV1>;
   if (typeof a.id !== 'string' || a.id === '') throw new Error('Attempt has no id');
   if (typeof a.exerciseType !== 'string') throw new Error(`Attempt ${a.id} has no exercise type`);
+  if (a.presentation !== 'read' && a.presentation !== 'listen') {
+    throw new Error(`Attempt ${a.id} has no presentation`);
+  }
   // `typeof` rather than `Number.isFinite` alone, which accepts the value but
   // does not narrow away `undefined`.
   if (typeof a.seed !== 'number' || !Number.isFinite(a.seed)) {
@@ -178,6 +204,7 @@ export function coerceAttempt(data: unknown): Attempt {
     exerciseType: a.exerciseType,
     seed: a.seed,
     settings: a.settings,
+    presentation: a.presentation,
     startedAt: a.startedAt,
     answeredAt: a.answeredAt,
     items: [...a.items],

@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  attemptRow, coerceAttempt, coerceSettings, settingsDefaults,
-  ATTEMPT_SCHEMA, SETTINGS_DEFAULTS, SETTINGS_MIGRATIONS, SETTINGS_SCHEMA,
-  ATTEMPT_MIGRATIONS,
+  ATTEMPT_MIGRATIONS, ATTEMPT_SCHEMA, SETTINGS_DEFAULTS, SETTINGS_MIGRATIONS,
+  SETTINGS_SCHEMA, attemptRow, coerceAttempt, coerceSettings, settingsDefaults,
   type Attempt,
 } from './schema';
-import { assertStepsCoverVersions } from './migrate';
+import { assertStepsCoverVersions, migrate, versioned } from './migrate';
 
 /**
  * The two coercions, which are the only things standing between a
@@ -22,6 +21,7 @@ const attempt: Attempt = {
   exerciseType: 'interval-id',
   seed: 7919,
   settings: { difficulty: 2 },
+  presentation: 'listen' as const,
   startedAt: 1_700_000_000_000,
   answeredAt: 1_700_000_004_000,
   items: ['interval:m3:up'],
@@ -194,5 +194,65 @@ describe('the migration tables in this file', () => {
       .not.toThrow();
     expect(() => assertStepsCoverVersions('attempt', ATTEMPT_SCHEMA, ATTEMPT_MIGRATIONS))
       .not.toThrow();
+  });
+});
+
+describe('upgrading an attempt from v1 to v2', () => {
+  /**
+   * The first migration this app has ever run, over the one thing in it a
+   * user cannot get back. A migration that silently does nothing is worse
+   * than one that fails: the data is still there, every reader sees a field
+   * that was never filled, and nothing says so.
+   */
+  const v1 = (over: Record<string, unknown> = {}) => ({
+    id: 'old-1',
+    exerciseType: 'interval-id',
+    seed: 7,
+    settings: { difficulty: 2 },
+    startedAt: 1_000,
+    answeredAt: 2_000,
+    items: ['interval:m3:up'],
+    outcomes: [{ item: 'interval:m3:up', correct: true }],
+    correct: true,
+    ...over,
+  });
+
+  const upgrade = (stored: unknown) =>
+    migrate<Attempt>(versioned(1, stored), {
+      current: ATTEMPT_SCHEMA,
+      steps: ATTEMPT_MIGRATIONS,
+      validate: coerceAttempt,
+    });
+
+  it('gives an attempt written before the field existed one it can be read by', () => {
+    const out = upgrade(v1());
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    // 'listen' is what happened, not a default: reading was not an option
+    // any exercise offered when these rows were written.
+    expect(out.value.presentation).toBe('listen');
+    expect(out.migrated).toBe(true);
+  });
+
+  it('prefers a presentation the row already carried inside its settings', () => {
+    const out = upgrade(v1({ settings: { difficulty: 2, presentation: 'read' } }));
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.value.presentation).toBe('read');
+  });
+
+  it('leaves everything else about the attempt alone', () => {
+    const out = upgrade(v1());
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.value.id).toBe('old-1');
+    expect(out.value.seed).toBe(7);
+    expect(out.value.outcomes).toEqual([{ item: 'interval:m3:up', correct: true }]);
+    expect(out.value.correct).toBe(true);
+  });
+
+  // The check runs on migrated data, so a step that forgot the field has to
+  // be refused rather than stored half-upgraded.
+  it('refuses a v2 attempt that has no presentation at all', () => {
+    expect(() => coerceAttempt(v1())).toThrow(/presentation/);
   });
 });

@@ -90,5 +90,30 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./src/testing/setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+
+    /*
+      Raised from vitest's 5000ms because this suite is mostly sweeps and
+      that default was never chosen for them. One sweep sat at 2.6s — a
+      1.9x margin — which passed here, failed on CI, and in between
+      produced a single unreproducible red run that cost a session to
+      chase. Measured under contention, with other agents running suites
+      on the same machine, every slow test runs 1.4x to 2.0x longer, so a
+      margin computed on a quiet laptop is not the margin anything else
+      gets. At 20s nothing in the suite is inside 3x even loaded.
+
+      The cost is real and is the reason `slowTestThreshold` is set with
+      it: the old default was accidentally guarding against a sweep
+      creeping from one second to fifteen, and raising it gives that up.
+      A test that crosses a second is listed by `./test.sh` after every
+      unit run, which catches the creep without turning a slow machine
+      into a red build. That listing is the guard, not this setting:
+      vitest only prints a duration once it passes the threshold, and the
+      default reporter does not print it at all, so the number here does
+      nothing on its own and the script runs verbose to read it. Change
+      one and the other stops meaning anything. Bound a test tightly in
+      the test itself where being bounded is the thing under test.
+    */
+    testTimeout: 20_000,
+    slowTestThreshold: 1_000,
   },
 })

@@ -192,12 +192,32 @@ if $COVERAGE; then
     echo
 elif $UNIT; then
     echo -e "${BLUE}Unit tests${NC}"
-    if npx vitest run; then
+    # Verbose into a file, so the slow list below has durations to read.
+    # The reporter only prints a test's time once it crosses
+    # `slowTestThreshold`, and the default reporter never prints it at all,
+    # so without this the threshold in vite.config.ts is a setting nobody
+    # ever sees — which is the whole guard that justified raising
+    # `testTimeout` off its default.
+    UNIT_LOG="$(mktemp -t vitest-XXXXXX.log)"
+    if npx vitest run --reporter=verbose >"$UNIT_LOG" 2>&1; then
+        grep -E '^ *Test Files |^ *Tests ' "$UNIT_LOG"
         echo -e "${GREEN}✓${NC} passed"
     else
+        cat "$UNIT_LOG"
         echo -e "${RED}✗${NC} failed — rerun one file with: npx vitest run <path>"
         FAILURES=$((FAILURES + 1))
     fi
+
+    # Tests slow enough to be worth knowing about. Not a failure: a slow
+    # sweep is usually a sweep doing its job, and the number is here so a
+    # creep from one second to fifteen is visible on the run that caused
+    # it rather than on the CI run that eventually times out.
+    SLOW="$(grep -oE '^ *✓ .* [0-9]{4,}ms$' "$UNIT_LOG" | sed -E 's/^ *✓ /  /' || true)"
+    if [ -n "$SLOW" ]; then
+        echo -e "${YELLOW}⚠${NC} slow tests (over ${SLOW_TEST_MS:-1000}ms):"
+        echo "$SLOW"
+    fi
+    rm -f "$UNIT_LOG"
     echo
 fi
 

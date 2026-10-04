@@ -166,6 +166,15 @@ export function numeralText(n: RomanNumeral): string {
   let quality = '';
   if (n.typeId === 'dim' || n.typeId === 'dim7') quality = 'o';
   else if (n.typeId === 'm7b5') quality = 'ø';
+  // A major seventh is marked; a minor one is the default reading of the
+  // figure. Without this, maj7 and dom7 on the same degree both printed
+  // "I7" — and the key does not resolve it, because IV7 in a major key is
+  // genuinely ambiguous between the diatonic IVmaj7 and a borrowed
+  // dominant, and the corpus contains both. Same category error add6 fixed
+  // for the sixths: two chords rendering to one string. For a progression
+  // exercise where the user names what each chord is doing, that is
+  // correctness rather than cosmetics.
+  else if (n.typeId === 'maj7' || n.typeId === 'minmaj7') quality = 'maj';
   // aug7 takes the seventh figures, so without the sign it prints as a plain
   // dominant seventh — a different chord, not a shorthand for this one.
   else if (n.typeId === 'aug' || n.typeId === 'aug7') quality = '+';

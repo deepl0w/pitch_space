@@ -204,11 +204,29 @@ describe('numerals that must be unambiguous as a prompt', () => {
     expect(numeralText(numeral(5, 'dom7'))).toBe('V7');
   });
 
-  // maj7 and dom7 both printing I7 is NOT this problem, and the distinction is
-  // the point. A figure states an interval above the bass and leaves quality to
-  // the key, so I7 in C major is Cmaj7 and V7 is G7 — the key resolves it. An
-  // added sixth is a chord member rather than a figure, so no key can resolve
-  // I6; both readings are available in the same key at the same time.
+  // An earlier version of this test accepted maj7 and dom7 both printing I7,
+  // on the argument that a figure leaves quality to the key. That argument is
+  // wrong where it matters: IV7 in a major key is ambiguous between the
+  // diatonic IVmaj7 and a borrowed dominant, and the template corpus contains
+  // both — so the key resolves nothing and a progression exercise asking what
+  // each chord is doing cannot mark the answer. A major seventh is marked now.
+  it('gives every chord type on one degree a numeral of its own', () => {
+    const seen = new Map<string, string>();
+    for (const type of CHORD_TYPES) {
+      const text = numeralText(numeral(1, type.id));
+      const clash = seen.get(text);
+      expect(clash, `${type.id} and ${clash} both print ${text}`).toBeUndefined();
+      seen.set(text, type.id);
+    }
+  });
+
+  it('marks a major seventh and leaves a minor one as the plain figure', () => {
+    expect(numeralText(numeral(1, 'maj7'))).toBe('Imaj7');
+    expect(numeralText(numeral(5, 'dom7'))).toBe('V7');
+    expect(numeralText(numeral(1, 'min7'))).toBe('i7');
+    expect(numeralText(numeral(1, 'minmaj7'))).toBe('imaj7');
+  });
+
   it('never prints a chord member as a figure a triad inversion already uses', () => {
     // Every triad and every inversion, not just a major one in root position:
     // the diminished and augmented triads carry a quality sign and the minor

@@ -35,7 +35,7 @@ const BLURBS: Record<string, string> = {
 const BUILT: MenuEntry[] = EXERCISE_TYPES.map((type) => ({
   route: type.id,
   name: type.name,
-  blurb: BLURBS[type.id] ?? '',
+  blurb: BLURBS[type.id] ?? type.description,
   ready: true,
 }));
 

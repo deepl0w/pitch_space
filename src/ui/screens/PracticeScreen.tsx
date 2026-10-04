@@ -6,7 +6,7 @@ import { newAttemptId, newSeed } from '../../exercises/seed';
 import type { AudioOut, ExerciseBase, Result } from '../../exercises/types';
 import { appSynth } from '../sound';
 import { settingsStore, useSettings } from '../../state/settingsStore';
-import { progressStore, tallyItems, useProgress } from '../../state/progressStore';
+import { progressStore, tallyItems, tallyKey, useProgress } from '../../state/progressStore';
 import type { Attempt } from '../../state/schema';
 
 /**
@@ -109,6 +109,10 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
       exerciseType: definition.id,
       seed: round.exercise.seed,
       settings: round.settings,
+      // From the exercise, not from the live settings: the exercise carries
+      // how it was actually asked, and the setting may have been changed
+      // since it was generated.
+      presentation: round.exercise.presentation,
       startedAt: round.startedAt,
       answeredAt: Date.now(),
       items: [...round.exercise.items],
@@ -208,7 +212,9 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
           <h2>How this has gone</h2>
           <ol className="items">
             {round.exercise.items.map((item) => {
-              const counts = tally.get(item);
+              // Counted per sense (ADR 0010), so the figure shown is for the
+              // way this exercise was actually asked.
+              const counts = tally.get(tallyKey(item, round.exercise.presentation));
               return (
                 <li key={item}>
                   <span className="primary">{item}</span>

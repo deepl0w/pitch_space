@@ -194,6 +194,7 @@ describe('a history kept in IndexedDB', () => {
     exerciseType: 'interval-id',
     seed: 7919,
     settings: { difficulty: 2 },
+    presentation: 'listen' as const,
     startedAt: answeredAt - 3_000,
     answeredAt,
     items: ['interval:m3:up'],

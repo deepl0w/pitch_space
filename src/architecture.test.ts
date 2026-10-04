@@ -52,19 +52,30 @@ function show(path: string): string {
 }
 
 /**
- * Line-by-line matches, so a failure names the line and not just the file.
+ * The file with its comments blanked out, line numbers preserved.
  *
- * Comment-only lines are skipped, because these rules match prose otherwise.
- * A sentence ending "…had only partly entered the window." tripped the
- * platform rule, which is the kind of false positive that teaches people the
- * guard is noise. A line with code on it is still checked however it ends, so
- * `const x = window.foo; // note` is caught.
+ * These rules match prose otherwise: a sentence ending "…had only partly
+ * entered the window." tripped the platform rule, which is the kind of false
+ * positive that teaches people the guard is noise.
+ *
+ * Skipping lines that *look* like comments was the first fix and it cut the
+ * other way — `const w = 2\n  * window.innerWidth;` begins with `*`, so a real
+ * platform read hid behind a continuation line. `audio/dsp/` wraps arithmetic
+ * across lines constantly, which is where that would have landed. Blanking the
+ * comments themselves has neither failure mode.
  */
+function codeOf(file: string): string[] {
+  const source = readFileSync(file, 'utf8');
+  // Spaces rather than nothing, so columns and line numbers both survive.
+  const blanked = source.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+  return blanked.split('\n').map((l) => l.replace(/\/\/.*$/, ''));
+}
+
+/** Line-by-line matches, so a failure names the line and not just the file. */
 function hits(files: string[], pattern: RegExp): string[] {
   const found: string[] = [];
   for (const file of files) {
-    readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
-      if (/^\s*(\/\/|\*|\/\*)/.test(line)) return;
+    codeOf(file).forEach((line, i) => {
       if (pattern.test(line)) found.push(`${show(file)}:${i + 1}  ${line.trim()}`);
     });
   }

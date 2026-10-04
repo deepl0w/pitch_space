@@ -329,6 +329,8 @@ export const keySettingsSchema: SettingsSchema<KeySettings> = {
     },
     {
       kind: 'choice', id: 'readSource', label: 'Read from',
+      // Nothing is read when the question is a cadence.
+      relevant: (s) => s.presentation === 'read',
       options: [
         { id: 'signature', label: 'The key signature' },
         { id: 'accidentals', label: 'The notes, no signature' },
@@ -364,6 +366,9 @@ export const keySettingsSchema: SettingsSchema<KeySettings> = {
     },
     {
       kind: 'multi', id: 'clefs', label: 'Clefs',
+      // No staff is drawn for a heard question (ADR 0020), so a clef
+      // chooses nothing.
+      relevant: (s) => s.presentation === 'read',
       options: CLEFS.map((c) => ({ id: c, label: c[0].toUpperCase() + c.slice(1) })),
       selected: (s) => s.clefs,
       apply: (s, options) => (options.length === 0 ? s : { ...s, clefs: coerceClefs(options) }),

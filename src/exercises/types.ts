@@ -168,20 +168,37 @@ export interface ExerciseBase {
 export type SettingField<S> =
   | {
     kind: 'choice'; id: string; label: string; options: readonly SettingOption[];
+    relevant?: FieldRelevance<S>;
     selected(settings: S): string;
     apply(settings: S, option: string): S;
   }
   | {
     kind: 'multi'; id: string; label: string; options: readonly SettingOption[];
+    relevant?: FieldRelevance<S>;
     selected(settings: S): readonly string[];
     /** May refuse: an empty pool is not a setting, it is a broken generator. */
     apply(settings: S, options: readonly string[]): S;
   }
   | {
     kind: 'toggle'; id: string; label: string;
+    relevant?: FieldRelevance<S>;
     selected(settings: S): boolean;
     apply(settings: S, on: boolean): S;
   };
+
+/**
+ * Whether a field applies, given the rest of the settings.
+ *
+ * A control that cannot affect the next question is worse than a missing
+ * one: it invites the user to set something and then ignores them. Key
+ * identification asked by ear left its clef and its read-source sitting
+ * there enabled, both inert the moment the question stopped being seen.
+ *
+ * A predicate rather than a flag on the definition, because what makes a
+ * field irrelevant is usually another field — and absent means relevant,
+ * so a field that never needs to say nothing says nothing.
+ */
+export type FieldRelevance<S> = (settings: S) => boolean;
 
 export interface SettingOption {
   /** Stored, so it is as much of a compatibility commitment as an item id. */

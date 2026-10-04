@@ -211,3 +211,52 @@ describe('every declared presentation gives the user something', () => {
     }
   }
 });
+
+/**
+ * A control that cannot affect the next question is not offered.
+ *
+ * Worse than a missing control, because it invites the user to set
+ * something and then ignores them. Key identification asked by ear left
+ * its clefs and its read-source enabled and inert — the question is a
+ * cadence, no staff is drawn (ADR 0020), and neither field chooses
+ * anything. Found by the user role configuring an exercise rather than
+ * reading one.
+ *
+ * **The general form of this is not written here, and the reason is worth
+ * keeping.** The obvious version — generate once per option and require
+ * the questions to differ — fails on `degree-id`'s "Named as", which
+ * chooses between numbers and solfège. That field changes what the
+ * buttons say and not what is asked, which is legitimate and is not
+ * inertness. The contract has no way to say "this one affects the
+ * rendering rather than the question", so a sweep cannot tell a
+ * display-only field from a dead one, and a test that cannot tell them
+ * apart would either pass vacuously or fail on a working control. Written
+ * out, tried, and abandoned rather than weakened.
+ */
+describe('settings that cannot change the question', () => {
+  const keyId = EXERCISE_TYPES.find((d) => d.id === 'key-id')!;
+
+  function shownWhen(presentation: Presentation): string[] {
+    const settings = keyId.settings.coerce({
+      ...(keyId.settings.defaults as object), presentation,
+    });
+    return keyId.settings.fields
+      .filter((f) => f.relevant?.(settings) ?? true)
+      .map((f) => f.id);
+  }
+
+  it('hides the clef and the source when the question is heard', () => {
+    const heard = shownWhen('listen');
+    expect(heard).not.toContain('clefs');
+    expect(heard).not.toContain('readSource');
+    // And still offers the one that decides what is asked.
+    expect(heard).toContain('presentation');
+  });
+
+  it('shows them again when the question is read', () => {
+    // Otherwise "hides them" would pass for a field nobody ever sees.
+    const read = shownWhen('read');
+    expect(read).toContain('clefs');
+    expect(read).toContain('readSource');
+  });
+});

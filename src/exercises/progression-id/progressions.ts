@@ -112,6 +112,15 @@ export const SHAPE_AT: Record<Difficulty, { bars: number; grade: number }> = {
   5: { bars: 8, grade: 9 },
 };
 
+/** What actually differs between the five, in the user's terms. */
+const DIFFICULTY_BLURBS: Record<Difficulty, string> = {
+  1: 'four bars, the plainest progressions',
+  2: 'four bars, a wider corpus',
+  3: 'eight bars',
+  4: 'eight bars, sevenths and inversions',
+  5: 'eight bars, everything',
+};
+
 export const PROGRESSION_DEFAULTS: ProgressionSettings = {
   difficulty: 2,
   presentation: 'listen',
@@ -355,8 +364,15 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       kind: 'choice',
       id: 'difficulty',
       label: 'Difficulty',
+      // Named rather than measured in bars. The label used to read
+      // "1 — 4 bars" through "5 — 8 bars", where the one concrete fact in
+      // it was not what moved: two levels share four bars and three share
+      // eight, while the thing that actually changes across all five is
+      // how much of the corpus and how many devices are in play. A label
+      // whose only number is the one that does not track the setting
+      // teaches the wrong thing about the setting.
       options: ([1, 2, 3, 4, 5] as Difficulty[]).map((d) => ({
-        id: `${d}`, label: `${d} — ${SHAPE_AT[d].bars} bars`,
+        id: `${d}`, label: `${d} — ${DIFFICULTY_BLURBS[d]}`,
       })),
       selected: (s) => `${s.difficulty}`,
       apply: (s, option) => ({ ...s, difficulty: coerceDifficulty(Number(option)) }),
@@ -380,14 +396,14 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     {
       kind: 'toggle',
       id: 'appliedDominants',
-      label: 'Applied dominants',
+      label: 'Applied dominants (V of a chord other than the tonic)',
       selected: (s) => s.appliedDominants,
       apply: (s, on) => ({ ...s, appliedDominants: on }),
     },
     {
       kind: 'toggle',
       id: 'varyCadence',
-      label: 'Vary the close',
+      label: 'Vary the close (not every phrase ends V–I)',
       selected: (s) => s.varyCadence,
       apply: (s, on) => ({ ...s, varyCadence: on }),
     },

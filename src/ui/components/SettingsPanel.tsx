@@ -23,7 +23,13 @@ export function SettingsPanel<S>({ fields, settings, onChange }: {
 }) {
   return (
     <Panel>
-      {fields.map((field) => {
+      {/*
+        A field that cannot affect the next question is not shown. It is
+        worse than a missing control, because it invites the user to set
+        something and then ignores them — key identification asked by ear
+        left its clef and its read-source enabled and inert.
+      */}
+      {fields.filter((field) => field.relevant?.(settings) ?? true).map((field) => {
         switch (field.kind) {
           case 'choice':
             return (

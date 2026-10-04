@@ -30,6 +30,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0013](0013-knowing-the-answer-narrows-what-judging-has-to-do.md) | Knowing the answer narrows what judging has to do | Accepted |
 | [0014](0014-one-clock-and-the-latency-nobody-can-measure.md) | One clock, and the latency nobody can measure | Accepted |
 | [0015](0015-state-keyed-to-the-exercise-type-must-not-outlive-it.md) | State keyed to the exercise type must not outlive it | Accepted |
+| [0016](0016-widen-the-query-not-the-corpus.md) | Widen the query, not the corpus, and only when it pays on its own | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in

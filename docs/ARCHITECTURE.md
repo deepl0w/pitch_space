@@ -163,6 +163,22 @@ app meant to be installable: **a lazily loaded chunk has to be precached by the
 service worker or the app breaks offline**, and `vite-plugin-pwa` is currently
 a declared dependency that `vite.config.ts` never imports.
 
+**A family is a kind of practice; a type is one way of asking it.**
+[`registry.ts`](../src/exercises/registry.ts) groups types into families, so
+the home screen offers six kinds rather than nine ways of asking them, and the
+practice screen offers a family's types in a selector. The grouping lives in
+the registry rather than the menu because it is a fact about the exercises and
+the menu is a view of it.
+
+It is a grouping and not a merge, and
+[ADR 0007](adr/0007-an-attempt-records-per-event-item-attribution.md) is why: a
+type's id is what the attempt log stores and what every recorded item is keyed
+by, so folding three types into one would orphan everything a user had learned
+under the ids that disappeared. Each type keeps its id; only the presentation
+changed. The cost is two id namespaces that both carry compatibility
+commitments — family ids are routes, type ids are log keys — and `findFamily`
+accepts either, so a bookmark made before the families existed still resolves.
+
 **The evidence is good for adding a type and was bad for switching between
 them.** Adding is cheap as advertised: the second exercise,
 [`key-id`](../src/exercises/key-id), is 356 lines of non-test source and

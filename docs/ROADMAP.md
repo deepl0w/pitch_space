@@ -55,6 +55,28 @@ when the exercise as a whole was failed. Items an exercise merely *contained*
 without testing — a key signature in a bar with no accidentals — should get
 nothing.
 
+**It is not in the flashcard textbooks, but it is in the literature.** SM-2 and
+FSRS do both assume one item per review, so the framing above is right about
+them. The field that does address many-to-many attribution is knowledge
+tracing, where an exercise is an *item* tagged with several *knowledge
+components* and a single graded response updates all of them — the Additive
+Factors Model and Performance Factors Analysis lineage, and most directly
+[DAS3H](https://arxiv.org/abs/1905.06873), which added memory decay to
+multi-skill tagging and allows the learning and forgetting curves to differ
+from one skill to another.
+
+Two things follow, neither of which changes the plan. The design arrived at
+above — per-event attribution, per-item state, credit only for what was
+actually tested — is the same shape that literature converged on, which is
+reassurance rather than a reason to adopt a model that needs a large review
+corpus nobody has yet. And per-skill curves are the evidence for
+[ADR 0010](adr/0010-presentation-is-part-of-what-an-attempt-means.md): if
+forgetting rates differ by skill, then reading a third and hearing one are two
+skills with two curves, not one skill seen twice.
+
+Starting with SM-2 remains right. The note is here so that whoever revisits the
+algorithm knows the prior art exists and does not re-derive it.
+
 ### The algorithm
 
 Start with **SM-2**: about fifty lines, thoroughly understood, and its failure

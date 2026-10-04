@@ -57,10 +57,16 @@ node -e '
   } catch { console.log("catalogues      unreadable"); }
 ' 2>/dev/null
 
-# Counted from the array's entries, not from a line shape: the old pattern
-# required [a-zA-Z]+ and would have silently dropped chord7Identification.
-printf 'exercises       %s built\n' "$(sed -n '/^export const EXERCISE_TYPES/,/^];/p' \
-    src/exercises/registry.ts 2>/dev/null | grep -cE '^\s+\w+,\s*$' || echo '?')"
+# Counted from the filesystem, not from registry.ts. Two earlier versions
+# read the source: the first required an identifier of [a-zA-Z]+ and would
+# have dropped chord7Identification, and the second parsed the EXERCISE_TYPES
+# array literal — which stopped existing the moment that array became the
+# families flattened, and quietly printed 0. A directory with an index.ts is
+# an exercise, and registry.test.ts already fails if one is not registered.
+printf 'exercises       %s built\n' \
+    "$(find src/exercises -mindepth 2 -maxdepth 2 -name index.ts | wc -l | tr -d ' ')"
+printf 'families        %s\n' \
+    "$(grep -cE "^    id: '" src/exercises/registry.ts 2>/dev/null || echo '?')"
 printf 'screens         %s\n' "$(ls src/ui/screens/*.tsx 2>/dev/null | grep -vc test || echo 0)"
 
 # A dist older than the last commit that could change it reports a previous

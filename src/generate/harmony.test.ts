@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_KEYS, type Key, keyName } from '../theory/key';
+import { ALL_KEYS, type Key, findKey, keyName } from '../theory/key';
 import { diatonicOf, pitchClass, pitchName } from '../theory/pitch';
 import { identifyChord, spellChord } from '../theory/chord';
 import { timeSignature } from '../theory/meter';
@@ -7,7 +7,7 @@ import { makeRng, pick, rngInt } from '../theory/rng';
 import {
   type CadenceType, type RomanNumeral, numeralText, realizeNumeral,
 } from '../theory/roman';
-import { type StyleTag } from './templates';
+import { type StyleTag, isBorrowedIn } from './templates';
 import {
   type Harmony, type HarmonyEvent, type HarmonyOptions, type PhraseForm,
   bassNote, generateHarmony, isSixFour, planPhrases, sixFourKind,
@@ -445,5 +445,225 @@ describe('determinism', () => {
         .map((e) => numeralText(e.numeral)).join(' '));
     }
     expect(texts.size).toBeGreaterThan(200);
+  });
+});
+
+/**
+ * ADR 0017: the two flags *exclude*, rather than merely decline to add.
+ *
+ * The sweep above draws `allowAppliedDominants` and `allowBorrowed` as `true`
+ * or `undefined` and never as `false`, so every assertion in this file so far
+ * has been made about a generator with both switches on or defaulted. The off
+ * position is the one the record is about — it is what makes a difficulty that
+ * promises no applied dominants deliver none, and what stops the attempt log
+ * recording a `V/IV` the user was never told to expect.
+ *
+ * Four paths can put one of these chords in a progression: a quoted template
+ * whose own data carries it, the transformation pass that adds it, the state
+ * machine that fills a phrase when nothing is quoted, and the cadence writes
+ * that overwrite whatever was there. Asserting over the finished events covers
+ * all four, including the one 0017's correction was written about — a borrowed
+ * chord spelled by quality rather than by alteration, which the first filter
+ * let through.
+ */
+const WITHOUT_GRADES = [1, 3, 4, 5, 6, 7, 8, 9, 10];
+
+/**
+ * One case twice over: the same draw, generated once with both flags off and
+ * once with both on. Sharing the draw is what makes the pair comparable — a
+ * difference between them is the flags and cannot be the options.
+ */
+function flagCase(index: number, allow: boolean): Case {
+  const r = makeRng(index);
+  const options: HarmonyOptions = {
+    key: pick(r, ALL_KEYS),
+    timeSignature: pick(r, METERS),
+    bars: pick(r, BARS),
+    grade: pick(r, WITHOUT_GRADES),
+    style: pick(r, STYLES),
+    cadences: pick(r, CADENCES),
+    form: pick(r, FORMS),
+    // Both ends: 0 always quotes a template, 1 always improvises, so the
+    // corpus filter and the state machine are each reached on their own.
+    improviseRate: pick(r, [0, 0, 0.35, 1, 1]),
+    allowAppliedDominants: allow,
+    allowBorrowed: allow,
+  };
+  const harmony = generateHarmony(makeRng(index), options);
+  return { options, harmony, label: `seed ${index} grade ${options.grade} allow=${allow}` };
+}
+
+const WITHOUT = Array.from({ length: 2000 }, (_, i) => flagCase(i, false));
+const WITH = Array.from({ length: 2000 }, (_, i) => flagCase(i, true));
+
+const isApplied = (e: HarmonyEvent) => e.numeral.appliedTo !== undefined;
+/**
+ * The shipped predicate, not a second opinion about what borrowing is.
+ *
+ * What is under test is whether the generator honours the flag, not whether
+ * `isBorrowedIn` draws the line in the right place — `templates.test.ts` owns
+ * that. A reimplementation here could only agree with the generator or
+ * disagree with the corpus.
+ */
+const isBorrowed = (c: Case) => (e: HarmonyEvent) => isBorrowedIn(
+  // Carried across field by field rather than cast. `bars` belongs to a
+  // template step and not to a generated chord; the predicate does not read
+  // it, and everything it does read arrives unchanged.
+  {
+    bars: 1,
+    degree: e.numeral.degree,
+    typeId: e.numeral.typeId,
+    chromaticAlter: e.numeral.chromaticAlter,
+    appliedTo: e.numeral.appliedTo,
+  },
+  c.options.key.mode,
+);
+
+describe('a flag that is switched off', () => {
+  it('is reached by a sweep that turns both off over the whole grade range', () => {
+    // Without this the two assertions below would pass on an empty sweep, and
+    // the one above them would pass on a sweep that generated nothing to
+    // exclude.
+    expect(WITHOUT).toHaveLength(2000);
+    expect(new Set(WITHOUT.map((c) => c.options.grade)).size).toBe(WITHOUT_GRADES.length);
+    expect(new Set(WITHOUT.flatMap((c) => c.harmony.events.map((e) => e.source))))
+      .toEqual(new Set(['template', 'functional']));
+    expect(WITHOUT.reduce((n, c) => n + c.harmony.events.length, 0)).toBeGreaterThan(10000);
+  });
+
+  it('has something to exclude, on the same draws, when it is switched on', () => {
+    // The guard that stops the two tests below being vacuous. If the
+    // generator stopped producing applied or borrowed chords altogether,
+    // "none appear when the flag is off" would stay green and mean nothing.
+    expect(WITH.filter((c) => c.harmony.events.some(isApplied)).length).toBeGreaterThan(0);
+    expect(WITH.filter((c) => c.harmony.events.some(isBorrowed(c))).length).toBeGreaterThan(0);
+  });
+
+  it('writes no applied dominant anywhere, from the corpus or from a pass', () => {
+    for (const c of WITHOUT) {
+      const found = c.harmony.events.filter(isApplied);
+      expect(found.map((e) => numeralText(e.numeral)), c.label).toEqual([]);
+    }
+  });
+
+  /**
+   * The one thing the flag does not govern, asserted as the only one.
+   *
+   * `planCadence` writes a major tonic to close a minor-key authentic cadence
+   * — "the only borrowing that belongs to the cadence itself", in its own
+   * words — and does not consult `allowBorrowed`. That is deliberate and said
+   * twice: the progression exercise lists `I` in its minor palette for the
+   * same reason, that raising the third of a final tonic is how a minor key
+   * closes rather than a loan from elsewhere.
+   *
+   * Written as "every borrowed chord that appears is this one" rather than as
+   * an exclusion, so the carve-out cannot quietly widen. Anything else the
+   * flag fails to exclude still fails here.
+   */
+  const isPicardy = (c: Case, e: HarmonyEvent) =>
+    c.options.key.mode === 'minor'
+    && e.numeral.degree === 1 && e.numeral.typeId === 'maj'
+    && e.numeral.chromaticAlter === 0
+    && (e.cadence === 'PAC' || e.cadence === 'IAC');
+
+  it('writes no borrowed chord but the Picardy third the cadence owns', () => {
+    // 0017's correction: `rhythm-a` borrows by quality (`{ degree: 4,
+    // typeId: 'min' }`) with the degree unaltered, where `blues-jazz` borrows
+    // by alteration. A filter that only knew about the second shipped once.
+    for (const c of WITHOUT) {
+      const leaked = c.harmony.events.filter((e) => isBorrowed(c)(e) && !isPicardy(c, e));
+      expect(leaked.map((e) => numeralText(e.numeral)), c.label).toEqual([]);
+    }
+  });
+
+  /**
+   * The corpus filter, reached on purpose and one flag at a time.
+   *
+   * Two things hide this filter from a sweep. The random one above never
+   * selects either carrier — `rhythm-a` and `blues-jazz` need an eight- and
+   * a twelve-bar *phrase*, which a period or a sentence never produces
+   * because it splits its bars in two, so only a single-phrase form reaches
+   * them. And **every template carrying a borrowed chord also carries an
+   * applied dominant**, so turning both flags off lets the applied filter
+   * exclude all three and the borrowed filter never decides anything.
+   *
+   * Deleting the borrowed filter is invisible to any test that moves the two
+   * flags together. These move them apart.
+   */
+  const CARRIERS = [
+    { id: 'rhythm-a', bars: 8, cadence: 'PAC' as const, borrowed: true },
+    { id: 'rhythm-b', bars: 8, cadence: 'HC' as const, borrowed: false },
+    { id: 'blues-jazz', bars: 12, cadence: 'HC' as const, borrowed: true },
+  ];
+
+  function quotedIds(
+    carrier: typeof CARRIERS[number],
+    flags: { applied: boolean; borrowed: boolean },
+  ): Set<string> {
+    const ids = new Set<string>();
+    for (let seed = 0; seed < 200; seed += 1) {
+      const harmony = generateHarmony(makeRng(seed), {
+        key: findKey('C_major'),
+        timeSignature: timeSignature('4/4'),
+        bars: carrier.bars,
+        grade: 10,
+        form: 'single',
+        style: 'jazz',
+        // Always quote: the state machine cannot select a template, so
+        // improvising would be testing the wrong half.
+        improviseRate: 0,
+        cadences: { final: carrier.cadence },
+        allowAppliedDominants: flags.applied,
+        allowBorrowed: flags.borrowed,
+      });
+      for (const e of harmony.events) if (e.templateId) ids.add(e.templateId);
+    }
+    return ids;
+  }
+
+  it('is quoting the templates whose data carries these chords, when both are on', () => {
+    // The coverage guard for the two tests below. Without it, a change that
+    // made these three unreachable for any other reason would read as the
+    // filters working.
+    for (const carrier of CARRIERS) {
+      expect(
+        quotedIds(carrier, { applied: true, borrowed: true }),
+        `${carrier.id} is unreachable even with both flags on`,
+      ).toContain(carrier.id);
+    }
+  });
+
+  it('drops a template that borrows, with borrowing off and applied chords still on', () => {
+    // The borrowed filter on its own. With both flags off the applied filter
+    // excludes all three of these and this assertion would hold with the
+    // borrowed filter deleted.
+    for (const carrier of CARRIERS) {
+      const quoted = quotedIds(carrier, { applied: true, borrowed: false });
+      if (carrier.borrowed) {
+        expect(quoted, `${carrier.id} was quoted with borrowing off`).not.toContain(carrier.id);
+      } else {
+        // And does not over-exclude: `rhythm-b` carries an applied dominant
+        // and no loan, so the borrowed flag has no business touching it.
+        expect(quoted, `${carrier.id} was excluded by a flag that does not apply to it`)
+          .toContain(carrier.id);
+      }
+    }
+  });
+
+  it('drops a template that carries an applied dominant, with applied chords off', () => {
+    for (const carrier of CARRIERS) {
+      expect(
+        quotedIds(carrier, { applied: false, borrowed: true }),
+        `${carrier.id} was quoted with applied dominants off`,
+      ).not.toContain(carrier.id);
+    }
+  });
+
+  it('still closes a minor cadence on the major third, which is not the flag’s business', () => {
+    // The exception above is an exception to something that happens. If the
+    // Picardy third stopped being written the test above would pass by
+    // excusing nothing, and this file would have quietly lost the claim.
+    const picardy = WITHOUT.filter((c) => c.harmony.events.some((e) => isPicardy(c, e)));
+    expect(picardy.length).toBeGreaterThan(0);
   });
 });

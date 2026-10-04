@@ -4,7 +4,7 @@ import { type Key, type Mode } from '../theory/key';
 import { type TimeSignature, beatLevel, metricWeight } from '../theory/meter';
 import { type Rng, chance, weightedPick } from '../theory/rng';
 import {
-  type CadenceType, type Degree, type RomanNumeral, numeral, realizeNumeral,
+  type CadenceType, type Degree, type RomanNumeral, numeral, numeralText, realizeNumeral,
 } from '../theory/roman';
 import {
   type StyleTag, type Template, candidateTemplates, defaultTypeId, templateNumerals,
@@ -771,10 +771,31 @@ export function generateHarmony(rng: Rng, options: HarmonyOptions): Harmony {
   if (ctx.allowBorrowed) applyBorrowing(ctx, slots, 0.25);
   if (options.allowInversions ?? ctx.grade >= 3) applyInversions(ctx, slots, 0.6);
 
-  // The second application is the guarantee: the transformations are written
-  // to leave locked slots alone, and this is what makes that a fact rather
-  // than a convention. It draws nothing, so it cannot disagree with the first.
-  applyCadences(slots, writes);
+  // The transformations above are written to leave locked slots alone, and
+  // this is what makes that a fact rather than a convention.
+  //
+  // An assertion rather than a second `applyCadences`, which is what stood
+  // here. That call could not fail: every mutator checks `locked`, so each
+  // slot it rewrote already held the value it was writing. Its own comment
+  // called it "the guarantee" and it was a repair — and a repair is the
+  // worst of the three options for exactly the case it exists for. Add a
+  // transformation that forgets the `locked` check and the overwrite
+  // silently undoes its work on the cadence chords, the generator looks
+  // right, the new pass is ineffective on the chords that matter most, and
+  // nothing says so. Deleting it would at least let the damage show;
+  // asserting names it.
+  //
+  // Found by the architect reading the pipeline against its own header.
+  for (const write of writes) {
+    const held = slots[write.index].numeral;
+    if (held !== write.numeral) {
+      throw new Error(
+        `A transformation rewrote the cadence at slot ${write.index}: `
+        + `expected ${numeralText(write.numeral)}, found ${numeralText(held)}. `
+        + 'Every pass that mutates a slot must skip the locked ones.',
+      );
+    }
+  }
 
   const marker = new Map(cadenceAt.map((c) => [c.index, c.cadence]));
   const events: HarmonyEvent[] = slots.map((slot, i) => ({

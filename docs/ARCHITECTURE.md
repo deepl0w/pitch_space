@@ -336,6 +336,11 @@ A generator working in pitch classes could not know whether the middle note of
 V/V in C was meant as F# or Gb, and the whole investment in spelled pitches
 would be wasted at the point of use.
 
+The generator runs in stages, and the four its own header describes are not the
+four it runs — the order differs, two are unnumbered, and cadence enforcement
+brackets the transformations rather than following them.
+[`docs/harmony-pipeline.md`](harmony-pipeline.md) has the comparison.
+
 Because `generate/` has no ground truth, its tests assert constraints and never
 aesthetics: that a suspension resolves down by step, not that a particular seed
 produces a particular tune. A test that pinned the weights would make tuning
@@ -343,7 +348,7 @@ impossible.
 
 Three of its files are catalogues of musical data rather than code —
 [`cells.ts`](../src/generate/cells.ts) (the figures a bar is built from),
-[`templates.ts`](../src/generate/templates.ts) (33 progressions) and
+[`templates.ts`](../src/generate/templates.ts) (35 progressions) and
 [`patterns.ts`](../src/generate/patterns.ts) (26 named whole-bar rhythms). The
 catalogue is the product and the generator is plumbing: twenty correct
 templates are worth more than any cleverness in the thing that reads them.

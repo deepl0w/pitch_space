@@ -36,6 +36,17 @@ export interface ProgressState {
    * silently skipped.
    */
   unreadable: number;
+  /**
+   * Rows written by a later release than this one.
+   *
+   * Counted apart from {@link unreadable} because the two need opposite
+   * words. A row this release cannot parse may be damaged; a row from a newer
+   * release is intact and will read again on the next update. Calling the
+   * second one unreadable told the user their history was corrupt, and the
+   * obvious response to that — clearing it — is the one action that would
+   * actually destroy it.
+   */
+  fromNewerRelease: number;
   load(): Promise<void>;
   record(attempt: Attempt): Promise<void>;
   clear(): Promise<void>;
@@ -58,12 +69,14 @@ export function createProgressStore(log: Log<AttemptRow> = defaultAttemptLog()):
     status: 'loading',
     attempts: [],
     unreadable: 0,
+    fromNewerRelease: 0,
 
     async load() {
       try {
         const rows = await log.all();
         const attempts: Attempt[] = [];
         let unreadable = 0;
+        let fromNewerRelease = 0;
         for (const row of rows) {
           // Per row, because `coerceAttempt` refuses by throwing: a single
           // half-written record would otherwise land in the outer catch and
@@ -77,6 +90,7 @@ export function createProgressStore(log: Log<AttemptRow> = defaultAttemptLog()):
               validate: coerceAttempt,
             });
             if (outcome.ok) attempts.push(outcome.value);
+            else if (outcome.reason === 'from-the-future') fromNewerRelease++;
             else unreadable++;
           } catch {
             unreadable++;
@@ -86,9 +100,9 @@ export function createProgressStore(log: Log<AttemptRow> = defaultAttemptLog()):
         // written by a release that indexed a different field would come
         // back in an order nothing downstream expects.
         attempts.sort((a, b) => a.answeredAt - b.answeredAt);
-        set({ status: 'ready', attempts, unreadable });
+        set({ status: 'ready', attempts, unreadable, fromNewerRelease });
       } catch {
-        set({ status: 'unavailable', attempts: [], unreadable: 0 });
+        set({ status: 'unavailable', attempts: [], unreadable: 0, fromNewerRelease: 0 });
       }
     },
 
@@ -106,7 +120,7 @@ export function createProgressStore(log: Log<AttemptRow> = defaultAttemptLog()):
 
     async clear() {
       await log.clear();
-      set({ attempts: [], unreadable: 0 });
+      set({ attempts: [], unreadable: 0, fromNewerRelease: 0 });
     },
   }));
 }

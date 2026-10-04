@@ -77,15 +77,49 @@ describe('loading a history', () => {
       attemptRow(attempt({ id: 'good', answeredAt: 100 })),
       versioned(ATTEMPT_SCHEMA, { id: 'half-written' }) as AttemptRow,
       { id: 'unversioned', answeredAt: 150 } as AttemptRow,
-      versioned(ATTEMPT_SCHEMA + 1, attempt({ id: 'newer' })) as AttemptRow,
       attemptRow(attempt({ id: 'also-good', answeredAt: 200 })),
     ];
     const store = createProgressStore(memoryLog(rows));
     await store.getState().load();
 
     expect(store.getState().attempts.map((a) => a.id)).toEqual(['good', 'also-good']);
-    expect(store.getState().unreadable).toBe(3);
+    expect(store.getState().unreadable).toBe(2);
     expect(store.getState().status).toBe('ready');
+  });
+
+  /**
+   * A row written by a newer release is intact, and counting it as unreadable
+   * told the user their history was corrupt. The obvious response to that is
+   * to clear the history — which is the one action that would actually destroy
+   * it, and the data would otherwise have come back on the next update.
+   *
+   * Reported separately so the screen can say which of the two happened.
+   */
+  it('separates a row from a newer release from a row it cannot read', async () => {
+    const rows = [
+      attemptRow(attempt({ id: 'good', answeredAt: 100 })),
+      versioned(ATTEMPT_SCHEMA + 1, attempt({ id: 'newer' })) as AttemptRow,
+      versioned(ATTEMPT_SCHEMA + 9, attempt({ id: 'much-newer' })) as AttemptRow,
+      { id: 'unversioned', answeredAt: 150 } as AttemptRow,
+    ];
+    const store = createProgressStore(memoryLog(rows));
+    await store.getState().load();
+
+    expect(store.getState().attempts.map((a) => a.id)).toEqual(['good']);
+    expect(store.getState().fromNewerRelease).toBe(2);
+    expect(store.getState().unreadable).toBe(1);
+    expect(store.getState().status).toBe('ready');
+  });
+
+  it('forgets a newer-release count when a later load finds none', async () => {
+    const store = createProgressStore(memoryLog([
+      versioned(ATTEMPT_SCHEMA + 1, attempt({ id: 'newer' })) as AttemptRow,
+    ]));
+    await store.getState().load();
+    expect(store.getState().fromNewerRelease).toBe(1);
+
+    await store.getState().clear();
+    expect(store.getState().fromNewerRelease).toBe(0);
   });
 
   it('says it is unavailable when the device will not answer', async () => {

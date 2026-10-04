@@ -223,6 +223,48 @@ which is exactly what a score parses into. So:
 Worth doing after the six generated exercise types work, because every one of
 them is the consumer, and a source with nothing to feed is not useful.
 
+## A practice count that is believable
+
+The home screen briefly carried a per-card count of what was waiting —
+"16 to practise" — and it was removed within the hour. Two sweeps found
+it misleading in three independent ways, and all three have the same
+shape: **the arithmetic was right and the sentence was wrong.**
+
+- **It could not say "I do not know".** With storage blocked, the
+  numbers came back byte-identical to a brand-new profile, because with
+  no readable history every item is unseen and unseen is due. A user
+  could not tell "we cannot read your history" from "you have not
+  started", and the first of those is the one worth saying.
+- **It moved with the settings, not only with practice.** Re-including
+  two intervals that had never been practised put the count back to its
+  fresh-profile figure, which reads as having lost the work already
+  done — the per-item tally underneath still had it, correctly.
+- **It summed a family.** The note-identification card adds intervals
+  and scale degrees together, so a learner who narrowed to one interval
+  and answered it correctly twelve times running watched the count go
+  from five to four. The remaining four were scale-degree items that no
+  amount of interval practice can clear, and nothing on the card said so.
+
+What a believable version needs, from those three:
+
+- **A figure that cannot read as going backwards.** "Due" falls when you
+  practise and rises when you widen the pool, and the second is
+  indistinguishable from losing progress. Something cumulative — how
+  much you have met, out of how much is in scope — only ever rises with
+  effort, and widening adds to the denominator without touching the
+  numerator.
+- **An explicit unreadable state**, not silence that looks like zero.
+  [ADR 0006](adr/0006-settings-in-localstorage-progress-in-indexeddb.md)
+  already requires deciding what the first frame shows while the log
+  loads; this is the same decision for a log that will never load.
+- **A number scoped to what the card opens.** A family card that sums
+  two exercises is promising work the user cannot do from that card
+  without first changing which exercise is running.
+
+Until then `src/state/schedule.ts` has no production caller, which is
+the honest state and recorded in `docs/IN-FLIGHT.md` rather than hidden
+behind a surface that said the wrong thing.
+
 ## A settings screen
 
 Everything that is about the app rather than about an exercise, in one

@@ -255,15 +255,6 @@ button:active { transform: translateY(1px); }
    happens when you press them. */
 .card-pending { cursor: default; opacity: 0.62; }
 .card-pending:hover { border-color: var(--line); }
-/* What a card is waiting on. Pinned to the bottom edge like the "not
-   built yet" chip, because with every card the same height that is
-   where a badge belongs — and it is the same kind of thing: a word
-   about the card rather than part of its description. */
-.card-due {
-  align-self: flex-start; margin-top: auto; padding-top: 0.3rem;
-  font-size: 0.72rem; font-weight: 600; color: var(--accent);
-}
-
 .card-state {
   /* `auto` rather than a gap: with every card the same height the state
      chip belongs on the bottom edge, not floating after a short blurb. */

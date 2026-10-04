@@ -126,3 +126,56 @@ trade: the panel is longer, and everything on it does one thing.
   together, that is evidence the split was too fine and a combined control is
   honest. One ordinal over six was too coarse; six over six may not be the
   last word.
+
+## Addendum, 5 October 2026 — a second opinion on the ordering, asked for and given
+
+Architect's review of the "What this costs" section, which asked for one.
+
+**The trade is right, and the reason given understates it in its own favour.**
+The costs say the catalogue "loses its only built-in notion of ordering, and
+the loss is real". Most of it was not a loss, because the ordering was two
+different things wearing one number, and only one of them has gone.
+
+The pool entries say so themselves: "These carried a `minGrade` — ii7 and V7
+at 4, ii° at 5, iiø7 and vii° at 6 — and the numbers were describing the
+chord's quality in every case." **A grade column conflated a judgement with a
+structure.** "How hard is a Neapolitan" is unfalsifiable and had no business in
+data this repository tests for constraints and never aesthetics. "A chord that
+is a seventh needs sevenths switched on" is a fact about the chord, checkable
+against the chord. The first is gone; the second survives as `needs:`, read off
+the entry rather than assigned to it.
+
+So the honest statement of the trade is not "we dropped the ordering and will
+earn one back". It is **the falsifiable half was kept and moved to where it
+could be checked, and the unfalsifiable half was dropped.** That is a stronger
+position than the record claims, and worth having written down before someone
+reinstates a grade column believing they are restoring something that worked.
+
+### The cost that is understated, and it lands on the scheduler
+
+"A suggested starting point… will have to be earned from the attempt log" is
+right for *review* order and empty for *introduction* order, and spaced
+repetition needs both. A new user has no log. On their first session the log
+is the one source the record names and the one source that does not exist yet,
+which is exactly when an order matters most — the first ten minutes are where
+a practice app is abandoned.
+
+These are two jobs and the Revisit trigger assigns both to the log:
+
+- **Review order** — what to ask again and when. The log is the right and only
+  source, and `schedule.ts` is already built on it.
+- **Introduction order** — what to show someone who has never answered
+  anything. The log cannot answer this. Containment can: the switches already
+  declare that a seventh needs sevenths and a borrowed chord needs borrowing,
+  which is a dependency graph in all but name, and "introduce what depends on
+  nothing first" is derivable from data already present and already checked.
+
+Deriving introduction order from `needs:` is not the grade column coming back
+under another name, and the difference is the test this record already
+applies: a grade is an opinion about a chord, a dependency is a property of
+it. The distinction is worth protecting in advance, because the first person
+to hit the cold-start problem will reach for a grade column and this record's
+Revisit trigger currently points them at a log that is empty.
+
+Nothing here changes the Decision. It sharpens one defence and names one cost
+the record carries without having priced.

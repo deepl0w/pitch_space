@@ -98,15 +98,60 @@ a comment is worth a test, and the comment should point at the test.** Where
 that is not possible, say what is unenforced rather than stating the rule as
 though it holds.
 
+**State what you measured *through*, not only what you measured.** A
+reachability finding is a statement about a catalogue and an instrument
+together, and the instrument has a range of its own. Where that range is not
+written down it gets attributed to the subject, and the finding reads as a
+fact about the thing when it is a fact about the question that was asked of
+it.
+
+Four instances, two of them in records on this list:
+
+- [0021](0021-a-catalogues-top-grade-must-be-reachable.md) measured the cell
+  catalogue through `SHAPE_AT`, a progression exercise's difficulty table. The
+  table stopped at grade 9, so two grade-10 cells read as stranded. They were
+  not: the table never reached rhythm generation at all, and
+  [0027](0027-configure-by-naming-what-an-exercise-contains.md) found that the
+  measurement had no referent until a rhythm exercise shipped.
+- [0017](0017-a-setting-that-excludes-is-not-a-corpus-you-cannot-reach.md)
+  tabulated templates against "the difficulty that reaches that grade", which
+  is the same instrument and has since been removed from the app.
+- [0025](0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)
+  measured calibration through one microphone, which turned out to be a
+  directional condenser, and wrote the microphone's behaviour into the
+  Consequences as the feature's — while its own Revisit list said one room
+  cannot tell the instrument from the room.
+- [0026](0026-a-measurement-signal-does-not-inherit-a-listening-level.md) is
+  the same fault one layer down: the stimulus was measured through a gain
+  stage nobody had characterised, 24 dB below full scale, and the attenuation
+  read as the stimulus being wrong.
+
+[0011](0011-what-a-catalogue-owes.md) is the counter-example and shows the
+cost of getting it right is one sentence. It named its instrument — "the
+phrase planner chooses the closing cadence before a template is picked, and
+its default vocabulary is two values" — and its finding has survived every
+change since, because a reader can see which half to re-check when the planner
+changes.
+
+This is close to
+[a proxy is not the mechanism](../process/2026-10-04-a-proxy-is-not-the-mechanism.md)
+and is not the same fault. That one is about reaching for a correlate when the
+mechanism is available: a matching test count is not `git merge-base`. This one
+is about using a legitimate instrument and not stating its range, so a true
+measurement supports a conclusion wider than itself. The first substitutes the
+wrong tool; the second over-reads the right one.
+
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code
 rides on the record that made it. The second says check exactly — a guard fires
 only on what can change the thing it guards. They meet because a guard broad
 enough to be noisy and a claim nobody ever checks fail in the same place: at the
 moment someone decides the signal is not worth reading. The third says which
-kind of thing you are holding before you apply either, and the fourth is the
-first one again, pointed at prose: a comment is a claim about the code, and it
-goes stale exactly the way a record does.
+kind of thing you are holding before you apply either; the fourth is the first
+one again, pointed at prose, because a comment is a claim about the code and
+goes stale exactly the way a record does; and the fifth is the first one
+pointed at a finding, because a measurement is a claim too, and it carries its
+instrument whether or not anyone writes the instrument down.
 
 [`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
 0018 and 0020 as one argument, because five of them are the same rule meeting a

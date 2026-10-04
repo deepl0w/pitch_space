@@ -15,6 +15,17 @@ drifts at the next link.
 It is a living document and takes no decisions. Where it disagrees with a
 record, the record is what was decided.
 
+**Two of the rungs are superseded and the chain is not.**
+[0028](adr/0028-a-question-only-absolute-pitch-can-answer.md) removed key
+identification's listening mode, so 0020 and 0022 decide about an exercise
+that no longer exists and are marked accordingly. What they decided is moot;
+what they *found* is the evidence this document is made of, and the rule they
+found it with is in force —
+[0024](adr/0024-the-progress-view-lists-what-was-tested.md) carries 0022's
+forward and is Accepted. A superseded record keeps its argument; that is the
+whole reason the log is append-only. Read the two rungs below as history that
+still counts, not as instructions.
+
 ## Contents
 
 - [The rule](#the-rule)
@@ -88,12 +99,12 @@ graded, pitch is unaffected, and only `latencyMs` is withheld. 0018 says
 outright that it is applying 0013's rule "to a second kind of it", which is why
 this chain is legible at all — it is the only record that names the pattern.
 
-**[0020](adr/0020-by-ear-the-unit-is-the-sounding-key.md) — asked but
+**[0020](adr/0020-by-ear-the-unit-is-the-sounding-key.md) (superseded) — asked but
 undistinguishable.** Six enharmonic key pairs sound identical, so a listener
 marked wrong for answering "F♯ major" to a G♭ cadence generates a row claiming
 they were asked a question nobody can be asked.
 
-**[0022](adr/0022-an-outcome-for-evidence-that-was-never-shown.md) — recorded
+**[0022](adr/0022-an-outcome-for-evidence-that-was-never-shown.md) (superseded) — recorded
 but never shown.** `gradeKey` wrote a `signature:` outcome on every attempt,
 including by ear, where the staff is deliberately empty. **It inverts 0020
 exactly, which is why it is worth its own rung rather than a footnote to that
@@ -151,7 +162,8 @@ ambiguity — one-to-many in `grade`, which is precisely what 0020 rejected for
 the clicking case.
 
 That is not a contradiction today. It is a tripwire, and 0020's "Revisit when"
-does not carry it, which is why it is written down here and noted on 0020
+does not carry it — and now that 0020 is superseded, **this section is the
+formulation's only live home**, which is why it is written down here and noted on 0020
 itself. Whoever builds performance-answered key identification should expect to
 need a record, and should expect it to narrow 0020 rather than supersede it:
 the two mechanisms suit two input shapes and the app will have both.

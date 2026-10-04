@@ -313,24 +313,28 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    Pick-one is a segmented control: the options share one track with no
    gaps between them, which is the shape that says "these are
    alternatives and exactly one is true". Pick-any stays a row of
-   separate pills, each with a tick when it is in, which is the shape
-   that says "each of these is in or out on its own".
+   separate pills, which says the opposite — each is in or out on its
+   own.
 
-   Colour alone was carrying it, and colour alone cannot: an accent fill
+   Colour alone was carrying it and colour alone cannot: an accent fill
    means "chosen" in both, so a row of eight styles with four lit looked
-   like a pick-one control somebody had broken. */
+   like a pick-one control somebody had broken. The container is the
+   whole distinction, though — a tick on every selected pill as well was
+   saying it twice, in a row where most pills are usually on. */
 .chips-single {
-  display: inline-flex; gap: 0;
-  border: 1px solid var(--line); border-radius: 999px; padding: 2px;
+  display: inline-flex; flex-wrap: wrap;
+  gap: 0.15rem;
+  /* A rounded box, not a pill. A pill-shaped border is right around one
+     line of options and wrong around four — "how far round the circle"
+     has eight, and a 999px radius drawn round a four-row block reads as
+     a stretched lozenge rather than as a group. A modest radius looks
+     like a group at any height. */
+  border: 1px solid var(--line); border-radius: 0.7rem;
+  padding: 0.25rem;
 }
 .chips-single .chip { border-color: transparent; }
 .chips-single .chip.on { box-shadow: none; }
 
-/* The tick is decoration, not content: the pressed state is already on
-   the element for anything that is not looking at it. */
-.chips:not(.chips-single) .chip.on::before {
-  content: '\2713'; margin-right: 0.3rem; font-weight: 700;
-}
 
 /* The settings panel lays its fields out in a row, but a multi-select chip
    list needs the full width or the chips wrap into a column one at a time.

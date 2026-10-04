@@ -249,10 +249,16 @@ this record is most critical of.
 
 The stimulus is still marginal at the volume the app ships at. On the good
 microphone, **no run succeeded at 85% and four of ten succeeded at 120%**. That
-is not a fact about the Snowball. The clicks-and-onsets instrument needs the
-user to turn their speakers past comfortable before it works at all, and the
-surveyed tools cross-correlate a spread signal precisely to avoid that. The
-Decision's last clause stands.
+is not a fact about the Snowball.
+
+**Superseded in part the same day by [0026](0026-a-measurement-signal-does-not-inherit-a-listening-level.md):**
+the clicks go out at about −24 dBFS, because `measureLatency.ts` passes no
+`gain` and so inherits `MASTER_GAIN` and the partial normalisation. The 0-of-11
+figure therefore says nothing yet about clicks as a stimulus — it was measured
+with the stimulus attenuated by a factor of fifteen. The Decision's last clause
+is **suspended rather than withdrawn**: cross-correlation remains the published
+practice and a candidate, and the clicks must be tried at a sensible level
+first.
 
 ### The fault in how this record was reached
 

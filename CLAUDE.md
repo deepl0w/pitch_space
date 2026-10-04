@@ -28,28 +28,31 @@ agent works in this checkout, owns `main`, and is the only one that may push;
 everyone else works in a worktree under `.claude/worktrees/` on `claude/<name>`,
 syncs before starting, commits before going idle, and never pushes.
 
-A worktree and its branch are named after the role — `.claude/worktrees/tester`
-on `claude/tester`, and two worktrees in one role take `feature-melody`,
-`feature-capture`. `status` and `announce` list the fleet by that name, so a
-randomly-named worktree makes the roster unreadable.
+**The branch carries the role; the directory name is cosmetic.** An agent
+in the `tester` role works on `claude/tester`, whatever its folder is called,
+and two agents in one role take `claude/feature-melody` and
+`claude/feature-capture`. `fleet.sh status`, `integrate` and every merge work
+in branches, so that is where the role has to be legible.
 
-**Never call `EnterWorktree` with no arguments.** It generates a random name
-when none is given, which is where every `eager-feynman-950574` in this
-repository's history came from — not from the fleet script, which has always
-defaulted to the role. Two correct forms:
+Directories get generated names like `intelligent-hypatia-c5ce53` and **that
+is expected, not a mistake to report.** The host's worktree option is
+`claude --worktree` with no name and there is no field to supply one, so a
+random folder is simply what a new session gets. Do not ask for it to be
+renamed and do not rename it yourself: **a session is pinned for writes to
+the directory it was launched in**, separately from where its shell stands,
+so moving it mid-session gives an agent that reads, runs tests and uses git
+while every save is refused — looking fine right up to the first save. Three
+sessions were lost that way on 4 October. Main renames folders between
+sessions, never during.
 
-- `EnterWorktree({ path: ".claude/worktrees/<role>" })` — **preferred.** Main
-  creates the worktree with `fleet.sh new <role>`; you enter the one that is
-  already there.
-- `EnterWorktree({ name: "<role>" })` when there is no worktree yet and you
-  have been told to make one.
+So a new session's first act is to take its role branch, which is free to
+rename at any time and costs nothing:
 
-If you are given a role and find yourself in a randomly-named worktree, say
-so and ask main to sort it rather than carrying on. **A session also carries
-the directory it was launched in, separately from where its shell stands**,
-and file writes are checked against that one — so a session whose launch
-directory was renamed or removed can read, run tests and use git while every
-save is refused. It looks like a working session until the first save.
+```bash
+git switch claude/<role>          # if the branch already exists
+git branch -m $(git branch --show-current) claude/<role>   # if it does not
+.claude/scripts/fleet.sh role <role>
+```
 
 **The roles this project runs**, and what each may change:
 

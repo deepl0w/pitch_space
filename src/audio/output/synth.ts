@@ -28,20 +28,31 @@ export class Synth {
   private master: GainNode | null = null;
   /** Everything scheduled and not yet finished, so it can be cut short. */
   private scheduled: OscillatorNode[] = [];
+  /**
+   * Which intention is current, so a passage waiting on a cold context can be
+   * told it has been superseded. Bumped by every play and by every stop.
+   */
+  private generation = 0;
 
   /**
    * Browsers refuse to start an AudioContext until a gesture, so this is
    * called from the click that wants sound rather than at module load.
    */
-  private ensure(): { context: AudioContext; master: GainNode } {
+  private ensure(): { context: AudioContext; master: GainNode; waking: Promise<void> | null } {
     if (!this.context) {
       this.context = new AudioContext();
       this.master = this.context.createGain();
       this.master.gain.value = MASTER_GAIN;
       this.master.connect(this.context.destination);
     }
-    if (this.context.state === 'suspended') void this.context.resume();
-    return { context: this.context, master: this.master! };
+    // Handed back rather than dropped. `currentTime` does not move while a
+    // context is still starting and jumps when it does, so a caller that
+    // schedules across the gap times the passage against a clock reading
+    // that is about to be wrong.
+    const waking = this.context.state === 'suspended'
+      ? this.context.resume().catch(() => {})
+      : null;
+    return { context: this.context, master: this.master!, waking };
   }
 
   get currentTime(): number {
@@ -50,7 +61,31 @@ export class Synth {
 
   /** Play a set of voices, all timed from one `now` so a chord stays together. */
   play(voices: readonly Voice[]): void {
-    const { context, master } = this.ensure();
+    const { context, master, waking } = this.ensure();
+    // On the very first play of a page the hardware is still opening, and the
+    // 60 ms below is not enough to cover it — 200 ms to open a device is
+    // unremarkable, and every attack inside that is behind the clock before a
+    // sample is played. So the cold case waits for the clock it is about to
+    // read rather than guessing at a larger headroom, which would only move
+    // the question to how large. Warm plays, which is all of them after the
+    // first, are unchanged and still schedule synchronously.
+    if (waking) {
+      // Ticketed, because deferring re-opens the hole `stopAll` was written
+      // to close: a passage laid down after the user has navigated away, or
+      // after a second press meant to replace it, is the "notes playing over
+      // the next screen" defect with a wake-up in front of it. Only the
+      // newest intention survives the wait.
+      const ticket = ++this.generation;
+      void waking.then(() => {
+        if (ticket === this.generation) this.lay(context, master, voices);
+      });
+      return;
+    }
+    this.generation += 1;
+    this.lay(context, master, voices);
+  }
+
+  private lay(context: AudioContext, master: GainNode, voices: readonly Voice[]): void {
     const now = context.currentTime + 0.06; // a beat of headroom to schedule into
     for (const voice of voices) {
       this.scheduleNote(context, master, voice, now + voice.start);
@@ -68,6 +103,10 @@ export class Synth {
    * gone.
    */
   stopAll(): void {
+    // Before the early return: a context still waking has nothing scheduled
+    // to cut, but it may have a passage queued behind it, and that is exactly
+    // what must not arrive after the screen it belonged to has gone.
+    this.generation += 1;
     if (!this.context || !this.master) return;
     const now = this.context.currentTime;
     this.master.gain.cancelScheduledValues(now);

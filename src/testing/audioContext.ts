@@ -136,11 +136,17 @@ class FakeAudioContext {
 
   resume() {
     recording.resumed += 1;
-    this.state = 'running';
-    // Starting the hardware takes real time, and the clock has moved on by
-    // the time the first sample is played.
-    clock += resumeCost;
-    return Promise.resolve();
+    // Settled on a later turn, because a real one is. Advancing the clock
+    // here instead would close the very gap this exists to model: the caller
+    // that does not await `resume` reads `currentTime` *before* the hardware
+    // starts, and a synchronous fake would hand it the post-start reading no
+    // real browser could have given it.
+    return Promise.resolve().then(() => {
+      this.state = 'running';
+      // Starting the hardware takes real time, and the clock has moved on by
+      // the time the first sample is played.
+      clock += resumeCost;
+    });
   }
 
   close() {

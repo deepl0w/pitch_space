@@ -53,11 +53,19 @@ export default function App() {
   useEffect(() => { stopSound(); }, [route]);
 
   return (
-    <main>
-      {(Screen || exercise) && (
+    /*
+      The practice route gets a shell rather than a page: a sidebar the
+      height of the window and a question beside it, each scrolling on
+      its own. `shell` is what turns the padding and the centred column
+      off so the grid can own the viewport; every other route is an
+      ordinary scrolling page and keeps them.
+    */
+    <main className={exercise ? 'shell' : undefined}>
+      {Screen && !exercise && (
         <button className="back" onClick={() => go('')}>&larr; Everything</button>
       )}
-      {exercise ? <PracticeScreen exerciseId={route} onSwitch={go} />
+      {exercise
+        ? <PracticeScreen exerciseId={route} onSwitch={go} onBack={() => go('')} />
         : Screen ? <Screen /> : <Home go={go} />}
     </main>
   );

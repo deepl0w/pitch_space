@@ -1,3 +1,4 @@
+import type { SettingOption } from '../exercises/types';
 import { useId, type ReactNode } from 'react';
 
 /**
@@ -70,6 +71,47 @@ export function Toggle({ label, checked, onChange }: {
     >
       {label}
     </button>
+  );
+}
+
+/**
+ * A single choice, laid out like the multi-select rather than folded into
+ * a dropdown.
+ *
+ * Same argument as `Chips`, applied one field over: the options are the
+ * thing being chosen between and a closed `select` shows one of them.
+ * These lists are short — two modes, four clefs, three directions — so
+ * there is nothing a dropdown was buying except a second visual grammar
+ * in the same panel for the same kind of decision.
+ *
+ * A radio group rather than a row of toggles, and marked as one: exactly
+ * one is always on, so `aria-checked` and `role="radio"` say what
+ * `aria-pressed` would not. Clicking the one already chosen does
+ * nothing — there is no state where none is selected.
+ */
+export function OneOf({ options, chosen, onChange }: {
+  options: readonly SettingOption[];
+  chosen: string;
+  onChange(next: string): void;
+}) {
+  return (
+    <div className="chips chips-single" role="radiogroup">
+      {options.map((option) => {
+        const on = option.id === chosen;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="radio"
+            className={on ? 'chip on' : 'chip'}
+            aria-checked={on}
+            onClick={() => { if (!on) onChange(option.id); }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

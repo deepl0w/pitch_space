@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
+import { Field, OneOf } from '../controls';
 import { ExerciseBoundary } from '../components/ExerciseBoundary';
 import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registry';
 import { itemLabel } from '../../exercises/itemLabel';
@@ -69,9 +70,10 @@ interface Round {
  * this for free — which is what the registry's "one import and one array
  * entry" promise needs in order to be true of the screen as well.
  */
-// Navigation belongs to the router, which already puts a back control above
-// every screen; a second one here was two ways out of the same page.
-export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
+// The back control lives in this screen's own sidebar rather than above it.
+// Every other route keeps the router's, which is still the only one on the
+// page — the shell moved it, it did not add a second.
+export function PracticeScreen({ exerciseId, onSwitch, onBack, audio = defaultSynth }: {
   /**
    * Which exercise to run. The route decides, so the menu card and the URL
    * both mean something; the stored `lastExercise` is only the fallback for
@@ -80,6 +82,8 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
   exerciseId?: string;
   /** Change which exercise is running. The router owns that, not this screen. */
   onSwitch?: (exerciseId: string) => void;
+  /** Leave for the home screen. The router owns that too. */
+  onBack?: () => void;
   audio?: AudioOut;
 }) {
   const lastExercise = useSettings((s) => s.doc.lastExercise);
@@ -103,6 +107,16 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
     [family, exerciseId, lastExercise],
   );
 
+  /*
+    Coerced here rather than in `ExerciseRound`, because the panel that
+    writes these and the round that reads them are now in different
+    columns and both need the same value. Coerced rather than trusted:
+    what comes back from storage was written by whichever release the
+    user last ran.
+  */
+  const stored = useSettings((s) => s.doc.exercises[definition.id]);
+  const settings = useMemo(() => definition.settings.coerce(stored), [definition, stored]);
+
   const status = useProgress((s) => s.status);
   const unreadable = useProgress((s) => s.unreadable);
   const fromNewerRelease = useProgress((s) => s.fromNewerRelease);
@@ -112,42 +126,62 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
   useEffect(() => { void progressStore.getState().load(); }, []);
 
   return (
-    <main>
+    /*
+      No `main` of its own. This rendered one while `App` was already
+      rendering one around it, which is two `main` elements on every
+      practice page — invalid, and the reason the shell below could not
+      own the viewport until it was noticed.
+    */
+    <div className="practice-layout">
+      {/*
+        The sidebar: where you are, and what you are being asked. The
+        panel is rendered here rather than inside `ExerciseRound` so the
+        column can be the height of the window — inside, it began below
+        the heading and the grid could only be as tall as what was left.
+        Both read the same store, so hoisting it drills no props.
+      */}
+      <aside className="practice-settings">
+        <button className="back" onClick={onBack}>&larr; Everything</button>
+        {/*
+          Which way to practise this family, in the sidebar with every
+          other thing you set about the exercise — and as bubbles, like
+          them. It was a dropdown under the heading, which made it look
+          like part of the title rather than a setting, and made it the
+          one control on the screen you had to open to see your options.
+
+          Hidden for a family of one: a control with a single option is a
+          label pretending to be a choice.
+        */}
+        {family.members.length > 1 && (
+          <Field label="Exercise" group>
+            <OneOf
+              options={family.members.map((type) => ({ id: type.id, label: type.name }))}
+              chosen={definition.id}
+              onChange={(id) => {
+                // Both: the route decides which exercise runs, and the
+                // stored preference is what a later visit with no route
+                // falls back to. Setting only the preference left the
+                // control snapping back to the routed id.
+                settingsStore.getState().setLastExercise(id);
+                onSwitch?.(id);
+              }}
+            />
+          </Field>
+        )}
+
+        <SettingsPanel
+          fields={definition.settings.fields}
+          settings={settings}
+          onChange={(next) => settingsStore.getState().setExerciseSettings(definition.id, next)}
+        />
+      </aside>
+
+      <div className="practice-main">
       <header>
         {/* No "practice" tag. You are on the practice screen; saying so
             is the heading telling you where you already are. */}
         <h1>{family.name}</h1>
         <p className="lede">{definition.description}</p>
-        <div className="nav">
-          {/*
-            The family's own ways of asking, and nothing else. A selector
-            listing every exercise in the app would make this a second
-            navigation to somewhere the home screen already goes, and would
-            put "name the key" beside "name the degree" as though choosing
-            between them were part of practising either.
-
-            Hidden for a family of one: a control with a single option is a
-            label pretending to be a choice.
-          */}
-          {family.members.length > 1 && (
-            <select
-              aria-label={`How to practise ${family.name.toLowerCase()}`}
-              value={definition.id}
-              onChange={(e) => {
-                // Both: the route is what decides which exercise runs, and
-                // the stored preference is what a later visit with no route
-                // falls back to. Setting only the preference left the control
-                // snapping back to the routed id, which read as broken.
-                settingsStore.getState().setLastExercise(e.target.value);
-                onSwitch?.(e.target.value);
-              }}
-            >
-              {family.members.map((type) => (
-                <option key={type.id} value={type.id}>{type.name}</option>
-              ))}
-            </select>
-          )}
-        </div>
       </header>
 
       {/*
@@ -155,7 +189,13 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
         component rather than handing this one a question it did not generate.
         Nothing below has to remember to reset, now or when it grows.
       */}
-      <ExerciseRound key={definition.id} definition={definition} audio={audio} tally={tally} />
+      <ExerciseRound
+        key={definition.id}
+        definition={definition}
+        audio={audio}
+        tally={tally}
+        settings={settings}
+      />
 
       {status === 'unavailable' && (
         <p className="warning">
@@ -186,7 +226,8 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
           {fromNewerRelease === 1 ? ' it' : ' them'}.
         </p>
       )}
-    </main>
+      </div>
+    </div>
   );
 }
 
@@ -198,15 +239,13 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
  * needs — is discarded wholesale when the type changes, because this
  * component stops existing rather than being told to tidy up.
  */
-function ExerciseRound({ definition, audio, tally }: {
+function ExerciseRound({ definition, audio, tally, settings }: {
   definition: AnyExerciseDefinition;
   audio: AudioOut;
   tally: Map<TallyKey, ItemTally>;
+  /** Coerced once by the screen, which also renders the panel that sets it. */
+  settings: unknown;
 }) {
-  const stored = useSettings((s) => s.doc.exercises[definition.id]);
-  // Coerced rather than trusted: what comes back from storage was written by
-  // whichever release the user last ran.
-  const settings = useMemo(() => definition.settings.coerce(stored), [definition, stored]);
 
   const [round, setRound] = useState<Round | null>(null);
   // Per type, because that is what the number means. It used to be one
@@ -260,32 +299,7 @@ function ExerciseRound({ definition, audio, tally }: {
   }
 
   return (
-    /*
-      Two columns where there is room, stacked where there is not.
-
-      The settings and the question are different kinds of thing: one is
-      a standing configuration you adjust occasionally, the other is what
-      you are looking at. Stacked, every glance at the question travels
-      past a panel that has not changed — and the panel grew to a dozen
-      controls once difficulty stopped standing in for them, so on a
-      laptop the exercise was below the fold on a screen that was two
-      thirds empty.
-
-      Side by side above the breakpoint, with the settings scrolling
-      independently so a long panel cannot push the question off; stacked
-      below it, settings first, which is the phone reading and the one
-      the narrow layout already had.
-    */
-    <div className="practice-layout">
-      <div className="practice-settings">
-        <SettingsPanel
-          fields={definition.settings.fields}
-          settings={settings}
-          onChange={(next) => settingsStore.getState().setExerciseSettings(definition.id, next)}
-        />
-      </div>
-
-      <div className="practice-main">
+    <>
       <div className="actions">
         <button type="button" onClick={start}>
           {round === null ? 'Start' : round.result ? 'Next' : 'Skip to the next'}
@@ -347,8 +361,7 @@ function ExerciseRound({ definition, audio, tally }: {
           <p className="secondary">Seed {round.exercise.seed}</p>
         </section>
       )}
-      </div>
-    </div>
+    </>
   );
 }
 

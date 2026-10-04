@@ -48,34 +48,76 @@ main {
   main { max-width: none; padding-left: 2rem; padding-right: 2rem; }
 }
 
-/* The practice screen's two columns.
+/* The practice screen is a shell, not a page.
 
-   Settings left and the question right, because they are different kinds
-   of thing: one is a standing configuration, the other is what you are
-   looking at. The panel grew to a dozen controls when difficulty stopped
-   standing in for them, and stacked that put the exercise below the fold
-   on a laptop with two thirds of the screen empty.
+   A sidebar the height of the window and the question beside it, each
+   scrolling on its own, so the page itself never scrolls. The first
+   attempt was a sticky column with `max-height: calc(100vh - 3rem)`,
+   which is wrong in a way that only shows on a short window: the column
+   starts below the heading, so its own height plus where it begins came
+   to more than the viewport and the whole document scrolled — a
+   scrollbar on a screen whose right-hand half held one button.
 
-   The settings column scrolls on its own and sticks, so a long panel
-   cannot push the question out of view and scrolling the question does
-   not take the controls with it. */
+   Measuring from where something starts is the mistake; owning the
+   viewport is the fix. `100dvh` rather than `100vh` because a phone's
+   address bar makes those different numbers, and this is the layout
+   that would be clipped by the difference. */
 .practice-layout { display: grid; gap: 1.5rem; align-items: start; }
 
 @media (min-width: 60rem) {
-  .practice-layout { grid-template-columns: minmax(17rem, 22rem) minmax(0, 1fr); }
-  .practice-settings {
-    position: sticky; top: 1.5rem;
-    max-height: calc(100vh - 3rem); overflow-y: auto;
-    /* Room for the scrollbar, so a chip never sits under it. */
-    padding-right: 0.25rem;
+  main.shell {
+    max-width: none; padding: 0; margin: 0;
+    height: 100dvh; overflow: hidden;
   }
-  .practice-settings .panel { margin-bottom: 0; }
+  main.shell .practice-layout {
+    height: 100%;
+    grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
+    gap: 0;
+    align-items: stretch;
+  }
+  .practice-settings {
+    /* `min-height: 0` is what lets a grid child scroll instead of
+       stretching its track: without it the panel's content sets the row
+       height and the overflow never engages. */
+    min-height: 0; overflow-y: auto;
+    padding: 1.25rem 1rem 2rem;
+    border-right: 1px solid var(--line);
+  }
+  .practice-settings .panel {
+    margin-bottom: 0; border: none; background: none; padding: 0;
+  }
+  .practice-main {
+    min-height: 0; overflow-y: auto;
+    padding: 1.5rem 2rem 3rem;
+  }
 }
 
-/* Below it, settings first and the question under them — the reading a
-   phone already had, stated rather than left to the grid's default. */
-.practice-layout > .practice-settings { order: 0; }
-.practice-layout > .practice-main { order: 1; }
+/* Below the breakpoint it is an ordinary page again: settings first, then
+   the question, both scrolling with everything else. */
+@media (max-width: 59.999rem) {
+  main.shell { padding: 2rem 16px 4rem; }
+  .practice-settings .back { padding-bottom: 0.5rem; }
+}
+
+/* The question, centred in whatever room the sidebar leaves.
+
+   A column rather than the full width: the exercise is a handful of
+   short rows and a stave, and left-aligned in a 1400px track it sits in
+   the corner of an empty screen. */
+.practice-main > * { width: 100%; max-width: 44rem; margin-inline: auto; }
+.practice-main header { text-align: center; }
+.practice-main .lede { margin-inline: auto; }
+.practice-main .actions,
+.practice-main .choices,
+.practice-main .slots,
+.practice-main .nav { justify-content: center; }
+.practice-main .prompt { text-align: center; }
+
+/* The one button there is before a question exists. It is the whole of
+   what the screen is asking you to do, so it says so. */
+.practice-main .actions > button:first-child {
+  font-size: 1rem; font-weight: 650; padding: 0.6rem 1.5rem;
+}
 
 /*
  * Above sixty rems the column stops growing and the page starts looking
@@ -174,6 +216,13 @@ button:active { transform: translateY(1px); }
    width, which is how that stopped being theoretical. */
 @media (min-width: 40rem) { .menu { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 64rem) { .menu { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Every card the same height, across the whole menu and not only within a
+   row. Blurbs run from one line to three, so each row sized itself to its
+   own tallest card and the grid came out as a ragged set of boxes — which
+   reads as the cards meaning different amounts rather than as the text
+   being different lengths. `1fr` rows make every track the height of the
+   tallest card anywhere in the menu. */
+.menu { grid-auto-rows: 1fr; }
 
 .card {
   display: flex; flex-direction: column; gap: 0.25rem; width: 100%;
@@ -181,6 +230,9 @@ button:active { transform: translateY(1px); }
   background: var(--surface); color: var(--ink);
   border: 1px solid var(--line); border-radius: 10px;
   padding: 0.85rem 1rem;
+  /* Fill the track the rule above sized, rather than sitting at the top
+     of it. */
+  height: 100%;
 }
 .card:hover { border-color: var(--accent); filter: none; }
 .card-name { font-weight: 600; font-size: 0.95rem; }
@@ -192,7 +244,9 @@ button:active { transform: translateY(1px); }
 .card-pending { cursor: default; opacity: 0.62; }
 .card-pending:hover { border-color: var(--line); }
 .card-state {
-  align-self: flex-start; margin-top: 0.3rem;
+  /* `auto` rather than a gap: with every card the same height the state
+     chip belongs on the bottom edge, not floating after a short blurb. */
+  align-self: flex-start; margin-top: auto; padding-top: 0.3rem;
   font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em;
   color: var(--muted); border: 1px solid var(--line);
   border-radius: 999px; padding: 0.1rem 0.45rem;
@@ -253,6 +307,30 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 }
 .chip:hover { color: var(--ink); filter: none; }
 .chip.on { background: var(--accent); color: var(--bg); border-color: transparent; }
+
+/* Two kinds of chip, and they have to look like two kinds of thing.
+
+   Pick-one is a segmented control: the options share one track with no
+   gaps between them, which is the shape that says "these are
+   alternatives and exactly one is true". Pick-any stays a row of
+   separate pills, each with a tick when it is in, which is the shape
+   that says "each of these is in or out on its own".
+
+   Colour alone was carrying it, and colour alone cannot: an accent fill
+   means "chosen" in both, so a row of eight styles with four lit looked
+   like a pick-one control somebody had broken. */
+.chips-single {
+  display: inline-flex; gap: 0;
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px;
+}
+.chips-single .chip { border-color: transparent; }
+.chips-single .chip.on { box-shadow: none; }
+
+/* The tick is decoration, not content: the pressed state is already on
+   the element for anything that is not looking at it. */
+.chips:not(.chips-single) .chip.on::before {
+  content: '\2713'; margin-right: 0.3rem; font-weight: 700;
+}
 
 /* The settings panel lays its fields out in a row, but a multi-select chip
    list needs the full width or the chips wrap into a column one at a time.

@@ -79,6 +79,24 @@ const DEGREES_AT: Record<Difficulty, number[]> = {
   5: [1, 2, 3, 4, 5, 6, 7],
 };
 
+/**
+ * The preset whose degree set this is, or null for a set somebody built by
+ * hand.
+ *
+ * The scope picker and the degree chips control the same property, and a
+ * picker that keeps claiming "the whole scale" after two degrees are
+ * unticked is a control lying about the state it is showing. Deriving the
+ * picker's value from the degrees makes the chips the single source and the
+ * picker a shortcut into it.
+ */
+export function presetFor(degrees: readonly number[]): Difficulty | null {
+  const wanted = [...degrees].sort((a, b) => a - b).join(',');
+  for (const level of [1, 2, 3, 4, 5] as Difficulty[]) {
+    if (DEGREES_AT[level].join(',') === wanted) return level;
+  }
+  return null;
+}
+
 export const DEGREE_DEFAULTS: DegreeSettings = {
   difficulty: 2,
   presentation: 'listen',
@@ -210,27 +228,22 @@ export const degreeSettingsSchema: SettingsSchema<DegreeSettings> = {
       apply: (s, option) => ({ ...s, presentation: option === 'read' ? 'read' : 'listen' }),
     },
     {
-      kind: 'choice', id: 'difficulty', label: 'How much of the scale',
-      options: [
-        { id: '1', label: 'The tonic triad' },
-        { id: '2', label: 'Add the second' },
-        { id: '3', label: 'Add the fourth' },
-        { id: '4', label: 'Add the sixth' },
-        { id: '5', label: 'The whole scale' },
-      ],
-      selected: (s) => String(s.difficulty),
-      apply: (s, option) => {
-        const difficulty = Number(option) as Difficulty;
-        return { ...s, difficulty, degrees: DEGREES_AT[difficulty] };
-      },
-    },
-    {
+      // The only control over which degrees are asked. There was a preset
+      // picker beside it and the two went out of step the moment a chip was
+      // unticked — the picker kept saying "the whole scale" over five
+      // degrees. A preset that cannot be read back is also a control the
+      // contract test rightly refuses, since selecting it changes nothing.
+      // The presets survive as the default rather than as a second control.
       kind: 'multi', id: 'degrees', label: 'Degrees',
       options: [1, 2, 3, 4, 5, 6, 7].map((d) => ({ id: String(d), label: String(d) })),
       selected: (s) => s.degrees.map(String),
-      apply: (s, options) => (options.length === 0 ? s : {
-        ...s, degrees: coerceDegrees(options.map(Number), s.degrees),
-      }),
+      apply: (s, options) => {
+        if (options.length === 0) return s;
+        const degrees = coerceDegrees(options.map(Number), s.degrees);
+        // Keep the shared ordinal meaning something: where the hand-picked
+        // set happens to be a preset, say so.
+        return { ...s, degrees, difficulty: presetFor(degrees) ?? s.difficulty };
+      },
     },
     {
       kind: 'multi', id: 'modes', label: 'Modes',

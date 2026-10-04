@@ -9,6 +9,19 @@ expensive to reverse live in [`docs/adr/`](adr/README.md) and are linked from
 here; where the two disagree the ADR is the record of what was decided and this
 file is what is true today.
 
+## Contents
+
+- [The one constraint](#the-one-constraint)
+  - [How the boundary is kept](#how-the-boundary-is-kept)
+- [What happens when the user practises](#what-happens-when-the-user-practises)
+- [The exercise contract](#the-exercise-contract)
+  - [Presentation](#presentation)
+- [What an attempt records](#what-an-attempt-records)
+- [Persistence](#persistence)
+- [The analysis chain](#the-analysis-chain)
+- [Generation](#generation)
+- [What is not built](#what-is-not-built)
+
 ## The one constraint
 
 Three directories — [`src/theory/`](../src/theory), [`src/generate/`](../src/generate)

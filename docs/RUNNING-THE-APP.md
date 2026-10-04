@@ -12,6 +12,13 @@ about code, and it holds for claims about behaviour too: **check a claim
 against the thing itself, not against whatever is in front of you.** A
 preview pane is not the app.
 
+## Contents
+
+- [Starting a server](#starting-a-server)
+- [What the preview harness gets wrong about this app](#what-the-preview-harness-gets-wrong-about-this-app)
+- [Driving real Chrome](#driving-real-chrome)
+- [What this does not cover](#what-this-does-not-cover)
+
 ## Starting a server
 
 ```bash

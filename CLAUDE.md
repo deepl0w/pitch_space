@@ -6,6 +6,13 @@ playing them on a real instrument. One TypeScript codebase ships as an
 installable PWA and as an Android APK. `README.md` describes what it does and how
 the generation works; this file is about working on it.
 
+## Contents
+
+- [Several agents work here at once](#several-agents-work-here-at-once)
+- [Building and testing](#building-and-testing)
+- [The code](#the-code)
+- [Conventions](#conventions)
+
 ## Several agents work here at once
 
 The protocol is generic and lives in your user config: `~/.claude/skills/fleet/SKILL.md`
@@ -232,5 +239,12 @@ reproduce exactly.
   this file said "the three roles" over a table of four for two days. Put the
   argument where it belongs and point at it from everywhere else; the ADR
   index already carries this as its first convention, for claims about code.
+- **A document over about a hundred lines opens with a contents block**, as
+  links, so an agent can find the one section it needs and read that. Write
+  headings that say what is under them rather than gesturing at it, and keep
+  sections short enough to be the unit someone reads. An index that is
+  already there — the table of records at the top of `docs/adr/README.md` —
+  does not want a second one in front of it.
 - Prose in docs is written out, British spelling, no telegraphic bullet lists
-  where a sentence would do.
+  where a sentence would do. Short is not telegraphic: cut the paragraph that
+  repeats the one above it, not the sentence that gives the reason.

@@ -106,12 +106,12 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
   <h1>Music Practice<br>Loop One</h1>
   <p class="standfirst">The engine that was the hard part is built and tested. The
   microphone that was the point of the app is not.</p>
-  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at 8e7a569 &nbsp;·&nbsp; 148 commits</p>
+  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at d90585d &nbsp;·&nbsp; 154 commits</p>
 </header>
 
 <div class="figures">
-  <div class="fig"><b>583</b><span>tests passing</span></div>
-  <div class="fig"><b>36</b><span>test files</span></div>
+  <div class="fig"><b>601</b><span>tests passing</span></div>
+  <div class="fig"><b>38</b><span>test files</span></div>
   <div class="fig"><b>15</b><span>ADRs</span></div>
   <div class="fig"><b>16,922</b><span>lines in src</span></div>
   <div class="fig"><b>3 / 6</b><span>exercises asked for</span></div>
@@ -128,7 +128,7 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
 <h2>Where it stands</h2>
 
 <p>Every figure on this page is read out of the repository by
-<code>tools/report-facts.sh</code> rather than recalled. 583 tests pass, none fail,
+<code>tools/report-facts.sh</code> rather than recalled. 601 tests pass, none fail,
 three are <code>todo</code>. <code>tsc</code> and <code>oxlint</code> are clean. The
 whole history is on <code>main</code> under one author; the eight <code>claude/*</code>
 branches are all zero ahead and exist only as stale pointers.</p>
@@ -295,25 +295,47 @@ did. There is no per-figure state that could be cold.</p>
 <p class="q">The first press after a page reload, whatever the figure &mdash; the audio
 graph waking, not anything cached per figure.</p>
 
-<p><b>With a caveat that has to be carried.</b> In the harness where this was measured the
-<code>AudioContext</code> is born <code>running</code>, with <code>currentTime</code> 0 and
-<code>outputLatency</code> 0, so the autoplay path never ran at all. In a real browser the
-context is created <em>suspended</em> and <code>resume()</code> is asynchronous. A bar laid
-out against <code>currentTime</code> before the resume lands sits on a clock that then
-jumps &mdash; which is exactly what a truncated tail sounds like, and is specific to the
-first press after a load. Settling it costs one log line: print <code>ctx.state</code> and
-<code>ctx.currentTime</code> at the first scheduling call after a reload, in a real
-browser. If the state is <code>suspended</code> or the time is 0, that is the bug.</p>
+<p><b>That mechanism has now been tested on a real browser, and it is wrong.</b> The
+proposed explanation was that the context is created suspended and <code>resume()</code> is
+asynchronous, so a bar laid out before the resume lands sits on a clock that then jumps.
+Measured in Chrome 126, with the click driven as a genuine user activation: at the first
+scheduling call after a page load the context reports <code>running</code>, with
+<code>currentTime</code> 0. It is not born suspended and there is no async resume. The
+explanation is withdrawn by the person who proposed it, rather than left to harden.</p>
+
+<p>What is actually there is narrower, and does not account for the symptom. The context is
+created lazily on the first press; its clock then sits at 0 for 30–40 ms before advancing by
+one render quantum. The first note is scheduled at +60 ms, clearing that stall by only
+20–30 ms. Nothing landed in the past in that run. But scheduling is identical on every press
+— 28 sources, +0.060 s to +2.203 s, 28 stops, a 1.04 s tail margin — and there is no
+<code>setTimeout</code>, <code>setInterval</code> or <code>Date.now</code> anywhere in
+<code>src/audio</code> or the sound module, so nothing cuts playback on wall-clock time.
+<b>If the first press loses anything, the thin margin is at the front of the bar, not the
+back.</b> A lost <em>last</em> note is not explained, and could not be reproduced.</p>
+
+<p>So this defect is less understood than the previous version of this page claimed, not
+more. Two measurement caveats are why it is not closed either way: headless Chrome has no
+audio device and its clock ran about 12% slow over the window, and a null sink may open
+faster or slower than a real sound card — which is precisely the quantity that decides
+whether 60 ms of lead is enough.</p>
+
+<p>One cheap test settles which half to pursue. <code>src/testing/audioContext.ts</code>
+already carries a <code>resumeCost</code> knob, built for exactly this: notes scheduled
+against a stale <code>currentTime</code> going missing. Set it above 60 ms and assert the
+Rhythms path still sounds every note. Red means the defect is the front-of-bar margin and
+the fix is to schedule further ahead on a cold context. Green means the lost last note is
+something else, and this page should stop attributing it to the clock at all.</p>
 </div>
 </section>
 
 <section>
-<h2>Open: four of six exercise switches blank the app</h2>
+<h2>Closed within the day: four of six exercise switches blanked the app</h2>
 
 <div class="open">
-<p>Found after this report was first published. Clear storage, open an exercise, press
-Start, then change the exercise in the dropdown. Four of the six transitions crash the
-whole page, in four different files, two of which are not components:</p>
+<p>Found after this report was first published, and fixed before the day ended. Clear
+storage, open an exercise, press Start, then change the exercise in the dropdown — four of
+the six transitions crashed the whole page, in four different files, two of which are not
+components:</p>
 
 <div class="scroll">
 <table>
@@ -358,12 +380,29 @@ to extend but unsafe to switch between is not the seam it advertises. <code>defi
 is a <code>useMemo</code> over the dropdown and changes at once; <code>round</code> is
 <code>useState</code> and does not.</p>
 
-<p>The fix is discard by remount rather than a reset path, on the grounds that a reset
-path is a list that has to be kept in step with the state it clears, and the evidence in
-front of us is that such lists are not kept in step. Session counters become per type,
-because that is what the number means. The regression test runs over all ordered pairs and
-asserts the tally resets as well as that the page survives — a fix that stops the crashes
-and leaves the tally blending would pass a crash-only test.</p>
+<p><b>Fixed.</b> <code>PracticeScreen</code> split in two: the chrome keeps the heading,
+the type selector and the progress warnings, and everything scoped to a type moved into an
+<code>ExerciseRound</code> rendered <code>key={definition.id}</code>. Discard by remount
+rather than a reset path, on the grounds that a reset path is a list someone has to keep in
+step with the state it clears, and the evidence in front of us is that such lists are not
+kept in step. The session tally lives inside the keyed component, so it is per type by
+construction.</p>
+
+<p>The regression test runs every ordered pair, driven through the selector as a user
+drives it, and asserts the strong form: <em>arriving at a type by switching is
+indistinguishable from arriving at it fresh</em>, compared against a freshly-mounted
+screen. It names no field, so it keeps covering whatever the sixth type adds. Checked
+against the unfixed code, which is the only way to know a test works — 11 of 13 cases fail,
+the crash sweep flags exactly the four known pairs, and the comparison test fails on all
+<em>six</em>, including the two that never crashed. That is the silent half a crash-only
+test would have waved through.</p>
+
+<p>The boundary sits inside the chrome, so a throwing prompt costs the user the exercise
+and not the menu, and it names the seed. That forced three components rather than two: a
+boundary wrapped around <code>ExerciseRound</code> cannot show a seed that lives inside it,
+and <code>questionScore</code>/<code>answerScore</code> call into the definition during
+render — which is where two of the four crashes came from — so computing them above the
+boundary would have put the likeliest throw out of its reach.</p>
 </div>
 </section>
 
@@ -461,11 +500,10 @@ The service worker moves ahead of the bundle split for the reason above, and the
 measurement sits in front of the chord exercise.</li>
 </ol>
 
-<p>Two things are not on that list because neither is a work item. The Rhythms question
-now costs one log line in a real browser rather than an answer from anyone. And the
-exercise-switch seam is a fix rather than a feature, with its regression test being
-written — but it is the most serious thing on this page, because it is the one a new user
-hits, and it has to land before the sixth exercise type rather than after.</p>
+<p>The exercise-switch seam is off that list because it is done. What is left of the
+Rhythms defect is one test against a <code>resumeCost</code> above 60 ms, which decides
+whether the remaining suspect is the front-of-bar margin or nothing to do with the clock at
+all.</p>
 
 <p>One cost of that fix cuts the other way and should not be lost. A prompt that throws on
 every render currently stops the app, which is the loudest possible signal and guarantees
@@ -478,10 +516,11 @@ can reproduce exactly rather than a story about a blank page.</p>
 </section>
 
 <footer>
-Figures read from the repository by tools/report-facts.sh · main 8e7a569 · 4 October 2026<br>
+Figures read from the repository by tools/report-facts.sh · main d90585d · 4 October 2026<br>
 Revised three times the same day, by the fleet reviewing it: the DSP layer computes no
-chroma; the clock a performed note is measured against was undecided; and the exercise
-screen keeps state belonging to a type the user has already left.
+chroma; the clock a performed note is measured against was undecided; the exercise screen
+kept state belonging to a type the user had already left, since fixed; and the explanation
+this page gave for the Rhythms defect was disproved on a real browser and withdrawn.
 </footer>
 
 </div>

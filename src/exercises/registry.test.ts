@@ -291,20 +291,19 @@ describe('every exercise type’s generator', () => {
  *   which is worse than no badge. This is ADR 0011's obligation on a
  *   catalogue, applied to a list the schedule reads.
  *
- * Containment is asserted at every settings shape; reachability only at
- * the widest, and that asymmetry is the honest statement of what
- * `items` can promise. One exercise cannot do better: the progression
- * palette is deliberately blind to the grade, because a row of buttons
- * that grew with the setting would say how many chords are in play
- * before the user had named one, and `items` is derived from it so the
- * two cannot disagree. Measured, the gap is one numeral: `viio` in major
- * needs grade 6 *and* six bars, so at narrow settings the count includes
- * it and cannot clear it.
+ * **Both directions at every settings shape, with no carve-out.** There
+ * used to be one: reachability was asserted only at the widest
+ * settings, because the progression palette is deliberately blind to
+ * the grade and `viio` in major needed grade 6 and six bars, so at
+ * narrow settings the list contained a numeral nothing could produce.
  *
- * That is a known cost of keeping one list rather than two, written
- * down rather than hidden, and the thing that removes it is the same
- * reachability computation targeted generation will need — at which
- * point this asymmetry should go.
+ * ADR 0027 removed the grade and gave the diminished triads a switch of
+ * their own, which closed that gap without anyone noticing it had. The
+ * comment outlived the dial it described by several commits and went on
+ * justifying an exemption nothing needed — a stale claim is worse than
+ * no claim, because it reads as a decision. Measured at defaults and at
+ * the widest, over every exercise and both presentations: nothing is
+ * listed that cannot be produced.
  *
  * Swept over the widened settings as well as the defaults, for the reason
  * the progression sweep learned: a new control is a new dimension, and
@@ -425,7 +424,6 @@ describe('every exercise type’s askable items', () => {
       });
 
       it(`lists nothing the generator cannot test, under ${label} (${presentation})`, () => {
-        if (label === 'its defaults') return; // see the asymmetry above
         for (const type of EXERCISE_TYPES) {
           if (!type.presentations.includes(presentation)) continue;
           const base = { ...type.settings.defaults, ...over, presentation };

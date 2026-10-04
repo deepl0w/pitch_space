@@ -37,6 +37,37 @@ describe('how an exercise is asked', () => {
     }
   });
 
+  /**
+   * The other direction, which is the one that had gone wrong.
+   *
+   * The check above skips an exercise with no presentation field, so
+   * `interval-id` declared both presentations, implemented both — the prompt
+   * suppresses playback when reading, and `intervalQuestionScore` engraves
+   * the two notes — and offered neither. The home card and the exercise's own
+   * subtitle both advertised reading intervals off the staff and there was no
+   * way to get there; the clef picker beside it changed nothing, because
+   * nothing was ever drawn.
+   *
+   * A capability declared and not reachable is worse than one not built: the
+   * app says it can do something it cannot be made to do.
+   */
+  it('offers every presentation it declares', () => {
+    for (const d of EXERCISE_TYPES) {
+      if (d.presentations.length < 2) continue;
+
+      const field = d.settings.fields.find((f) => f.id === 'presentation');
+      expect(field, `${d.id} declares ${d.presentations.join(' and ')} and offers no choice`)
+        .toBeDefined();
+      if (field?.kind !== 'choice') continue;
+
+      const offered = field.options.map((o) => o.id);
+      for (const presentation of d.presentations) {
+        expect(offered, `${d.id} declares ${presentation} with no way to pick it`)
+          .toContain(presentation);
+      }
+    }
+  });
+
   it('defaults to something it supports', () => {
     for (const d of EXERCISE_TYPES) {
       expect(d.presentations, d.id).toContain(d.settings.defaults.presentation);

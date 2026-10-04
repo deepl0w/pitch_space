@@ -16,6 +16,35 @@ integrates everything else this file would need to stay correct about.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
+### Owed to `process` — a third instance of the stale-reading pattern
+
+No process session is running, so this is parked here rather than sent.
+
+For several exchanges I told the user that the tester, architect and user
+worktrees had no sessions in them. All three had been running for forty
+minutes. I ran `ListAgents` once, found only the process session, and then
+repeated that conclusion four or five times — syncing all three worktrees
+and printing `cd … && claude` lines for agents that already existed —
+without re-running the one command that answers the question.
+
+It is the announce failure with the subject changed. Liveness is a state;
+I checked it once as an event and cached the answer. `CLAUDE.md` already
+says `ListAgents` is the liveness check, so the rule was written down and
+I had read it.
+
+What distinguishes the cases that went wrong is that I was *acting on* the
+liveness claim — syncing for absent agents, telling the user nobody was
+there, deciding not to send. A check at the moment of acting on the belief
+is the narrow version of a guard; whether that is expressible is process's
+call, and a hook that re-runs `ListAgents` constantly is probably worse
+than the problem.
+
+All three instances are a *reading* standing in for a *fact that moves*: a
+test count for a merge base, a sent message for a fleet told, a
+four-hour-old roster for who is working. The third is the only one where
+the stale reading was my own from earlier in the same session, which is
+the cheapest to re-take and the easiest to forget to.
+
 ### `main` — four exercises, a scheduler, and the practice screen rebuilt
 
 **Branch:** `main`, landed. Nine commits since the last announcement,

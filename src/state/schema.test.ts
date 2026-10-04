@@ -184,6 +184,38 @@ describe('the stored row', () => {
     expect(row.id).toBe('b2');
     expect(row.answeredAt).toBe(42);
   });
+
+  /**
+   * Raising the schema version and teaching the writer the new field are two
+   * edits, and between them this stamps the new version onto data that does
+   * not have it yet. Vite serves code that has not been type-checked, so the
+   * window is real and it was hit: rows went in marked v2 with no
+   * `presentation`.
+   *
+   * Such a row is refused on read, correctly — and it is already at the
+   * current version, so no later step will ever come back for it. It is the
+   * one unrecoverable shape in the whole store, and the cheapest place to
+   * make it unreachable is the moment before it is written.
+   */
+  it('refuses to stamp the current version onto a row it could not read back', () => {
+    const missing = { ...attempt } as Record<string, unknown>;
+    delete missing.presentation;
+    expect(() => attemptRow(missing as unknown as Attempt)).toThrow(/presentation/);
+  });
+
+  it('refuses any payload the reader would reject, not just that one', () => {
+    for (const field of ['id', 'exerciseType', 'seed', 'startedAt', 'items', 'outcomes', 'correct'] as const) {
+      expect(() => attemptRow(broken(field, undefined) as Attempt), field).toThrow();
+    }
+  });
+
+  it('still writes a good attempt, and one that reads back identically', () => {
+    const row = attemptRow(attempt);
+    const read = migrate<Attempt>(row, {
+      current: ATTEMPT_SCHEMA, steps: ATTEMPT_MIGRATIONS, validate: coerceAttempt,
+    });
+    expect(read.ok && read.value).toEqual(attempt);
+  });
 });
 
 describe('the migration tables in this file', () => {

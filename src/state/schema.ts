@@ -157,7 +157,25 @@ export interface AttemptRow extends Versioned<unknown> {
   answeredAt: number;
 }
 
+/**
+ * Stamp an attempt with the current version, having first checked it can be
+ * read back at that version.
+ *
+ * Raising {@link ATTEMPT_SCHEMA} and teaching the writer the new field are two
+ * edits, and between them this stamped the new version onto data that did not
+ * have it yet. The dev server serves code it has not type-checked, so the
+ * window is real and it was hit: rows went in marked v2 with no
+ * `presentation`.
+ *
+ * A row like that is refused on read, correctly, and it is already at the
+ * current version — so no later migration step will ever come back for it. It
+ * is the one unrecoverable shape in the store, and the cheapest place to make
+ * it unreachable is here, one line before it exists. Failing at the write is
+ * loud and costs the session's storage; failing at the read is silent and
+ * costs the user their history.
+ */
 export function attemptRow(attempt: Attempt): AttemptRow {
+  coerceAttempt(attempt);
   return { v: ATTEMPT_SCHEMA, data: attempt, id: attempt.id, answeredAt: attempt.answeredAt };
 }
 

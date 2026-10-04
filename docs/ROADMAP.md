@@ -17,6 +17,9 @@ it ships or is dropped.
 - [Importing sheet music](#importing-sheet-music)
   - [What a score is for, once it is in](#what-a-score-is-for-once-it-is-in)
   - [The parts that will actually be hard](#the-parts-that-will-actually-be-hard)
+- [A settings screen](#a-settings-screen)
+- [Taking your progress with you](#taking-your-progress-with-you)
+- [Bringing your own material](#bringing-your-own-material)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 ## Spaced repetition
@@ -220,12 +223,73 @@ which is exactly what a score parses into. So:
 Worth doing after the six generated exercise types work, because every one of
 them is the consumer, and a source with nothing to feed is not useful.
 
+## A settings screen
+
+Everything that is about the app rather than about an exercise, in one
+place: the theme, and the audio calibration that currently has a card on
+the home screen of its own.
+
+Calibration is the reason this is worth doing rather than a tidy-up.
+It sits in `SETUP_MENU`, a list invented for it because it is "not an
+exercise and not a reference" — a comment that is already describing a
+settings screen without having one. Measuring your microphone's delay is
+something you do once and forget, which is exactly what belongs behind a
+settings door and exactly what should not be a card next to the six kinds
+of practice.
+
+The theme toggle is listed below as well, and the two should land
+together: a toggle with nowhere to live is most of why it has not.
+
+## Taking your progress with you
+
+Export and import of the attempt log, so a learner's history survives a
+device.
+
+**After spaced repetition is doing real work, not before.** Until the
+schedule reads the log for something a user can feel, an export is a
+backup of a scoreboard — and the shape of what is worth exporting is
+decided by what the schedule turns out to need. Exporting the wrong
+record and then having to migrate it is more work than waiting.
+
+[ADR 0006](adr/0006-settings-in-localstorage-progress-in-indexeddb.md)
+already names this as one of its revisit conditions, and says why it is
+the hard one: export and import read the whole log and write it back,
+which is the first operation large enough for the record-at-a-time
+migration to be the wrong granularity, and the first where a partial
+failure has to mean something.
+
+## Bringing your own material
+
+Scales, chords and progressions a user adds, for the niche material no
+catalogue will cover.
+
+The catalogues are already the right shape for this and that is not an
+accident — a `ScaleType` is a list of semitones with the staff steps that
+spell it, a `ChordType` the same, and a `Template` a list of degrees with
+a cadence and some tags. None of them references anything outside itself,
+so a user-supplied entry is data of the same kind rather than a plugin.
+
+Three things will be the work, and none of them is the parsing:
+
+- **Spelling.** The staff-step array is what makes a C blues print G♭ and
+  not F♯, and it is the part a user will not want to type. It has to be
+  derivable from something they would write, or inferred and shown back
+  for correction.
+- **Ids.** An item id keys a user's history for good
+  ([ADR 0007](adr/0007-an-attempt-records-per-event-item-attribution.md)), so a custom entry
+  needs an id that cannot collide with a built-in one this release has
+  never heard of.
+- **Validation at the boundary.** `template()` and `cell()` already throw
+  on a corpus that does not add up, which is right for data written by a
+  contributor and wrong for data arriving from a file. An import needs to
+  refuse an entry and say why, not take the app down.
+
 ## Also planned, not yet designed
 
 - **Guitar tablature** via VexFlow's `TabStave`, for fretted instruments.
 - **A theme toggle**, which needs `Score` to watch the `data-theme` attribute
   as well as the media query (there is a `todo` pinning this in
-  `Score.test.tsx`).
+  `Score.test.tsx`). It belongs on the settings screen above.
 - **Sampled instruments** as an optional download behind the `InstrumentPack`
   seam, with the synthesised one staying the default.
 - **Multi-system scores**, which is when `drawScore` gets a real measured

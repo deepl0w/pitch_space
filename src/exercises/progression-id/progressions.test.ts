@@ -114,7 +114,17 @@ describe('the palette contains every answer', () => {
         }
       }
     }
-  });
+    /*
+      Three seconds here and five is the per-test default, which is not a
+      margin — a runner half the speed of this laptop fails a sweep that
+      found nothing wrong. That is what happened: one unreproducible red
+      run locally, then the same test timing out on CI, and the cause was
+      the clock rather than anything it asserts. A sweep's cost is the
+      point of it, so the timeout is raised to say so rather than the
+      seed count cut to fit a default that was never chosen for this.
+      `toVexflow.test.ts` carries the same note for the same reason.
+    */
+  }, 30_000);
 
   /**
    * The other half, and the one that would be easy to lose by "fixing" the

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Synth, type Voice } from './synth';
 import {
-  advanceAudioClock, audioClock, audioClosed, contextCount, installAudioContext,
+  advanceAudioClock, audioClock, audioClosed, contextCount, gains, installAudioContext,
   masterGain, oscillators, resetAudio, soundingAfter,
 } from '../../testing/audioContext';
 
@@ -76,6 +76,59 @@ describe('playing', () => {
     for (const oscillator of oscillators()) {
       expect(oscillator.stoppedAt!).toBeGreaterThan(oscillator.startedAt! + 0.4);
     }
+  });
+});
+
+describe('the envelope', () => {
+  /**
+   * An envelope is a sequence of automation calls, and the Web Audio rules it
+   * has to obey are not type errors: an exponential ramp from zero never
+   * leaves zero, one to zero is invalid outright, and two events at the same
+   * time make the result depend on order. Any of those silences a note while
+   * every other note around it sounds — which is the shape a listener reports
+   * as "one note is missing" rather than as "the audio is broken".
+   */
+  const envelopes = () => gains().slice(1).filter((g) => g.events.length > 1);
+
+  it('rises, decays and fades, in that order, for every voice', () => {
+    synth.play(notes(5, 0.2));
+    expect(envelopes().length).toBe(5);
+    for (const [i, envelope] of envelopes().entries()) {
+      const times = envelope.events.map((e) => e.time);
+      expect(times, `voice ${i}: times not strictly increasing`)
+        .toEqual([...new Set(times)].sort((a, b) => a - b));
+      expect(Math.max(...envelope.events.map((e) => e.value)), `voice ${i}: silent`)
+        .toBeGreaterThan(0);
+    }
+  });
+
+  it('never ramps exponentially from or to zero', () => {
+    synth.play(notes(4, 0.2));
+    for (const envelope of envelopes()) {
+      envelope.events.forEach((event, i) => {
+        if (event.kind !== 'exponential') return;
+        expect(event.value, 'exponential ramp to zero').toBeGreaterThan(0);
+        expect(envelope.events[i - 1]?.value, 'exponential ramp from zero').toBeGreaterThan(0);
+      });
+    }
+  });
+
+  it('shapes the last voice exactly like the first', () => {
+    // The last note of a passage has nothing after it to mask a fault in its
+    // tail, so it is the one a listener notices.
+    synth.play([
+      { midi: 60, start: 0, duration: 0.4 },
+      { midi: 62, start: 0.4, duration: 0.08 },
+    ]);
+    const shapes = envelopes().map((g) => g.events.map((e) => e.kind).join(','));
+    expect(new Set(shapes).size, `envelopes differ: ${shapes.join(' | ')}`).toBe(1);
+  });
+
+  it('gives even the shortest voice an audible tail', () => {
+    synth.play([{ midi: 60, start: 0, duration: 0.01 }]);
+    const envelope = envelopes()[0];
+    const rings = envelope.events[envelope.events.length - 1].time - envelope.events[0].time;
+    expect(rings).toBeGreaterThan(0.1);
   });
 });
 

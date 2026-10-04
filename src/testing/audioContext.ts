@@ -183,6 +183,11 @@ export function oscillators(): RecordedOscillator[] {
   return recording.oscillators;
 }
 
+/** Every gain node made, master first and then one envelope per note. */
+export function gains(): RecordedGain[] {
+  return recording.gains;
+}
+
 /** The first gain made is the master; `Synth` creates it before any envelope. */
 export function masterGain(): RecordedGain | undefined {
   return recording.gains[0];

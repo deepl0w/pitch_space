@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
+import { ExerciseBoundary } from '../components/ExerciseBoundary';
 import { EXERCISE_TYPES, exerciseTypeOr } from '../../exercises/registry';
 import { newAttemptId, newSeed } from '../../exercises/seed';
 import type { AnyExerciseDefinition, AudioOut, ExerciseBase, Result } from '../../exercises/types';
@@ -229,29 +230,6 @@ function ExerciseRound({ definition, audio, tally }: {
     void progressStore.getState().record(attempt);
   }
 
-  /**
-   * The question on the staff, for an exercise being read rather than heard.
-   *
-   * Shown before the answer and replaced by it afterwards, so a reading
-   * exercise has exactly one stave on screen at a time rather than the
-   * question and its answer stacked.
-   */
-  const questionScore = useMemo(
-    () => (round && !round.result && definition.questionScore
-      ? definition.questionScore(round.exercise)
-      : null),
-    [round, definition],
-  );
-
-  const answerScore = useMemo(
-    () => (round?.result && definition.answerScore
-      ? definition.answerScore(round.exercise)
-      : null),
-    [round, definition],
-  );
-
-  const Prompt = definition.Prompt;
-
   return (
     <>
       <SettingsPanel
@@ -274,21 +252,22 @@ function ExerciseRound({ definition, audio, tally }: {
       {round === null
         ? <p className="lede">Nothing yet. Start, and two notes will sound.</p>
         : (
-          <Prompt
-            // A fresh exercise is a fresh component: remounting is what
-            // clears the prompt's own state without a reset path that has to
-            // be kept in step with it.
-            key={round.id}
-            exercise={round.exercise}
-            settings={settings}
-            result={round.result}
-            onRespond={respond}
-            audio={audio}
-          />
+          /*
+            Keyed by round as well as wrapped: a boundary that kept its error
+            would leave the exercise broken for good, where a fresh seed
+            deserves a fresh attempt. "Next" sits outside it, so a user whose
+            question failed to draw can always ask for another one.
+          */
+          <ExerciseBoundary key={round.id} seed={round.exercise.seed}>
+            <RoundView
+              definition={definition}
+              round={round}
+              settings={settings}
+              onRespond={respond}
+              audio={audio}
+            />
+          </ExerciseBoundary>
         )}
-
-      {questionScore && <Score spec={questionScore} />}
-      {answerScore && <Score spec={answerScore} />}
 
       {round?.result && (
         <section className="readout">
@@ -311,6 +290,64 @@ function ExerciseRound({ definition, audio, tally }: {
           <p className="secondary">Seed {round.exercise.seed}</p>
         </section>
       )}
+    </>
+  );
+}
+
+/**
+ * The parts of a round that run an exercise type's own code.
+ *
+ * Separate from {@link ExerciseRound} so that all of it sits *inside* the
+ * boundary. `questionScore` and `answerScore` call into the definition during
+ * render, and two of the four transition crashes came from there rather than
+ * from a prompt — so computing them in the parent would put the most
+ * likely throw above the thing meant to catch it.
+ */
+function RoundView({ definition, round, settings, onRespond, audio }: {
+  definition: AnyExerciseDefinition;
+  round: Round;
+  settings: unknown;
+  onRespond: (response: unknown) => void;
+  audio: AudioOut;
+}) {
+  /**
+   * The question on the staff, for an exercise being read rather than heard.
+   *
+   * Shown before the answer and replaced by it afterwards, so a reading
+   * exercise has exactly one stave on screen at a time rather than the
+   * question and its answer stacked.
+   */
+  const questionScore = useMemo(
+    () => (!round.result && definition.questionScore
+      ? definition.questionScore(round.exercise)
+      : null),
+    [round, definition],
+  );
+
+  const answerScore = useMemo(
+    () => (round.result && definition.answerScore
+      ? definition.answerScore(round.exercise)
+      : null),
+    [round, definition],
+  );
+
+  const Prompt = definition.Prompt;
+
+  return (
+    <>
+      <Prompt
+        // A fresh exercise is a fresh component: remounting is what clears
+        // the prompt's own state without a reset path that has to be kept in
+        // step with it.
+        key={round.id}
+        exercise={round.exercise}
+        settings={settings}
+        result={round.result}
+        onRespond={onRespond}
+        audio={audio}
+      />
+      {questionScore && <Score spec={questionScore} />}
+      {answerScore && <Score spec={answerScore} />}
     </>
   );
 }

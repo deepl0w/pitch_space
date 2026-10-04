@@ -106,13 +106,13 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
   <h1>Music Practice<br>Loop One</h1>
   <p class="standfirst">The engine that was the hard part is built and tested. The
   microphone that was the point of the app is not.</p>
-  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at 2e9af03 &nbsp;·&nbsp; 124 commits</p>
+  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at 8e6c415 &nbsp;·&nbsp; 133 commits</p>
 </header>
 
 <div class="figures">
   <div class="fig"><b>582</b><span>tests passing</span></div>
   <div class="fig"><b>36</b><span>test files</span></div>
-  <div class="fig"><b>13</b><span>ADRs</span></div>
+  <div class="fig"><b>14</b><span>ADRs</span></div>
   <div class="fig"><b>16,922</b><span>lines in src</span></div>
   <div class="fig"><b>3 / 6</b><span>exercises asked for</span></div>
   <div class="fig"><b>0</b><span>shipping targets</span></div>
@@ -277,19 +277,72 @@ nowhere else.</p>
 final note of the figure. It is reproducible for the person who reported it and has not
 been reproduced in a test.</p>
 
-<p>Four explanations have been eliminated with evidence: the scheduling arithmetic was
-checked against every figure in every metre, cold-graph headroom was measured at 4.5 ms against 60 ms
-available with no note starting in the past, 92 envelopes were checked for malformation,
-and the master-gain stop window was ruled out. None of them accounts for it.</p>
+<p>Four explanations were eliminated earlier: the scheduling arithmetic was checked
+against every figure in every metre, cold-graph headroom was measured at 4.5 ms against
+60 ms available with no note starting in the past, 92 envelopes were checked for
+malformation, and the master-gain stop window was ruled out.</p>
 
-<p>Progress now depends on one answer, which has not come back:</p>
+<p>Two candidates remained, and <b>one of them has now been eliminated too.</b> Every
+<code>Oscillator</code> and <code>AudioBufferSourceNode</code> start and stop was
+instrumented. A figure&rsquo;s first press and its later presses are identical in every
+respect: same source count, same offsets to the millisecond, same stops, a 1.04 s tail
+margin, nothing scheduled in the past. Crucially, a figure&rsquo;s own first press &mdash;
+when it was not the first press since the reload &mdash; scheduled exactly what its second
+did. There is no per-figure state that could be cold.</p>
 
-<p class="q">Does it happen on the first press after a page reload whatever the figure is,
-or on the first press of each particular figure?</p>
+<p>So of the two, this one survives:</p>
 
-<p>The two point at different causes. The first implicates the audio graph waking up; the
-second implicates something cached per figure. Until it is known which, any fix is a
-guess.</p>
+<p class="q">The first press after a page reload, whatever the figure &mdash; the audio
+graph waking, not anything cached per figure.</p>
+
+<p><b>With a caveat that has to be carried.</b> In the harness where this was measured the
+<code>AudioContext</code> is born <code>running</code>, with <code>currentTime</code> 0 and
+<code>outputLatency</code> 0, so the autoplay path never ran at all. In a real browser the
+context is created <em>suspended</em> and <code>resume()</code> is asynchronous. A bar laid
+out against <code>currentTime</code> before the resume lands sits on a clock that then
+jumps &mdash; which is exactly what a truncated tail sounds like, and is specific to the
+first press after a load. Settling it costs one log line: print <code>ctx.state</code> and
+<code>ctx.currentTime</code> at the first scheduling call after a reload, in a real
+browser. If the state is <code>suspended</code> or the time is 0, that is the bug.</p>
+</div>
+</section>
+
+<section>
+<h2>Open: four of six exercise switches blank the app</h2>
+
+<div class="open">
+<p>Found after this report was first published. Clear storage, open an exercise, press
+Start, then change the exercise in the dropdown. Four of the six transitions crash the
+whole page, in four different files, two of which are not components:</p>
+
+<div class="scroll">
+<table>
+<thead><tr><th>Transition</th><th></th><th>Where</th></tr></thead>
+<tbody>
+<tr><td>Interval → Key</td><td><span class="chip none">crash</span></td><td><code>KeyPrompt.tsx</code> — <code>.map</code> of undefined</td></tr>
+<tr><td>Interval → Degree</td><td><span class="chip none">crash</span></td><td><code>DegreePrompt.tsx</code> — <code>.length</code> of undefined</td></tr>
+<tr><td>Degree → Interval</td><td><span class="chip none">crash</span></td><td><code>intervals.ts</code> — <code>intervalVoices</code></td></tr>
+<tr><td>Degree → Key</td><td><span class="chip none">crash</span></td><td><code>keys.ts</code> — <code>keyScoreSpec</code></td></tr>
+<tr><td>Key → Interval</td><td><span class="chip ok">ok</span></td><td></td></tr>
+<tr><td>Key → Degree</td><td><span class="chip ok">ok</span></td><td></td></tr>
+</tbody>
+</table>
+</div>
+
+<p>The mechanism is confirmed in the source rather than inferred from the stack traces.
+<code>PracticeScreen</code> holds the live question in one <code>useState</code>, while
+the definition comes from the dropdown — so changing the dropdown leaves the
+<em>outgoing</em> exercise&rsquo;s question in place and runs the <em>incoming</em>
+exercise&rsquo;s code against it. Key happens to be a tolerant source; that looks like
+luck rather than design. There is no error boundary anywhere in <code>src</code>, so the
+failure takes the whole page.</p>
+
+<p>It only bites when the destination has not been visited in that profile, which makes it
+a first-run crash on a very short path — the worst place to have one. And it is getting
+worse rather than staying still: degree-id arrived with two fresh instances of it, so the
+sixth exercise type will add more unless the seam is fixed rather than the four sites
+patched. A regression test over all N×(N−1) transitions is being written; it would have
+caught all four.</p>
 </div>
 </section>
 
@@ -357,6 +410,18 @@ it.</p>
 <section>
 <h2>Next</h2>
 <ol class="next">
+<li><b>Measure input latency on real devices first.</b> ADR 0014, written today,
+settles the clock: one <code>AudioContext.currentTime</code>, input latency as a single
+correction at the capture boundary, calibrated rather than assumed, and the correction in
+force stored with each attempt. The forcing fact is that the Web Audio API exposes
+<code>baseLatency</code> and <code>outputLatency</code> but <em>no input-latency
+property</em>, while <code>toleranceFor</code> already pins the matching window at a 100 ms
+half-width across all of normal practice tempo. Ordinary round-trip latency is of that
+order, so an uncorrected offset does not degrade judging gracefully — past the window every
+note reads as missed and every attack as extra, and it looks like the detector failing
+rather than a clock. The experiment is small: play a click through the output path, capture
+it, take the difference, on as many target devices as can be reached. It is cheap now and
+it decides whether the rhythm exercise is buildable as designed.</li>
 <li><b>Capture, end to end, on one exercise.</b> <code>getUserMedia</code> with echo
 cancellation, noise suppression and gain control all off, a worklet, and a note assembler
 feeding the seam ADR 0012 already specifies. Rhythm is the exercise to prove it on: the
@@ -375,13 +440,18 @@ The service worker moves ahead of the bundle split for the reason above, and the
 measurement sits in front of the chord exercise.</li>
 </ol>
 
-<p>Answering the Rhythms question is not on that list because it costs one sentence rather
-than a work item, but it blocks the only user-reported defect currently open.</p>
+<p>Two things are not on that list because neither is a work item. The Rhythms question
+now costs one log line in a real browser rather than an answer from anyone. And the
+exercise-switch crash is a seam to fix rather than a feature to build, with its regression
+test already being written — but it is the most serious thing on this page, because it is
+the one a new user hits.</p>
 </section>
 
 <footer>
-Figures read from the repository by tools/report-facts.sh · main 2e9af03 · 4 October 2026<br>
-Revised the same day: the DSP layer does not compute chroma, and three documents said it did.
+Figures read from the repository by tools/report-facts.sh · main 8e6c415 · 4 October 2026<br>
+Revised three times the same day, by the fleet reviewing it: the DSP layer computes no
+chroma; the clock a performed note is measured against was undecided; and four of six
+exercise switches crash the app.
 </footer>
 
 </div>

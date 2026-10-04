@@ -9,8 +9,14 @@
 set -uo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
+# Written beside the repository rather than inside it, so a --run leaves no
+# untracked file behind for someone to commit by accident.
+RESULTS="${TMPDIR:-/tmp}/music-practice-report-tests.json"
+export RESULTS
+trap 'rm -f "$RESULTS"' EXIT
+
 if [ "${1:-}" = "--run" ]; then
-    npx vitest run --reporter=json --outputFile=.report-tests.json >/dev/null 2>&1 \
+    npx vitest run --reporter=json --outputFile="$RESULTS" >/dev/null 2>&1 \
         && echo "suite: ran" || echo "suite: FAILED — report that, not a number"
 fi
 
@@ -23,11 +29,14 @@ printf 'adrs            %s\n' "$(ls docs/adr/[0-9]*.md 2>/dev/null | wc -l | tr 
 src_files() { git ls-files src | grep '\.tsx\?$'; }
 printf 'source files    %s ts/tsx (%s test)\n' \
     "$(src_files | wc -l | tr -d ' ')" "$(src_files | grep -c '\.test\.')"
-printf 'source lines    %s\n' "$(src_files | xargs wc -l | tail -1 | awk '{print $1}')"
+# `wc -l <` per file and sum, rather than `xargs wc -l | tail -1`: past
+# ARG_MAX xargs runs wc more than once and tail takes only the last batch's
+# total. Correct at 97 files; wrong silently at some larger number.
+printf 'source lines    %s\n' "$(src_files | tr '\n' '\0' | xargs -0 cat | wc -l)"
 
-if [ -f .report-tests.json ]; then
+if [ -f "$RESULTS" ]; then
     node -e '
-      const r = require("./.report-tests.json");
+      const r = require(process.env.RESULTS);
       console.log(`tests           ${r.numPassedTests} passing, ${r.numFailedTests} failed, ${r.numTodoTests} todo, across ${r.numTotalTestSuites} suites`);
     ' 2>/dev/null || echo "tests           results unreadable — run with --run"
 else
@@ -48,15 +57,25 @@ node -e '
   } catch { console.log("catalogues      unreadable"); }
 ' 2>/dev/null
 
-printf 'exercises       %s built\n' "$(grep -cE '^  [a-zA-Z]+,$' src/exercises/registry.ts 2>/dev/null || echo '?')"
+# Counted from the array's entries, not from a line shape: the old pattern
+# required [a-zA-Z]+ and would have silently dropped chord7Identification.
+printf 'exercises       %s built\n' "$(sed -n '/^export const EXERCISE_TYPES/,/^];/p' \
+    src/exercises/registry.ts 2>/dev/null | grep -cE '^\s+\w+,\s*$' || echo '?')"
 printf 'screens         %s\n' "$(ls src/ui/screens/*.tsx 2>/dev/null | grep -vc test || echo 0)"
 
-if [ -d dist ]; then
+# A dist older than HEAD reports the previous commit's bundle with no sign
+# that it is doing so. It was caught doing exactly that: a 15-minute-old dist
+# printed 464 kB where HEAD builds 465. A figure that is quietly one commit
+# behind is worse than no figure, because the report's whole claim is that its
+# numbers are checkable.
+if [ ! -d dist ]; then
+    echo "bundle          not built"
+elif [ "$(find dist -newermt "@$(git log -1 --format=%ct)" -print -quit 2>/dev/null)" = "" ]; then
+    echo "bundle          STALE — dist predates HEAD; rebuild before quoting it"
+else
     gz=$(find dist/assets -name '*.js' -exec sh -c 'gzip -c "$1" | wc -c' _ {} \; 2>/dev/null |
          awk '{s+=$1} END {printf "%.0f", s/1024}')
     printf 'bundle          %s kB gzipped js\n' "${gz:-?}"
-else
-    echo "bundle          not built"
 fi
 
 echo

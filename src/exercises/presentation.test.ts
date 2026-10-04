@@ -3,6 +3,7 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_TYPES } from './registry';
+import type { Voice } from '../audio/output/synth';
 import type { AnyExerciseDefinition, Presentation } from './types';
 
 /**
@@ -164,8 +165,8 @@ describe('every declared presentation gives the user something', () => {
           const exercise = definition.generate({ seed, settings });
 
           const score = definition.questionScore?.(exercise) ?? null;
-          const played: unknown[][] = [];
-          const audio = { play: (voices: readonly unknown[]) => { played.push([...voices]); } };
+          const played: Voice[][] = [];
+          const audio = { play: (voices: readonly Voice[]) => { played.push([...voices]); } };
 
           const root = createRoot(document.createElement('div'));
           // `createElement` rather than JSX so this stays a .ts file, which
@@ -185,6 +186,25 @@ describe('every declared presentation gives the user something', () => {
           // draws a staff is a reading question wearing the wrong label.
           if (presentation === 'listen') {
             expect(sounded, `${definition.id} by ear is silent`).toBe(true);
+
+            // And audible, not merely scheduled. A voice outside the
+            // instrument's range, or with no duration, is a `play` call
+            // that satisfies "it sounded" and produces nothing a person
+            // can hear — which is the same defect one layer down, and the
+            // user role could not settle it from a microphone in a real
+            // room. MIDI 21 to 108 is a piano; a quarter of a second is
+            // the shortest thing worth calling a note here.
+            for (const voice of played.flat()) {
+              expect(
+                voice.midi >= 21 && voice.midi <= 108,
+                `${definition.id} plays MIDI ${voice.midi}, outside a piano`,
+              ).toBe(true);
+              expect(
+                voice.duration >= 0.25,
+                `${definition.id} plays a note lasting ${voice.duration}s`,
+              ).toBe(true);
+              expect(Number.isFinite(voice.start) && voice.start >= 0).toBe(true);
+            }
           }
         }
       });

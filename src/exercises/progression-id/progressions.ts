@@ -11,7 +11,7 @@ import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
 import type {
-  BaseSettings, Difficulty, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
+  BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
 
 /**
@@ -50,9 +50,17 @@ export const CLEFS: readonly Clef[] = ['treble', 'bass'];
 
 export interface ProgressionSettings extends BaseSettings {
   /**
+   * How much of the corpus the generator may use, 1 to 10.
+   *
+   * The catalogues' own ordering rather than a scale invented here: it is
+   * compared against `grade` on `CELLS` and `minGrade` on `TEMPLATES` and
+   * the harmony pools, unchanged.
+   */
+  grade: number;
+  /**
    * How long the progression is, asked for directly.
    *
-   * Its own control rather than a consequence of difficulty. The dial
+   * Its own control rather than a consequence of the grade. The dial
    * used to decide both, so a learner who wanted six bars picked "3",
    * got eight, and was told afterwards — and moving to "4" changed
    * something invisible while the bar count stayed the same. A setting
@@ -110,15 +118,6 @@ export interface ProgressionResponse {
 }
 
 /**
- * How many chords a difficulty asks for, and how much the generator may use.
- *
- * Exported because it is the only difficulty-to-grade mapping the codebase
- * has, which makes it the query every catalogue is measured against — ADR
- * 0021 measures the rhythm cells through it and found two stranded above its
- * top grade. Asserting that against the real table rather than a copy of its
- * numbers is what makes the finding fail if someone narrows a band.
- */
-/**
  * The lengths worth offering. The generator takes any of them — checked
  * from two to sixteen bars, every one generating cleanly — so this list is
  * a judgement about what is useful to practise and not a limit of the
@@ -126,30 +125,45 @@ export interface ProgressionResponse {
  */
 export const BAR_CHOICES = [2, 4, 6, 8, 12, 16] as const;
 
-export const SHAPE_AT: Record<Difficulty, { bars: number; grade: number }> = {
-  1: { bars: 4, grade: 2 },
-  2: { bars: 4, grade: 4 },
-  3: { bars: 8, grade: 5 },
-  4: { bars: 8, grade: 7 },
-  5: { bars: 8, grade: 9 },
-};
+/**
+ * The generator's own grade, settable directly.
+ *
+ * This replaces a `SHAPE_AT` table that mapped a shared 1-to-5
+ * `difficulty` onto `{bars, grade}`. Two problems, and the second is the
+ * one that mattered. Its `bars` had already been overtaken by a real
+ * length control and survived only as a fallback. And its five rows
+ * reached grades 2, 4, 5, 7 and 9 — so grades 1, 3, 6, 8 and **10** were
+ * unreachable from the app however the user set it, which is the whole of
+ * ADR 0021's finding that two rhythm cells sit above anything the dial can
+ * ask for. They are not stranded by the catalogue. They were stranded by
+ * this table, and removing it is the fix.
+ *
+ * `grade` is the catalogues' own ordering — `grade` on `CELLS`, `minGrade`
+ * on `TEMPLATES` and on the harmony pools — so this is not a new scale
+ * invented for the settings panel. It is the existing one, stopping being
+ * private.
+ */
+export const GRADE_CHOICES: readonly number[] =
+  Array.from({ length: 10 }, (_, i) => i + 1);
 
 /**
- * What actually differs between the five, in the user's terms.
+ * What a grade opens up, in the user's terms.
  *
- * Length is no longer among them — it has its own control — so these say
- * what the dial is for: how much of the harmonic corpus is in play.
+ * Bands rather than ten sentences, because the corpus does not change at
+ * every step and claiming it does would be the same lie the old labels
+ * told — those read "1 — 4 bars" through "5 — 8 bars", where the one
+ * concrete fact in them was not what moved.
  */
-const DIFFICULTY_BLURBS: Record<Difficulty, string> = {
-  1: 'the plainest progressions',
-  2: 'a wider corpus',
-  3: 'most of the corpus',
-  4: 'sevenths and richer cadences',
-  5: 'everything the generator has',
-};
+function gradeBlurb(grade: number): string {
+  if (grade <= 2) return 'the plainest progressions';
+  if (grade <= 4) return 'a wider corpus, sevenths at cadences';
+  if (grade <= 6) return 'most of the corpus';
+  if (grade <= 8) return 'richer cadences and borrowed chords';
+  return 'everything the generator has';
+}
 
 export const PROGRESSION_DEFAULTS: ProgressionSettings = {
-  difficulty: 2,
+  grade: 4,
   presentation: 'listen',
   bars: 4,
   modes: ['major'],
@@ -177,8 +191,8 @@ const ALL_CADENCES: readonly CadenceType[] = ['PAC', 'IAC', 'HC', 'DC', 'PC'];
  * every run. A palette that drifts behind it fails the containment test;
  * it cannot fail quietly.
  *
- * One palette per mode rather than per difficulty, though the reachable
- * set does grow with grade. A palette listing exactly what this difficulty
+ * One palette per mode rather than per grade, though the reachable
+ * set does grow with grade. A palette listing exactly what this grade
  * can produce would say how many chords are in play before the user had
  * named one.
  *
@@ -242,18 +256,16 @@ export function generateProgression(
   // rather than the chord names. Someone who only ever hears C major learns
   // "that was F", which is what this exercise exists not to teach.
   const key = pick(rng, ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4));
-  const shape = SHAPE_AT[settings.difficulty];
-  // `shape.bars` is the fallback and not the setting: a stored length from a
-  // release that offered a different set, or a hand-edited one, lands here.
-  // See SHAPE_AT — this is the only thing still reading its `bars`.
+  // A fallback and not the setting: a stored length from a release that
+  // offered a different set, or a hand-edited one, lands here.
   const bars = BAR_CHOICES.includes(settings.bars as typeof BAR_CHOICES[number])
-    ? settings.bars : shape.bars;
+    ? settings.bars : PROGRESSION_DEFAULTS.bars;
 
   const harmony = generateHarmony(rng, {
     key,
     timeSignature: timeSignature('4/4'),
     bars,
-    grade: shape.grade,
+    grade: settings.grade,
     // All three exclude rather than merely decline to add (ADR 0017), so
     // the palette is exactly what can be heard.
     allowInversions: false,
@@ -385,20 +397,11 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     },
     {
       kind: 'choice',
-      id: 'difficulty',
-      label: 'Difficulty',
-      // Named rather than measured in bars. The label used to read
-      // "1 — 4 bars" through "5 — 8 bars", where the one concrete fact in
-      // it was not what moved: two levels share four bars and three share
-      // eight, while the thing that actually changes across all five is
-      // how much of the corpus and how many devices are in play. A label
-      // whose only number is the one that does not track the setting
-      // teaches the wrong thing about the setting.
-      options: ([1, 2, 3, 4, 5] as Difficulty[]).map((d) => ({
-        id: `${d}`, label: `${d} — ${DIFFICULTY_BLURBS[d]}`,
-      })),
-      selected: (s) => `${s.difficulty}`,
-      apply: (s, option) => ({ ...s, difficulty: coerceDifficulty(Number(option)) }),
+      id: 'grade',
+      label: 'Grade',
+      options: GRADE_CHOICES.map((g) => ({ id: `${g}`, label: `${g} — ${gradeBlurb(g)}` })),
+      selected: (s) => `${s.grade}`,
+      apply: (s, option) => ({ ...s, grade: coerceGrade(Number(option)) }),
     },
     {
       kind: 'choice',
@@ -443,7 +446,7 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as
       Record<string, unknown>;
     return {
-      difficulty: coerceDifficulty(raw.difficulty),
+      grade: coerceGrade(raw.grade),
       presentation: raw.presentation === 'read' ? 'read' : 'listen',
       bars: BAR_CHOICES.includes(raw.bars as typeof BAR_CHOICES[number])
         ? raw.bars as number : PROGRESSION_DEFAULTS.bars,
@@ -455,7 +458,7 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
   },
 };
 
-function coerceDifficulty(value: unknown): Difficulty {
+function coerceGrade(value: unknown): number {
   const n = Number(value);
-  return (Number.isInteger(n) && n >= 1 && n <= 5 ? n : PROGRESSION_DEFAULTS.difficulty) as Difficulty;
+  return GRADE_CHOICES.includes(n) ? n : PROGRESSION_DEFAULTS.grade;
 }

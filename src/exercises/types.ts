@@ -78,16 +78,6 @@ export interface Result {
 }
 
 /**
- * The difficulty slice every exercise type shares.
- *
- * One number rather than a vector, for now. The ROADMAP's "difficulty vector"
- * is the per-exercise constraints plus this, and keeping the shared part to a
- * single ordinal is what lets one settings panel and one default-difficulty
- * preference work across every type.
- */
-export type Difficulty = 1 | 2 | 3 | 4 | 5;
-
-/**
  * How a question is put to the user.
  *
  * Nearly every exercise here can be asked either way, and they are different
@@ -106,8 +96,29 @@ export const PRESENTATION_LABELS: Record<Presentation, string> = {
   listen: 'Hear it',
 };
 
+/**
+ * The slice every exercise type shares, which is one field.
+ *
+ * It used to carry a `difficulty: 1 | 2 | 3 | 4 | 5` as well, and the
+ * ordinal was the problem rather than the vector it was a placeholder for.
+ * Nothing shared ever read it: each of the four exercises using it kept a
+ * private table and used the number as a row index, so "level 3" meant
+ * four accidentals here, a twelve-semitone register there, and grade five
+ * somewhere else. A user who wanted three accidentals could not ask for
+ * three accidentals, and the tables between them left grades 1, 3, 6, 8
+ * and 10 unreachable from the app at all.
+ *
+ * Each exercise now names the quantity it was hiding — `maxAccidentals`,
+ * `window`, `grade` — and `degree-id`, whose table duplicated a control it
+ * already had, names nothing. That is the app's direction, not a tidy-up:
+ * the exercises are meant to be configurable, and a preset is only
+ * configuration if you can also set what it presets.
+ *
+ * `presentation` stays shared because it genuinely is: every exercise can
+ * be asked by eye or by ear, and an attempt is only comparable with
+ * another attempt asked the same way.
+ */
 export interface BaseSettings {
-  difficulty: Difficulty;
   presentation: Presentation;
 }
 

@@ -7,7 +7,7 @@ import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
 import type {
-  BaseSettings, Difficulty, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
+  BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
 
 /**
@@ -76,39 +76,22 @@ export interface DegreeResponse {
   latencyMs?: number;
 }
 
-/** How far from the tonic a difficulty reaches. */
-const DEGREES_AT: Record<Difficulty, number[]> = {
-  // The tonic triad first: the three notes a key is built on, and the ones
-  // whose pull is most obvious.
-  1: [1, 3, 5],
-  2: [1, 2, 3, 5],
-  3: [1, 2, 3, 4, 5],
-  4: [1, 2, 3, 4, 5, 6],
-  5: [1, 2, 3, 4, 5, 6, 7],
-};
-
 /**
- * The preset whose degree set this is, or null for a set somebody built by
- * hand.
+ * Where a learner starts: the tonic triad, and the second between its first
+ * two notes.
  *
- * The scope picker and the degree chips control the same property, and a
- * picker that keeps claiming "the whole scale" after two degrees are
- * unticked is a control lying about the state it is showing. Deriving the
- * picker's value from the degrees makes the chips the single source and the
- * picker a shortcut into it.
+ * A default rather than a preset. There was a `DEGREES_AT` table keyed by a
+ * shared 1-to-5 difficulty, and a picker over it beside the degree chips —
+ * but the chips are the setting, so the two went out of step the moment one
+ * was unticked and the picker kept claiming "the whole scale" over five
+ * degrees. The picker went first; the table survived it by a few commits,
+ * read by nothing but this line and the loader that filled this line in.
  */
-export function presetFor(degrees: readonly number[]): Difficulty | null {
-  const wanted = [...degrees].sort((a, b) => a - b).join(',');
-  for (const level of [1, 2, 3, 4, 5] as Difficulty[]) {
-    if (DEGREES_AT[level].join(',') === wanted) return level;
-  }
-  return null;
-}
+const STARTING_DEGREES = [1, 2, 3, 5];
 
 export const DEGREE_DEFAULTS: DegreeSettings = {
-  difficulty: 2,
   presentation: 'listen',
-  degrees: DEGREES_AT[2],
+  degrees: STARTING_DEGREES,
   modes: ['major'],
   naming: 'number',
   clef: 'treble',
@@ -204,15 +187,11 @@ function coerceDegrees(value: unknown, fallback: readonly number[]): readonly nu
 
 export function coerceDegreeSettings(stored: unknown): DegreeSettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Record<string, unknown>;
-  const difficulty = ([1, 2, 3, 4, 5] as const).includes(raw.difficulty as Difficulty)
-    ? raw.difficulty as Difficulty
-    : DEGREE_DEFAULTS.difficulty;
   const modes: Mode[] = (['major', 'minor'] as Mode[])
     .filter((m) => Array.isArray(raw.modes) && raw.modes.includes(m));
   return {
-    difficulty,
     presentation: raw.presentation === 'read' ? 'read' : 'listen',
-    degrees: coerceDegrees(raw.degrees, DEGREES_AT[difficulty]),
+    degrees: coerceDegrees(raw.degrees, DEGREE_DEFAULTS.degrees),
     modes: modes.length ? modes : DEGREE_DEFAULTS.modes,
     naming: raw.naming === 'solfege' ? 'solfege' : 'number',
     clef: CLEFS.includes(raw.clef as Clef) ? raw.clef as Clef : DEGREE_DEFAULTS.clef,
@@ -240,13 +219,9 @@ export const degreeSettingsSchema: SettingsSchema<DegreeSettings> = {
       kind: 'multi', id: 'degrees', label: 'Degrees',
       options: [1, 2, 3, 4, 5, 6, 7].map((d) => ({ id: String(d), label: String(d) })),
       selected: (s) => s.degrees.map(String),
-      apply: (s, options) => {
-        if (options.length === 0) return s;
-        const degrees = coerceDegrees(options.map(Number), s.degrees);
-        // Keep the shared ordinal meaning something: where the hand-picked
-        // set happens to be a preset, say so.
-        return { ...s, degrees, difficulty: presetFor(degrees) ?? s.difficulty };
-      },
+      apply: (s, options) => (options.length === 0
+        ? s
+        : { ...s, degrees: coerceDegrees(options.map(Number), s.degrees) }),
     },
     {
       kind: 'multi', id: 'modes', label: 'Modes',

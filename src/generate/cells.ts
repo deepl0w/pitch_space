@@ -6,7 +6,7 @@ import { TICKS_PER_QUARTER, type NoteValue, type TimeSignature, valueOfTicks } f
  * Real rhythm is not a random walk over note values; it is built from a stock
  * of figures that players already have in their hands. Generating from a
  * catalogue of those figures is what makes a bar scan, and it is also what
- * makes difficulty mean something — a grade is a slice of this list rather
+ * makes a grade mean something — a grade is a slice of this list rather
  * than a separate mechanism.
  *
  * Cells are written against a reference beat and scaled to whatever beat the

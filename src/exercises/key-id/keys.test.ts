@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  KEY_DEFAULTS, generateKey, gradeKey, keyPool, soundingKeyName, soundingPool,
-  type KeySettings,
+  ACCIDENTAL_CHOICES, KEY_DEFAULTS, MAX_ACCIDENTALS, generateKey, gradeKey, keyPool, soundingKeyName, soundingPool, type KeySettings,
 } from './keys';
 import { cadencePitches } from '../../generate/tonicize';
 import { ALL_KEYS, type Key, type Mode, findKey, keyId, keyName } from '../../theory/key';
 import { midiOf } from '../../theory/pitch';
-import type { Difficulty } from '../types';
 
 /**
  * What the two presentations of this exercise are allowed to ask.
@@ -22,13 +20,14 @@ import type { Difficulty } from '../types';
  * sharps are different signatures, and telling them apart is the skill.
  */
 
-const DIFFICULTIES: Difficulty[] = [1, 2, 3, 4, 5];
+/** Every limit the circle has, not the five a table used to expose. */
+const LIMITS = ACCIDENTAL_CHOICES;
 const MODES: Mode[] = ['major', 'minor'];
 
 const heard = (over: Partial<KeySettings> = {}): KeySettings =>
-  ({ ...KEY_DEFAULTS, presentation: 'listen', difficulty: 5, ...over });
+  ({ ...KEY_DEFAULTS, presentation: 'listen', maxAccidentals: MAX_ACCIDENTALS, ...over });
 const read = (over: Partial<KeySettings> = {}): KeySettings =>
-  ({ ...KEY_DEFAULTS, presentation: 'read', difficulty: 5, ...over });
+  ({ ...KEY_DEFAULTS, presentation: 'read', maxAccidentals: MAX_ACCIDENTALS, ...over });
 
 /**
  * What a key sounds like, as pitch classes.
@@ -72,24 +71,24 @@ describe('which spelling stands for a sound', () => {
 });
 
 describe('the pool a question draws from', () => {
-  it('offers no two choices that sound the same, at any difficulty', () => {
+  it('offers no two choices that sound the same, at any limit', () => {
     // The defect, stated as the property. Nothing below this line is about
     // how many keys there are; it is about the question having one answer.
-    for (const difficulty of DIFFICULTIES) {
+    for (const maxAccidentals of LIMITS) {
       for (const mode of MODES) {
-        const pool = soundingPool(heard({ difficulty }), mode);
+        const pool = soundingPool(heard({ maxAccidentals }), mode);
         const sounds = pool.map(sound);
-        expect(new Set(sounds).size, `difficulty ${difficulty} ${mode}`).toBe(pool.length);
+        expect(new Set(sounds).size, `up to ${maxAccidentals} accidentals, ${mode}`).toBe(pool.length);
       }
     }
   });
 
   it('loses no sounding key when it collapses the spellings', () => {
-    // The cost feared when this was framed as narrowing difficulty 5, and
+    // The cost feared when this was framed as narrowing the widest limit, and
     // not paid: the collapsed entries are duplicates, not hard keys.
-    for (const difficulty of DIFFICULTIES) {
+    for (const maxAccidentals of LIMITS) {
       for (const mode of MODES) {
-        const settings = heard({ difficulty });
+        const settings = heard({ maxAccidentals });
         expect(new Set(soundingPool(settings, mode).map(sound)))
           .toEqual(new Set(keyPool(settings, mode).map(sound)));
       }
@@ -106,10 +105,10 @@ describe('the pool a question draws from', () => {
   it('leaves the reading pools exactly as they were', () => {
     // Spelled accidentals and a printed signature both separate enharmonics,
     // so neither reading form has the ambiguity and neither may lose a key.
-    for (const difficulty of DIFFICULTIES) {
+    for (const maxAccidentals of LIMITS) {
       for (const mode of MODES) {
         for (const readSource of ['signature', 'accidentals'] as const) {
-          const settings = read({ difficulty, readSource });
+          const settings = read({ maxAccidentals, readSource });
           const ids = new Set<string>();
           for (let seed = 0; seed < 300; seed += 1) {
             ids.add(generateKey({ seed, settings: { ...settings, modes: [mode] } }).keyId);

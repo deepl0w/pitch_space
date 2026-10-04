@@ -9,7 +9,7 @@ import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
 import type {
-  BaseSettings, Difficulty, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
+  BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
 
 /**
@@ -64,10 +64,19 @@ export function intervalItemId(semitones: number, direction: IntervalDirection):
 
 /* -- settings ------------------------------------------------------------- */
 
-// Extends the shared base rather than restating its fields: redeclaring
-// `difficulty` is what let this drift out of step when `presentation` was
+// Extends the shared base rather than restating its fields: redeclaring a
+// shared field is what let this drift out of step when `presentation` was
 // added to the contract.
 export interface IntervalSettings extends BaseSettings {
+  /**
+   * Semitones either side of the staff's centre that a note may fall in.
+   *
+   * The register the exercise works in, named as the quantity it is. It
+   * was a shared 1-to-5 `difficulty` indexing a private `SPREAD` table of
+   * slightly asymmetric pairs — and "Wide" is not a thing a learner can
+   * aim at, where "two octaves around the staff" is.
+   */
+  window: number;
   /** Semitone distances that may be drawn, ascending and distinct. */
   semitones: readonly number[];
   directions: readonly IntervalDirection[];
@@ -76,9 +85,25 @@ export interface IntervalSettings extends BaseSettings {
 
 const CLEFS: readonly Clef[] = ['treble', 'bass', 'alto', 'tenor'];
 
+/**
+ * The registers worth offering, as semitones either side of the staff.
+ *
+ * Never narrower than an octave: an octave interval needs room for both of
+ * its notes, and a window of six either side is exactly that room.
+ */
+export const WINDOW_CHOICES: readonly number[] = [6, 9, 12, 18, 24];
+
+const WINDOW_LABELS: Record<number, string> = {
+  6: 'An octave around the staff',
+  9: 'A twelfth',
+  12: 'Two octaves',
+  18: 'Three octaves',
+  24: 'Four octaves',
+};
+
 export const INTERVAL_DEFAULTS: IntervalSettings = {
   presentation: 'listen',
-  difficulty: 2,
+  window: 9,
   // Every simple interval above the unison. Narrowing is what the settings
   // panel is for; a default that starts narrow hides most of the exercise
   // behind a control the user has no reason to open yet.
@@ -89,10 +114,6 @@ export const INTERVAL_DEFAULTS: IntervalSettings = {
 
 function coerceIntervalSettings(stored: unknown): IntervalSettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Partial<IntervalSettings>;
-
-  const difficulty = [1, 2, 3, 4, 5].includes(raw.difficulty as number)
-    ? raw.difficulty as Difficulty
-    : INTERVAL_DEFAULTS.difficulty;
 
   const presentation = raw.presentation === 'read' ? 'read' as const : 'listen' as const;
 
@@ -110,7 +131,9 @@ function coerceIntervalSettings(stored: unknown): IntervalSettings {
     : [];
 
   return {
-    difficulty,
+    window: WINDOW_CHOICES.includes(raw.window as number)
+      ? raw.window as number
+      : INTERVAL_DEFAULTS.window,
     presentation,
     // An empty pool is a screen with nothing to generate, so it falls back
     // rather than surfacing as an error the user cannot act on from here.
@@ -136,16 +159,15 @@ export const intervalSettingsSchema: SettingsSchema<IntervalSettings> = {
       apply: (s, option) => ({ ...s, presentation: option === 'read' ? 'read' : 'listen' }),
     },
     {
-      kind: 'choice', id: 'difficulty', label: 'Range',
-      options: [
-        { id: '1', label: 'Around the staff' },
-        { id: '2', label: 'Narrow' },
-        { id: '3', label: 'Medium' },
-        { id: '4', label: 'Wide' },
-        { id: '5', label: 'The whole keyboard' },
-      ],
-      selected: (s) => String(s.difficulty),
-      apply: (s, option) => ({ ...s, difficulty: Number(option) as Difficulty }),
+      kind: 'choice', id: 'window', label: 'Range',
+      options: WINDOW_CHOICES.map((w) => ({ id: String(w), label: WINDOW_LABELS[w] })),
+      selected: (s) => String(s.window),
+      apply: (s, option) => ({
+        ...s,
+        window: WINDOW_CHOICES.includes(Number(option))
+          ? Number(option)
+          : INTERVAL_DEFAULTS.window,
+      }),
     },
     {
       kind: 'multi', id: 'semitones', label: 'Intervals',
@@ -208,28 +230,20 @@ const DIATONIC_STEPS = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7];
 /** Middle of each staff, so the drawn answer sits on the lines rather than above them. */
 const CLEF_CENTRE: Record<Clef, number> = { treble: 71, alto: 60, tenor: 57, bass: 50 };
 
-/** Semitones either side of the staff centre that the lower note may fall in. */
-const SPREAD: Record<Difficulty, readonly [number, number]> = {
-  // Never narrower than an octave, or an octave interval would have no room
-  // to be placed at all once the second note has to fit too.
-  1: [-5, 7],
-  2: [-9, 11],
-  3: [-12, 14],
-  4: [-16, 19],
-  5: [-21, 24],
-};
-
 /**
- * The MIDI range both notes are kept inside, for a given clef and difficulty.
+ * The MIDI range both notes are kept inside, for a given clef and window.
  *
  * Exported because it is the claim worth testing about placement — that no
  * exercise ever puts a note off the end of the staff it is drawn on — and a
  * test that reconstructed the arithmetic would only be testing itself.
+ *
+ * Symmetric about the clef's centre, where the table it replaces leant one
+ * semitone sharp at every level. That asymmetry was not a decision about
+ * register; it is what you get from writing five pairs of numbers by hand.
  */
 export function pitchWindow(settings: IntervalSettings): readonly [number, number] {
   const centre = CLEF_CENTRE[settings.clef];
-  const [below, above] = SPREAD[settings.difficulty];
-  return [centre + below, centre + above];
+  return [centre - settings.window, centre + settings.window];
 }
 
 export function generateInterval(spec: ExerciseSpec<IntervalSettings>): IntervalExercise {

@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  generateInterval, gradeInterval, intervalItemId, intervalScoreNotes, intervalSettingsSchema,
-  intervalVoices, pitchWindow,
-  INTERVAL_DEFAULTS, INTERVAL_DIRECTIONS, INTERVAL_SLUGS, MAX_SEMITONES,
-  type IntervalDirection, type IntervalSettings,
+  INTERVAL_DEFAULTS, INTERVAL_DIRECTIONS, INTERVAL_SLUGS, MAX_SEMITONES, WINDOW_CHOICES, generateInterval, gradeInterval, intervalItemId, intervalScoreNotes, intervalSettingsSchema, intervalVoices, pitchWindow, type IntervalDirection, type IntervalSettings,
 } from './intervals';
 import { intervalBetween, intervalName, qualityOf } from '../../theory/interval';
 import { midiOf, pitchName } from '../../theory/pitch';
-import type { Difficulty } from '../types';
 
 /**
  * Generation and grading are pure, so this is where the exercise's claims
@@ -119,11 +115,11 @@ describe('generating an interval', () => {
     }
   });
 
-  it('keeps both notes inside the window the difficulty allows', () => {
+  it('keeps both notes inside the window the setting allows', () => {
     for (const clef of ['treble', 'bass', 'alto', 'tenor'] as const) {
-      for (const difficulty of [1, 2, 3, 4, 5] as Difficulty[]) {
+      for (const window of WINDOW_CHOICES) {
         const spec = settings({
-          clef, difficulty, semitones: ALL_SEMITONES, directions: ALL_DIRECTIONS,
+          clef, window, semitones: ALL_SEMITONES, directions: ALL_DIRECTIONS,
         });
         const [low, high] = pitchWindow(spec);
         for (let seed = 0; seed < 300; seed++) {
@@ -140,7 +136,7 @@ describe('generating an interval', () => {
     // The narrowest window is exactly wide enough for the widest interval,
     // which is the constraint that keeps `rngInt` from being handed a range
     // running backwards.
-    const spec = settings({ difficulty: 1, semitones: [12], directions: ALL_DIRECTIONS });
+    const spec = settings({ window: WINDOW_CHOICES[0], semitones: [12], directions: ALL_DIRECTIONS });
     for (let seed = 0; seed < 200; seed++) {
       const exercise = generateInterval({ seed, settings: spec });
       expect(Math.abs(midiOf(exercise.pitches[1]) - midiOf(exercise.pitches[0]))).toBe(12);
@@ -274,9 +270,9 @@ describe('the interval settings schema', () => {
   });
 
   it('keeps what it can read and repairs the rest', () => {
-    const coerced = coerce({ clef: 'bass', difficulty: 99, semitones: [3, 7] });
+    const coerced = coerce({ clef: 'bass', window: 99, semitones: [3, 7] });
     expect(coerced.clef).toBe('bass');
-    expect(coerced.difficulty).toBe(INTERVAL_DEFAULTS.difficulty);
+    expect(coerced.window).toBe(INTERVAL_DEFAULTS.window);
     expect(coerced.semitones).toEqual([3, 7]);
   });
 
@@ -303,7 +299,7 @@ describe('the interval settings schema', () => {
   it('always coerces to settings the generator can actually use', () => {
     const rubbish: unknown[] = [
       undefined, null, 0, [], {}, { semitones: null }, { directions: 5 },
-      { clef: 'percussion', difficulty: '3', semitones: {} },
+      { clef: 'percussion', window: '3', semitones: {} },
     ];
     for (const stored of rubbish) {
       const coerced = coerce(stored);

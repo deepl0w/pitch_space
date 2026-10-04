@@ -13,7 +13,7 @@ export interface ScaleType {
   semitones: readonly number[];
   /** Staff steps above the root letter, parallel to `semitones`. */
   steps: readonly number[];
-  /** Grouping for the picker, and for difficulty tiers. */
+  /** Grouping for the picker, and for grading a scale's difficulty. */
   family: 'common' | 'mode' | 'pentatonic' | 'symmetric' | 'exotic';
 }
 

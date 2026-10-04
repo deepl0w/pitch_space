@@ -25,9 +25,9 @@ import { patternsFor } from '../../generate/patterns';
  * contain a dotted-quarter beat — and because the question anybody actually
  * has is "what does this metre sound like", not "what is in the library".
  *
- * There is no difficulty control. Difficulty is how an exercise chooses what
- * to set you; a reference has nothing to grade and showing a figure as
- * locked would be withholding information for no reason.
+ * There is no grade control. A grade is how an exercise chooses what to set
+ * you; a reference has nothing to grade and showing a figure as locked would
+ * be withholding information for no reason.
  */
 
 /** Rhythm is read on one pitch; the middle line is the convention. */

@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { CELLS } from './generate/cells';
 import { chooseCells } from './generate/rhythm';
 import { generateHarmony, planPhrases } from './generate/harmony';
-import { TEMPLATES } from './generate/templates';
+import { TEMPLATES, candidateTemplates } from './generate/templates';
 import { ALL_KEYS } from './theory/key';
 import type { CadenceType } from './theory/roman';
-import { SHAPE_AT } from './exercises/progression-id/progressions';
+import { BAR_CHOICES, GRADE_CHOICES } from './exercises/progression-id/progressions';
 import { TIME_SIGNATURES, timeSignature } from './theory/meter';
 import { makeRng } from './theory/rng';
 
@@ -14,7 +14,7 @@ import { makeRng } from './theory/rng';
  *
  * At the root rather than beside either half, because the claim spans both
  * and belongs to neither: the catalogue lives in `generate/` and the query
- * that reaches it is a difficulty in `exercises/`. `generate/` may not import
+ * that reaches it is a setting in `exercises/`. `generate/` may not import
  * upwards — `architecture.test.ts` enforces that and caught this file sitting
  * in the wrong place — so the test that compares the two sits above them, as
  * the architecture test does.
@@ -87,39 +87,46 @@ describe('reaching the cell catalogue', () => {
   /**
    * The grades the app can actually ask for.
    *
-   * Read out of `SHAPE_AT` rather than copied from the record, so that
-   * narrowing a difficulty band moves this test rather than leaving it
-   * asserting a mapping that no longer exists.
+   * Read out of `GRADE_CHOICES` rather than copied from the record, so that
+   * narrowing the range moves this test rather than leaving it asserting a
+   * query nobody can make.
    */
-  const ASKABLE = [...new Set(Object.values(SHAPE_AT).map((s) => s.grade))].sort((a, b) => a - b);
+  const ASKABLE = [...GRADE_CHOICES].sort((a, b) => a - b);
   const REACHED_ASKABLE = reachedAt(ASKABLE);
 
-  it('is queried over a range that stops one grade short of the catalogue', () => {
-    // The cause, named separately from its effect: the catalogue reaches 10
-    // and the only mapping onto it reaches 9.
-    expect(ASKABLE).toEqual([2, 4, 5, 7, 9]);
-    expect(Math.max(...CELLS.map((c) => c.grade)))
-      .toBeGreaterThan(Math.max(...ASKABLE));
+  it('is queried over the whole catalogue, with nothing above the range', () => {
+    /*
+      ADR 0021's finding, resolved rather than reasserted.
+
+      It recorded two cells above anything the app could ask for, and read
+      as a fact about the catalogue: the hardest material in the library,
+      out of reach. It was a fact about the *dial*. The grades reachable
+      were 2, 4, 5, 7 and 9 — five rows of a `SHAPE_AT` table keyed by a
+      1-to-5 difficulty — so 1, 3, 6, 8 and 10 could not be asked for by
+      any setting, and the catalogue graded to 10.
+
+      Removing the table removes the gap. This asserts the relationship
+      that has to hold, not the numbers: every grade the catalogue uses is
+      one the app can ask for.
+    */
+    expect(Math.max(...ASKABLE)).toBeGreaterThanOrEqual(Math.max(...CELLS.map((c) => c.grade)));
+    for (const grade of new Set(CELLS.map((c) => c.grade))) expect(ASKABLE).toContain(grade);
   });
 
-  it('strands exactly the two cells above that range, and no others', () => {
+  it('strands no cell at all, now that every grade is askable', () => {
     /*
-      Named rather than counted. "All 37" would fail today and would be
-      wrong — the two are genuinely out of reach and the app is not broken,
-      because no rhythm exercise exists yet to ask. "Some are stranded"
-      would assert nothing at all.
+      This case named `quintuplet_s` and `septuplet_s` and required them to
+      be out of reach. They are the irrational subdivisions, the two
+      highest-graded cells in the library, and the only thing keeping them
+      from a user was a preset table.
 
-      So: these two, by id, for this reason. A third one appearing fails
-      here, which is the thing worth catching — and so does either of these
-      two becoming reachable, which is what building the rhythm exercise
-      against a mapping that reaches grade 10 would do.
+      Kept as a case rather than deleted, because the obligation did not go
+      away: ADR 0011 requires every entry to be reachable by a query the
+      app makes, and this is now the whole of it for the cells. If a future
+      grade band strands one again, it fails here and names it.
     */
     const stranded = CELLS.filter((c) => !REACHED_ASKABLE.has(c.id)).map((c) => c.id).sort();
-    expect(stranded).toEqual(['quintuplet_s', 'septuplet_s']);
-    for (const id of stranded) {
-      expect(CELLS.find((c) => c.id === id)!.grade, `${id} is stranded for some other reason`)
-        .toBeGreaterThan(Math.max(...ASKABLE));
-    }
+    expect(stranded).toEqual([]);
   });
 });
 
@@ -138,10 +145,10 @@ describe('reaching the cell catalogue', () => {
  * Measured through `generateHarmony` under the options
  * `generateProgression` builds, since the exercise's own output carries no
  * template identity to observe. That bridge is the modelled part of this and
- * the place it can go stale: the bars and grades come from `SHAPE_AT` and the
- * cadence list from the exercise, but `allowBorrowed: false`,
- * `allowInversions: false` and 4/4 are copied from the call and would not
- * notice if that call changed.
+ * the place it can go stale: the bars and grades come from `BAR_CHOICES` and
+ * `GRADE_CHOICES` and the cadence list from the exercise, but
+ * `allowBorrowed: false`, `allowInversions: false` and 4/4 are copied from
+ * the call and would not notice if that call changed.
  */
 describe('reaching the template corpus', () => {
   const CADENCES: CadenceType[] = ['PAC', 'IAC', 'HC', 'DC', 'PC'];
@@ -156,7 +163,7 @@ describe('reaching the template corpus', () => {
 
   function reachedWith(vary: boolean, applied: boolean): Set<string> {
     const out = new Set<string>();
-    for (const { bars, grade } of Object.values(SHAPE_AT)) {
+    for (const bars of BAR_CHOICES) for (const grade of GRADE_CHOICES) {
       for (const mode of ['major', 'minor'] as const) {
         const key = ALL_KEYS.find((k) => k.mode === mode && k.accidentals === 0)!;
         {
@@ -200,33 +207,54 @@ describe('reaching the template corpus', () => {
     for (const id of EVERYTHING) expect(TEMPLATES.map((t) => t.id)).toContain(id);
   });
 
-  it('leaves five templates no setting can reach, each for its own reason', () => {
+  it('leaves two templates no setting can reach, both for the same reason', () => {
     /*
       0017 drew the boundary this is measured against: the obligation is
-      about entries *no* legitimate query can reach, not about entries *some*
-      query excludes. These five are the first kind. No combination of the
-      exercise's settings produces them.
+      about entries *no* legitimate query can reach, not about entries
+      *some* query excludes.
 
-      Named rather than counted, like the cells, so a sixth fails here and so
-      does any of these five becoming reachable — which is what giving the
-      exercise a twelve-bar difficulty, or a borrowed-chord setting, would do.
+      This list was five, and three of them left when `difficulty` did. The
+      previous measurement read: the blues section stood down because the
+      exercise asked for four or eight bars and nothing else, and
+      `phrygian-half` stranded on a pairing of bar counts with grades that
+      nobody had declared. Both of those were `SHAPE_AT`, the preset table
+      — not the corpus, and not a judgement anyone made about the corpus. A
+      length control and a grade control were enough to release
+      `blues-12`, `blues-quick-change` and `phrygian-half` with no change
+      to `generate/` at all.
+
+      What is left is one cause, and it is a real one. Both of these carry
+      a borrowed chord — `rhythm-a` the iv that rhythm changes is known
+      for, `blues-jazz` the ♯iv°7 in its sixth bar — and the exercise
+      hardwires `allowBorrowed: false`. That is the only gate still closed
+      against the corpus, and unlike the other three it is a setting the
+      exercise has chosen not to offer rather than a table nobody meant to
+      write. Asked of `candidateTemplates` directly: both are refused under
+      the query the exercise makes and admitted the moment borrowing is
+      allowed, with everything else held still.
     */
     const stranded = TEMPLATES.filter((t) => !EVERYTHING.has(t.id)).map((t) => t.id).sort();
-    expect(stranded).toEqual([
-      // Twelve bars. The exercise asks for four or eight and nothing else,
-      // so a twelve-bar phrase is never planned — which stands the whole
-      // blues section of the corpus down.
-      'blues-12', 'blues-jazz', 'blues-quick-change',
-      // The only two-bar template that closes on a half cadence, and it
-      // needs grade 5. See the case below: the pairing denies it.
-      'phrygian-half',
-      // Carries a borrowed chord, and the exercise hardwires
-      // `allowBorrowed: false` — not a setting the user can turn on.
-      'rhythm-a',
-    ]);
+    expect(stranded).toEqual(['blues-jazz', 'rhythm-a']);
+
+    // The cause, asked of the selector rather than inferred from the ids.
+    for (const id of stranded) {
+      const t = TEMPLATES.find((x) => x.id === id)!;
+      const query = {
+        bars: t.bars, mode: 'major' as const, grade: Math.max(...GRADE_CHOICES),
+        cadence: t.endsWith, allowApplied: true,
+      };
+      expect(
+        candidateTemplates({ ...query, allowBorrowed: false }).map((c) => c.id),
+        `${id} is refused for some reason other than borrowing`,
+      ).not.toContain(id);
+      expect(
+        candidateTemplates({ ...query, allowBorrowed: true }).map((c) => c.id),
+        `${id} is still refused once borrowing is allowed, so borrowing is not the cause`,
+      ).toContain(id);
+    }
   });
 
-  it('is rescued by varyCadence alone, and by applied dominants only with it', () => {
+  it('is rescued by varyCadence alone, and by applied dominants on its own too', () => {
     /*
       0016's question, answered, and the answer is a conjunction rather than
       the single lever I first wrote down — this case failed on its own first
@@ -245,81 +273,109 @@ describe('reaching the template corpus', () => {
       0016 nor 0017 considered.
     */
     // Applied dominants on its own changes nothing at all.
-    expect([...APPLIED_ONLY].sort(), 'applied dominants alone rescued something')
-      .toEqual([...PLAIN].sort());
+    // Applied dominants on their own now rescue `rhythm-b`, which used to
+    // need both gates at once. It is an eight-bar half-cadence template,
+    // and the conjunction was never about the two settings: eight bars
+    // only came with grades 5, 7 and 9, so whether it could be reached at
+    // all depended on which row of the table the user had landed on.
+    expect([...APPLIED_ONLY].filter((id) => !PLAIN.has(id)).sort()).toEqual(['rhythm-b']);
 
-    // varyCadence on its own rescues five.
+    // varyCadence on its own rescues three.
     expect([...VARY_ONLY].filter((id) => !PLAIN.has(id)).sort())
-      .toEqual(['axis-iv', 'folia', 'leading-tone-close', 'pachelbel', 'plagal']);
+      .toEqual(['axis-iv', 'leading-tone-close', 'plagal']);
 
-    // And the sixth needs both gates open at once.
-    expect([...BOTH].filter((id) => !VARY_ONLY.has(id)).sort()).toEqual(['rhythm-b']);
+    // And nothing now needs both gates open at once, which is the claim
+    // 0016's argument was load-bearing for.
+    expect([...BOTH].filter((id) => !VARY_ONLY.has(id) && !APPLIED_ONLY.has(id))).toEqual([]);
   });
 
-  it('rescues twice what 0016 counted, and the extra three close on a half cadence', () => {
+  it('counts exactly what 0016 counted, now that the grades are not rationed', () => {
     /*
-      0016 named three — `leading-tone-close`, `axis-iv`, `plagal` — the ones
-      whose declared cadence is IAC, DC and PC. It missed the half-cadence
-      ones, and the reason is structural rather than careless: an eight-bar
-      template is only ever quoted into an eight-bar *phrase*, which only the
-      single-phrase form produces, and that phrase carries the progression's
-      final cadence. So an eight-bar template closing on HC needs the final
-      cadence to be HC, which is exactly what `varyCadence` made askable.
+      0016 named three — `leading-tone-close`, `axis-iv`, `plagal` — the
+      ones whose declared cadence is IAC, DC and PC. A later measurement
+      made it six, and read the extra three as an undercount in 0016:
+      `folia`, `pachelbel` and `rhythm-b` are eight-bar templates closing
+      on HC, and an eight-bar template is only quoted into an eight-bar
+      *phrase*, which carries the progression's final cadence.
 
-      This is the second undercount in this lineage with the same shape as
-      0017's borrowed column: a figure taken from the obvious mechanism and
-      not from the selector.
+      That reading was wrong, and the correction is worth more than the
+      number. Those three are reachable in the plain sweep now, with
+      `varyCadence` off, and nothing in `generate/` changed. They were
+      never rescued by varying the cadence; they were out of reach because
+      eight bars only arrived at grades 5, 7 and 9 and the sweep could not
+      ask for an eight-bar phrase at any other grade. 0016's three are the
+      three, and the apparent undercount was an artefact of measuring
+      through a preset table.
+
+      So the discipline the earlier note drew from itself — take the figure
+      from the selector, not from the obvious mechanism — was right and did
+      not go far enough. The selector was asked honestly; the *query* was a
+      table that nobody had read as part of the measurement.
     */
-    const extra = ['folia', 'pachelbel', 'rhythm-b'];
-    for (const id of extra) {
-      const t = TEMPLATES.find((x) => x.id === id)!;
-      expect(t.endsWith, `${id} was expected to close on a half cadence`).toBe('HC');
-      expect(t.bars, `${id} was expected to be an eight-bar carrier`).toBe(8);
-      expect(PLAIN.has(id), `${id} should be out of reach without varyCadence`).toBe(false);
-      expect(EVERYTHING.has(id), `${id} should be in reach with it`).toBe(true);
+    const rescued = [...VARY_ONLY].filter((id) => !PLAIN.has(id)).sort();
+    expect(rescued).toEqual(['axis-iv', 'leading-tone-close', 'plagal']);
+    expect(rescued.map((id) => TEMPLATES.find((t) => t.id === id)!.endsWith).sort())
+      .toEqual(['DC', 'IAC', 'PC']);
+
+    for (const id of ['folia', 'pachelbel']) {
+      expect(PLAIN.has(id), `${id} needs varyCadence after all`).toBe(true);
     }
   });
 
-  it('strands phrygian-half on a pairing nobody declared', () => {
+  it('reaches phrygian-half, which the bar-and-grade pairing used to deny', () => {
     /*
-      The cells turned on `SHAPE_AT` stopping at grade 9. This turns on the
-      same table pairing bar counts with grades: four bars come only with
-      grades 2 and 4, eight bars only with 5, 7 and 9.
+      The sharpest of the three releases, and the one that shows what the
+      preset table cost.
 
-      `phrygian-half` is two bars, minor, closes on a half cadence, and needs
-      grade 5. A two-bar phrase that wants a half cadence is the antecedent
-      of a four-bar period — and four bars never arrive above grade 4. The
-      two-bar phrases inside an eight-bar sentence are the presentation,
-      which asks for no cadence at all, so a template declaring one is
-      filtered out there.
+      `phrygian-half` is two bars, minor, closes on a half cadence, and
+      needs grade 5. A two-bar phrase that wants a half cadence is the
+      antecedent of a four-bar period — and under `SHAPE_AT`, four bars
+      came only with grades 2 and 4, while grade 5 came only with eight.
+      So the template needed a four-bar progression at grade 5 or above,
+      and the table paired those two facts out of existence. Neither half
+      of that was written down anywhere; it was a consequence of five rows
+      of numbers, and nobody chose it.
 
-      Neither half of that is written down anywhere, and either moving alone
-      would release it.
+      Kept as a case, inverted, because the pairing is the kind of thing
+      that comes back: if some future control couples length to grade
+      again, this is where it shows.
     */
     const t = TEMPLATES.find((x) => x.id === 'phrygian-half')!;
     expect(t.bars).toBe(2);
     expect(t.endsWith).toBe('HC');
+    expect(EVERYTHING.has(t.id)).toBe(true);
 
-    const gradesAtFourBars = Object.values(SHAPE_AT)
-      .filter((s) => s.bars === 4).map((s) => s.grade);
-    expect(gradesAtFourBars.length).toBeGreaterThan(0);
-    expect(Math.max(...gradesAtFourBars)).toBeLessThan(t.minGrade);
+    // The pairing is gone: every grade is askable at every length.
+    expect(Math.max(...GRADE_CHOICES)).toBeGreaterThanOrEqual(t.minGrade);
+    expect(BAR_CHOICES).toContain(4);
   });
 
-  it('never plans a phrase as long as the twelve-bar templates need', () => {
-    // The blues section's reason, asserted against the planner rather than
-    // inferred from the three ids above.
+  it('now plans a phrase as long as the twelve-bar templates need', () => {
+    /*
+      The blues section's old reason, asserted against the planner rather
+      than inferred from the ids — and inverted, because it no longer
+      holds.
+
+      The planner was always willing to produce a twelve-bar phrase. What
+      never arrived was a twelve-bar *request*: `SHAPE_AT` asked for four
+      bars or eight, so the three twelve-bar templates were unreachable
+      from the app while being perfectly ordinary entries in the corpus.
+      Two of the three are now reached; the third, `blues-jazz`, is held
+      by borrowing and not by length.
+    */
     const lengths = new Set<number>();
-    for (const { bars } of Object.values(SHAPE_AT)) {
+    for (const bars of BAR_CHOICES) {
       for (let seed = 0; seed < 200; seed += 1) {
         for (const phrase of planPhrases(makeRng(seed), { bars }).phrases) {
           lengths.add(phrase.bars);
         }
       }
     }
-    expect([...lengths].sort((a, b) => a - b)).toEqual([2, 4, 8]);
-    for (const id of ['blues-12', 'blues-quick-change', 'blues-jazz']) {
+    expect([...lengths].sort((a, b) => a - b)).toContain(12);
+
+    for (const id of ['blues-12', 'blues-quick-change']) {
       expect(TEMPLATES.find((t) => t.id === id)!.bars).toBe(12);
+      expect(EVERYTHING.has(id), `${id} is still out of reach`).toBe(true);
     }
   });
 });

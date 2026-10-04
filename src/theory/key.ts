@@ -52,7 +52,7 @@ export function findKey(id: string): Key {
   return found;
 }
 
-/** Keys within `max` accidentals, which is how the difficulty settings slice them. */
+/** Keys within `max` accidentals, which is how key identification slices them. */
 export function keysUpTo(max: number, modes: readonly Mode[] = ['major', 'minor']): Key[] {
   return ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= max && modes.includes(k.mode));
 }

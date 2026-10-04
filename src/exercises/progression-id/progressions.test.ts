@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  PROGRESSION_DEFAULTS, generateProgression, gradeProgression, paletteFor,
-  progressionScoreSpec, progressionVoices,
-  type ProgressionSettings,
+  GRADE_CHOICES, PROGRESSION_DEFAULTS, generateProgression, gradeProgression, paletteFor, progressionScoreSpec, progressionVoices, type ProgressionSettings,
 } from './progressions';
-import type { Difficulty } from '../types';
 import { ALL_KEYS, keyId } from '../../theory/key';
 
 /**
@@ -17,6 +14,18 @@ import { ALL_KEYS, keyId } from '../../theory/key';
  */
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => i * 7919 + 1);
+
+/**
+ * The furthest the settings panel can now reach.
+ *
+ * Read off `GRADE_CHOICES` rather than written as a literal, because the
+ * point of the two tests that use it is that they probe the *end* of the
+ * range. A literal would have gone on passing while quietly testing the
+ * middle — which is how the old top, grade 9 against a catalogue graded to
+ * 10, became a finding about the catalogue in ADR 0021 when it was a
+ * finding about the dial.
+ */
+const TOP_GRADE = GRADE_CHOICES[GRADE_CHOICES.length - 1];
 
 function settings(over: Partial<ProgressionSettings> = {}): ProgressionSettings {
   return { ...PROGRESSION_DEFAULTS, ...over };
@@ -33,16 +42,16 @@ describe('the palette contains every answer', () => {
    * are off at generation for exactly this reason; this is the assertion
    * that the switches do what their names say.
    */
-  it('over every seed, difficulty and mode', () => {
+  it('over every seed, grade and mode', () => {
     for (const mode of ['major', 'minor'] as const) {
-      for (const difficulty of [1, 2, 3, 4, 5] as Difficulty[]) {
+      for (const grade of GRADE_CHOICES) {
         for (const applied of [false, true]) {
-          const s = settings({ modes: [mode], difficulty, appliedDominants: applied });
+          const s = settings({ modes: [mode], grade, appliedDominants: applied });
           const palette = new Set(paletteFor(mode, applied));
           for (const seed of SEEDS) {
             const exercise = generateProgression({ seed, settings: s });
             for (const numeral of exercise.numerals) {
-              expect(palette.has(numeral), `${mode} d${difficulty}: ${numeral} is not offered`)
+              expect(palette.has(numeral), `${mode} grade ${grade}: ${numeral} is not offered`)
                 .toBe(true);
             }
           }
@@ -61,7 +70,7 @@ describe('the palette contains every answer', () => {
    * used exactly once. It has to come from the mode alone.
    */
   it('without depending on what this seed produced', () => {
-    const s = settings({ difficulty: 5 });
+    const s = settings({ grade: TOP_GRADE });
     const palettes = SEEDS.slice(0, 50)
       .map((seed) => generateProgression({ seed, settings: s }).palette.join(','));
     expect(new Set(palettes).size).toBe(1);
@@ -90,7 +99,7 @@ describe('the palette contains every answer', () => {
    * `allowAppliedDominants: false` stops the transformation pass adding
    * them; it does not stop a template quoting one it was written with. A
    * palette that believed the flag asked questions with no right answer on
-   * screen, at difficulty 4 and above.
+   * screen, at grade 7 and above.
    */
   /**
    * What ADR 0017 changed, asserted from this side of it.
@@ -123,15 +132,15 @@ describe('the palette contains every answer', () => {
  * only one of them is the one a user would ever notice going wrong.
  */
 describe('every chord on the palette is reachable', () => {
-  it('at the difficulty that reaches furthest', () => {
+  it('at the grade that reaches furthest', () => {
     for (const mode of ['major', 'minor'] as const) {
       for (const applied of [false, true]) {
-        // Eight bars as well as difficulty 5: length is the user's own
+        // Eight bars as well as the top grade: length is the user's own
         // setting now, and a four-bar progression reaches less of the
         // corpus — so "every palette entry is reachable" has to name the
         // configuration it is reachable under rather than assume one.
         const s = settings({
-          modes: [mode], difficulty: 5, bars: 8, appliedDominants: applied,
+          modes: [mode], grade: TOP_GRADE, bars: 8, appliedDominants: applied,
         });
         const produced = new Set(
           SEEDS.flatMap((seed) => generateProgression({ seed, settings: s }).numerals),
@@ -145,7 +154,7 @@ describe('every chord on the palette is reachable', () => {
 });
 
 describe('what the exercise hands the rest of the app', () => {
-  const s = settings({ difficulty: 3 });
+  const s = settings({ grade: 5 });
 
   it('has a chord, a voicing and an item for every slot', () => {
     for (const seed of SEEDS.slice(0, 60)) {
@@ -186,7 +195,7 @@ describe('what the exercise hands the rest of the app', () => {
 });
 
 describe('grading a progression', () => {
-  const e = generateProgression({ seed: 7919, settings: settings({ difficulty: 1 }) });
+  const e = generateProgression({ seed: 7919, settings: settings({ grade: 1 }) });
 
   it('credits a right answer whole', () => {
     const result = gradeProgression(e, { numerals: [...e.numerals] });
@@ -239,7 +248,7 @@ describe('grading a progression', () => {
  */
 describe('varying the close', () => {
   function closes(vary: boolean): Set<string> {
-    const s = settings({ difficulty: 4, varyCadence: vary });
+    const s = settings({ grade: 7, varyCadence: vary });
     return new Set(
       SEEDS.map((seed) => generateProgression({ seed, settings: s }).cadence ?? 'none'),
     );

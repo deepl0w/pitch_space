@@ -14,21 +14,40 @@ import type { ItemId } from './types';
  * kinds are added, which a list of examples would not.
  */
 
-/** Every item id the shipped exercises can actually produce. */
-function everyItem(): ItemId[] {
+/**
+ * Every item id the shipped exercises can actually produce.
+ *
+ * `widen` is false for the measurement below that has to know what the
+ * defaults alone reach; everything else wants the whole ground.
+ */
+function everyItem(widen = true): ItemId[] {
   const items = new Set<ItemId>();
   for (const type of EXERCISE_TYPES) {
     const { defaults } = type.settings;
-    // Across the settings that change which items are drawn, not only the
-    // defaults: a kind only reachable at difficulty 5, or with a cadence
-    // asked for, is still a kind a user sees.
-    const variants = [
-      defaults,
-      { ...defaults, difficulty: 1 },
-      { ...defaults, difficulty: 5 },
-      { ...defaults, difficulty: 5, modes: ['major', 'minor'], varyCadence: true,
-        appliedDominants: true, degrees: [1, 2, 3, 4, 5, 6, 7] },
-    ];
+    /*
+      Across the settings that change which items are drawn, not only the
+      defaults: a kind only reachable at the widest setting, or with a
+      cadence asked for, is still a kind a user sees.
+
+      One object carrying every exercise's widening field, because each
+      exercise's `generate` reads the fields it declares and ignores the
+      rest. This used to spread `difficulty: 1` and `difficulty: 5`, which
+      was one shared ordinal every exercise read; when that field was
+      removed the three variants silently became three copies of
+      `defaults` and this sweep went on passing over a third of the
+      ground. Naming the fields is what stops that happening again — a
+      field that disappears takes its line with it rather than becoming an
+      ignored key.
+    */
+    const NARROWEST = { maxAccidentals: 0, window: 6, grade: 1 };
+    const WIDEST = {
+      maxAccidentals: 7, window: 24, grade: 10,
+      modes: ['major', 'minor'], varyCadence: true, appliedDominants: true,
+      degrees: [1, 2, 3, 4, 5, 6, 7], directions: ['up', 'down'],
+    };
+    const variants = widen
+      ? [defaults, { ...defaults, ...NARROWEST }, { ...defaults, ...WIDEST }]
+      : [defaults];
     for (const settings of variants) {
       for (let seed = 0; seed < 150; seed += 1) {
         for (const item of type.generate({ seed, settings }).items) items.add(item);
@@ -39,6 +58,30 @@ function everyItem(): ItemId[] {
 }
 
 describe('naming an item for the user', () => {
+  it('sweeps well past what the default settings reach', () => {
+    /*
+      The guard the guard needed.
+
+      The sweep widens each exercise past its defaults so that items only
+      a configured user sees — a minor degree, a descending interval, a
+      key with seven flats — are labelled too. It used to widen by
+      spreading a shared `difficulty` ordinal, and when that field was
+      removed the three variants became three copies of `defaults`. Every
+      case below went on passing, over a third of the ground, because the
+      only thing checking the widening was that it produced every *kind*
+      of item — and the defaults alone already do that.
+
+      So the kinds guard cannot be the guard. This is: the widened sweep
+      must reach substantially more ids than the defaults, and 'twice' is
+      a floor well under the 37-to-106 it actually reaches, chosen so
+      tuning a default does not move it but a collapse does.
+    */
+    const narrow = everyItem(false);
+    const wide = everyItem(true);
+    expect(narrow.length).toBeGreaterThan(0);
+    expect(wide.length).toBeGreaterThan(narrow.length * 2);
+  });
+
   it('finds every kind of item the shipped exercises produce', () => {
     // Guards the sweep below: if generation stops producing one of these the
     // coverage quietly shrinks and the real test passes vacuously.

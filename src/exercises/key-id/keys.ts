@@ -7,7 +7,7 @@ import type { Pitch } from '../../theory/pitch';
 import { noteValue } from '../../theory/meter';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
 import type {
-  BaseSettings, Difficulty, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
+  BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
 
 /**
@@ -44,6 +44,8 @@ export const KEY_SOURCE_LABELS: Record<KeySource, string> = {
 };
 
 export interface KeySettings extends BaseSettings {
+  /** How far round the circle to go: 0 is C major alone, 7 is all fifteen. */
+  maxAccidentals: number;
   /** Which modes may be asked about. */
   modes: readonly Mode[];
   clefs: readonly Clef[];
@@ -57,7 +59,7 @@ export interface KeyExercise extends ExerciseBase {
   readonly mode: Mode;
   readonly clef: Clef;
   readonly source: KeySource;
-  /** Every key of the asked-for mode within the difficulty, as answer options. */
+  /** Every key of the asked-for mode within the accidental limit, as answer options. */
   readonly choices: readonly string[];
   /** The notes shown or sounded, spelled. Empty when the signature is the question. */
   readonly pitches: readonly Pitch[];
@@ -68,29 +70,31 @@ export interface KeyResponse {
 }
 
 /**
- * How many accidentals a difficulty reaches.
+ * How far round the circle the questions reach, as the accidental count
+ * itself.
  *
- * Grouped the way they are learned rather than evenly: the first step is the
- * keys with none or one, and the last is the far side of the circle where
- * seven accidentals and a double-named tonic live.
+ * This was a shared 1-to-5 `difficulty` indexing a private table that read
+ * `{1: 1, 2: 2, 3: 4, 4: 5, 5: 7}` — so the dial offered five of the eight
+ * limits that exist and silently refused three and six, for no reason
+ * except that five rows is a tidy number of rows. Naming the real quantity
+ * costs nothing and makes every limit askable, which is the point: a
+ * learner working on the three-accidental keys can now ask for exactly
+ * those.
  */
-const ACCIDENTAL_LIMIT: Record<Difficulty, number> = {
-  1: 1, 2: 2, 3: 4, 4: 5, 5: 7,
-};
+export const MAX_ACCIDENTALS = 7;
 
 export const KEY_DEFAULTS: KeySettings = {
-  difficulty: 2,
+  maxAccidentals: 2,
   presentation: 'read',
   modes: ['major'],
   clefs: ['treble'],
   readSource: 'signature',
 };
 
-/** Keys askable at a difficulty, in circle-of-fifths order. */
+/** Keys askable within the limit, in circle-of-fifths order. */
 export function keyPool(settings: KeySettings, mode: Mode): Key[] {
-  const limit = ACCIDENTAL_LIMIT[settings.difficulty];
   return ALL_KEYS
-    .filter((k) => k.mode === mode && Math.abs(k.accidentals) <= limit)
+    .filter((k) => k.mode === mode && Math.abs(k.accidentals) <= settings.maxAccidentals)
     .sort((a, b) => a.accidentals - b.accidentals);
 }
 
@@ -143,7 +147,7 @@ export function soundingKeyName(key: Key): string {
  * that is one answer. Offering both and marking one wrong is the defect
  * 0020 was written about; the exercise's own opening comment forbids it.
  *
- * A key inside the difficulty always has its canonical spelling inside it
+ * A key inside the limit always has its canonical spelling inside it
  * too, because the canonical is the one with no more accidentals.
  */
 export function soundingPool(settings: KeySettings, mode: Mode): Key[] {
@@ -302,16 +306,28 @@ function coerceClefs(value: unknown): readonly Clef[] {
 
 export function coerceKeySettings(stored: unknown): KeySettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Record<string, unknown>;
-  const difficulty = Number(raw.difficulty);
   return {
-    difficulty: ([1, 2, 3, 4, 5] as const).includes(difficulty as Difficulty)
-      ? difficulty as Difficulty
-      : KEY_DEFAULTS.difficulty,
+    maxAccidentals: clampAccidentals(raw.maxAccidentals),
     presentation: raw.presentation === 'listen' ? 'listen' : 'read',
     modes: coerceModes(raw.modes),
     clefs: coerceClefs(raw.clefs),
     readSource: raw.readSource === 'accidentals' ? 'accidentals' : 'signature',
   };
+}
+
+/** Every limit the circle has, so none of them is unaskable. */
+export const ACCIDENTAL_CHOICES: readonly number[] =
+  Array.from({ length: MAX_ACCIDENTALS + 1 }, (_, n) => n);
+
+function accidentalLabel(n: number): string {
+  if (n === 0) return 'C major and A minor only';
+  if (n === MAX_ACCIDENTALS) return 'All fifteen keys';
+  return `Up to ${n} accidental${n === 1 ? '' : 's'}`;
+}
+
+function clampAccidentals(value: unknown): number {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n <= MAX_ACCIDENTALS ? n : KEY_DEFAULTS.maxAccidentals;
 }
 
 export const keySettingsSchema: SettingsSchema<KeySettings> = {
@@ -342,16 +358,10 @@ export const keySettingsSchema: SettingsSchema<KeySettings> = {
       }),
     },
     {
-      kind: 'choice', id: 'difficulty', label: 'How far round the circle',
-      options: [
-        { id: '1', label: 'Up to one accidental' },
-        { id: '2', label: 'Up to two' },
-        { id: '3', label: 'Up to four' },
-        { id: '4', label: 'Up to five' },
-        { id: '5', label: 'All fifteen' },
-      ],
-      selected: (s) => String(s.difficulty),
-      apply: (s, option) => ({ ...s, difficulty: Number(option) as Difficulty }),
+      kind: 'choice', id: 'maxAccidentals', label: 'How far round the circle',
+      options: ACCIDENTAL_CHOICES.map((n) => ({ id: String(n), label: accidentalLabel(n) })),
+      selected: (s) => String(s.maxAccidentals),
+      apply: (s, option) => ({ ...s, maxAccidentals: clampAccidentals(Number(option)) }),
     },
     {
       kind: 'multi', id: 'modes', label: 'Asked about',

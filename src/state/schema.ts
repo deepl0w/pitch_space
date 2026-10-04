@@ -99,15 +99,6 @@ export interface AttemptV1 {
    */
   seed: number;
   settings: unknown;
-  /**
-   * Which sense the question was put to, read or heard.
-   *
-   * A named field rather than a reach into `settings`, which is `unknown` and
-   * validated by nothing. ADR 0010 makes this part of what an attempt means —
-   * progress is tracked per item *and* per presentation — and a schedule
-   * keyed on a field no reader checks is the fragile kind.
-   */
-  presentation: Presentation;
   /** Epoch milliseconds. */
   startedAt: number;
   answeredAt: number;
@@ -125,8 +116,28 @@ export interface AttemptV1 {
   correct: boolean;
 }
 
+/**
+ * Version 2 adds the sense the question was put to.
+ *
+ * Written as an extension of v1 rather than by growing v1 in place. The
+ * shapes have to stay distinct because `migrate.ts` makes the step the only
+ * thing allowed to know the old one — and a type named for the old shape
+ * that is quietly the new one misleads precisely the reader who went looking
+ * for what changed.
+ */
+export interface AttemptV2 extends AttemptV1 {
+  /**
+   * Read or heard.
+   *
+   * A named field rather than a reach into `settings`, which is `unknown` and
+   * validated by nothing. ADR 0010 makes this part of what an attempt means —
+   * progress is tracked per item *and* per presentation — and a schedule
+   * keyed on a field no reader checks is the fragile kind.
+   */
+  presentation: Presentation;
+}
+
 export type Attempt = AttemptV2;
-export type AttemptV2 = AttemptV1;
 
 export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [
   // 1 -> 2: give every attempt a presentation of its own.
@@ -195,7 +206,7 @@ function isOutcome(value: unknown): value is ItemOutcome {
  */
 export function coerceAttempt(data: unknown): Attempt {
   if (typeof data !== 'object' || data === null) throw new Error('Attempt is not an object');
-  const a = data as Partial<AttemptV1>;
+  const a = data as Partial<AttemptV2>;
   if (typeof a.id !== 'string' || a.id === '') throw new Error('Attempt has no id');
   if (typeof a.exerciseType !== 'string') throw new Error(`Attempt ${a.id} has no exercise type`);
   if (a.presentation !== 'read' && a.presentation !== 'listen') {

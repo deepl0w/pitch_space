@@ -51,7 +51,7 @@ export const PATTERNS: readonly RhythmPattern[] = [
     [Q, E + S, S, Q, E + S, S]),
   pattern('dotted-pair', 'Dotted pair', 'march and hornpipe', '4/4',
     [E + S, S, E + S, S, E + S, S, E + S, S]),
-  pattern('backbeat-rest', 'Rest on one', 'funk', '4/4',
+  pattern('backbeat-rest', 'Rest on one', 'funk; the downbeat left to the bass', '4/4',
     [-Q, Q, -E, E, E, E]),
 
   // --- 3/4 ---------------------------------------------------------------

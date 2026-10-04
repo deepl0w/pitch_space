@@ -156,7 +156,8 @@ the whole app rests on, and which does not exist in any form.</p>
 <tr><td>audio/dsp/</td><td><span class="chip ok">done</span></td>
   <td>FFT, YIN pitch detection ported from the tuner, a spectral-flux onset detector with
   a measured absolute floor, and Needleman–Wunsch rhythm alignment. All tested under
-  Node. All unused by the app.</td></tr>
+  Node. All unused by the app. It does <em>not</em> contain chroma, though four documents
+  say it does — see below.</td></tr>
 <tr><td>audio/capture/</td><td><span class="chip none">none</span></td>
   <td>The directory does not exist. No <code>getUserMedia</code>, no worklet, no worker.</td></tr>
 <tr><td>exercises/</td><td><span class="chip part">part</span></td>
@@ -298,17 +299,40 @@ guess.</p>
 into its own chunk, but the import is static, so the built <code>index.html</code>
 modulepreloads it: the split bought nothing on first load. Total JS is 465 kB gzipped
 against a planned 91 kB — the gap is the Bravura font, chosen deliberately, costed
-wrongly. Making the import dynamic would take 377 kB off the first paint for a reader who
-opens the home screen and stops there.</p>
+wrongly. Making the import dynamic would take 377 kB off the first paint for a reader
+who opens the home screen and stops there, and the architect has confirmed it is
+compatible with ADR 0003 &mdash; exactly one runtime import reaches the renderer, because
+the one-importer rule held. But it must not be done first: a lazy chunk that the service
+worker does not precache breaks the app offline, and <code>vite-plugin-pwa</code> is still
+a declared dependency that <code>vite.config.ts</code> never imports. Wire the PWA, then
+split.</p>
 
 <p><b>Three progression templates are unreachable</b> on the default settings path, and
 <code>leading-tone-close</code> is one of them. The decision was deferred to when the
 progression exercise is built, which is now the next piece of work rather than a distant
 one.</p>
 
-<p><b>ADR 0013 makes an unmeasured claim</b> about pitch-class presence being a weaker
-question than transcription. It is almost certainly right and it is still unmeasured, so
-it should be checked against real audio before anything is built on it.</p>
+<p><b>Four documents say the DSP layer computes chroma. It does not.</b> Corrected
+after this report was first published, by the architect, who wrote the worst of them.
+<code>src/audio/dsp/</code> exports FFT utilities, an onset detector, YIN pitch detection
+and rhythm alignment; the string <code>chroma</code> appears nowhere under
+<code>src/audio/</code>. ADR 0013 and ADR 0012 both say a chord&rsquo;s pitch classes are
+&ldquo;answerable from the chroma the DSP layer already computes&rdquo;, ADR 0001 lists it
+among that directory&rsquo;s contents, and so does the diagram in
+<code>docs/adr/README.md</code>. The source of all four is one line of
+<code>CLAUDE.md</code> describing what the layer is <em>for</em>, read by each subsequent
+document as a description of what it <em>holds</em>.</p>
+
+<p>This matters beyond tidiness, and it changes the order of work. The measurement ADR
+0013 wanted cannot be run at all, because there is nothing to measure. The chord exercise
+cannot be built on that claim. The sequence is: build a chroma feature, measure per-pitch-class
+recall on recorded chords both strummed and blocked, then build the exercise on whichever
+answer comes back &mdash; and if recall on inner voices is poor, the chord exercise declares
+itself MIDI-first, which ADR 0012 already permits an exercise to do.</p>
+
+<p>It is also the second time: ADR 0005 corrected ADR 0002 for the same mistake, a claim
+about this codebase taken from the prose around it rather than from the code. Worth
+recording plainly rather than filing quietly, because the lesson did not take.</p>
 </section>
 
 <svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
@@ -333,7 +357,9 @@ effect.</li>
 legal-but-dull walk. Its real failure mode is blandness, which no test catches, so it
 needs listening as well as invariants.</li>
 <li><b>Sight reading</b>, which is the first exercise that uses everything at once.</li>
-<li><b>The two shipping targets</b>, taking the two <code>todo</code> tests green.</li>
+<li><b>The two shipping targets</b>, taking the two <code>todo</code> tests green.
+The service worker moves ahead of the bundle split for the reason above, and the chroma
+measurement sits in front of the chord exercise.</li>
 </ol>
 
 <p>Answering the Rhythms question is not on that list because it costs one sentence rather
@@ -341,7 +367,8 @@ than a work item, but it blocks the only user-reported defect currently open.</p
 </section>
 
 <footer>
-Figures read from the repository by tools/report-facts.sh · main 2e9af03 · 4 October 2026
+Figures read from the repository by tools/report-facts.sh · main 2e9af03 · 4 October 2026<br>
+Revised the same day: the DSP layer does not compute chroma, and four documents said it did.
 </footer>
 
 </div>

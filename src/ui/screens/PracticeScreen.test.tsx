@@ -165,6 +165,19 @@ describe('switching exercise type with a round on screen', () => {
     // of one. The lede carries the running definition's own description,
     // which is the thing that has to have changed.
     expect(s.container.querySelector('.lede')?.textContent).toBe(to.description);
+    /*
+      And it arrived without throwing at all, rather than throwing into the
+      boundary.
+
+      Worth asserting separately, because the boundary now hides exactly the
+      failure this sweep was written for. Take the remount away and ten of
+      the twelve pairs still throw — they are simply caught, so the page is
+      no longer blank and every assertion above passes. Without this line the
+      sweep would stay green on a broken seam and only the comparison test
+      above would go red, which is a guard quietly testing the half that is
+      easy to reach.
+    */
+    expect(s.text()).not.toContain('could not be shown');
   });
 });
 

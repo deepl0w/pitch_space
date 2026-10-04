@@ -163,11 +163,25 @@ app meant to be installable: **a lazily loaded chunk has to be precached by the
 service worker or the app breaks offline**, and `vite-plugin-pwa` is currently
 a declared dependency that `vite.config.ts` never imports.
 
-**The evidence so far is good.** Two exercises exist. The second,
+**The evidence is good for adding a type and was bad for switching between
+them.** Adding is cheap as advertised: the second exercise,
 [`key-id`](../src/exercises/key-id), is 356 lines of non-test source and
 required no change to the screen, the settings panel or the attempt log —
 [`registry.ts`](../src/exercises/registry.ts) gained one import and one array
-entry. That is the claim holding up under its first real test.
+entry.
+
+Switching was not. The screen is generic over exercise types, which means it
+holds state belonging to a *particular* type — the live question, the session
+tally — while the type can change underneath it, and nothing tied that state's
+lifetime to the type. Changing the exercise ran the incoming type's code
+against the outgoing type's question. `key={round.id}` was the right technique
+applied one level too deep, and with no error boundary anywhere in `src/` the
+failure took the whole page.
+[ADR 0015](adr/0015-state-keyed-to-the-exercise-type-must-not-outlive-it.md)
+makes it a rule — state keyed to the type is discarded by remount, not by a
+reset path that has to be kept in step — and contains the failure so a broken
+exercise does not take the menu with it. A seam that is cheap to extend but
+unsafe to switch between is not the seam it advertises.
 
 One leak is closed: a card whose blurb is not listed in
 [`ui/menu.ts`](../src/ui/menu.ts) now falls back to the definition's own

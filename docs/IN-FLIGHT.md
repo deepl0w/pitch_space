@@ -16,36 +16,74 @@ integrates everything else this file would need to stay correct about.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
-### `main` — difficulty has left the codebase entirely; landed, not yet reviewed
+### `main` — four exercises, a scheduler, and the practice screen rebuilt
 
-**Branch:** `main`. Landed across `2a99afe`, `71f6735`, `2592501`, `7b9ee50`
-and `7ca12ea`, with [ADR 0027](adr/0027-configure-by-naming-what-an-exercise-contains.md)
-recording the decision. Kept here until tester and architect have reviewed
-it, because it supersedes one record and changes what another is about.
+**Branch:** `main`, landed. Nine commits since the last announcement,
+`7b9ee50` to `3815301`. Kept here until tester and architect have
+reviewed, because it supersedes two records and changes what a third is
+about.
 
-**What changed.** No exercise has a difficulty setting and no catalogue has
-a difficulty ordering. `BaseSettings` keeps only `presentation`.
-`maxAccidentals`, `window`, styles and five capability switches replaced
-the dials; `minGrade` has left `TEMPLATES` and the harmony pools and
-`grade` has left `CELLS`. A spaced-repetition scheduler reads the attempt
-log for the first time (`src/state/schedule.ts`), and `ExerciseDefinition`
-gained `items(settings)` as its denominator.
+**What landed, in the order it matters to a reviewer.**
 
-**For architect.** ADR 0027 supersedes 0021 and is written; the index is
-updated. 0011's third obligation survives with a different query and the
-template corpus now has nothing unreachable. The thing worth a second
-opinion is 0027's "What this costs": the catalogues no longer carry any
-notion of ordering, so if the app ever wants to *suggest* where to start
-it has to earn one from the attempt log rather than from a field. I have
-asserted that is the right trade; it is the part of the record I am least
-able to check myself.
+**Difficulty is gone from the app and from the catalogues.** No exercise
+has a difficulty setting and no catalogue carries an ordering.
+`minGrade` has left `TEMPLATES` and the harmony pools, `grade` has left
+`CELLS`; `maxAccidentals`, `window`, styles and five capability switches
+replaced the dials. [ADR 0027](adr/0027-configure-by-naming-what-an-exercise-contains.md)
+records it and supersedes 0021.
 
-**For tester.** Three sweeps found three real defects in two days, all of
-the same shape — a sweep that held a user-facing control at its default.
-`V/VII` had no button in minor at sixteen bars; `tupletId` came from a
-module-level counter so the same seed did not reproduce; turning
-diminished triads off did not turn them off, because a quoted template
-and the borrowing pass both supplied them. **A new user-facing control is
-a new dimension of every existing sweep.** `bars`, then `styles` and the
-five switches, each arrived without the sweeps following. That is the
-property worth a guard somewhere, if one can be written.
+**Key identification by ear is removed.** It played a cadence with no
+reference pitch and asked for the absolute key, which is absolute pitch
+and nothing else. ADRs 0020 and 0022 were both spent marking that
+exercise fairly; neither could reach the fact that it should not have
+been set. An ADR for this is **not yet written and is the first thing
+owed** — see below.
+
+**Two new exercises**, scale identification and chord identification,
+both transposing so the answer is the shape rather than the root. Chord
+inversions are a separate opt-in question with their own item ids.
+
+**A spaced-repetition scheduler** in `src/state/schedule.ts`, pure, clock
+injected, with `items(settings)` on `ExerciseDefinition` as its
+denominator. Not yet wired to the UI.
+
+**The practice screen is a shell** — full-height sidebar, question
+beside it, neither scrolling the page — and every control in it is a
+chip rather than a dropdown or a checkbox.
+
+**For architect, three things in order of how much they move.**
+
+1. **ADR 0028 is owed and I have not written it.** The code and its
+   comments already reference it by number for the key-identification
+   removal. I claimed 0027 and wrote it; 0028 is referenced in
+   `keys.ts`, `KeyPrompt.tsx`, `keys.test.ts` and `index.ts` and does
+   not exist. That is the worst kind of dangling reference — a record
+   that reads as decided and is not. Either write it or tell me to.
+2. **0020 and 0022 are now about an exercise that does not exist.**
+   Both should be marked superseded by 0028 when it lands. I have not
+   touched their status, because changing a record's status without the
+   record that supersedes it is worse than leaving it.
+3. **ADR 0027's "What this costs" wants a second opinion.** The
+   catalogues no longer carry any notion of ordering, so a suggested
+   starting point has to be earned from the attempt log rather than
+   read off a field. I asserted that is the right trade.
+
+**For tester.** Three real defects surfaced in two days, all the same
+shape — a sweep that held a user-facing control at its default:
+
+- `V/VII` had no button in minor at sixteen bars, so a correct answer
+  was marked wrong.
+- `tupletId` came from a module-level counter that never reset, so the
+  same seed did not reproduce. An ADR 0005 violation, invisible because
+  the determinism test's settings never reached a tuplet.
+- Turning diminished triads off did not turn them off: a quoted
+  template and the borrowing pass both supplied them.
+
+**A new user-facing control is a new dimension of every existing
+sweep.** `bars`, then `styles` and five switches, then `types` on two
+new exercises — each arrived without the sweeps following, and each had
+to be noticed afterwards. If that can be made a guard rather than a
+habit, it is worth more than any single test here.
+
+The scheduler is also untested against a real session: `schedule.ts` has
+its own suite, and nothing has yet run it over a log a person made.

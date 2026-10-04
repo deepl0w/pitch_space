@@ -50,7 +50,16 @@ export const CLEFS: readonly Clef[] = ['treble', 'bass'];
 
 export interface ProgressionSettings extends BaseSettings {
   modes: readonly Mode[];
-  /** Extends the palette with V/x, for every question rather than some. */
+  /**
+   * Extends the palette with V/x, for every question rather than some.
+   *
+   * *Extra*, not *any*: `allowAppliedDominants` in the generator gates the
+   * transformation pass that adds applied dominants, and does not exclude a
+   * template written with one. The corpus quotes `V/IV` from grade 7, so at
+   * the top two difficulties this being off does not mean there are none —
+   * which is why the control does not say it does. Turning it on is what
+   * puts the other four in play, at every difficulty.
+   */
   appliedDominants: boolean;
   /**
    * Let the close be any of the five cadence types rather than whatever the
@@ -367,7 +376,12 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     {
       kind: 'toggle',
       id: 'appliedDominants',
-      label: 'Applied dominants',
+      // "Extra" because the corpus quotes V/IV at the top difficulties
+      // whatever this says. A label reading "Applied dominants" would be
+      // true at difficulty 1 to 3 and false at 4 and 5, which is worse than
+      // plainly wrong: it is a control the user learns to trust and then
+      // finds has been lying only sometimes.
+      label: 'Extra applied dominants',
       selected: (s) => s.appliedDominants,
       apply: (s, on) => ({ ...s, appliedDominants: on }),
     },

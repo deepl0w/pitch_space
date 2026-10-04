@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
+import { EXERCISE_FAMILIES, EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
 import type { AnyExerciseDefinition } from './types';
 
 /**
@@ -241,6 +241,49 @@ describe('every exercise on disk', () => {
         registry.includes(`from './${name}'`),
         `src/exercises/${name}/ has an index.ts and registry.ts does not import it`,
       ).toBe(true);
+    }
+  });
+});
+
+/**
+ * The second id namespace, which the families introduced and nothing
+ * checked.
+ *
+ * There are two, and both are compatibility commitments. A **type** id is
+ * what the attempt log stores and what every recorded item is keyed by — the
+ * tests above cover those. A **family** id is a route, so it is what a link
+ * or a bookmark carries, and it had no tests at all: `EXERCISE_FAMILIES`
+ * appeared in exactly one test file and only in assertions that could not
+ * fail.
+ *
+ * Two families sharing an id puts two cards on one route. `findFamily`
+ * returns the first and the second is unreachable, which is the same defect
+ * as an exercise registered in no family and would be found the same way —
+ * by a user clicking a card and getting someone else's screen.
+ */
+describe('family ids', () => {
+  it('are distinct, so no card is shadowed by another on its route', () => {
+    const ids = EXERCISE_FAMILIES.map((f) => f.id);
+    expect(new Set(ids).size, `duplicate family id in ${ids.join(', ')}`).toBe(ids.length);
+  });
+
+  it('do not collide with a type id belonging to another family', () => {
+    // A family id and a member id may be the same string — a family of one
+    // names itself after its member, and `findFamily` accepts either — but
+    // a family sharing an id with some *other* family's member makes the
+    // route ambiguous, and findFamily resolves it by declaration order.
+    for (const family of EXERCISE_FAMILIES) {
+      const owner = EXERCISE_FAMILIES.find((f) => f.members.some((m) => m.id === family.id));
+      expect(owner === undefined || owner === family,
+        `family ${family.id} shares its route with a member of ${owner?.id}`).toBe(true);
+    }
+  });
+
+  it('are storable and linkable, like the type ids beside them', () => {
+    for (const family of EXERCISE_FAMILIES) {
+      expect(family.id, `${family.id} is not a usable route`).toMatch(/^[a-z][a-z0-9-]*$/);
+      expect(family.name.length, `${family.id} has no name`).toBeGreaterThan(0);
+      expect(family.members.length, `${family.id} has no members`).toBeGreaterThan(0);
     }
   });
 });

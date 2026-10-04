@@ -1,38 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_MENU, REFERENCE_MENU, entryFor } from './menu';
-import { EXERCISE_FAMILIES } from '../exercises/registry';
 
 describe('the menu', () => {
-  /**
-   * The point of deriving the card title from the registry. Two strings that
-   * happen to match today are two strings that stop matching the first time
-   * one is edited, and the symptom is a card that opens a page calling
-   * itself something else.
-   */
-  it('titles every family from the family itself', () => {
-    for (const family of EXERCISE_FAMILIES) {
-      const entry = EXERCISE_MENU.find((e) => e.route === family.id);
-      expect(entry, `${family.id} is missing from the menu`).toBeDefined();
-      expect(entry!.name).toBe(family.name);
-      expect(entry!.ready).toBe(true);
-    }
-  });
-
   /*
-   * The obvious companion to the test above — "every built type is reachable
-   * from some card" — is *not* here, and deliberately.
+   * There was a test here asserting that every family's card carries the
+   * family's name and is marked ready, and a companion asserting that no
+   * built type is unreachable from a card. Both are gone, and neither was
+   * deleted for being wrong.
    *
-   * `EXERCISE_TYPES` is the families flattened, so a type belonging to no
-   * family is not a type this file can see; the loop would iterate the
-   * families' own members and pass whatever the families said. Written out,
-   * it looked like protection and could not fail. Checked by deleting a
-   * member: still green.
+   * They could not fail. `BUILT` maps `family.id` to `route`, `family.name`
+   * to `name` and `true` to `ready`, and it comes first in `EXERCISE_MENU`
+   * — so the lookup cannot miss, the name cannot differ and `ready` cannot
+   * be false. `EXERCISE_TYPES` is the families flattened, so a type in no
+   * family is not a type the second one could see. Checked both by
+   * mutation: deleting a member left them green.
    *
-   * The thing it was reaching for is real — an exercise can be written,
-   * tested and never registered, which is how the clef control came to be
-   * advertised and unopenable — but it is a claim about the filesystem and
-   * not about this module, so it lives in `registry.test.ts` where it can
-   * actually fail.
+   * They are fossils of a design that changed. The duplication they were
+   * written against — a title written once on the card and once on the
+   * screen — went away when the menu started deriving the name, and what
+   * was left guarded nothing. Kept as documentation they would be worse
+   * than absent, because a passing test reads as a guarantee.
+   *
+   * What they were reaching for is real and now lives where it can fail:
+   * registry.test.ts asks the filesystem whether every exercise directory
+   * is registered, and asks whether family ids are distinct and storable.
    */
 
   it('lists every built exercise before the unbuilt ones', () => {

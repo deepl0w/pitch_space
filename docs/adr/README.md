@@ -39,6 +39,21 @@ repeated it. No single step looked like an invention, and the claim — that the
 DSP layer computes chroma, which it does not — was load-bearing for an exercise
 about to be built on it. Both records now carry dated corrections.
 
+**Scope a guard to what can actually change the thing it guards.** A check that
+fires on changes it should ignore is not merely annoying: the noise is how it
+comes to be ignored, and an ignored check is worse than none, because everyone
+believes it is still running. Three instances in one day, all the same shape —
+the layering rule matched the word "window" in a sentence about a signal frame,
+and the report's staleness check cried wolf twice, once comparing the bundle
+against `HEAD` rather than against the files that can change it, and once
+counting test files that are never bundled. Each was narrowed after it had
+already taught someone to skim past it.
+
+The two conventions pull in opposite directions, and that is the point. The
+first says check more; the second says check *exactly*. A guard that is broad
+enough to be noisy and a claim that is never checked at all fail in the same
+place — at the moment someone decides the signal is not worth reading.
+
 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) describes the system as it stands
 today and links back to these records. It is a living document: when a record
 and it disagree, the record says what was decided and ARCHITECTURE.md says what

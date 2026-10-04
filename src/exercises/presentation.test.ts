@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { EXERCISE_TYPES } from './registry';
 import type { Voice } from '../audio/output/synth';
 import type { AnyExerciseDefinition, Presentation } from './types';
+import { widestSettings } from '../testing/settingsSpace';
 
 /**
  * The by-eye / by-ear axis, asked of every exercise rather than of one.
@@ -321,6 +322,20 @@ describe('settings that cannot change the question', () => {
     { presentation: 'read' as const, modes: ['major', 'minor'] },
   ];
 
+  /**
+   * And the same two presentations with everything else opened up, derived
+   * rather than listed.
+   *
+   * The four shapes above are a hand-written axis list, which is the habit
+   * that keeps costing: adding `relevant: (s) => s.borrowed` to the
+   * Neapolitan sixth made it invisible in all four and failed this sweep for
+   * a control that works perfectly well once borrowing is on. Deriving the
+   * widest shape from the schema means a field conditional on a switch
+   * nobody thought of here is still seen.
+   */
+  const widestShapes = (d: AnyExerciseDefinition) => d.presentations
+    .map((presentation) => widestSettings(d, { presentation }));
+
   it('declares a conditional field somewhere, or this sweep is idle', () => {
     const conditional = EXERCISE_TYPES.flatMap(
       (d) => d.settings.fields.filter((f) => f.relevant !== undefined).map((f) => `${d.id}:${f.id}`),
@@ -334,7 +349,10 @@ describe('settings that cannot change the question', () => {
       const reachable = SHAPES.filter((shape) => modes.includes(shape.presentation));
       for (const field of d.settings.fields) {
         if (field.relevant === undefined) continue;
-        const where = reachable.map((shape) => shown(d, shape).includes(field.id));
+        const where = [
+          ...reachable.map((shape) => shown(d, shape).includes(field.id)),
+          ...widestShapes(d).map((settings) => (field.relevant?.(settings) ?? true)),
+        ];
         // A field conditional on something other than presentation —
         // the Picardy third, which waits on a mode being in play — is
         // allowed to be visible in both, so the only thing forbidden is

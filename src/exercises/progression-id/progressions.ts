@@ -590,6 +590,13 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       kind: 'toggle',
       id: 'neapolitan',
       label: 'Neapolitan sixth',
+      // The Neapolitan is reached through the borrowing pass — it is one of
+      // the chromatic predominants `borrowedOptions` offers — so with
+      // borrowing off this switch could be ticked and did nothing at all.
+      // Declaring the dependency rather than removing it: asking for a bII6
+      // while refusing borrowed chords is a contradiction, and the panel
+      // drops a field that says it is irrelevant.
+      relevant: (s) => s.borrowed,
       selected: (s) => s.neapolitan,
       apply: (s, on) => ({ ...s, neapolitan: on }),
     },

@@ -6,7 +6,7 @@ import { KeyChords } from './ui/screens/KeyChords';
 import { Rhythms } from './ui/screens/Rhythms';
 import { CircleOfFifths } from './ui/screens/CircleOfFifths';
 import { PracticeScreen } from './ui/screens/PracticeScreen';
-import { findExerciseType } from './exercises/registry';
+import { findFamily } from './exercises/registry';
 import { stopSound } from './ui/sound';
 
 /**
@@ -40,7 +40,10 @@ const SCREENS: Partial<Record<string, () => React.ReactElement>> = {
 export default function App() {
   const [route, go] = useRoute();
   const Screen = SCREENS[route];
-  const exercise = findExerciseType(route);
+  // A family id is what the menu links to; a member id is what links made
+  // before the families existed still carry. Both land on the practice
+  // screen rather than silently on the home one.
+  const exercise = findFamily(route);
 
   // Notes are scheduled into the future against the audio clock, so leaving a
   // screen does not stop the passage it started — it plays on over whatever

@@ -1,22 +1,39 @@
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_MENU, REFERENCE_MENU, entryFor } from './menu';
-import { EXERCISE_TYPES } from '../exercises/registry';
+import { EXERCISE_FAMILIES } from '../exercises/registry';
 
 describe('the menu', () => {
   /**
-   * The point of deriving the card title from the exercise definition. Two
-   * strings that happen to match today are two strings that stop matching the
-   * first time one is edited, and the symptom is a card that opens a page
-   * calling itself something else.
+   * The point of deriving the card title from the registry. Two strings that
+   * happen to match today are two strings that stop matching the first time
+   * one is edited, and the symptom is a card that opens a page calling
+   * itself something else.
    */
-  it('titles every built exercise from the exercise itself', () => {
-    for (const type of EXERCISE_TYPES) {
-      const entry = EXERCISE_MENU.find((e) => e.route === type.id);
-      expect(entry, `${type.id} is missing from the menu`).toBeDefined();
-      expect(entry!.name).toBe(type.name);
+  it('titles every family from the family itself', () => {
+    for (const family of EXERCISE_FAMILIES) {
+      const entry = EXERCISE_MENU.find((e) => e.route === family.id);
+      expect(entry, `${family.id} is missing from the menu`).toBeDefined();
+      expect(entry!.name).toBe(family.name);
       expect(entry!.ready).toBe(true);
     }
   });
+
+  /*
+   * The obvious companion to the test above — "every built type is reachable
+   * from some card" — is *not* here, and deliberately.
+   *
+   * `EXERCISE_TYPES` is the families flattened, so a type belonging to no
+   * family is not a type this file can see; the loop would iterate the
+   * families' own members and pass whatever the families said. Written out,
+   * it looked like protection and could not fail. Checked by deleting a
+   * member: still green.
+   *
+   * The thing it was reaching for is real — an exercise can be written,
+   * tested and never registered, which is how the clef control came to be
+   * advertised and unopenable — but it is a claim about the filesystem and
+   * not about this module, so it lives in `registry.test.ts` where it can
+   * actually fail.
+   */
 
   it('lists every built exercise before the unbuilt ones', () => {
     const firstUnbuilt = EXERCISE_MENU.findIndex((e) => !e.ready);

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { ExerciseBoundary } from '../components/ExerciseBoundary';
-import { EXERCISE_TYPES, exerciseTypeOr } from '../../exercises/registry';
+import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registry';
 import { newAttemptId, newSeed } from '../../exercises/seed';
 import type { AnyExerciseDefinition, AudioOut, ExerciseBase, Result } from '../../exercises/types';
 import { appSynth } from '../sound';
@@ -82,9 +82,24 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
   audio?: AudioOut;
 }) {
   const lastExercise = useSettings((s) => s.doc.lastExercise);
-  const definition = useMemo(
-    () => exerciseTypeOr(exerciseId ?? lastExercise),
+  /**
+   * The family the route names, and the member within it.
+   *
+   * The route may name either — a family id is what the menu links to now,
+   * and a member id is what older links and bookmarks carry — so both
+   * resolve. Within the family the stored preference decides, which is what
+   * makes "the way I practise this" stick without making it a separate
+   * route.
+   */
+  const family = useMemo(
+    () => findFamily(exerciseId ?? '') ?? findFamily(lastExercise ?? '') ?? EXERCISE_FAMILIES[0],
     [exerciseId, lastExercise],
+  );
+  const definition = useMemo(
+    () => memberOr(family, exerciseId && family.members.some((m) => m.id === exerciseId)
+      ? exerciseId
+      : lastExercise),
+    [family, exerciseId, lastExercise],
   );
 
   const status = useProgress((s) => s.status);
@@ -98,11 +113,22 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
   return (
     <main>
       <header>
-        <h1>{definition.name} <span className="tag">practice</span></h1>
+        <h1>{family.name} <span className="tag">practice</span></h1>
         <p className="lede">{definition.description}</p>
         <div className="nav">
-          {EXERCISE_TYPES.length > 1 && (
+          {/*
+            The family's own ways of asking, and nothing else. A selector
+            listing every exercise in the app would make this a second
+            navigation to somewhere the home screen already goes, and would
+            put "name the key" beside "name the degree" as though choosing
+            between them were part of practising either.
+
+            Hidden for a family of one: a control with a single option is a
+            label pretending to be a choice.
+          */}
+          {family.members.length > 1 && (
             <select
+              aria-label={`How to practise ${family.name.toLowerCase()}`}
               value={definition.id}
               onChange={(e) => {
                 // Both: the route is what decides which exercise runs, and
@@ -113,7 +139,7 @@ export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
                 onSwitch?.(e.target.value);
               }}
             >
-              {EXERCISE_TYPES.map((type) => (
+              {family.members.map((type) => (
                 <option key={type.id} value={type.id}>{type.name}</option>
               ))}
             </select>

@@ -1,4 +1,4 @@
-import { EXERCISE_TYPES } from '../exercises/registry';
+import { EXERCISE_FAMILIES } from '../exercises/registry';
 
 /**
  * What the home screen offers, and the single source of every title on it.
@@ -24,19 +24,27 @@ export interface MenuEntry {
 /**
  * Blurbs live here rather than on the definition because they are a property
  * of the menu, not of the exercise. The *name* is the thing both the card and
- * the screen have to agree on, and that comes from the definition.
+ * the screen have to agree on, and that comes from the family.
  */
 const BLURBS: Record<string, string> = {
-  'interval-id': 'Name the distance between two notes — by ear, or read off the staff.',
+  'note-id': 'Name a note — by the distance to a reference, or by what it is '
+    + 'doing in a key. By ear or on the staff.',
   'key-id': 'Name the key, from its signature, from the notes, or by ear.',
-  'degree-id': 'Hear a key, then name what a note is doing in it.',
 };
 
-/** A card for each built exercise, titled by the exercise itself. */
-const BUILT: MenuEntry[] = EXERCISE_TYPES.map((type) => ({
-  route: type.id,
-  name: type.name,
-  blurb: BLURBS[type.id] ?? type.description,
+/**
+ * A card for each built *family*, titled by the family.
+ *
+ * One card per kind of practice rather than one per way of asking it: the
+ * brief names six kinds, and a home screen listing nine cards for them
+ * describes the implementation instead of the subject. Which way a question
+ * is asked is chosen on the practice screen, where the rest of that
+ * exercise's settings already are.
+ */
+const BUILT: MenuEntry[] = EXERCISE_FAMILIES.map((family) => ({
+  route: family.id,
+  name: family.name,
+  blurb: BLURBS[family.id] ?? family.members[0].description,
   ready: true,
 }));
 
@@ -46,18 +54,6 @@ const PLANNED: MenuEntry[] = [
     route: 'sight-reading',
     name: 'Sight reading',
     blurb: 'Read a generated line and play it. Scored on pitch and on timing.',
-    ready: false,
-  },
-  {
-    // Naming one note, which is a different skill from naming the distance
-    // between two and so a different exercise rather than a mode of that one.
-    // Absolute and relative are the two modes *within* it: absolute is the
-    // note with no help at all, relative is the note against a reference the
-    // exercise sounds first. What is being named is the same either way,
-    // which is why they belong together.
-    route: 'note-id',
-    name: 'Note identification',
-    blurb: 'Name a single note — alone or against a reference, by ear or on the staff.',
     ready: false,
   },
   {

@@ -48,8 +48,11 @@ const silent: AudioOut = { play: () => {} };
  * point: the defect lived in the gap between the prop changing and the state
  * not.
  */
-function Harness({ from }: { from: string }) {
+function Harness({ from, route }: { from: string; route: { go?: (id: string) => void } }) {
   const [exerciseId, setExerciseId] = useState(from);
+  // The router's own setter, so a test can change the route the way a menu
+  // link does rather than only the way the in-page selector does.
+  route.go = setExerciseId;
   return <PracticeScreen exerciseId={exerciseId} onSwitch={setExerciseId} audio={silent} />;
 }
 
@@ -58,7 +61,8 @@ function mount(from: string) {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
-  act(() => root.render(<Harness from={from} />));
+  const route: { go?: (id: string) => void } = {};
+  act(() => root.render(<Harness from={from} route={route} />));
 
   const buttons = () => [...container.querySelectorAll('button')];
   const button = (label: string) =>
@@ -71,9 +75,27 @@ function mount(from: string) {
     switcher,
     text: () => container.textContent ?? '',
     start: () => act(() => button('Start')?.click()),
+    /**
+     * Change the running exercise by whichever route the app actually
+     * offers for that pair.
+     *
+     * Within a family the in-page selector does it; across families there
+     * is no selector option, because the home screen is where you choose a
+     * family and a second full list here would be a duplicate navigation.
+     * Both end in the same place — `exerciseId` arriving as a new prop —
+     * which is the gap the defect lived in, so both are worth driving and
+     * neither is a weaker test than the other.
+     */
     switchTo: (id: string) => act(() => {
-      switcher().value = id;
-      switcher().dispatchEvent(new Event('change', { bubbles: true }));
+      const select = container.querySelector('select');
+      const offered = select
+        && [...select.options].some((o) => o.value === id);
+      if (offered && select) {
+        select.value = id;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        route.go?.(id);
+      }
     }),
     /**
      * Answer whatever is on offer, so the tally exists to be carried.
@@ -132,8 +154,11 @@ describe('switching exercise type with a round on screen', () => {
 
     // A screen that threw leaves an empty container, which a `toContain` on
     // the text alone would read as a pass.
-    expect(s.container.querySelector('h1')?.textContent).toContain(to.name);
-    expect(s.switcher().value).toBe(to.id);
+    expect(s.container.querySelector('h1')).not.toBeNull();
+    // The heading names the *family*, so it does not distinguish two members
+    // of one. The lede carries the running definition's own description,
+    // which is the thing that has to have changed.
+    expect(s.container.querySelector('.lede')?.textContent).toBe(to.description);
   });
 });
 

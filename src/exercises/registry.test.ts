@@ -1,3 +1,5 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
 import type { AnyExerciseDefinition } from './types';
@@ -200,5 +202,45 @@ describe('every exercise type’s generator', () => {
         expect(['treble', 'bass', 'alto', 'tenor']).toContain(spec.clef);
       }
     });
+  });
+});
+
+/**
+ * Registration, asked of the filesystem rather than of the registry.
+ *
+ * Every assertion in the file above iterates `EXERCISE_TYPES`, which is the
+ * families flattened — so an exercise that exists on disk and is in no
+ * family is invisible to all of them, and they pass. That is not a gap in
+ * the assertions; it is the shape of the question. "Did anyone forget to
+ * register this?" cannot be answered by the register.
+ *
+ * It is the same defect as the reading presentation the app declared and
+ * never offered: everything built, nothing wired, nothing red. The scan
+ * walks the directory for the same reason `architecture.test.ts` does — an
+ * untracked exercise is still an unregistered one.
+ */
+describe('every exercise on disk', () => {
+  const EXERCISES = new URL('.', import.meta.url).pathname;
+
+  /** A directory with an `index.ts` is an exercise; anything else is support. */
+  function builtDirectories(): string[] {
+    return readdirSync(EXERCISES, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && e.name !== 'render')
+      .map((e) => e.name)
+      .filter((name) => existsSync(join(EXERCISES, name, 'index.ts')));
+  }
+
+  it('finds the ones that are registered, so the scan is not looking at nothing', () => {
+    expect(builtDirectories().length).toBeGreaterThanOrEqual(EXERCISE_TYPES.length);
+  });
+
+  it('is in a family, so nothing is built and unreachable', () => {
+    const registry = readFileSync(join(EXERCISES, 'registry.ts'), 'utf8');
+    for (const name of builtDirectories()) {
+      expect(
+        registry.includes(`from './${name}'`),
+        `src/exercises/${name}/ has an index.ts and registry.ts does not import it`,
+      ).toBe(true);
+    }
   });
 });

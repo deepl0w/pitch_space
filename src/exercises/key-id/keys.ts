@@ -1,8 +1,7 @@
 import { makeRng, pick } from '../../theory/rng';
+import { cadencePitches } from '../../generate/tonicize';
 import { ALL_KEYS, type Key, type Mode, keyId, keyName, keyPitches, relativeKey, signatureLetters } from '../../theory/key';
 import type { Pitch } from '../../theory/pitch';
-import { spellChord } from '../../theory/chord';
-import { type Degree, numeral, realizeNumeral } from '../../theory/roman';
 import { noteValue } from '../../theory/meter';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
 import type {
@@ -93,24 +92,6 @@ export function keyPool(settings: KeySettings, mode: Mode): Key[] {
     .sort((a, b) => a.accidentals - b.accidentals);
 }
 
-/**
- * A cadence that fixes the key, for the listening form.
- *
- * I-IV-V-I rather than a scale: a scale names its tonic only if you already
- * know where it started, whereas a cadence puts the tonic somewhere the ear
- * cannot miss. In minor the dominant is major, because the leading tone is
- * most of what tells a listener the mode.
- */
-function cadenceFor(key: Key): Pitch[] {
-  const tonic = { ...key.tonic, octave: 4 };
-  const quality = key.mode === 'major'
-    ? ['maj', 'maj', 'maj', 'maj']
-    : ['min', 'min', 'maj', 'min'];
-  const degrees: Degree[] = [1, 4, 5, 1];
-  return degrees.flatMap((degree, i) =>
-    spellChord(realizeNumeral({ ...key, tonic }, numeral(degree, quality[i]))));
-}
-
 /** The scale of the key, which is where its accidentals are visible. */
 function scaleFor(key: Key): Pitch[] {
   return keyPitches({ ...key, tonic: { ...key.tonic, octave: 4 } });
@@ -141,7 +122,7 @@ export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
 
   const pitches = source === 'signature' ? []
     : source === 'accidentals' ? scaleFor(key)
-      : cadenceFor(key);
+      : cadencePitches(key);
 
   return {
     type: KEY_EXERCISE_ID,

@@ -1,5 +1,6 @@
 import { intervalIdentification } from './interval-id';
 import { keyIdentification } from './key-id';
+import { degreeIdentification } from './degree-id';
 import type { AnyExerciseDefinition } from './types';
 
 /**
@@ -17,6 +18,7 @@ import type { AnyExerciseDefinition } from './types';
 export const EXERCISE_TYPES: readonly AnyExerciseDefinition[] = [
   intervalIdentification,
   keyIdentification,
+  degreeIdentification,
 ];
 
 export function findExerciseType(id: string): AnyExerciseDefinition | undefined {

@@ -29,6 +29,7 @@ export interface MenuEntry {
 const BLURBS: Record<string, string> = {
   'interval-id': 'Name the distance between two notes — by ear, or read off the staff.',
   'key-id': 'Name the key, from its signature, from the notes, or by ear.',
+  'degree-id': 'Hear a key, then name what a note is doing in it.',
 };
 
 /** A card for each built exercise, titled by the exercise itself. */

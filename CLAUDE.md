@@ -21,12 +21,28 @@ agent works in this checkout, owns `main`, and is the only one that may push;
 everyone else works in a worktree under `.claude/worktrees/` on `claude/<name>`,
 syncs before starting, commits before going idle, and never pushes.
 
-A worktree and its branch are named after the role — `fleet.sh new tester`
-gives `.claude/worktrees/tester` on `claude/tester`, and two worktrees in one
-role take `feature-melody`, `feature-capture`. `status` and `announce` list
-the fleet by that name, so a randomly-named worktree makes the roster
-unreadable. If you are given a role and find yourself in one, ask main to
-rename it rather than carrying on.
+A worktree and its branch are named after the role — `.claude/worktrees/tester`
+on `claude/tester`, and two worktrees in one role take `feature-melody`,
+`feature-capture`. `status` and `announce` list the fleet by that name, so a
+randomly-named worktree makes the roster unreadable.
+
+**Never call `EnterWorktree` with no arguments.** It generates a random name
+when none is given, which is where every `eager-feynman-950574` in this
+repository's history came from — not from the fleet script, which has always
+defaulted to the role. Two correct forms:
+
+- `EnterWorktree({ path: ".claude/worktrees/<role>" })` — **preferred.** Main
+  creates the worktree with `fleet.sh new <role>`; you enter the one that is
+  already there.
+- `EnterWorktree({ name: "<role>" })` when there is no worktree yet and you
+  have been told to make one.
+
+If you are given a role and find yourself in a randomly-named worktree, say
+so and ask main to sort it rather than carrying on. **A session also carries
+the directory it was launched in, separately from where its shell stands**,
+and file writes are checked against that one — so a session whose launch
+directory was renamed or removed can read, run tests and use git while every
+save is refused. It looks like a working session until the first save.
 
 **The three roles this project runs**, and what each may change:
 

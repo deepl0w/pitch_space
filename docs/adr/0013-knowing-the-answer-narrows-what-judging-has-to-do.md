@@ -109,6 +109,32 @@ third, not a major one". That requires looking beyond the hypothesis, and the
 cheap version — checking the few near-miss pitch classes as well as the expected
 ones — should be designed in rather than retrofitted.
 
+## Correction, 4 October 2026
+
+**This record twice says a chord's pitch-class presence is answerable from "the
+chroma the DSP layer already computes". There is no chroma in the DSP layer.**
+`src/audio/dsp/` exports FFT utilities, an onset detector, a YIN pitch detector
+and the rhythm alignment, and the string "chroma" does not appear anywhere
+under `src/audio/`. `CLAUDE.md` and [0001](0001-a-pure-core.md) both list chroma
+among the layer's contents, which is where the belief came from; both were
+describing what the layer is *for*, and this record read them as describing what
+it holds.
+
+Added rather than edited, because the decision above does not depend on it: a
+chord still localises to per-tone questions, polyphony still does not break
+0009's method, and an inconclusive hearing still produces no outcome. What
+changes is the schedule. The measurement this record calls for cannot be run
+today — there is nothing to measure — so the order is: build a chroma feature,
+then measure per-pitch-class recall, then build the chord exercise on whichever
+answer comes back. Treating "a chord localises" as settled before that sequence
+runs is exactly the mistake this correction exists to prevent.
+
+The error is the same one [0005](0005-seeds-are-minted-outside-the-core.md)
+caught on [0002](0002-generation-is-reproducible-from-its-seed.md): a claim
+about this codebase asserted from reading the prose around it rather than from
+reading the code. It is worth noticing that it happened again, in a record whose
+author had just written that it should not.
+
 ## Revisit when
 
 - **The chord recall measurement exists.** It is the gate on this whole record.

@@ -130,6 +130,40 @@ not to be needed — is the mistake 0005 corrected on 0002, and it applies here.
 The mitigation is that the decision is small: it names what crosses a boundary,
 not how either side works.
 
+## Correction, 4 October 2026
+
+**The Consequences above say deciding whether a set of expected pitch classes
+is present "is answerable from the chroma the DSP layer already computes". The
+DSP layer computes no chroma.** `src/audio/dsp/` holds an FFT, an onset
+detector, a YIN pitch detector and the rhythm alignment; `grep -rni chroma
+src/audio/` returns nothing.
+
+The claim is identical to the one corrected on
+[0013](0013-knowing-the-answer-narrows-what-judging-has-to-do.md), and this is
+where it first appeared — so a reader following the chain from 0012 to 0013
+meets it here first, stated as a consequence rather than as a caveat. That is
+the stronger position and the more misleading one, which is why this note
+exists rather than relying on 0013's.
+
+**What survives.** Everything this record decides. The seam is unaffected: a
+performed note is still what crosses it, there are still two producers, and the
+iOS fact the whole record rests on is independent of any of this. The claim that
+chord exercises do not require polyphonic transcription also survives as
+*reasoning* — verification really is a weaker demand than transcription — but
+it is a prediction about an unwritten feature rather than a fact about an
+existing one.
+
+**What changes.** Only the schedule. Chroma has to be built and its
+per-pitch-class recall measured before a chord exercise is built on this
+argument. If recall on the inner voices of a strummed chord is poor, this
+record's own provision applies: an exercise may declare that it needs MIDI.
+
+The mechanism is worth naming, because it is how one unchecked reading became
+four wrong documents. Each record took the claim from the prose of the one
+before it rather than from the code. `CLAUDE.md` described what `audio/dsp/` is
+*for*; 0012 read that as what it holds; 0013 cited 0012; the ADR index drew it.
+No single step looked like an invention.
+
 ## Revisit when
 
 - **The first capture path is built.** Check that the audio producer can

@@ -139,6 +139,30 @@ A prompt that rendered its own stave would make `exercises/` import `ui/` import
 `exercises/render/`, and the containment is easiest to keep while that arrow
 points one way.
 
+That containment pays for itself twice. It was written so the renderer stays
+replaceable; it also turns out to be what makes VexFlow's weight removable from
+the first paint. The notation chunk is 377 kB gzipped — most of it the Bravura
+font — against 465 kB of JavaScript in total, and **exactly one runtime import
+reaches it**: [`Score.tsx`](../src/ui/notation/Score.tsx) importing `drawScore`.
+Every other reference, in six screens and three exercises, is `import type` and
+is erased at compile time.
+
+So there is one edge to make dynamic, inside an effect that already runs
+imperatively and already has a failure path. Had VexFlow leaked into those six
+screens there would be six await points and no practical split. A dynamic
+`import('vexflow')` inside `toVexflow.ts` keeps the file the sole importer, and
+the guard's scanner already matches dynamic specifiers, so the rule in ADR 0003
+continues to be enforced unchanged.
+
+Two consequences are not free. The first engrave gains a load it did not have,
+so the staff needs a placeholder rather than nothing. And `Score.tsx` currently
+treats any throw as "the engraver could not lay out this spec", which is a
+generator bug worth showing; a chunk that fails to load is a different failure
+and would be reported as the first. That matters more than it sounds for an
+app meant to be installable: **a lazily loaded chunk has to be precached by the
+service worker or the app breaks offline**, and `vite-plugin-pwa` is currently
+a declared dependency that `vite.config.ts` never imports.
+
 **The evidence so far is good.** Two exercises exist. The second,
 [`key-id`](../src/exercises/key-id), is 356 lines of non-test source and
 required no change to the screen, the settings panel or the attempt log —

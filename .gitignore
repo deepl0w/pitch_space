@@ -29,3 +29,12 @@ keystore.properties
 
 # Scratch results from tools/report-facts.sh --run, if ever written here.
 .report-tests.json
+
+# Internal fleet working notes: sweep reports and process post-mortems.
+# Untracked deliberately, the same reason `.claude/adr-claims` is — except
+# that this one is about audience rather than coordination. The repository
+# is public; these are candid internal writing, and the user asked for them
+# to stay out of the published tree. They are still written, still read, and
+# still referred to by path. They are simply not pushed.
+docs/findings/
+docs/process/

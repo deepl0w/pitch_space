@@ -110,6 +110,19 @@ about to improve the fleet skill from a tester worktree, that is the moment
 the rule is for. `docs/process/` carries the reasoning, because a decision
 recorded only in an unversioned file is not recorded.
 
+**`docs/findings/` and `docs/process/` are written but never committed.**
+The repository is public, and the user asked that the fleet's internal
+writing stay out of it; `.gitignore` enforces that, so an agent cannot
+re-add them by forgetting. Keep writing them — the reason they exist is
+that a finding nobody wrote down is forgotten, and that has already cost
+this project one. But they now live only in the checkout that wrote them,
+which has two consequences worth planning around: a sweep's findings do
+not reach another worktree through `fleet.sh sync`, so say what you found
+in a message as well; and a document that cites one is citing something a
+reader of the public repository cannot open. Where that citation carries
+the argument rather than just the evidence, put the argument in the
+citing document.
+
 A **tester** should invoke the `test-engineer` skill and an **architect** the
 `architect` skill; **feature**, **user** and **process** sessions need neither.
 
@@ -272,8 +285,9 @@ reproduce exactly.
   index already carries this as its first convention, for claims about code.
 - **When a mechanism exists to answer a question directly, a correlate of
   the answer is not a substitute for running it.** A matching test count is
-  not `git merge-base`; telling one agent is not `fleet.sh announce`. See
-  [docs/process/2026-10-04-a-proxy-is-not-the-mechanism.md](docs/process/2026-10-04-a-proxy-is-not-the-mechanism.md).
+  not `git merge-base`; telling one agent is not `fleet.sh announce`. The
+  reasoning is in `docs/process/2026-10-04-a-proxy-is-not-the-mechanism.md`,
+  which is on disk and deliberately not in the repository — see below.
 - **A document over about a hundred lines opens with a contents block**, as
   links, so an agent can find the one section it needs and read that. Write
   headings that say what is under them rather than gesturing at it, and keep

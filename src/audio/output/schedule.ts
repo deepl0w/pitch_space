@@ -37,8 +37,9 @@ export function schedule(
     });
     // A rolled event takes longer to lay out, so the next one waits for it.
     // Without this a roll and the event after it overlap, which is audible as
-    // the chord changing underneath the last note of the roll.
-    at += options.eventGap + event.midis.length * options.rollGap;
+    // the chord changing underneath the last note of the roll. The roll spans
+    // (n - 1) gaps, not n: the first note is at the event's own start.
+    at += options.eventGap + Math.max(0, event.midis.length - 1) * options.rollGap;
   }
   return voices;
 }

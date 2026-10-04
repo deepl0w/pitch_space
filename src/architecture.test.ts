@@ -251,6 +251,34 @@ describe('ADR 0003 — one importer for the notation library', () => {
   });
 });
 
+describe('one audio graph', () => {
+  /**
+   * `new Synth()` outside the one module that owns it.
+   *
+   * A second instance is not a duplicate, it is a second AudioContext with
+   * its own scheduled notes that `stopSound` cannot reach. That is exactly
+   * what happened: `src/ui/sound.ts` said "one AudioContext for the whole
+   * app; creating a second is how you get drift", and the practice screen
+   * fourteen files away constructed one anyway — so an interval kept playing
+   * over the home screen after the user navigated back.
+   *
+   * The comment was the invariant and nothing enforced it, which is the only
+   * reason it could be broken by someone who had read it.
+   */
+  const OWNER = 'ui/sound.ts';
+
+  it('builds a Synth in one place only', () => {
+    const builders = [...new Set(
+      hits(filesUnder(SRC), /\bnew Synth\s*\(/).map((h) => h.split(':')[0]),
+    )].filter((path) => !path.endsWith('.test.ts') && !path.endsWith('.test.tsx'));
+    expect(builders).toEqual([OWNER]);
+  });
+
+  it('still has the owner it is guarding, so the rule cannot pass vacuously', () => {
+    expect(readFileSync(join(SRC, 'ui', 'sound.ts'), 'utf8')).toContain('new Synth(');
+  });
+});
+
 describe('the npm scripts', () => {
   const pkg = JSON.parse(
     readFileSync(join(SRC, '..', 'package.json'), 'utf8'),

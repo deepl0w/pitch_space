@@ -4,7 +4,7 @@ import { SettingsPanel } from '../components/SettingsPanel';
 import { EXERCISE_TYPES, exerciseTypeOr } from '../../exercises/registry';
 import { newAttemptId, newSeed } from '../../exercises/seed';
 import type { AudioOut, ExerciseBase, Result } from '../../exercises/types';
-import { Synth } from '../../audio/output/synth';
+import { appSynth } from '../sound';
 import { settingsStore, useSettings } from '../../state/settingsStore';
 import { progressStore, tallyItems, useProgress } from '../../state/progressStore';
 import type { Attempt } from '../../state/schema';
@@ -18,8 +18,14 @@ import type { Attempt } from '../../state/schema';
  * prompt, grade what comes back, record the attempt, show the answer.
  */
 
-/** Lazy: the AudioContext is not created until the first note (see Synth). */
-const defaultSynth = new Synth();
+/**
+ * The app's one synth, not a second of its own.
+ *
+ * Building one here gave the exercise path an audio graph that `stopSound`
+ * could not reach, so an interval played on over the home screen after the
+ * user pressed back.
+ */
+const defaultSynth = appSynth;
 
 interface Round {
   /** Also the attempt's id, so a recorded attempt is the round it came from. */
@@ -40,13 +46,15 @@ interface Round {
 
 // Navigation belongs to the router, which already puts a back control above
 // every screen; a second one here was two ways out of the same page.
-export function PracticeScreen({ exerciseId, audio = defaultSynth }: {
+export function PracticeScreen({ exerciseId, onSwitch, audio = defaultSynth }: {
   /**
    * Which exercise to run. The route decides, so the menu card and the URL
    * both mean something; the stored `lastExercise` is only the fallback for
    * arriving here without one.
    */
   exerciseId?: string;
+  /** Change which exercise is running. The router owns that, not this screen. */
+  onSwitch?: (exerciseId: string) => void;
   audio?: AudioOut;
 }) {
   const lastExercise = useSettings((s) => s.doc.lastExercise);
@@ -142,7 +150,14 @@ export function PracticeScreen({ exerciseId, audio = defaultSynth }: {
           {EXERCISE_TYPES.length > 1 && (
             <select
               value={definition.id}
-              onChange={(e) => settingsStore.getState().setLastExercise(e.target.value)}
+              onChange={(e) => {
+                // Both: the route is what decides which exercise runs, and
+                // the stored preference is what a later visit with no route
+                // falls back to. Setting only the preference left the control
+                // snapping back to the routed id, which read as broken.
+                settingsStore.getState().setLastExercise(e.target.value);
+                onSwitch?.(e.target.value);
+              }}
             >
               {EXERCISE_TYPES.map((type) => (
                 <option key={type.id} value={type.id}>{type.name}</option>

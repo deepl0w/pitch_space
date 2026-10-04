@@ -52,7 +52,7 @@ export default function App() {
       {(Screen || exercise) && (
         <button className="back" onClick={() => go('')}>&larr; Everything</button>
       )}
-      {exercise ? <PracticeScreen exerciseId={route} />
+      {exercise ? <PracticeScreen exerciseId={route} onSwitch={go} />
         : Screen ? <Screen /> : <Home go={go} />}
     </main>
   );

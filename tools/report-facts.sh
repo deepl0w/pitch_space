@@ -70,10 +70,14 @@ printf 'screens         %s\n' "$(ls src/ui/screens/*.tsx 2>/dev/null | grep -vc 
 # numbers are checkable. Dated against the last commit touching src, the
 # lockfile or the build config rather than against HEAD: a doc-only commit
 # cannot change the bundle, and a check that cries stale for one gets ignored,
-# which is how the figure starts lying again.
+# which is how the figure starts lying again. Test files are excluded for the
+# same reason — vite does not bundle them, and this cried stale for a commit
+# that touched one.
 if [ ! -d dist ]; then
     echo "bundle          not built"
-elif built_after=$(git log -1 --format=%ct -- src package.json package-lock.json vite.config.ts index.html) \
+elif built_after=$(git log -1 --format=%ct -- \
+        ':(exclude)src/**/*.test.ts' ':(exclude)src/**/*.test.tsx' ':(exclude)src/*.test.ts' \
+        src package.json package-lock.json vite.config.ts index.html) \
      && [ "$(find dist -newermt "@$built_after" -print -quit 2>/dev/null)" = "" ]; then
     echo "bundle          STALE — dist predates HEAD; rebuild before quoting it"
 else

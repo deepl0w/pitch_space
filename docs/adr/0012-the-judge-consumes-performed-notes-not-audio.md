@@ -26,6 +26,15 @@ octave errors and no onset ambiguity — but an iOS user of an installable PWA
 cannot have it. Audio capture is the only path that works everywhere, and MIDI
 is the only path that is reliable. Neither can be the sole input.
 
+Checked rather than remembered, on 4 October 2026, against
+[caniuse](https://caniuse.com/midi): no Safari version on any platform
+supports it, desktop or iOS, including Technology Preview. It is not a gap
+waiting to close — WebKit declined to implement it in 2020 on fingerprinting
+grounds, and Apple requires every iOS browser to use WebKit, so Chrome, Edge
+and Firefox on iOS inherit the same answer. This whole record rests on that
+one fact, which is why it is dated and sourced here: if it ever changes, the
+argument above is the first thing to re-read.
+
 **And the problem is not transcription.** General-purpose polyphonic
 transcription is hard and a different algorithm class from the monophonic YIN
 already ported. But this app never has to transcribe: it generated the exercise,

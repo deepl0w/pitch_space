@@ -106,13 +106,13 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
   <h1>Music Practice<br>Loop One</h1>
   <p class="standfirst">The engine that was the hard part is built and tested. The
   microphone that was the point of the app is not.</p>
-  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at 8b113c6 &nbsp;·&nbsp; 177 commits</p>
+  <p class="dateline">4 October 2026 &nbsp;·&nbsp; main at 1b359b8 &nbsp;·&nbsp; 182 commits</p>
 </header>
 
 <div class="figures">
-  <div class="fig"><b>651</b><span>tests passing</span></div>
+  <div class="fig"><b>656</b><span>tests passing</span></div>
   <div class="fig"><b>41</b><span>test files</span></div>
-  <div class="fig"><b>16</b><span>ADRs</span></div>
+  <div class="fig"><b>17</b><span>ADRs</span></div>
   <div class="fig"><b>18,944</b><span>lines in src</span></div>
   <div class="fig"><b>2 / 6</b><span>kinds of practice built</span></div>
   <div class="fig"><b>0</b><span>shipping targets</span></div>
@@ -128,7 +128,7 @@ footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--rule
 <h2>Where it stands</h2>
 
 <p>Every figure on this page is read out of the repository by
-<code>tools/report-facts.sh</code> rather than recalled. 651 tests pass, none fail,
+<code>tools/report-facts.sh</code> rather than recalled. 656 tests pass, none fail,
 three are <code>todo</code>. <code>tsc</code> and <code>oxlint</code> are clean. The
 whole history is on <code>main</code> under one author; the eight <code>claude/*</code>
 branches are all zero ahead and exist only as stale pointers.</p>
@@ -219,16 +219,21 @@ learner who only ever hears V–I never learns to hear a deceptive close as dece
 <p>Two remain that need nothing new: scale identification, and absolute note
 identification, which joins the card the other two are already on.</p>
 
-<p><b>Two generator flags promise more than they deliver</b>, found by a test asserting
-that every chord the generator can produce is on the palette the user picks from. It went
-red three times. <code>allowAppliedDominants</code> and <code>allowBorrowed</code> gate the
-transformation passes that <em>add</em> those chords; neither excludes a template written
-with one, and the corpus holds nine applied chords and three chromatic alterations. So a
-major key produces a borrowed <code>iv</code> and a <code>V/IV</code> with both flags off.
-The names promise exclusion and deliver non-addition, which is true until someone writes a
-settings panel against them — as this exercise did. Its toggle now reads "Extra applied
-dominants", because "Applied dominants" was true at difficulty 1 to 3 and false at 4 and 5,
-and a control that lies only sometimes is worse than one that lies plainly.</p>
+<p><b>Two generator flags promised more than they delivered, and now deliver it.</b> Found
+by a test asserting that every chord the generator can produce is on the palette the user
+picks from; it went red three times. <code>allowAppliedDominants</code> and
+<code>allowBorrowed</code> gated only the passes that <em>added</em> those chords, so a
+major key produced a borrowed <code>iv</code> and a <code>V/IV</code> with both flags off.
+The names promised exclusion and delivered non-addition — harmless until someone built a
+settings panel on them, as this exercise did, leaving a toggle honest at difficulty 1 to 3
+and dishonest at 4 and 5.</p>
+
+<p>The fix was decided by measurement rather than by argument, and the measurement reversed
+the guess that had been steering both of us: three templates in thirty-five carry these
+chords, all at grade 7 and above, so filtering costs nothing below difficulty 4. Both flags
+exclude now. Detecting a borrowed chord by its accidental alone was not enough — rhythm
+changes writes its <code>IV–iv</code> as a quality with the degree unaltered, so the first
+filter caught the jazz blues and let the one that mattered through.</p>
 </section>
 
 <svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
@@ -622,7 +627,7 @@ can reproduce exactly rather than a story about a blank page.</p>
 </section>
 
 <footer>
-Figures read from the repository by tools/report-facts.sh · main 8b113c6 · 4 October 2026<br>
+Figures read from the repository by tools/report-facts.sh · main 1b359b8 · 4 October 2026<br>
 Revised three times the same day, by the fleet reviewing it: the DSP layer computes no
 chroma; the clock a performed note is measured against was undecided; the exercise screen
 kept state belonging to a type the user had already left, since fixed; and two claims this

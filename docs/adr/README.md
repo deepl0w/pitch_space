@@ -36,6 +36,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0019](0019-the-click-gap-stays-the-callers-and-the-margin-stops-being-a-comment.md) | The click gap stays the caller's, and the margin stops being a comment | Accepted |
 | [0020](0020-by-ear-the-unit-is-the-sounding-key.md) | By ear, the unit is the sounding key | Accepted |
 | [0021](0021-a-catalogues-top-grade-must-be-reachable.md) | A catalogue's top grade must be reachable, and cell ids are not frozen yet | Accepted |
+| [0022](0022-an-outcome-for-evidence-that-was-never-shown.md) | An outcome for evidence that was never shown | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in

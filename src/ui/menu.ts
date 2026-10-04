@@ -30,6 +30,7 @@ const BLURBS: Record<string, string> = {
   'note-id': 'Name a note — by the distance to a reference, or by what it is '
     + 'doing in a key. By ear or on the staff.',
   'key-id': 'Name the key, from its signature, from the notes, or by ear.',
+  'progression-id': 'Hear a progression and name what each chord is doing in the key.',
 };
 
 /**
@@ -66,12 +67,6 @@ const PLANNED: MenuEntry[] = [
     route: 'chord-id',
     name: 'Chord identification',
     blurb: 'Name the quality of a chord — by ear, or read off the staff.',
-    ready: false,
-  },
-  {
-    route: 'progression-id',
-    name: 'Chord progressions',
-    blurb: 'Follow a progression and name what each chord is doing.',
     ready: false,
   },
   {

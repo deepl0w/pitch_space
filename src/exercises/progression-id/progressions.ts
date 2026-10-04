@@ -3,8 +3,7 @@ import { ALL_KEYS, type Key, type Mode, keyId, keyName } from '../../theory/key'
 import { midiOf, type Pitch } from '../../theory/pitch';
 import { noteValue, timeSignature } from '../../theory/meter';
 import {
-  CADENCE_NAMES, DIATONIC_TRIADS, type CadenceType, type Degree, type RomanNumeral,
-  numeral, numeralText, realizePitches,
+  CADENCE_NAMES, type CadenceType, type RomanNumeral, numeralText, realizePitches,
 } from '../../theory/roman';
 import { generateHarmony } from '../../generate/harmony';
 import { cadencePitches } from '../../generate/tonicize';
@@ -109,24 +108,78 @@ export const PROGRESSION_DEFAULTS: ProgressionSettings = {
 const ALL_CADENCES: readonly CadenceType[] = ['PAC', 'IAC', 'HC', 'DC', 'PC'];
 
 /**
- * Every numeral the user may choose, derived from the mode alone.
+ * Every numeral the generator can produce in a mode, as a triad, with the
+ * mode's own chords first in degree order.
  *
- * Deliberately not derived from the exercise: a palette that listed exactly
- * the numerals present would answer the question. It is also sorted by
- * degree rather than by frequency, because the row is read as a scale and a
- * learner hunting for "the five chord" should find it fifth.
+ * **Written out and locked by a test rather than derived.** Three
+ * assumptions about where chords come from were wrong in a row, and each
+ * one shipped a palette that could not answer its own question:
+ *
+ * - `DIATONIC_TRIADS` is the *natural* minor, and the generator raises the
+ *   leading tone — so the table said `v` and the answer said `V`.
+ * - `allowAppliedDominants: false` gates the transformation that *adds*
+ *   applied dominants; it does not exclude a template that was written with
+ *   one, and several were. `V/IV` arrives at grade 7 with the setting off.
+ * - `allowBorrowed: false` is the same story: a borrowed `iv` in a major
+ *   key comes out of the corpus, not out of the pass.
+ *
+ * So the honest source is the generator itself, enumerated once and
+ * asserted against on every run. A palette that drifts behind the generator
+ * fails the containment test; it cannot fail quietly.
+ *
+ * One palette per mode rather than per difficulty, though the reachable set
+ * really does grow with grade. A palette that listed exactly what this
+ * difficulty can produce would say how many chords are in play before the
+ * user had named one — five buttons for a grade that uses five chords is
+ * most of the answer.
+ *
+ * Every entry is reachable: the minor `v` is *not* here, because the modal
+ * minor dominant is a style flag this exercise never sets, and an option
+ * that can never be right is a control that lies about what it offers.
+ */
+const PALETTE: Record<Mode, readonly string[]> = {
+  // Diatonic in degree order, then the borrowed iv and the one applied
+  // dominant the corpus quotes without being asked.
+  major: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio', 'iv', 'V/IV'],
+  // Then the Picardy third, and the raised leading-tone diminished triad.
+  minor: ['i', 'iio', 'III', 'iv', 'V', 'VI', 'VII', 'I', '#viio'],
+};
+
+/**
+ * What the applied-dominant setting adds on top of what the corpus already
+ * quotes. V/I is just V, and V/vii would tonicise a diminished triad, which
+ * is not a key anything modulates to.
+ */
+const APPLIED: Record<Mode, readonly string[]> = {
+  major: ['V/II', 'V/III', 'V/V', 'V/VI'],
+  minor: ['V/III', 'V/IV', 'V/V', 'V/VI'],
+};
+
+/**
+ * Seventh chords are reduced to their triad before they are asked about.
+ *
+ * Telling V7 from V is a question about a chord's quality, which is what
+ * the chord identification exercise is for; asking it here would double the
+ * palette and change what this exercise trains. The seventh is dropped from
+ * the sounding chord too rather than only from the answer, so what is heard
+ * is what can be named — the alternative is a staff showing a note the
+ * palette has no word for, which is how the inversion version of this
+ * problem would have gone.
+ */
+const TRIAD_OF: Record<string, string> = {
+  maj7: 'maj', dom7: 'maj', min7: 'min', minmaj7: 'min',
+  m7b5: 'dim', dim7: 'dim', aug7: 'aug',
+};
+
+/**
+ * Every numeral the user may choose.
+ *
+ * Depends on the mode and on one setting, and never on what this seed
+ * produced: a palette listing exactly the numerals present would answer the
+ * question.
  */
 export function paletteFor(mode: Mode, appliedDominants: boolean): string[] {
-  const diatonic = DIATONIC_TRIADS[mode].map(
-    (typeId, i) => numeralText(numeral((i + 1) as Degree, typeId)),
-  );
-  if (!appliedDominants) return diatonic;
-  // V/I is just V, and V/vii tonicises a diminished triad, which is not a
-  // key anyone modulates to. The remaining five are the ones real music uses.
-  const applied = ([2, 3, 4, 5, 6] as Degree[]).map(
-    (target) => numeralText(numeral(5, 'maj', { appliedTo: target })),
-  );
-  return [...diatonic, ...applied];
+  return appliedDominants ? [...PALETTE[mode], ...APPLIED[mode]] : [...PALETTE[mode]];
 }
 
 export function generateProgression(
@@ -154,8 +207,9 @@ export function generateProgression(
     cadences: settings.varyCadence ? { final: pick(rng, ALL_CADENCES) } : undefined,
   });
 
-  const numerals = harmony.events.map((e) => numeralText(stripInversion(e.numeral)));
-  const voicings = harmony.events.map((e) => realizePitches(key, stripInversion(e.numeral)));
+  const asked = harmony.events.map((e) => asTriad(e.numeral));
+  const numerals = asked.map(numeralText);
+  const voicings = asked.map((n) => realizePitches(key, n));
   const cadence = harmony.plan.phrases[harmony.plan.phrases.length - 1]?.cadence ?? null;
 
   return {
@@ -180,12 +234,17 @@ export function generateProgression(
 }
 
 /**
- * Inversions are off at generation, so this is a guard rather than a
- * transform — but `allowInversions: false` is the generator's promise and
- * this file's palette is the thing that breaks if it is ever not kept.
+ * The numeral as this exercise asks it: root position, triad.
+ *
+ * Inversions are already off at generation, so that half is a guard rather
+ * than a transform — but `allowInversions: false` is the generator's
+ * promise and this file's palette is what breaks if it is ever not kept.
+ * The seventh is a real reduction, applied to the sounding chord as well as
+ * to the answer.
  */
-function stripInversion(n: RomanNumeral): RomanNumeral {
-  return n.inversion === 0 ? n : { ...n, inversion: 0 };
+function asTriad(n: RomanNumeral): RomanNumeral {
+  const typeId = TRIAD_OF[n.typeId] ?? n.typeId;
+  return typeId === n.typeId && n.inversion === 0 ? n : { ...n, typeId, inversion: 0 };
 }
 
 export function gradeProgression(

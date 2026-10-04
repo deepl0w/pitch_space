@@ -1,6 +1,7 @@
 import { intervalIdentification } from './interval-id';
 import { keyIdentification } from './key-id';
 import { degreeIdentification } from './degree-id';
+import { progressionIdentification } from './progression-id';
 import type { AnyExerciseDefinition } from './types';
 
 /**
@@ -51,6 +52,11 @@ export const EXERCISE_FAMILIES: readonly ExerciseFamily[] = [
     // Relative, functional, and — when it is built — absolute. What is being
     // named is the same thing each time; what differs is what help you get.
     members: [intervalIdentification, degreeIdentification],
+  },
+  {
+    id: 'progression-id',
+    name: progressionIdentification.name,
+    members: [progressionIdentification],
   },
   {
     id: 'key-id',

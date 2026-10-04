@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { useState, act } from 'react';
+import { useEffect, useState, act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PracticeScreen } from './PracticeScreen';
@@ -48,11 +48,16 @@ const silent: AudioOut = { play: () => {} };
  * point: the defect lived in the gap between the prop changing and the state
  * not.
  */
-function Harness({ from, route }: { from: string; route: { go?: (id: string) => void } }) {
+function Harness({ from, onRouter }: {
+  from: string;
+  /** Hands the router's own setter out, so a test can change the route the
+   * way a menu link does rather than only the way the in-page selector
+   * does. In an effect rather than during render: writing to a prop while
+   * rendering is a mutation React is entitled to repeat or discard. */
+  onRouter: (go: (id: string) => void) => void;
+}) {
   const [exerciseId, setExerciseId] = useState(from);
-  // The router's own setter, so a test can change the route the way a menu
-  // link does rather than only the way the in-page selector does.
-  route.go = setExerciseId;
+  useEffect(() => { onRouter(setExerciseId); }, [onRouter]);
   return <PracticeScreen exerciseId={exerciseId} onSwitch={setExerciseId} audio={silent} />;
 }
 
@@ -62,7 +67,8 @@ function mount(from: string) {
   document.body.append(container);
   const root = createRoot(container);
   const route: { go?: (id: string) => void } = {};
-  act(() => root.render(<Harness from={from} route={route} />));
+  const onRouter = (go: (id: string) => void) => { route.go = go; };
+  act(() => root.render(<Harness from={from} onRouter={onRouter} />));
 
   const buttons = () => [...container.querySelectorAll('button')];
   const button = (label: string) =>

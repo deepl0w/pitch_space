@@ -1,6 +1,8 @@
 import { makeRng, pick } from '../../theory/rng';
 import { cadencePitches } from '../../generate/tonicize';
 import { ALL_KEYS, type Key, type Mode, keyId, keyName, keyPitches, relativeKey, signatureLetters } from '../../theory/key';
+import { positionFor } from '../../theory/circle';
+import { pitchName } from '../../theory/pitch';
 import type { Pitch } from '../../theory/pitch';
 import { noteValue } from '../../theory/meter';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
@@ -92,6 +94,70 @@ export function keyPool(settings: KeySettings, mode: Mode): Key[] {
     .sort((a, b) => a.accidentals - b.accidentals);
 }
 
+/**
+ * The spellings of one sounding tonic, ordered with the canonical one first.
+ *
+ * Taken from the circle rather than from a table written here. `circle.ts`
+ * already decides which spelling leads — "fewest accidentals first, so the
+ * ordinary spelling leads and the enharmonic twin sits behind it" — and a
+ * second rule in this file could only drift from it. The six-against-six
+ * ties, Gb/F# and Eb/D# minor, fall to `ALL_KEYS` order; `keys.test.ts`
+ * pins the winners by name, because the canonical spelling is an item id
+ * and reordering that array would silently refile a learner's history.
+ */
+function spellingsOf(key: Key): readonly Key[] {
+  const at = positionFor(key);
+  return key.mode === 'major' ? at.major : at.minor;
+}
+
+/** The spelling that stands for a sounding tonic. ADR 0020. */
+function canonicalFor(key: Key): Key {
+  return spellingsOf(key)[0];
+}
+
+/** The twin spelling, where the sound has two. */
+function twinOf(key: Key): Key | null {
+  const both = spellingsOf(key);
+  return both.length > 1 ? both.find((k) => keyId(k) !== keyId(canonicalFor(key)))! : null;
+}
+
+/**
+ * What a by-ear choice is called: "Gb / F# major".
+ *
+ * Both spellings, canonical first, so a listener who names the sound the
+ * other way finds their answer on the screen rather than concluding the app
+ * disagrees with them. The canonical leads because it is the one the
+ * feedback names and the one the attempt is filed under.
+ */
+export function soundingKeyName(key: Key): string {
+  const twin = twinOf(key);
+  if (twin === null) return keyName(key);
+  return `${pitchName(canonicalFor(key).tonic, false)} / ${pitchName(twin.tonic, false)} ${key.mode}`;
+}
+
+/**
+ * The keys askable by ear: one per sounding tonic, twelve per mode.
+ *
+ * Nothing leaves the pool that a musician would call a key — the three
+ * collapsed pairs in each mode are two spellings of one sound, and by ear
+ * that is one answer. Offering both and marking one wrong is the defect
+ * 0020 was written about; the exercise's own opening comment forbids it.
+ *
+ * A key inside the difficulty always has its canonical spelling inside it
+ * too, because the canonical is the one with no more accidentals.
+ */
+export function soundingPool(settings: KeySettings, mode: Mode): Key[] {
+  const seen = new Set<string>();
+  const out: Key[] = [];
+  for (const key of keyPool(settings, mode)) {
+    const canonical = canonicalFor(key);
+    if (seen.has(keyId(canonical))) continue;
+    seen.add(keyId(canonical));
+    out.push(canonical);
+  }
+  return out.sort((a, b) => a.accidentals - b.accidentals);
+}
+
 /** The scale of the key, which is where its accidentals are visible. */
 function scaleFor(key: Key): Pitch[] {
   return keyPitches({ ...key, tonic: { ...key.tonic, octave: 4 } });
@@ -105,7 +171,19 @@ export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
   const clefs: readonly Clef[] = spec.settings.clefs.length ? spec.settings.clefs : KEY_DEFAULTS.clefs;
   const mode = pick(rng, modes);
   const clef = pick(rng, clefs);
-  const pool = keyPool(spec.settings, mode);
+
+  const source: KeySource = spec.settings.presentation === 'listen'
+    ? 'passage'
+    : spec.settings.readSource;
+
+  // The pool depends on how the question is asked, not only on how far round
+  // the circle it reaches. By ear the askable unit is the sounding key, so
+  // the three enharmonic pairs in each mode collapse to one choice (ADR
+  // 0020); on the page six flats and six sharps are different signatures and
+  // telling them apart is the skill, so the reading pools are untouched.
+  const pool = source === 'passage'
+    ? soundingPool(spec.settings, mode)
+    : keyPool(spec.settings, mode);
   const key = pick(rng, pool);
 
   const items: ItemId[] = [
@@ -115,10 +193,6 @@ export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
     // something that helps them in D major too.
     `signature:${key.accidentals}` as ItemId,
   ];
-
-  const source: KeySource = spec.settings.presentation === 'listen'
-    ? 'passage'
-    : spec.settings.readSource;
 
   const pitches = source === 'signature' ? []
     : source === 'accidentals' ? scaleFor(key)
@@ -138,6 +212,13 @@ export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
   };
 }
 
+/** "6 flats", "1 sharp", "no sharps or flats" — the count, not the signature. */
+function countOf(key: Key): string {
+  const n = Math.abs(key.accidentals);
+  if (n === 0) return 'no sharps or flats';
+  return `${n} ${key.accidentals > 0 ? 'sharp' : 'flat'}${n > 1 ? 's' : ''}`;
+}
+
 export function gradeKey(exercise: KeyExercise, response: KeyResponse): Result {
   const correct = response.keyId === exercise.keyId;
   const asked = ALL_KEYS.find((k) => keyId(k) === exercise.keyId)!;
@@ -146,15 +227,39 @@ export function gradeKey(exercise: KeyExercise, response: KeyResponse): Result {
   const described = letters.length === 0
     ? 'no sharps and no flats'
     : `${letters.length} ${asked.accidentals > 0 ? 'sharp' : 'flat'}${letters.length > 1 ? 's' : ''} (${letters.join(' ')})`;
+  const heard = exercise.source === 'passage';
+  const twin = twinOf(asked);
+  /*
+    The bridge from the ear to the page, and the one thing a listener who
+    named the sound correctly still has to learn: this sound is written with
+    six flats, and the same sound with six sharps is spelled the other way.
+
+    It counts the accidentals without calling them a signature and without
+    listing their letters. Naming a signature would repeat the claim ADR 0022
+    removed — there was none on screen — and the letters are a reading
+    detail nobody heard.
+  */
+  const written = twin === null
+    ? `written with ${countOf(asked)}`
+    : `written with ${countOf(asked)} — or as ${keyName(twin)}, with ${countOf(twin)}`;
 
   return {
     correct,
-    feedback: correct
-      ? `Yes — ${described} is ${keyName(asked)}, and ${keyName(relative)} alongside it.`
-      : `That signature is ${described}: ${keyName(asked)}. Its relative is ${keyName(relative)}.`,
+    feedback: heard
+      ? (correct
+        ? `Yes — that was ${keyName(asked)}, ${written}.`
+        : `That was ${keyName(asked)}, ${written}.`)
+      : (correct
+        ? `Yes — ${described} is ${keyName(asked)}, and ${keyName(relative)} alongside it.`
+        : `That signature is ${described}: ${keyName(asked)}. Its relative is ${keyName(relative)}.`),
     outcomes: [
       { item: `key:${exercise.keyId}` as ItemId, correct },
-      { item: `signature:${asked.accidentals}` as ItemId, correct },
+      // No signature outcome by ear (ADR 0022). Nothing was shown, and for
+      // the six enharmonic pairs the signature is precisely what the ear
+      // cannot recover — six flats against six sharps is the distinction
+      // 0020 collapsed the question over. `exercise.items` keeps both, since
+      // that list is what the question contained rather than what it tested.
+      ...(heard ? [] : [{ item: `signature:${asked.accidentals}` as ItemId, correct }]),
     ],
   };
 }

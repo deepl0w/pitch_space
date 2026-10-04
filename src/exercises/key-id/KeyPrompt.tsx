@@ -4,7 +4,7 @@ import { midiOf } from '../../theory/pitch';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { PromptProps } from '../types';
-import type { KeyExercise, KeyResponse, KeySettings } from './keys';
+import { soundingKeyName, type KeyExercise, type KeyResponse, type KeySettings } from './keys';
 
 /**
  * Asked by eye, the question is a signature on a staff and the prompt is
@@ -65,7 +65,12 @@ export function KeyPrompt({
               disabled={answered}
               onClick={() => onRespond({ keyId: id })}
             >
-              {keyName(key)}
+              {/*
+                Both spellings by ear — "Gb / F# major" — because the sound
+                has two and the listener may name either. On the page the
+                spelling is the question, so it stays single. ADR 0020.
+              */}
+              {listening ? soundingKeyName(key) : keyName(key)}
             </button>
           );
         })}

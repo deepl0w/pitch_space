@@ -44,7 +44,7 @@ and file writes are checked against that one — so a session whose launch
 directory was renamed or removed can read, run tests and use git while every
 save is refused. It looks like a working session until the first save.
 
-**The three roles this project runs**, and what each may change:
+**The roles this project runs**, and what each may change:
 
 | Role | Changes |
 | --- | --- |
@@ -52,6 +52,7 @@ save is refused. It looks like a working session until the first save.
 | **architect** | `docs/`, chiefly `docs/adr/`; source only by exception |
 | **feature** | whatever the feature needs, with tests |
 | **user** | `docs/findings/`, and end-to-end tests of what it found |
+| **process** | `CLAUDE.md`, `.claude/`, `docs/process/`, and the protocol's own files |
 
 **The user role is not a second tester, and the distinction is the whole
 point of having it.** A tester reads the code and writes tests against what
@@ -81,8 +82,25 @@ So a **user** works from the built app and the brief, and nothing else:
   outlive the session that found them. A verbal finding is forgotten; this
   project has already lost one that way.
 
+A **process** session works on how the fleet works rather than on what it
+builds, and touches no source. It owns the three places the protocol is
+written — this section, `.claude/fleet.conf`, and the generic protocol in
+`~/.claude/` — for one reason that matters more than tidiness:
+
+**`~/.claude/skills/fleet/SKILL.md` and `~/.claude/scripts/fleet.sh` are
+shared, unversioned, and outside git.** Every worktree in this repository
+reads the same two files, there is no history on them, no diff, and no merge:
+two agents editing them at once silently keep whichever wrote last. The skill
+changed under a process session mid-edit on 4 October, which is how this came
+to be written down. So the rule is the same shape as *only main pushes* —
+**only a process session edits the protocol's own files**, and anyone else
+who wants them changed says so and leaves them alone. If you find yourself
+about to improve the fleet skill from a tester worktree, that is the moment
+the rule is for. `docs/process/` carries the reasoning, because a decision
+recorded only in an unversioned file is not recorded.
+
 A **tester** should invoke the `test-engineer` skill and an **architect** the
-`architect` skill; **feature** and **user** sessions need neither.
+`architect` skill; **feature**, **user** and **process** sessions need neither.
 
 The music theory core under `src/theory/` and `src/generate/` is where the
 tester role earns its keep. It is pure, deterministic given a seed, and makes
@@ -92,6 +110,19 @@ either is an augmented fourth or it is not. Prefer property tests over
 thousands of seeds to example tests over one, and **assert constraints, never
 aesthetics**: the generators' weights are a tuning problem with no ground
 truth, and a test that pins them makes tuning impossible.
+
+**Telling each other is a delivery, not a printout.** `fleet.sh announce`
+lists who has not heard that main moved; it cannot send anything. The
+delivery is `SendMessage` addressed to the worktree by name — `ListAgents`
+prints the names — or, where that fails, the user relaying it. An
+announcement nobody sends reads exactly like one nobody needed, which is why
+`announce` now records the commit it announced and `status` shows who is
+still owed the news.
+
+A worktree that was never told is not stuck, though: `fleet.sh brief` runs at
+every session start and now prints the subject lines of whatever landed while
+you were away, so a cold session can begin its standing review from the brief
+alone.
 
 Exercise types are the natural unit of feature work — one worktree per
 exercise keeps two agents out of the same file.
@@ -114,6 +145,17 @@ npm run typecheck            # tsc; a merge can pass tests and still not compile
 ./build.sh --dev             # the dev server, at http://localhost:5173
 make help                    # the same things, wrapped
 ```
+
+**Several worktrees cannot all have port 5173.** `./build.sh --dev` and
+`npm run dev` both want it, and vite silently takes the next free port
+instead, which the preview harness does not follow — a live server and a dead
+preview. Use `tools/app.sh`, which picks a free port, prints it, and prints
+the headless-Chrome command to drive it.
+
+**Before you report what the app does, read `docs/RUNNING-THE-APP.md`.** The
+preview harness misreports two things about this app in particular, and two
+published findings had to be withdrawn because of it. Checking the app is
+cheap; withdrawing a claim is not.
 
 `./build.sh --android` exists and refuses with a reason: Capacitor is not set
 up yet, so the app currently ships as a PWA only. `./test.sh --offline` does
@@ -178,5 +220,17 @@ reproduce exactly.
   tuning problem with no ground truth; a test that pins them makes tuning
   impossible. Assert that a suspension resolves down by step, not that a
   particular seed produces a particular tune.
+- **A tracked document does not chase a figure the next commit can change.**
+  Either the number is read out of the repository when someone asks for it
+  (`tools/report-facts.sh`), or the document says which commit it describes
+  and then stays there. `docs/report/2026-10-04.html` is a dated snapshot of
+  `901e3d6` and says so; re-pointing its dateline at HEAD is the error, not
+  the staleness. Nine commits have been spent doing exactly that, which is
+  why this is written down.
+- **Say a thing in one place.** Where this file, `.claude/fleet.conf`, a
+  README and the fleet skill all explained the roles, the copies drifted —
+  this file said "the three roles" over a table of four for two days. Put the
+  argument where it belongs and point at it from everywhere else; the ADR
+  index already carries this as its first convention, for claims about code.
 - Prose in docs is written out, British spelling, no telegraphic bullet lists
   where a sentence would do.

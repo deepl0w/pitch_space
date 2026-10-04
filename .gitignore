@@ -22,8 +22,10 @@ keystore.properties
 .claude/worktrees/
 .claude/settings.local.json
 
-# Coordination state: ADR numbers claimed across branches and worktrees.
+# Coordination state: ADR numbers claimed across branches and worktrees,
+# and the last main commit the fleet was told about.
 .claude/adr-claims
+.claude/announced
 
 # Scratch results from tools/report-facts.sh --run, if ever written here.
 .report-tests.json

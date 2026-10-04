@@ -271,6 +271,16 @@ polyphonic transcription, and that an inconclusive hearing reports *no*
 outcome rather than a wrong one
 ([ADR 0013](adr/0013-knowing-the-answer-narrows-what-judging-has-to-do.md)).
 
+Timing is all on one clock, `AudioContext.currentTime`, with a performed note's
+start given in *exercise* time — seconds from the exercise's own zero
+([ADR 0014](adr/0014-one-clock-and-the-latency-nobody-can-measure.md)). The Web
+Audio API reports `baseLatency` and `outputLatency` but has no input-latency
+property, so what the microphone path costs has to be calibrated rather than
+read. The size of that gap is not academic: `toleranceFor` caps the matching
+window at a 100 ms half-width, which ordinary round-trip latency can consume
+entirely — past which every expected note reads as missed and every played note
+as extra, looking like a broken detector rather than an uncalibrated one.
+
 ## Generation
 
 `generate/` chooses; `theory/` knows. The division is that `theory/` contains

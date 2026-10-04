@@ -1,9 +1,7 @@
 import { defineExercise } from '../types';
 import { DegreePrompt } from './DegreePrompt';
 import {
-  DEGREE_EXERCISE_ID, degreeQuestionSpec, degreeScoreSpec, degreeSettingsSchema,
-  generateDegree, gradeDegree,
-  type DegreeExercise, type DegreeResponse, type DegreeSettings,
+  DEGREE_EXERCISE_ID, degreeItems, degreeQuestionSpec, degreeScoreSpec, degreeSettingsSchema, generateDegree, gradeDegree, type DegreeExercise, type DegreeResponse, type DegreeSettings,
 } from './degrees';
 
 /**
@@ -24,6 +22,7 @@ export const degreeIdentification = defineExercise<
   presentations: ['listen', 'read'],
   settings: degreeSettingsSchema,
   generate: generateDegree,
+  items: degreeItems,
   grade: (exercise, response) => gradeDegree(exercise, response),
   Prompt: DegreePrompt,
   questionScore: degreeQuestionSpec,

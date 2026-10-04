@@ -167,6 +167,37 @@ function scaleFor(key: Key): Pitch[] {
   return keyPitches({ ...key, tonic: { ...key.tonic, octave: 4 } });
 }
 
+/**
+ * Every key and signature these settings can ask about.
+ *
+ * **Signatures only when the question is read.** Asked by eye, a
+ * signature is genuinely tested and genuinely shared: someone who has
+ * learned two sharps from B minor has learned something that counts in D
+ * major, and the schedule should know that. Asked by ear there is no
+ * signature on the screen, `gradeKey` credits only the key, and listing
+ * them anyway put five items into the denominator that nothing could
+ * ever answer — half of this exercise's listening count, and a due badge
+ * that could not be cleared. Caught by measuring listed against reached
+ * rather than by reading the grader.
+ *
+ * Built from the same `keyPool`/`soundingPool` split `generate` uses, not
+ * from `ALL_KEYS` filtered by hand, because by ear the three enharmonic
+ * pairs collapse to one askable key (ADR 0020) and a hand-rolled version
+ * would promise six questions that cannot be told apart.
+ */
+export function keyItems(settings: KeySettings): readonly ItemId[] {
+  const modes = settings.modes.length ? settings.modes : KEY_DEFAULTS.modes;
+  const byEar = settings.presentation === 'listen';
+  const items = new Set<ItemId>();
+  for (const mode of modes) {
+    for (const key of byEar ? soundingPool(settings, mode) : keyPool(settings, mode)) {
+      items.add(`key:${keyId(key)}` as ItemId);
+      if (!byEar) items.add(`signature:${key.accidentals}` as ItemId);
+    }
+  }
+  return [...items];
+}
+
 export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
   const rng = makeRng(spec.seed);
   // Settings arrive coerced, but generation must not fall over on a stored

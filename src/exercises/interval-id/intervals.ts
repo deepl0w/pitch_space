@@ -246,6 +246,23 @@ export function pitchWindow(settings: IntervalSettings): readonly [number, numbe
   return [centre - settings.window, centre + settings.window];
 }
 
+/**
+ * Every interval-in-a-direction these settings can ask about.
+ *
+ * Through `intervalItemId` rather than by rebuilding the string, because
+ * the unison is the exception that makes a hand-rolled version wrong: it
+ * has no direction, so the two directions collapse to one item and a
+ * naive product would count it twice.
+ */
+export function intervalItems(settings: IntervalSettings): readonly ItemId[] {
+  const semitones = settings.semitones.length ? settings.semitones : INTERVAL_DEFAULTS.semitones;
+  const directions = settings.directions.length
+    ? settings.directions : INTERVAL_DEFAULTS.directions;
+  return [...new Set(
+    semitones.flatMap((s) => directions.map((d) => intervalItemId(s, d))),
+  )];
+}
+
 export function generateInterval(spec: ExerciseSpec<IntervalSettings>): IntervalExercise {
   const { settings } = spec;
   const rng = makeRng(spec.seed);

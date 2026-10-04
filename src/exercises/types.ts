@@ -309,6 +309,29 @@ export interface ExerciseDefinition<S extends BaseSettings, E extends ExerciseBa
    * there is nothing to show — which is the normal case when listening.
    */
   questionScore?(exercise: E): ScoreSpec | null;
+  /**
+   * Every item these settings make askable, whether or not it has ever
+   * been asked.
+   *
+   * The denominator the schedule needs, and it cannot be recovered from
+   * the attempt log: the log says what *has* been asked, and the whole
+   * first session is the gap between that and this. "Three intervals due"
+   * is a different claim from "three intervals you have already met are
+   * due", and only the second is computable from history alone.
+   *
+   * Settings-dependent on purpose. A user who has unticked everything but
+   * the fourth degree has one askable item however much history sits
+   * behind the others, and a count that ignored that would promise work
+   * the exercise cannot set.
+   *
+   * **What it owes is containment, not exactness**: every item
+   * `generate` can produce under these settings must appear here. Listing
+   * something unreachable overstates the work remaining, and
+   * `registry.test.ts` checks both directions against the generator
+   * rather than against a copy of this list — the same pairing that
+   * caught a missing numeral in the progression palette.
+   */
+  items(settings: S): readonly ItemId[];
 }
 
 /**

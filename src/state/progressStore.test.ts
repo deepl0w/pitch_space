@@ -217,8 +217,12 @@ describe('folding a history into per-item counts', () => {
       attempt({ outcomes: [{ item: m3, correct: false }] }),
       attempt({ outcomes: [{ item: p5, correct: true }] }),
     ]);
-    expect(tally.get(tallyKey(m3, 'listen'))).toEqual({ seen: 2, correct: 1, lastSeenAt: 2000 });
-    expect(tally.get(tallyKey(p5, 'listen'))).toEqual({ seen: 1, correct: 1, lastSeenAt: 2000 });
+    // m3 ends on a wrong answer, so its streak is 0 where p5's is 1 — the
+    // field the schedule reads, and the one totals cannot give it.
+    expect(tally.get(tallyKey(m3, 'listen')))
+      .toEqual({ seen: 2, correct: 1, lastSeenAt: 2000, streak: 0 });
+    expect(tally.get(tallyKey(p5, 'listen')))
+      .toEqual({ seen: 1, correct: 1, lastSeenAt: 2000, streak: 1 });
   });
 
   it('counts every item one attempt tested, not just the first', () => {
@@ -237,7 +241,8 @@ describe('folding a history into per-item counts', () => {
       items: [m3, p5],
       outcomes: [{ item: m3, correct: true }],
     })]);
-    expect(tally.get(tallyKey(m3, 'listen'))).toEqual({ seen: 1, correct: 1, lastSeenAt: 2000 });
+    expect(tally.get(tallyKey(m3, 'listen')))
+      .toEqual({ seen: 1, correct: 1, lastSeenAt: 2000, streak: 1 });
     expect(tally.has(tallyKey(p5, 'listen'))).toBe(false);
   });
 
@@ -266,8 +271,10 @@ describe('tallying by eye and by ear', () => {
       attempt({ id: 'r', presentation: 'read', outcomes: [{ item: m3, correct: true }] }),
       attempt({ id: 'l', presentation: 'listen', outcomes: [{ item: m3, correct: false }] }),
     ]);
-    expect(tally.get(tallyKey(m3, 'read'))).toEqual({ seen: 1, correct: 1, lastSeenAt: 2000 });
-    expect(tally.get(tallyKey(m3, 'listen'))).toEqual({ seen: 1, correct: 0, lastSeenAt: 2000 });
+    expect(tally.get(tallyKey(m3, 'read')))
+      .toEqual({ seen: 1, correct: 1, lastSeenAt: 2000, streak: 1 });
+    expect(tally.get(tallyKey(m3, 'listen')))
+      .toEqual({ seen: 1, correct: 0, lastSeenAt: 2000, streak: 0 });
     expect(tally.size).toBe(2);
   });
 

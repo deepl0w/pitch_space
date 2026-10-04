@@ -1,9 +1,7 @@
 import { defineExercise } from '../types';
 import { ProgressionPrompt } from './ProgressionPrompt';
 import {
-  PROGRESSION_EXERCISE_ID, generateProgression, gradeProgression,
-  progressionQuestionSpec, progressionScoreSpec, progressionSettings,
-  type ProgressionExercise, type ProgressionResponse, type ProgressionSettings,
+  PROGRESSION_EXERCISE_ID, generateProgression, gradeProgression, progressionItems, progressionQuestionSpec, progressionScoreSpec, progressionSettings, type ProgressionExercise, type ProgressionResponse, type ProgressionSettings,
 } from './progressions';
 
 /**
@@ -31,6 +29,7 @@ export const progressionIdentification = defineExercise<
   presentations: ['listen', 'read'],
   settings: progressionSettings,
   generate: generateProgression,
+  items: progressionItems,
   grade: gradeProgression,
   Prompt: ProgressionPrompt,
   questionScore: progressionQuestionSpec,

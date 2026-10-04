@@ -328,6 +328,30 @@ export interface PaletteOptions {
   borrowed: boolean;
 }
 
+/**
+ * Every numeral and cadence these settings can ask about.
+ *
+ * The palette is already exactly this list for the numerals — it is the
+ * row of buttons the user picks from, and two tests hold it to being
+ * neither larger nor smaller than what the generator produces. Deriving
+ * the schedule from it rather than from a second enumeration means the
+ * two cannot disagree.
+ *
+ * Numerals only. `generate` also attaches a `cadence:` item, and
+ * `gradeProgression` never credits one — the user names chords, and the
+ * cadence is a property of the progression rather than a separate
+ * question. So a cadence is contained and not tested, the same way
+ * `degree-id` contains the key it happened to pick, and putting it in
+ * the schedule's denominator would add rows that nothing can ever
+ * answer.
+ */
+export function progressionItems(settings: ProgressionSettings): readonly ItemId[] {
+  const modes = settings.modes.length ? settings.modes : PROGRESSION_DEFAULTS.modes;
+  return modes.flatMap(
+    (mode) => paletteFor(mode, settings).map((n) => `progression:${mode}:${n}` as ItemId),
+  );
+}
+
 export function generateProgression(
   spec: ExerciseSpec<ProgressionSettings>,
 ): ProgressionExercise {

@@ -138,6 +138,17 @@ export interface ItemTally {
   correct: number;
   /** Epoch milliseconds of the most recent attempt that tested this item. */
   lastSeenAt: number;
+  /**
+   * Consecutive correct answers ending at the most recent attempt.
+   *
+   * Totals cannot space anything. An item answered right four times and
+   * then wrong, and one answered wrong first and then right four times,
+   * have the same `seen` and the same `correct` and are in opposite
+   * states: the first has just been forgotten and the second has just
+   * been learned. The streak is the smallest thing that tells them apart,
+   * and it is what {@link dueAt} reads.
+   */
+  streak: number;
 }
 
 /**
@@ -176,12 +187,19 @@ export function tallyKey(item: ItemId, presentation: Presentation): TallyKey {
  */
 export function tallyItems(attempts: readonly Attempt[]): Map<TallyKey, ItemTally> {
   const tally = new Map<TallyKey, ItemTally>();
-  for (const attempt of attempts) {
+  // Sorted here rather than trusted from the caller, because `streak` is the
+  // one field whose value depends on the order and this is the function that
+  // needs it. The store already reads the log in `answeredAt` order, so this
+  // is usually a no-op — but a guard belongs with the thing it guards, and
+  // "the caller happens to sort" is not a property of this function.
+  const inOrder = [...attempts].sort((a, b) => a.answeredAt - b.answeredAt);
+  for (const attempt of inOrder) {
     for (const outcome of attempt.outcomes) {
       const key = tallyKey(outcome.item, attempt.presentation);
-      const entry = tally.get(key) ?? { seen: 0, correct: 0, lastSeenAt: 0 };
+      const entry = tally.get(key) ?? { seen: 0, correct: 0, lastSeenAt: 0, streak: 0 };
       entry.seen++;
       if (outcome.correct) entry.correct++;
+      entry.streak = outcome.correct ? entry.streak + 1 : 0;
       entry.lastSeenAt = Math.max(entry.lastSeenAt, attempt.answeredAt);
       tally.set(key, entry);
     }

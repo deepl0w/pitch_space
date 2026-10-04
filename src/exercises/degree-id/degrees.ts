@@ -133,6 +133,21 @@ export function generateDegree(spec: ExerciseSpec<DegreeSettings>): DegreeExerci
   };
 }
 
+/**
+ * Every degree-in-a-mode these settings can ask about.
+ *
+ * Only the `degree:` items. `generate` also attaches a `key:` item for the
+ * key it happened to pick, but that is context the question contains and
+ * not what it tests — the grader credits the degree alone. Counting the
+ * keys here would put thirty rows of work in front of a user practising
+ * seven degrees, and none of them would ever come due by being answered.
+ */
+export function degreeItems(settings: DegreeSettings): readonly ItemId[] {
+  const degrees = settings.degrees.length ? settings.degrees : DEGREE_DEFAULTS.degrees;
+  const modes = settings.modes.length ? settings.modes : DEGREE_DEFAULTS.modes;
+  return modes.flatMap((mode) => degrees.map((d) => `degree:${d}:${mode}` as ItemId));
+}
+
 export function gradeDegree(
   exercise: DegreeExercise, response: DegreeResponse, naming: DegreeNaming = 'number',
 ): Result {

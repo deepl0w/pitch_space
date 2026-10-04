@@ -1,10 +1,7 @@
 import { defineExercise } from '../types';
 import { IntervalPrompt } from './IntervalPrompt';
 import {
-  generateInterval, gradeInterval, intervalQuestionScore, intervalScoreNotes,
-  intervalSettingsSchema,
-  INTERVAL_EXERCISE_ID,
-  type IntervalExercise, type IntervalResponse, type IntervalSettings,
+  INTERVAL_EXERCISE_ID, generateInterval, gradeInterval, intervalItems, intervalQuestionScore, intervalScoreNotes, intervalSettingsSchema, type IntervalExercise, type IntervalResponse, type IntervalSettings,
 } from './intervals';
 
 /**
@@ -26,6 +23,7 @@ export const intervalIdentification = defineExercise<
   description: 'Say how far apart two notes are, by ear or from the staff.',
   settings: intervalSettingsSchema,
   generate: generateInterval,
+  items: intervalItems,
   grade: gradeInterval,
   Prompt: IntervalPrompt,
   questionScore: intervalQuestionScore,

@@ -1,9 +1,7 @@
 import { defineExercise } from '../types';
 import { KeyPrompt } from './KeyPrompt';
 import {
-  KEY_EXERCISE_ID, coerceKeySettings, generateKey, gradeKey, keyQuestionSpec, keyScoreSpec,
-  keySettingsSchema,
-  type KeyExercise, type KeyResponse, type KeySettings,
+  KEY_EXERCISE_ID, coerceKeySettings, generateKey, gradeKey, keyItems, keyQuestionSpec, keyScoreSpec, keySettingsSchema, type KeyExercise, type KeyResponse, type KeySettings,
 } from './keys';
 
 /**
@@ -22,6 +20,7 @@ export const keyIdentification = defineExercise<KeySettings, KeyExercise, KeyRes
   presentations: ['read', 'listen'],
   settings: keySettingsSchema,
   generate: generateKey,
+  items: keyItems,
   grade: gradeKey,
   Prompt: KeyPrompt,
   questionScore: keyQuestionSpec,

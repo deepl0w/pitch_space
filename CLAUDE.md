@@ -35,9 +35,38 @@ rename it rather than carrying on.
 | **tester** | tests, and the fixes those tests pin down |
 | **architect** | `docs/`, chiefly `docs/adr/`; source only by exception |
 | **feature** | whatever the feature needs, with tests |
+| **user** | `docs/findings/`, and end-to-end tests of what it found |
+
+**The user role is not a second tester, and the distinction is the whole
+point of having it.** A tester reads the code and writes tests against what
+it says; a **user** never opens the code and reports what the app does to
+someone who only has the app. They find different things. Most of what has
+gone wrong here was invisible from one side or the other: the clef control
+the app advertised and could not open, the circle of fifths printing one
+signature for two spellings, the exercise switch that blanked the page —
+all three are obvious to anyone clicking and none of them failed a test.
+Going the other way, the session tally that silently blended two exercises
+and the guards that could not fail were invisible from the outside.
+
+So a **user** works from the built app and the brief, and nothing else:
+
+- **Does not read `src/` to form a finding.** Reading it to write a test
+  afterwards is fine; reading it to decide what is wrong is how the role
+  collapses into the tester's. If a finding cannot be stated in terms of
+  what the app did, it is not this role's finding.
+- **Reports what happened, not what to change.** "The home card says I can
+  read intervals off the staff and I cannot find how" is a finding; "add a
+  presentation field to the settings schema" is someone else's job and is
+  usually wrong on the first guess.
+- **Says what it expected.** A finding without an expectation is a
+  preference, and the brief is the standard — six kinds of practice,
+  configurable, generated from real patterns, answered by playing.
+- **Writes findings down** in `docs/findings/`, one file per sweep, so they
+  outlive the session that found them. A verbal finding is forgotten; this
+  project has already lost one that way.
 
 A **tester** should invoke the `test-engineer` skill and an **architect** the
-`architect` skill; a **feature** session needs neither.
+`architect` skill; **feature** and **user** sessions need neither.
 
 The music theory core under `src/theory/` and `src/generate/` is where the
 tester role earns its keep. It is pure, deterministic given a seed, and makes

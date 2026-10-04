@@ -299,7 +299,68 @@ export interface TemplateQuery {
   style?: StyleTag;
   /** Set when the previous phrase ended on a dominant. */
   afterDominant?: boolean;
+  /**
+   * Exclude templates that *contain* an applied or borrowed chord, as
+   * distinct from declining to add one (ADR 0017).
+   *
+   * Both default to permitting, so a caller that does not care is
+   * unaffected. A caller that turns one off was previously told only that
+   * no more would be added, and still got the ones the corpus quotes —
+   * which made a settings toggle built on it honest at the grades where no
+   * such template exists and dishonest at the grades where they do.
+   */
+  allowApplied?: boolean;
+  allowBorrowed?: boolean;
 }
+
+/** A seventh's underlying triad, for comparing a step's quality to the mode's. */
+const TRIAD_OF: Record<string, string> = {
+  maj7: 'maj', dom7: 'maj', min7: 'min', minmaj7: 'min',
+  m7b5: 'dim', dim7: 'dim', aug7: 'aug',
+};
+
+/**
+ * Whether a step borrows from outside the mode.
+ *
+ * Mode-dependent, and it has to be. The first version of this read only
+ * `chromaticAlter`, which catches `#ivo7` in the jazz blues and misses the
+ * `IV–iv` in rhythm changes entirely — that one is written
+ * `{ degree: 4, typeId: 'min' }`, borrowed by *quality* with the degree
+ * unaltered. A filter that believed the first version let a borrowed chord
+ * through whenever the template spelled it the other way.
+ *
+ * Reduced to the triad before comparing, so a `dom7` on V is a seventh and
+ * not a loan. Applied chords are excluded because they are the other
+ * flag's business, and the minor dominant and leading tone are excluded
+ * because raising them is how a minor key cadences — that is practice, not
+ * borrowing, and treating it as borrowing would exclude nearly every minor
+ * template whenever the flag was off.
+ */
+function isBorrowedIn(step: TemplateStep, mode: Mode): boolean {
+  if (step.appliedTo !== undefined) return false;
+  if ((step.chromaticAlter ?? 0) !== 0) return true;
+  if (step.typeId === undefined) return false;
+  if (mode === 'minor' && (step.degree === 5 || step.degree === 7)) return false;
+  return (TRIAD_OF[step.typeId] ?? step.typeId) !== DIATONIC_TRIADS[mode][step.degree - 1];
+}
+
+/**
+ * Which templates carry these chords in their own data.
+ *
+ * Computed once here rather than per query. If a third such property
+ * appears it should be declared on the entry instead, where `template()`
+ * can check it at construction like everything else the corpus asserts
+ * about itself.
+ */
+const CARRIES_APPLIED = new Set(
+  TEMPLATES.filter((t) => t.steps.some((s) => s.appliedTo !== undefined)).map((t) => t.id),
+);
+/** Keyed by mode, because borrowing is relative to the mode borrowed into. */
+const CARRIES_BORROWED = new Set(
+  TEMPLATES.flatMap((t) => t.modes
+    .filter((mode) => t.steps.some((step) => isBorrowedIn(step, mode)))
+    .map((mode) => `${t.id}:${mode}`)),
+);
 
 /**
  * The templates that could fill a phrase.
@@ -318,6 +379,8 @@ export function candidateTemplates(query: TemplateQuery): Template[] {
     if (t.endsWith !== null && t.endsWith !== query.cadence) return false;
     if (query.style !== undefined && !t.tags.includes(query.style)) return false;
     if (query.afterDominant && startsOn(t, query.mode) === 'predominant') return false;
+    if (query.allowApplied === false && CARRIES_APPLIED.has(t.id)) return false;
+    if (query.allowBorrowed === false && CARRIES_BORROWED.has(`${t.id}:${query.mode}`)) return false;
     return true;
   });
 }

@@ -92,13 +92,17 @@ describe('the palette contains every answer', () => {
    * palette that believed the flag asked questions with no right answer on
    * screen, at difficulty 4 and above.
    */
-  it('carries the chords the corpus quotes even when the settings are off', () => {
-    // Both of these arrive from templates rather than from the
-    // transformation passes, so neither setting suppresses them: a borrowed
-    // iv in a major key, and the one applied dominant the corpus quotes
-    // without being asked.
-    expect(paletteFor('major', false)).toContain('iv');
-    expect(paletteFor('major', false)).toContain('V/IV');
+  /**
+   * What ADR 0017 changed, asserted from this side of it.
+   *
+   * Both of these used to be on the major palette and had to be: they
+   * arrive from templates rather than from the transformation passes, and
+   * the flags gated only the passes. Now that the flags exclude, a major
+   * progression with applied dominants off contains neither — so the
+   * palette is the seven diatonic triads and nothing else.
+   */
+  it('offers only the mode\'s own chords when nothing is switched on', () => {
+    expect(paletteFor('major', false)).toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio']);
   });
 
   it('offers nothing that can never be right', () => {

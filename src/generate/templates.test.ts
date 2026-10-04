@@ -318,3 +318,80 @@ describe('choosing a template', () => {
     expect(defaultTypeId('major', 5, true)).toBe('dom7');
   });
 });
+
+/**
+ * The two exclusion filters, each tested without the other.
+ *
+ * ADR 0017 makes `allowApplied` and `allowBorrowed` exclude templates that
+ * *contain* those chords rather than only gating the passes that add them.
+ * Both are asserted here rather than through an exercise, because the three
+ * templates that carry either carry *both* — so a caller that turns off one
+ * and leaves the other on is the only configuration that can tell them
+ * apart, and no exercise currently is one. Tested through the exercise, the
+ * applied filter could be deleted with nothing going red; it was.
+ */
+describe('excluding what a template contains', () => {
+  /**
+   * The query that would select this template, built from the template.
+   *
+   * Hand-picking one query and hoping it reaches the entry under test is
+   * how the first version of this returned an empty candidate list and
+   * asserted against it — `cadence: null` admits only templates that
+   * declare no cadence, which none of these do.
+   */
+  function queryFor(t: Template, mode: Mode) {
+    return { bars: t.bars, mode, grade: t.minGrade, cadence: t.endsWith };
+  }
+
+  function offered(t: Template, mode: Mode, flags: Record<string, boolean> = {}): boolean {
+    return candidateTemplates({ ...queryFor(t, mode), ...flags }).some((c) => c.id === t.id);
+  }
+
+  const appliedCarriers = ['rhythm-a', 'rhythm-b', 'blues-jazz'];
+
+  it('offers each carrier when nothing is switched off, so the rest is not vacuous', () => {
+    for (const id of appliedCarriers) {
+      const t = findTemplate(id);
+      expect(offered(t, 'major'), `${id} is not reachable at all`).toBe(true);
+    }
+  });
+
+  it('drops a template written with an applied chord', () => {
+    for (const id of appliedCarriers) {
+      const t = findTemplate(id);
+      expect(offered(t, 'major', { allowApplied: false }), `${id} survived`).toBe(false);
+    }
+  });
+
+  /**
+   * `rhythm-a` is the one that matters. It borrows by *quality* — `IV`
+   * then `{ degree: 4, typeId: 'min' }`, the rhythm-changes move — with the
+   * degree unaltered, so the first version of this filter read
+   * `chromaticAlter` and let it straight through.
+   */
+  it('drops a template written with a borrowed chord, however it is spelled', () => {
+    const byQuality = findTemplate('rhythm-a');
+    expect(offered(byQuality, 'major', { allowBorrowed: false })).toBe(false);
+
+    // And the one that spells it with an alteration, so both paths are live.
+    const byAlteration = findTemplate('blues-jazz');
+    expect(offered(byAlteration, 'major', { allowBorrowed: false })).toBe(false);
+  });
+
+  it('keeps a template that borrows nothing', () => {
+    // Otherwise "drops it" above would pass for a filter that dropped
+    // everything.
+    const plain = TEMPLATES.find((t) => t.modes.includes('major')
+      && !appliedCarriers.includes(t.id))!;
+    expect(offered(plain, 'major', { allowApplied: false, allowBorrowed: false })).toBe(true);
+  });
+
+  it('borrows relative to the mode, so a minor dominant is not a loan', () => {
+    // Raising the leading tone is how a minor key cadences. Counting it as
+    // borrowing would empty the minor corpus whenever the flag was off.
+    for (const t of TEMPLATES.filter((x) => x.modes.includes('minor'))) {
+      expect(offered(t, 'minor', { allowBorrowed: false }), `${t.id} wrongly excluded`)
+        .toBe(offered(t, 'minor'));
+    }
+  });
+});

@@ -211,6 +211,17 @@ interface Context {
   grade: number;
   style?: StyleTag;
   modalMinorV: boolean;
+  /**
+   * Resolved once, so corpus selection and the transformation passes agree
+   * about what was asked for (ADR 0017).
+   *
+   * Both default by grade. Resolving them at the two use sites separately
+   * is how they came to disagree in the first place: the pass read the
+   * option and the query did not read it at all, so the flags excluded
+   * nothing and only declined to add.
+   */
+  allowApplied: boolean;
+  allowBorrowed: boolean;
 }
 
 // ---- Stage 2a: the two-level functional machine -------------------------
@@ -343,6 +354,12 @@ function fill(ctx: Context, plan: PhrasePlan, improviseRate: number): Slot[] {
     const query = {
       bars: ph.bars, mode: ctx.mode, grade: ctx.grade, cadence: ph.cadence,
       style: ctx.style, afterDominant,
+      // The *resolved* values, not the raw options: both default by grade,
+      // and a filter reading the raw option would exclude nothing whenever
+      // the caller left the flag unset while the pass below happily added
+      // the same chords. The query and the pass have to agree about what
+      // was asked for.
+      allowApplied: ctx.allowApplied, allowBorrowed: ctx.allowBorrowed,
     };
     let candidates = candidateTemplates(query);
     // A style the corpus cannot serve at this length narrows to nothing; fall
@@ -728,6 +745,8 @@ export function generateHarmony(rng: Rng, options: HarmonyOptions): Harmony {
     grade: options.grade,
     style: options.style,
     modalMinorV: options.modalMinorV ?? false,
+    allowApplied: options.allowAppliedDominants ?? options.grade >= 5,
+    allowBorrowed: options.allowBorrowed ?? options.grade >= 7,
   };
 
   const plan = planPhrases(rng, {
@@ -748,8 +767,8 @@ export function generateHarmony(rng: Rng, options: HarmonyOptions): Harmony {
   applyCadences(slots, writes);
   repairRetrogressions(ctx, slots);
 
-  if (options.allowAppliedDominants ?? ctx.grade >= 5) applyAppliedDominants(ctx, slots, 0.3);
-  if (options.allowBorrowed ?? ctx.grade >= 7) applyBorrowing(ctx, slots, 0.25);
+  if (ctx.allowApplied) applyAppliedDominants(ctx, slots, 0.3);
+  if (ctx.allowBorrowed) applyBorrowing(ctx, slots, 0.25);
   if (options.allowInversions ?? ctx.grade >= 3) applyInversions(ctx, slots, 0.6);
 
   // The second application is the guarantee: the transformations are written

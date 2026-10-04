@@ -51,14 +51,13 @@ export const CLEFS: readonly Clef[] = ['treble', 'bass'];
 export interface ProgressionSettings extends BaseSettings {
   modes: readonly Mode[];
   /**
-   * Extends the palette with V/x, for every question rather than some.
+   * Extends the palette with V/x.
    *
-   * *Extra*, not *any*: `allowAppliedDominants` in the generator gates the
-   * transformation pass that adds applied dominants, and does not exclude a
-   * template written with one. The corpus quotes `V/IV` from grade 7, so at
-   * the top two difficulties this being off does not mean there are none —
-   * which is why the control does not say it does. Turning it on is what
-   * puts the other four in play, at every difficulty.
+   * Says what it does, which it did not until ADR 0017: the generator flag
+   * behind it used to gate only the pass that *added* applied dominants, so
+   * a template written with one was quoted anyway and `V/IV` arrived from
+   * grade 7 with the setting off. The control was therefore honest at
+   * difficulties 1 to 3 and dishonest at 4 and 5. It excludes now.
    */
   appliedDominants: boolean;
   /**
@@ -122,45 +121,40 @@ const ALL_CADENCES: readonly CadenceType[] = ['PAC', 'IAC', 'HC', 'DC', 'PC'];
  *
  * **Written out and locked by a test rather than derived.** Three
  * assumptions about where chords come from were wrong in a row, and each
- * one shipped a palette that could not answer its own question:
+ * one shipped a palette that could not answer its own question — most
+ * usefully that `allowAppliedDominants` and `allowBorrowed` gated only the
+ * passes that *added* those chords and let the corpus quote them anyway.
+ * ADR 0017 made both flags exclude, so this list is now the short one it
+ * always looked like it should be; before that fix it also had to carry a
+ * borrowed `iv` and a `V/IV` that arrived with both flags off.
  *
- * - `DIATONIC_TRIADS` is the *natural* minor, and the generator raises the
- *   leading tone — so the table said `v` and the answer said `V`.
- * - `allowAppliedDominants: false` gates the transformation that *adds*
- *   applied dominants; it does not exclude a template that was written with
- *   one, and several were. `V/IV` arrives at grade 7 with the setting off.
- * - `allowBorrowed: false` is the same story: a borrowed `iv` in a major
- *   key comes out of the corpus, not out of the pass.
+ * The honest source is the generator, enumerated and asserted against on
+ * every run. A palette that drifts behind it fails the containment test;
+ * it cannot fail quietly.
  *
- * So the honest source is the generator itself, enumerated once and
- * asserted against on every run. A palette that drifts behind the generator
- * fails the containment test; it cannot fail quietly.
- *
- * One palette per mode rather than per difficulty, though the reachable set
- * really does grow with grade. A palette that listed exactly what this
- * difficulty can produce would say how many chords are in play before the
- * user had named one — five buttons for a grade that uses five chords is
- * most of the answer.
+ * One palette per mode rather than per difficulty, though the reachable
+ * set does grow with grade. A palette listing exactly what this difficulty
+ * can produce would say how many chords are in play before the user had
+ * named one.
  *
  * Every entry is reachable: the minor `v` is *not* here, because the modal
  * minor dominant is a style flag this exercise never sets, and an option
  * that can never be right is a control that lies about what it offers.
  */
 const PALETTE: Record<Mode, readonly string[]> = {
-  // Diatonic in degree order, then the borrowed iv and the one applied
-  // dominant the corpus quotes without being asked.
-  major: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio', 'iv', 'V/IV'],
-  // Then the Picardy third, and the raised leading-tone diminished triad.
+  major: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio'],
+  // The Picardy third and the raised leading-tone diminished triad are both
+  // reachable in minor without borrowing: raising the leading tone is how a
+  // minor key cadences rather than a loan from elsewhere.
   minor: ['i', 'iio', 'III', 'iv', 'V', 'VI', 'VII', 'I', '#viio'],
 };
 
 /**
- * What the applied-dominant setting adds on top of what the corpus already
- * quotes. V/I is just V, and V/vii would tonicise a diminished triad, which
- * is not a key anything modulates to.
+ * What the applied-dominant setting adds. V/I is just V, and V/vii would
+ * tonicise a diminished triad, which is not a key anything modulates to.
  */
 const APPLIED: Record<Mode, readonly string[]> = {
-  major: ['V/II', 'V/III', 'V/V', 'V/VI'],
+  major: ['V/II', 'V/III', 'V/IV', 'V/V', 'V/VI'],
   minor: ['V/III', 'V/IV', 'V/V', 'V/VI'],
 };
 
@@ -210,6 +204,8 @@ export function generateProgression(
     timeSignature: timeSignature('4/4'),
     bars: shape.bars,
     grade: shape.grade,
+    // All three exclude rather than merely decline to add (ADR 0017), so
+    // the palette is exactly what can be heard.
     allowInversions: false,
     allowBorrowed: false,
     allowAppliedDominants: settings.appliedDominants,
@@ -376,12 +372,7 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     {
       kind: 'toggle',
       id: 'appliedDominants',
-      // "Extra" because the corpus quotes V/IV at the top difficulties
-      // whatever this says. A label reading "Applied dominants" would be
-      // true at difficulty 1 to 3 and false at 4 and 5, which is worse than
-      // plainly wrong: it is a control the user learns to trust and then
-      // finds has been lying only sometimes.
-      label: 'Extra applied dominants',
+      label: 'Applied dominants',
       selected: (s) => s.appliedDominants,
       apply: (s, on) => ({ ...s, appliedDominants: on }),
     },

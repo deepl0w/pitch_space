@@ -54,25 +54,32 @@ against `HEAD` rather than against the files that can change it, and once
 counting test files that are never bundled. Each was narrowed after it had
 already taught someone to skim past it.
 
-**But distinguish a guard from a definition, because this convention read
-carelessly argues for deleting the wrong things.** A guard asserts a property of
-the system as it stands, so scope it to what can change that property — and if
-nothing can, it is a tautology and should go, which is why the menu test that
-compared a derived name against the name it was derived from was deleted rather
-than kept as documentation. A definition answers a question over a domain, and
-is tested over that domain rather than over the inputs its current callers
-happen to produce. `isBorrowedIn` says whether a chord is a loan from the
-parallel mode; that `vii°` in minor is not one is true whether or not any
-template writes it today, so the branch is an untested corner and not dead code.
+**Before deleting a test as a tautology, ask: can this fail for some input in
+its domain, or only for inputs the present system cannot construct?** The first
+is a corner worth covering. The second is a tautology wearing a corner's
+clothes — and the convention above, read carelessly, argues for deleting both.
 
-The test that separates them: **can this fail for some input in its domain, or
-only for inputs the present system cannot construct?** The first is a corner
-worth covering. The second is a tautology wearing a corner's clothes.
+The question separates a guard from a definition. A guard asserts a property of
+the system as it stands, so it is scoped to what can change that property, and
+if nothing can it should go: the menu test that compared a derived name against
+the name it was derived from was deleted rather than kept as documentation. A
+definition answers a question over a domain, and is tested over that domain
+rather than over the inputs its current callers happen to produce.
+`isBorrowedIn` says whether a chord is a loan from the parallel mode; that
+`vii°` in minor is not one is true whether or not any template writes it today,
+so that branch is an untested corner and not dead code.
 
-The two conventions pull in opposite directions, and that is the point. The
-first says check more; the second says check *exactly*. A guard that is broad
-enough to be noisy and a claim that is never checked at all fail in the same
-place — at the moment someone decides the signal is not worth reading.
+**Checking more and checking exactly pull in opposite directions, and that is
+the point.** The first convention says check more — no claim about the code
+rides on the record that made it. The second says check exactly — a guard fires
+only on what can change the thing it guards. They meet because a guard broad
+enough to be noisy and a claim nobody ever checks fail in the same place: at the
+moment someone decides the signal is not worth reading. The third says which
+kind of thing you are holding before you apply either.
+
+[`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
+0018 and 0020 as one argument, because five of them are the same rule meeting a
+new kind of ignorance and no single record says so.
 
 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) describes the system as it stands
 today and links back to these records. It is a living document: when a record

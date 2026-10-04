@@ -28,6 +28,9 @@ const SEEDS = Array.from({ length: 300 }, (_, i) => i * 7919 + 1);
  */
 const SWEEP_SEEDS = SEEDS.slice(0, 25);
 
+/** Both palette-widening switches off, which is the default shape. */
+const OFF = { appliedDominants: false, borrowed: false } as const;
+
 /**
  * The furthest the settings panel can now reach.
  *
@@ -72,17 +75,18 @@ describe('the palette contains every answer', () => {
     for (const mode of ['major', 'minor'] as const) {
       for (const grade of GRADE_CHOICES) {
         for (const applied of [false, true]) for (const varyCadence of [false, true]) {
-          for (const bars of BAR_CHOICES) {
+          for (const borrowed of [false, true]) for (const bars of BAR_CHOICES) {
             const s = settings({
-              modes: [mode], grade, bars, varyCadence, appliedDominants: applied,
+              modes: [mode], grade, bars, varyCadence, borrowed, appliedDominants: applied,
             });
-            const palette = new Set(paletteFor(mode, applied));
+            const palette = new Set(paletteFor(mode, { appliedDominants: applied, borrowed }));
             for (const seed of SWEEP_SEEDS) {
               const exercise = generateProgression({ seed, settings: s });
               for (const numeral of exercise.numerals) {
                 expect(
                   palette.has(numeral),
-                  `${mode} grade ${grade} ${bars}b applied=${applied} vary=${varyCadence}: `
+                  `${mode} grade ${grade} ${bars}b applied=${applied} vary=${varyCadence} `
+                  + `borrowed=${borrowed}: `
                   + `${numeral} is not offered`,
                 ).toBe(true);
               }
@@ -110,14 +114,14 @@ describe('the palette contains every answer', () => {
   });
 
   it('opens with the mode\'s own triads, in degree order', () => {
-    expect(paletteFor('major', false).slice(0, 7))
+    expect(paletteFor('major', OFF).slice(0, 7))
       .toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio']);
-    expect(paletteFor('minor', false).slice(0, 4)).toEqual(['i', 'iio', 'III', 'iv']);
+    expect(paletteFor('minor', OFF).slice(0, 4)).toEqual(['i', 'iio', 'III', 'iv']);
   });
 
   it('adds the applied dominants when they are asked for', () => {
-    const off = paletteFor('major', false);
-    const on = paletteFor('major', true);
+    const off = paletteFor('major', OFF);
+    const on = paletteFor('major', { ...OFF, appliedDominants: true });
     expect(on.length).toBeGreaterThan(off.length);
     expect(on).toContain('V/V');
     // V/I is V, and V/vii would tonicise a diminished triad, which is not a
@@ -144,7 +148,7 @@ describe('the palette contains every answer', () => {
    * palette is the seven diatonic triads and nothing else.
    */
   it('offers only the mode\'s own chords when nothing is switched on', () => {
-    expect(paletteFor('major', false)).toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio']);
+    expect(paletteFor('major', OFF)).toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio']);
   });
 
   it('offers nothing that can never be right', () => {
@@ -152,7 +156,7 @@ describe('the palette contains every answer', () => {
     // off the palette. An option that cannot be the answer is a control
     // lying about what it offers — the same complaint ADR 0011 makes about
     // a catalogue entry nothing can reach.
-    expect(paletteFor('minor', false)).not.toContain('v');
+    expect(paletteFor('minor', OFF)).not.toContain('v');
   });
 });
 
@@ -167,7 +171,7 @@ describe('the palette contains every answer', () => {
 describe('every chord on the palette is reachable', () => {
   it('at the grade that reaches furthest', () => {
     for (const mode of ['major', 'minor'] as const) {
-      for (const applied of [false, true]) {
+      for (const applied of [false, true]) for (const borrowed of [false, true]) {
         // Every length at the top grade, not one of them. Length is the
         // user's own setting, and a progression's reach reads off it: the
         // minor `V/VII` is produced at sixteen bars and not at eight, so
@@ -175,11 +179,14 @@ describe('every chord on the palette is reachable', () => {
         // containment sweep was meeting it. Two tests that are supposed to
         // be each other's converse have to ask over the same ground, or
         // they can both be green and contradict one another.
-        const produced = new Set(BAR_CHOICES.flatMap((bars) => {
-          const s = settings({ modes: [mode], grade: TOP_GRADE, bars, appliedDominants: applied });
+        const produced = new Set(BAR_CHOICES.flatMap((bars) => [true, false].flatMap((vary) => {
+          const s = settings({
+            modes: [mode], grade: TOP_GRADE, bars, borrowed,
+            varyCadence: vary, appliedDominants: applied,
+          });
           return SWEEP_SEEDS.flatMap((seed) => generateProgression({ seed, settings: s }).numerals);
-        }));
-        for (const numeral of paletteFor(mode, applied)) {
+        })));
+        for (const numeral of paletteFor(mode, { appliedDominants: applied, borrowed })) {
           expect(produced.has(numeral), `${mode}: nothing ever produces ${numeral}`).toBe(true);
         }
       }

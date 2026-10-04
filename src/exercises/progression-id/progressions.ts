@@ -6,6 +6,7 @@ import {
   CADENCE_NAMES, type CadenceType, type RomanNumeral, numeralText, realizePitches,
 } from '../../theory/roman';
 import { generateHarmony } from '../../generate/harmony';
+import { TEMPLATES } from '../../generate/templates';
 import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
@@ -31,12 +32,20 @@ import type {
  * the grader being told to ignore them, because a staff showing a figure the
  * user was never asked for would be marking its own answer as incomplete.
  *
- * **Borrowed chords are off for the same reason**: they are reachable only
- * by numerals outside the mode's diatonic set, and a palette that grew
- * whenever the generator reached outside it would announce the answer by its
- * own shape. Applied dominants are a setting, and turning them on extends
- * the palette for *every* question rather than only the ones that use them —
- * which is the difference between a harder exercise and a tell.
+ * **Borrowed chords are a setting, on the same terms as applied
+ * dominants.** They were hardwired off, and the reason given was that they
+ * are reachable only by numerals outside the mode's diatonic set, so a
+ * palette that grew whenever the generator reached outside it would
+ * announce the answer by its own shape. That is the right objection to a
+ * palette that tracks the seed, and it is not an objection to a setting:
+ * turning one on extends the palette for *every* question rather than only
+ * the ones that use it, which is the difference between a harder exercise
+ * and a tell. Applied dominants already worked this way.
+ *
+ * What the flag cost while it was hardwired was the last two templates no
+ * query could reach — the iv in rhythm changes and the ♯iv°7 in jazz
+ * blues, which `catalogues.test.ts` names and asks `candidateTemplates`
+ * about directly. With this they are reachable, and the corpus is whole.
  *
  * A test asserts the containment both ways: every numeral the generator
  * produces is in the palette, and the palette does not depend on what this
@@ -82,6 +91,13 @@ export interface ProgressionSettings extends BaseSettings {
    * difficulties 1 to 3 and dishonest at 4 and 5. It excludes now.
    */
   appliedDominants: boolean;
+  /**
+   * Whether the generator may reach into the parallel mode.
+   *
+   * Extends the palette for every question while it is on, the same way
+   * applied dominants do, so it is a harder exercise and not a tell.
+   */
+  borrowed: boolean;
   /**
    * Let the close be any of the five cadence types rather than whatever the
    * phrase plan asks for.
@@ -138,28 +154,40 @@ export const BAR_CHOICES = [2, 4, 6, 8, 12, 16] as const;
  * ask for. They are not stranded by the catalogue. They were stranded by
  * this table, and removing it is the fix.
  *
- * `grade` is the catalogues' own ordering — `grade` on `CELLS`, `minGrade`
- * on `TEMPLATES` and on the harmony pools — so this is not a new scale
- * invented for the settings panel. It is the existing one, stopping being
- * private.
+ * `grade` is the catalogues' own ordering — `minGrade` on `TEMPLATES` and
+ * on the harmony pools — so this is not a new scale invented for the
+ * settings panel. It is the existing one, stopping being private.
+ *
+ * **The range is read off the corpus, not written as 10.** The cell
+ * catalogue is graded to 10, but this exercise does not generate rhythm
+ * and never queries it; what this grade reaches is the template corpus,
+ * which tops out at 8, over harmony pools that top out at 6. Offering 9
+ * and 10 here would be two options that cannot change the question, which
+ * is the same complaint ADR 0011 makes about a catalogue entry nothing
+ * can reach — and the complaint this exercise's own palette answers by
+ * leaving the modal minor `v` off.
  */
 export const GRADE_CHOICES: readonly number[] =
-  Array.from({ length: 10 }, (_, i) => i + 1);
+  Array.from({ length: Math.max(...TEMPLATES.map((t) => t.minGrade)) }, (_, i) => i + 1);
 
 /**
- * What a grade opens up, in the user's terms.
+ * What a grade opens up, counted rather than described.
  *
- * Bands rather than ten sentences, because the corpus does not change at
- * every step and claiming it does would be the same lie the old labels
- * told — those read "1 — 4 bars" through "5 — 8 bars", where the one
- * concrete fact in them was not what moved.
+ * Two attempts at prose failed the same way. The original read
+ * "1 — 4 bars" through "5 — 8 bars", where the one concrete fact in it was
+ * not the thing that moved. Its replacement banded ten grades into five
+ * phrases, which printed "1 — the plainest progressions" directly above
+ * "2 — the plainest progressions" and so said the control does nothing
+ * between them — when grade 2 opens nine templates, more than any other
+ * step.
+ *
+ * So the label is read out of the corpus. It cannot drift, it changes at
+ * exactly the grades where something changes, and the number is the one
+ * the user is choosing between.
  */
-function gradeBlurb(grade: number): string {
-  if (grade <= 2) return 'the plainest progressions';
-  if (grade <= 4) return 'a wider corpus, sevenths at cadences';
-  if (grade <= 6) return 'most of the corpus';
-  if (grade <= 8) return 'richer cadences and borrowed chords';
-  return 'everything the generator has';
+function gradeLabel(grade: number): string {
+  const n = TEMPLATES.filter((t) => t.minGrade <= grade).length;
+  return `${grade} — ${n} of ${TEMPLATES.length} progressions`;
 }
 
 export const PROGRESSION_DEFAULTS: ProgressionSettings = {
@@ -168,6 +196,7 @@ export const PROGRESSION_DEFAULTS: ProgressionSettings = {
   bars: 4,
   modes: ['major'],
   appliedDominants: false,
+  borrowed: false,
   varyCadence: false,
   clef: 'treble',
 };
@@ -230,6 +259,36 @@ const APPLIED: Record<Mode, readonly string[]> = {
 };
 
 /**
+ * What the borrowed-chord setting adds: the parallel mode's chords.
+ *
+ * Major borrows from minor, which is the common direction and the larger
+ * list. Minor borrows the major fourth, and both modes reach the
+ * Neapolitan. Enumerated from the generator over the whole settings space
+ * rather than reasoned out, for the reason ADR 0017 records: three
+ * assumptions in a row about where chords come from were wrong, and each
+ * shipped a palette that could not answer its own question.
+ */
+const BORROWED: Record<Mode, readonly string[]> = {
+  major: ['iv', 'iio', 'bII', 'bVI', 'bVII'],
+  minor: ['IV', 'bII'],
+};
+
+/**
+ * What only the two together reach, which is one template's worth.
+ *
+ * Jazz blues is twelve bars, carries a ♯iv°7 and a ii–V of IV, and is
+ * excluded by either flag alone — so these two numerals need both open and
+ * belong to neither list. A conjunction is worth the awkwardness of a
+ * third table only because the alternative is offering buttons that cannot
+ * be right, which is the complaint ADR 0011 makes about a catalogue entry
+ * nothing can reach.
+ */
+const BORROWED_APPLIED: Record<Mode, readonly string[]> = {
+  major: ['#ivo', 'ii/IV'],
+  minor: [],
+};
+
+/**
  * Seventh chords are reduced to their triad before they are asked about.
  *
  * Telling V7 from V is a question about a chord's quality, which is what
@@ -252,8 +311,21 @@ const TRIAD_OF: Record<string, string> = {
  * produced: a palette listing exactly the numerals present would answer the
  * question.
  */
-export function paletteFor(mode: Mode, appliedDominants: boolean): string[] {
-  return appliedDominants ? [...PALETTE[mode], ...APPLIED[mode]] : [...PALETTE[mode]];
+export function paletteFor(
+  mode: Mode, { appliedDominants, borrowed }: PaletteOptions,
+): string[] {
+  return [
+    ...PALETTE[mode],
+    ...(appliedDominants ? APPLIED[mode] : []),
+    ...(borrowed ? BORROWED[mode] : []),
+    ...(appliedDominants && borrowed ? BORROWED_APPLIED[mode] : []),
+  ];
+}
+
+/** The settings the palette depends on, named so a third cannot be forgotten. */
+export interface PaletteOptions {
+  appliedDominants: boolean;
+  borrowed: boolean;
 }
 
 export function generateProgression(
@@ -281,7 +353,7 @@ export function generateProgression(
     // All three exclude rather than merely decline to add (ADR 0017), so
     // the palette is exactly what can be heard.
     allowInversions: false,
-    allowBorrowed: false,
+    allowBorrowed: settings.borrowed,
     allowAppliedDominants: settings.appliedDominants,
     cadences: settings.varyCadence ? { final: pick(rng, ALL_CADENCES) } : undefined,
   });
@@ -308,7 +380,7 @@ export function generateProgression(
     cadence,
     clef: settings.clef,
     context: establishingCadence(key),
-    palette: paletteFor(mode, settings.appliedDominants),
+    palette: paletteFor(mode, settings),
   };
 }
 
@@ -411,7 +483,7 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       kind: 'choice',
       id: 'grade',
       label: 'Grade',
-      options: GRADE_CHOICES.map((g) => ({ id: `${g}`, label: `${g} — ${gradeBlurb(g)}` })),
+      options: GRADE_CHOICES.map((g) => ({ id: `${g}`, label: gradeLabel(g) })),
       selected: (s) => `${s.grade}`,
       apply: (s, option) => ({ ...s, grade: coerceGrade(Number(option)) }),
     },
@@ -448,6 +520,13 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     },
     {
       kind: 'toggle',
+      id: 'borrowed',
+      label: 'Borrowed chords (from the parallel major or minor)',
+      selected: (s) => s.borrowed,
+      apply: (s, on) => ({ ...s, borrowed: on }),
+    },
+    {
+      kind: 'toggle',
       id: 'varyCadence',
       label: 'Vary the close (not every phrase ends V–I)',
       selected: (s) => s.varyCadence,
@@ -464,6 +543,7 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
         ? raw.bars as number : PROGRESSION_DEFAULTS.bars,
       modes: coerceModes(raw.modes),
       appliedDominants: raw.appliedDominants === true,
+      borrowed: raw.borrowed === true,
       varyCadence: raw.varyCadence === true,
       clef: CLEFS.includes(raw.clef as Clef) ? raw.clef as Clef : PROGRESSION_DEFAULTS.clef,
     };

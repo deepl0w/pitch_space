@@ -6,6 +6,7 @@ import { TEMPLATES, candidateTemplates } from './generate/templates';
 import { ALL_KEYS } from './theory/key';
 import type { CadenceType } from './theory/roman';
 import { BAR_CHOICES, GRADE_CHOICES } from './exercises/progression-id/progressions';
+import { EXERCISE_TYPES } from './exercises/registry';
 import { TIME_SIGNATURES, timeSignature } from './theory/meter';
 import { makeRng } from './theory/rng';
 
@@ -21,6 +22,9 @@ import { makeRng } from './theory/rng';
  */
 
 const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+/** Enough to see what each exercise's defaults produce; this is a shape check. */
+const SEEDS_FOR_ITEMS = Array.from({ length: 40 }, (_, i) => i * 7919 + 1);
 /**
  * ADR 0011's third obligation, applied to the cell catalogue.
  *
@@ -85,48 +89,45 @@ describe('reaching the cell catalogue', () => {
   });
 
   /**
-   * The grades the app can actually ask for.
+   * There is no app-side query to measure this against, and saying so is
+   * the whole of this case.
    *
-   * Read out of `GRADE_CHOICES` rather than copied from the record, so that
-   * narrowing the range moves this test rather than leaving it asserting a
-   * query nobody can make.
+   * ADR 0021 recorded two cells — the irrational subdivisions, the
+   * highest-graded material in the library — as out of reach of anything
+   * the app could ask for, and attributed it to a `SHAPE_AT` table that
+   * reached grade 9 against a catalogue graded to 10. Removing that table
+   * appeared to resolve it, and this file briefly said so.
+   *
+   * It did not, and the error is the one `docs/process/`'s note on
+   * proxies is about. The grades `SHAPE_AT` offered were the *progression*
+   * exercise's, and that exercise does not generate rhythm: nothing in
+   * `src/` outside `generate/` and these tests calls `chooseCells` or
+   * `generateRhythm` at all. Measuring the cell catalogue through a
+   * progression setting was never a query against it — it was a number of
+   * the right shape standing in for one.
+   *
+   * So 0021's finding holds, with its reason corrected. The cells are not
+   * stranded above a grade band; they are unreached because **the rhythm
+   * exercise does not exist yet**, and so is every other cell in the
+   * catalogue. That is a roadmap item and not a defect.
+   *
+   * This case exists to fail the day it stops being true. When an exercise
+   * ships that queries the cell catalogue, this goes red and asks for the
+   * real measurement — against that exercise's own settings, which is
+   * what the template section below does for the exercise that exists.
    */
-  const ASKABLE = [...GRADE_CHOICES].sort((a, b) => a - b);
-  const REACHED_ASKABLE = reachedAt(ASKABLE);
-
-  it('is queried over the whole catalogue, with nothing above the range', () => {
-    /*
-      ADR 0021's finding, resolved rather than reasserted.
-
-      It recorded two cells above anything the app could ask for, and read
-      as a fact about the catalogue: the hardest material in the library,
-      out of reach. It was a fact about the *dial*. The grades reachable
-      were 2, 4, 5, 7 and 9 — five rows of a `SHAPE_AT` table keyed by a
-      1-to-5 difficulty — so 1, 3, 6, 8 and 10 could not be asked for by
-      any setting, and the catalogue graded to 10.
-
-      Removing the table removes the gap. This asserts the relationship
-      that has to hold, not the numbers: every grade the catalogue uses is
-      one the app can ask for.
-    */
-    expect(Math.max(...ASKABLE)).toBeGreaterThanOrEqual(Math.max(...CELLS.map((c) => c.grade)));
-    for (const grade of new Set(CELLS.map((c) => c.grade))) expect(ASKABLE).toContain(grade);
-  });
-
-  it('strands no cell at all, now that every grade is askable', () => {
-    /*
-      This case named `quintuplet_s` and `septuplet_s` and required them to
-      be out of reach. They are the irrational subdivisions, the two
-      highest-graded cells in the library, and the only thing keeping them
-      from a user was a preset table.
-
-      Kept as a case rather than deleted, because the obligation did not go
-      away: ADR 0011 requires every entry to be reachable by a query the
-      app makes, and this is now the whole of it for the cells. If a future
-      grade band strands one again, it fails here and names it.
-    */
-    const stranded = CELLS.filter((c) => !REACHED_ASKABLE.has(c.id)).map((c) => c.id).sort();
-    expect(stranded).toEqual([]);
+  it('is not queried by any exercise the app ships', () => {
+    const queries = EXERCISE_TYPES.filter((type) => {
+      const items = SEEDS_FOR_ITEMS.flatMap(
+        (seed) => type.generate({ seed, settings: type.settings.defaults }).items,
+      );
+      return items.some((item) => item.startsWith('cell:') || item.startsWith('rhythm:'));
+    });
+    expect(
+      queries.map((t) => t.id),
+      'an exercise now asks for rhythm — measure the cell catalogue against its settings, '
+      + 'the way the template section measures against the progression exercise',
+    ).toEqual([]);
   });
 });
 
@@ -161,7 +162,7 @@ describe('reaching the template corpus', () => {
    */
   const SEEDS = 150;
 
-  function reachedWith(vary: boolean, applied: boolean): Set<string> {
+  function reachedWith(vary: boolean, applied: boolean, borrowed = false): Set<string> {
     const out = new Set<string>();
     for (const bars of BAR_CHOICES) for (const grade of GRADE_CHOICES) {
       for (const mode of ['major', 'minor'] as const) {
@@ -176,7 +177,7 @@ describe('reaching the template corpus', () => {
                 bars,
                 grade,
                 allowInversions: false,
-                allowBorrowed: false,
+                allowBorrowed: borrowed,
                 allowAppliedDominants,
                 cadences,
               });
@@ -197,7 +198,10 @@ describe('reaching the template corpus', () => {
   const APPLIED_ONLY = reachedWith(false, true);
   const VARY_ONLY = reachedWith(true, false);
   const BOTH = reachedWith(true, true);
-  const EVERYTHING = new Set([...PLAIN, ...APPLIED_ONLY, ...VARY_ONLY, ...BOTH]);
+  // Borrowing is a setting now, so it is a corner of the sweep and not a
+  // ceiling on it. It is the one that reaches the last two templates.
+  const BORROWED = reachedWith(true, true, true);
+  const EVERYTHING = new Set([...PLAIN, ...APPLIED_ONLY, ...VARY_ONLY, ...BOTH, ...BORROWED]);
 
   it('is sweeping the settings it claims to', () => {
     // Without this the stranded lists below could be long for the dull
@@ -207,7 +211,7 @@ describe('reaching the template corpus', () => {
     for (const id of EVERYTHING) expect(TEMPLATES.map((t) => t.id)).toContain(id);
   });
 
-  it('leaves two templates no setting can reach, both for the same reason', () => {
+  it('leaves nothing in the corpus that no setting can reach', () => {
     /*
       0017 drew the boundary this is measured against: the obligation is
       about entries *no* legitimate query can reach, not about entries
@@ -223,21 +227,37 @@ describe('reaching the template corpus', () => {
       `blues-12`, `blues-quick-change` and `phrygian-half` with no change
       to `generate/` at all.
 
-      What is left is one cause, and it is a real one. Both of these carry
-      a borrowed chord — `rhythm-a` the iv that rhythm changes is known
-      for, `blues-jazz` the ♯iv°7 in its sixth bar — and the exercise
-      hardwires `allowBorrowed: false`. That is the only gate still closed
-      against the corpus, and unlike the other three it is a setting the
-      exercise has chosen not to offer rather than a table nobody meant to
-      write. Asked of `candidateTemplates` directly: both are refused under
-      the query the exercise makes and admitted the moment borrowing is
-      allowed, with everything else held still.
+      The last two went the same way, for a cause that was real rather
+      than accidental. `rhythm-a` carries the iv that rhythm changes is
+      known for and `blues-jazz` the ♯iv°7 in its sixth bar, and the
+      exercise hardwired `allowBorrowed: false` — so unlike the other
+      three this was a setting the exercise had chosen not to offer, not a
+      table nobody meant to write. It is offered now, on the same terms as
+      applied dominants: the palette grows for every question while it is
+      on, so it is a harder exercise and not a tell.
+
+      Which leaves the obligation itself, with nothing to carve out of it.
+      Every template in the corpus is reachable by some combination of the
+      exercise's settings. A template that stops being reachable fails
+      here and names itself.
     */
     const stranded = TEMPLATES.filter((t) => !EVERYTHING.has(t.id)).map((t) => t.id).sort();
-    expect(stranded).toEqual(['blues-jazz', 'rhythm-a']);
+    expect(stranded).toEqual([]);
+  });
 
-    // The cause, asked of the selector rather than inferred from the ids.
-    for (const id of stranded) {
+  it('needs borrowing for the two that borrow, and only those two', () => {
+    /*
+      The converse of the case above, and the reason it is not vacuous: if
+      the sweep's widest corner reached everything on its own, "nothing is
+      stranded" would say nothing about the corners.
+
+      Asked of `candidateTemplates` rather than inferred from the ids, so
+      the claim is about the selector's own reasoning.
+    */
+    const needsBorrowing = [...BORROWED].filter((id) => !BOTH.has(id)).sort();
+    expect(needsBorrowing).toEqual(['blues-jazz', 'rhythm-a']);
+
+    for (const id of needsBorrowing) {
       const t = TEMPLATES.find((x) => x.id === id)!;
       const query = {
         bars: t.bars, mode: 'major' as const, grade: Math.max(...GRADE_CHOICES),
@@ -360,8 +380,9 @@ describe('reaching the template corpus', () => {
       never arrived was a twelve-bar *request*: `SHAPE_AT` asked for four
       bars or eight, so the three twelve-bar templates were unreachable
       from the app while being perfectly ordinary entries in the corpus.
-      Two of the three are now reached; the third, `blues-jazz`, is held
-      by borrowing and not by length.
+      All three are reached now: two by the length control alone, and
+      `blues-jazz` once borrowing is also allowed — it was held by its
+      ♯iv°7 and not by its length.
     */
     const lengths = new Set<number>();
     for (const bars of BAR_CHOICES) {
@@ -373,7 +394,7 @@ describe('reaching the template corpus', () => {
     }
     expect([...lengths].sort((a, b) => a - b)).toContain(12);
 
-    for (const id of ['blues-12', 'blues-quick-change']) {
+    for (const id of ['blues-12', 'blues-quick-change', 'blues-jazz']) {
       expect(TEMPLATES.find((t) => t.id === id)!.bars).toBe(12);
       expect(EVERYTHING.has(id), `${id} is still out of reach`).toBe(true);
     }

@@ -121,3 +121,45 @@ describe('the enharmonic positions', () => {
     }
   });
 });
+
+/**
+ * The stack spacing has to follow the type size, because one component
+ * sets three rows at three sizes.
+ *
+ * It was a fixed 11px: comfortable under an 8px signature, and exactly the
+ * glyph height under an 11px major name — so the three enharmonic majors
+ * printed B over Cb, Gb over F#, Db over C# at the same point, while the
+ * minor ring one step in, with identical markup, read cleanly. Found by
+ * the user role, by comparing the two rings rather than reading either
+ * alone; a test that checked only "two lines are present" passed
+ * throughout, and this is the assertion that would not have.
+ */
+describe('stacking two spellings on one wedge', () => {
+  it('offsets them in em, so the gap scales with whatever size the row is', () => {
+    const stacked = [...container.querySelectorAll('text')]
+      .filter((t) => t.querySelectorAll('tspan').length > 1);
+
+    // Three major names, three minors, three signatures.
+    expect(stacked.length).toBeGreaterThanOrEqual(9);
+
+    for (const text of stacked) {
+      for (const span of text.querySelectorAll('tspan')) {
+        const dy = span.getAttribute('dy') ?? '';
+        expect(dy, `"${span.textContent}" is offset by ${dy}`).toMatch(/em$/);
+      }
+    }
+  });
+
+  it('puts both spellings of every shared wedge on their own line', () => {
+    // The pairs, by name, so a reordering of ALL_KEYS that changed which
+    // spelling leads is visible rather than silent.
+    const lines = [...container.querySelectorAll('text')]
+      .map((t) => [...t.querySelectorAll('tspan')].map((s) => s.textContent))
+      .filter((l) => l.length > 1);
+
+    for (const pair of [['B', 'Cb'], ['Gb', 'F#'], ['Db', 'C#']]) {
+      expect(lines, `${pair.join('/')} is not stacked`)
+        .toContainEqual(expect.arrayContaining(pair));
+    }
+  });
+});

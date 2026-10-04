@@ -53,6 +53,16 @@ function signatureText(key: Key): string {
  *
  * `dy` on the first tspan rather than on the text element, because shifting
  * the text shifts the anchor too and the pair ends up off-centre.
+ *
+ * **In `em`, not pixels.** The same component sets all three rows and CSS
+ * gives each a different size — 11px for a major name, 9.5px for a minor,
+ * 8px for a signature. A fixed 11px gap is comfortable under 8px type and
+ * is exactly the type's own height under 11px, so the major names printed
+ * their two spellings on top of each other while the minor ring one step
+ * in, with identical markup, read cleanly. Found by the user role, which
+ * compared the two rings rather than reading either alone. An `em` is a
+ * fraction of whatever size the row turns out to be, so the component
+ * stops needing to know.
  */
 function WedgeLabel({ x, y, lines, className }: {
   x: number; y: number; lines: string[]; className: string;
@@ -66,7 +76,7 @@ function WedgeLabel({ x, y, lines, className }: {
           (C has no twin, but nothing in the arithmetic forbids it), and a
           duplicate key would drop a line rather than draw it. */}
       {lines.map((line, i) => (
-        <tspan key={i} x={x} dy={i === 0 ? -5.5 : 11}>{line}</tspan>
+        <tspan key={i} x={x} dy={i === 0 ? '-0.52em' : '1.12em'}>{line}</tspan>
       ))}
     </text>
   );

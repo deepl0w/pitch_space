@@ -102,6 +102,26 @@ const MAX_PLAUSIBLE_SECONDS = 0.5;
 const MIN_TRIALS = 3;
 
 /**
+ * How many frames the capture layer buffers before handing them over.
+ *
+ * Declared here rather than in `capture/`, which is where it is used,
+ * because this is the size of the error when the caller gets the one thing
+ * wrong that {@link CalibrationTrial} says it cannot check. A recording
+ * whose first sample is one buffer later than the caller believes shifts
+ * every delta by this much, equally — and an interquartile range over
+ * equally-shifted numbers is unchanged, so the result moves 92.9 ms at
+ * 44.1 kHz and reports the same confidence to six decimal places.
+ *
+ * It lives in `dsp/` because both halves need it and only this direction is
+ * allowed: `capture/` may import from here and this layer may import
+ * nothing above itself. The alternative was the number written out twice in
+ * files that cannot see each other, where changing one leaves the other
+ * silently stale — which is the thing the tests about this very defect
+ * would then be measuring wrongly.
+ */
+export const RECORDER_BUFFER_FRAMES = 4096;
+
+/**
  * How far after its click an onset may be and still be that click's echo.
  *
  * Wider than any plausible latency, so a slow device is not silently scored

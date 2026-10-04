@@ -1,4 +1,6 @@
-import { estimateInputLatency, type CalibrationOutcome } from '../dsp/calibration';
+import {
+  RECORDER_BUFFER_FRAMES, estimateInputLatency, type CalibrationOutcome,
+} from '../dsp/calibration';
 import type { Synth } from '../output/synth';
 
 /**
@@ -132,7 +134,7 @@ async function run(synth: Synth, stream: MediaStream): Promise<MeasureOutcome> {
   }
 
   const source = context.createMediaStreamSource(stream);
-  const recorder = context.createScriptProcessor?.(4096, 1, 1);
+  const recorder = context.createScriptProcessor?.(RECORDER_BUFFER_FRAMES, 1, 1);
   if (!recorder) return { ok: false, reason: 'unsupported' };
 
   const chunks: Float32Array[] = [];

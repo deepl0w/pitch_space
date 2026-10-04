@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { estimateInputLatency, type CalibrationTrial } from './calibration';
+import {
+  RECORDER_BUFFER_FRAMES, estimateInputLatency, type CalibrationTrial,
+} from './calibration';
 import { detectOnsets } from './onsetDetector';
 import { concat, noiseFloor, pluckedString, silence } from '../testing/signals';
 
@@ -253,7 +255,7 @@ describe('matching clicks to what came back', () => {
  * honest form of it: if `measureLatency.ts` changes its buffer, this number
  * is stale and nothing will say so.
  */
-const PROCESSOR_FRAMES = 4096;
+const PROCESSOR_FRAMES = RECORDER_BUFFER_FRAMES;
 const ONE_BUFFER_SECONDS = PROCESSOR_FRAMES / RATE;
 
 /**

@@ -21,6 +21,19 @@ import type { Log } from './persistence';
  *   with a long history gets a blocked tab on the morning of a release.
  */
 
+/**
+ * Still `music-practice`, after the app was renamed to Pitch Space.
+ *
+ * A database name is not a display name: it is the address of
+ * everything a user has already recorded. Renaming it does not move
+ * the history, it opens a different, empty database and leaves the old
+ * one on disk — so the rename would read, to anyone who had practised,
+ * as the app having forgotten them.
+ *
+ * The same reasoning ADR 0007 gives for item ids. Changing it is a
+ * migration, not an edit, and is worth doing only alongside the export
+ * and import the roadmap already owes.
+ */
 const DB_NAME = 'music-practice';
 export const DB_VERSION = 1;
 export const ATTEMPTS_STORE = 'attempts';

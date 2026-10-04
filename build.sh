@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Music Practice - Build Script
+# Pitch Space - Build Script
 # Builds the web app, and wraps it for Android when asked
 
 set -e  # Exit on error
@@ -67,7 +67,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo -e "${BLUE}=====================================${NC}"
-echo -e "${BLUE}Music Practice - Build${NC}"
+echo -e "${BLUE}Pitch Space - Build${NC}"
 echo -e "${BLUE}=====================================${NC}"
 echo
 

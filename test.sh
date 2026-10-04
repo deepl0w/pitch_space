@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Music Practice - Test Script
+# Pitch Space - Test Script
 # Runs the suite, the type check, the linter and the toolchain doctor
 
 set -e  # Exit on error
@@ -72,7 +72,7 @@ if ! $UNIT && ! $LINT && ! $TYPES && ! $OFFLINE && ! $CHECK && ! $WATCH && ! $CO
 fi
 
 echo -e "${BLUE}=====================================${NC}"
-echo -e "${BLUE}Music Practice - Tests${NC}"
+echo -e "${BLUE}Pitch Space - Tests${NC}"
 echo -e "${BLUE}=====================================${NC}"
 echo
 

@@ -12,6 +12,7 @@ import { assertStepsCoverVersions, type MigrationStep, type Versioned } from './
 
 /* -- settings ------------------------------------------------------------- */
 
+/** Unchanged by the rename to Pitch Space, for the reason `DB_NAME` gives. */
 export const SETTINGS_KEY = 'music-practice:settings';
 export const SETTINGS_SCHEMA = 2;
 

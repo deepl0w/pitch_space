@@ -1,6 +1,7 @@
 {
-  "name": "music-practice",
+  "name": "pitch-space",
   "private": true,
+  "license": "MIT",
   "version": "0.0.0",
   "type": "module",
   "scripts": {

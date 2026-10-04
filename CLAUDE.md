@@ -1,4 +1,4 @@
-# Music Practice — notes for agents
+# Pitch Space — notes for agents
 
 A practice app for musicians: sight reading, note identification, rhythm, chord,
 chord-progression and scale exercises, generated on the spot and answered by

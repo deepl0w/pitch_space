@@ -8,7 +8,7 @@ export function Home({ go }: { go: (route: string) => void }) {
   return (
     <>
       <header>
-        <h1>Music Practice</h1>
+        <h1>Pitch Space</h1>
         <p className="lede">
           Exercises generated on the spot, following real patterns rather than
           random notes, and answered by playing them.

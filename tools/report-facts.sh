@@ -11,7 +11,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 # Written beside the repository rather than inside it, so a --run leaves no
 # untracked file behind for someone to commit by accident.
-RESULTS="${TMPDIR:-/tmp}/music-practice-report-tests.json"
+RESULTS="${TMPDIR:-/tmp}/pitch-space-report-tests.json"
 export RESULTS
 trap 'rm -f "$RESULTS"' EXIT
 

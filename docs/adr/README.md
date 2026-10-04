@@ -27,6 +27,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0010](0010-presentation-is-part-of-what-an-attempt-means.md) | Presentation is part of what an attempt means | Accepted |
 | [0011](0011-what-a-catalogue-owes.md) | What a catalogue owes | Accepted |
 | [0012](0012-the-judge-consumes-performed-notes-not-audio.md) | The judge consumes performed notes, not audio | Accepted |
+| [0013](0013-knowing-the-answer-narrows-what-judging-has-to-do.md) | Knowing the answer narrows what judging has to do | Accepted |
 
 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) describes the system as it stands
 today and links back to these records. It is a living document: when a record

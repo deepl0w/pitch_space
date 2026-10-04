@@ -95,8 +95,16 @@ export interface ProgressionResponse {
   latencyMs?: number;
 }
 
-/** How many chords a difficulty asks for, and how much the generator may use. */
-const SHAPE_AT: Record<Difficulty, { bars: number; grade: number }> = {
+/**
+ * How many chords a difficulty asks for, and how much the generator may use.
+ *
+ * Exported because it is the only difficulty-to-grade mapping the codebase
+ * has, which makes it the query every catalogue is measured against — ADR
+ * 0021 measures the rhythm cells through it and found two stranded above its
+ * top grade. Asserting that against the real table rather than a copy of its
+ * numbers is what makes the finding fail if someone narrows a band.
+ */
+export const SHAPE_AT: Record<Difficulty, { bars: number; grade: number }> = {
   1: { bars: 4, grade: 2 },
   2: { bars: 4, grade: 4 },
   3: { bars: 8, grade: 5 },

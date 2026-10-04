@@ -42,6 +42,20 @@ export function SettingsPanel<S>({ fields, settings, onChange }: {
                   options={field.options}
                   chosen={field.selected(settings)}
                   onChange={(next) => onChange(field.apply(settings, next))}
+                  /*
+                    Asked rather than assumed. Some fields refuse a selection
+                    — unticking the last mode would leave the generator
+                    nothing to draw from, so `apply` hands back the settings
+                    unchanged. That refusal is right and it was invisible:
+                    the chip took the tap, nothing moved, and nothing said
+                    why. Putting the question to the field keeps the policy
+                    where it was and only makes it legible.
+                  */
+                  accepts={(next) => {
+                    const after = field.selected(field.apply(settings, next));
+                    return after.length === next.length
+                      && next.every((id) => after.includes(id));
+                  }}
                 />
               </Field>
             );
@@ -69,24 +83,32 @@ export function SettingsPanel<S>({ fields, settings, onChange }: {
  * the current list, so what gets stored does not depend on the order the user
  * happened to click.
  */
-function Chips({ options, chosen, onChange }: {
+function Chips({ options, chosen, onChange, accepts }: {
   options: readonly SettingOption[];
   chosen: readonly string[];
   onChange(next: readonly string[]): void;
+  /** Whether the field would actually take this selection. */
+  accepts(next: readonly string[]): boolean;
 }) {
   return (
     <div className="chips">
       {options.map((option) => {
         const on = chosen.includes(option.id);
+        const next = options
+          .map((o) => o.id)
+          .filter((id) => (id === option.id ? !on : chosen.includes(id)));
+        const refused = !accepts(next);
         return (
           <button
             key={option.id}
             type="button"
             className={on ? 'chip on' : 'chip'}
             aria-pressed={on}
-            onClick={() => onChange(options
-              .map((o) => o.id)
-              .filter((id) => (id === option.id ? !on : chosen.includes(id))))}
+            disabled={refused}
+            // Said in words as well as in the disabled state, which a screen
+            // reader announces as "unavailable" without saying what for.
+            title={refused ? `${option.label} cannot be turned off — something must stay on` : undefined}
+            onClick={() => onChange(next)}
           >
             {option.label}
           </button>

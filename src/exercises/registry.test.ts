@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_FAMILIES, EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
+import { itemLabel } from './itemLabel';
 import type { AnyExerciseDefinition } from './types';
 
 /**
@@ -107,6 +108,27 @@ describe('every exercise type’s settings', () => {
     });
   });
 
+  it('labels every option for a reader rather than for the parser', () => {
+    // The interval exercise offered its clefs as `treble`, `alto`, `tenor`,
+    // `bass` while every other exercise offered `Treble` and `Bass` — the
+    // option id leaking into the dropdown. The ids are a storage format and
+    // the labels are the only part the user reads, so they are allowed to
+    // coincide only where the id is already how a musician writes it.
+    const written = /^(ii|iii|vi|vii|[IVX]+o?|[1-7])$/;
+    each((d) => {
+      for (const field of d.settings.fields) {
+        if (field.kind === 'toggle') continue;
+        for (const option of field.options) {
+          if (option.label === option.id && written.test(option.id)) continue;
+          expect(
+            option.label,
+            `${d.id}.${field.id} offers "${option.id}" as its own label`,
+          ).not.toBe(option.id);
+        }
+      }
+    });
+  });
+
   it('starts every field on a value that is one of its own options', () => {
     // A select whose value matches no option renders blank, and the first
     // change writes a setting the user never chose.
@@ -182,6 +204,19 @@ describe('every exercise type’s generator', () => {
         const { items } = d.generate({ seed, settings: d.settings.defaults });
         expect(items.length).toBeGreaterThan(0);
         for (const item of items) expect(item).toMatch(ITEM_ID);
+      }
+    });
+  });
+
+  it('produces no item the readout would have to show as a storage key', () => {
+    // "How this has gone" is the one place a learner is told what they know,
+    // and it lists `Exercise.items` directly. An item kind nothing can name
+    // reaches them as `progression:major:ii`.
+    each((d) => {
+      for (let seed = 0; seed < 100; seed++) {
+        for (const item of d.generate({ seed, settings: d.settings.defaults }).items) {
+          expect(itemLabel(item), `${d.id} produces an unnameable item`).not.toBe(item);
+        }
       }
     });
   });

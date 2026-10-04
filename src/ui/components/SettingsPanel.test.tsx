@@ -188,14 +188,56 @@ describe('a multi-select', () => {
     expect(changes.at(-1)).toEqual({ ...START, colours: ['red', 'blue'] });
   });
 
-  it('lets the field refuse, and shows the refusal', () => {
+  it('shows a refusal before the tap rather than after it', () => {
     // The field may reject an empty pool: unticking the last interval is a
     // slip, and the honest response is for the tick not to come off.
+    //
+    // It used to come off by the tap being taken and the result discarded,
+    // which from the user's side is a button that does nothing and says
+    // nothing. The refusal is the field's and stays the field's; what
+    // changed is that the chip now wears it.
     settings = { ...START, colours: ['red'] };
     render();
+    expect(chip('Red').disabled).toBe(true);
+    expect(chip('Red').title).toMatch(/cannot be turned off/);
+
     act(() => chip('Red').click());
-    expect(changes).toEqual([{ ...START, colours: ['red'] }]);
+    expect(changes).toEqual([]);
     expect(chip('Red').className).toBe('chip on');
+  });
+
+  it('refuses only the chip that is actually holding the pool open', () => {
+    // Disabling every chip once one refusal exists would be a far worse lie
+    // than the one it replaced.
+    render();
+    for (const label of ['Red', 'Blue']) expect(chip(label).disabled).toBe(false);
+    // An option that is off can always be turned on, whatever the field
+    // thinks of the ones that are on.
+    expect(chip('Green').disabled).toBe(false);
+  });
+
+  it('frees the last chip again as soon as a second one is on', () => {
+    settings = { ...START, colours: ['red'] };
+    render();
+    act(() => chip('Green').click());
+    expect(chip('Red').disabled).toBe(false);
+    expect(chip('Green').disabled).toBe(false);
+  });
+
+  it('leaves a field that refuses nothing entirely alone', () => {
+    // The panel asks the field; it does not impose a non-empty rule of its
+    // own on a field that never had one.
+    const permissive: readonly SettingField<Demo>[] = [{
+      kind: 'multi', id: 'colours', label: 'Colours',
+      options: [{ id: 'red', label: 'Red' }, { id: 'blue', label: 'Blue' }],
+      selected: (s) => s.colours,
+      apply: (s, options) => ({ ...s, colours: options }),
+    }];
+    settings = { ...START, colours: ['red'] };
+    render(permissive);
+    expect(chip('Red').disabled).toBe(false);
+    act(() => chip('Red').click());
+    expect(changes).toEqual([{ ...START, colours: [] }]);
   });
 });
 

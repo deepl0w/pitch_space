@@ -63,14 +63,18 @@ printf 'exercises       %s built\n' "$(sed -n '/^export const EXERCISE_TYPES/,/^
     src/exercises/registry.ts 2>/dev/null | grep -cE '^\s+\w+,\s*$' || echo '?')"
 printf 'screens         %s\n' "$(ls src/ui/screens/*.tsx 2>/dev/null | grep -vc test || echo 0)"
 
-# A dist older than HEAD reports the previous commit's bundle with no sign
-# that it is doing so. It was caught doing exactly that: a 15-minute-old dist
+# A dist older than the last commit that could change it reports a previous
+# commit's bundle with no sign that it is doing so. It was caught doing exactly that: a 15-minute-old dist
 # printed 464 kB where HEAD builds 465. A figure that is quietly one commit
 # behind is worse than no figure, because the report's whole claim is that its
-# numbers are checkable.
+# numbers are checkable. Dated against the last commit touching src, the
+# lockfile or the build config rather than against HEAD: a doc-only commit
+# cannot change the bundle, and a check that cries stale for one gets ignored,
+# which is how the figure starts lying again.
 if [ ! -d dist ]; then
     echo "bundle          not built"
-elif [ "$(find dist -newermt "@$(git log -1 --format=%ct)" -print -quit 2>/dev/null)" = "" ]; then
+elif built_after=$(git log -1 --format=%ct -- src package.json package-lock.json vite.config.ts index.html) \
+     && [ "$(find dist -newermt "@$built_after" -print -quit 2>/dev/null)" = "" ]; then
     echo "bundle          STALE — dist predates HEAD; rebuild before quoting it"
 else
     gz=$(find dist/assets -name '*.js' -exec sh -c 'gzip -c "$1" | wc -c' _ {} \; 2>/dev/null |

@@ -312,16 +312,24 @@ split.</p>
 progression exercise is built, which is now the next piece of work rather than a distant
 one.</p>
 
-<p><b>Four documents say the DSP layer computes chroma. It does not.</b> Corrected
-after this report was first published, by the architect, who wrote the worst of them.
-<code>src/audio/dsp/</code> exports FFT utilities, an onset detector, YIN pitch detection
-and rhythm alignment; the string <code>chroma</code> appears nowhere under
-<code>src/audio/</code>. ADR 0013 and ADR 0012 both say a chord&rsquo;s pitch classes are
-&ldquo;answerable from the chroma the DSP layer already computes&rdquo;, ADR 0001 lists it
-among that directory&rsquo;s contents, and so does the diagram in
-<code>docs/adr/README.md</code>. The source of all four is one line of
-<code>CLAUDE.md</code> describing what the layer is <em>for</em>, read by each subsequent
-document as a description of what it <em>holds</em>.</p>
+<p><b>Three documents said the DSP layer computes chroma. It does not.</b> Found
+after this report was first published, by the architect, who had written the worst of
+them. <code>src/audio/dsp/</code> exports FFT utilities, an onset detector, YIN pitch
+detection and rhythm alignment; <code>grep -rni chroma src/audio/</code> returns nothing.
+ADR 0013 and ADR 0012 both said a chord&rsquo;s pitch classes were &ldquo;answerable from
+the chroma the DSP layer already computes&rdquo;, and the diagram in the ADR index drew it
+among the directory&rsquo;s contents. All three now carry corrections, dated today: the two
+records by appended note, because an ADR is append-only, and the index by edit, because a
+living document&rsquo;s job is to say what is true now rather than to archive its own
+mistakes.</p>
+
+<p>Two things did <em>not</em> need correcting. ADR 0001 names chroma too, but it landed
+on 3 October and <code>src/audio/dsp/</code> first appeared on 4 October, so its sentence
+cannot have been describing the layer&rsquo;s contents &mdash; there was no layer. And
+<code>CLAUDE.md</code>, which is the source of all of it, still reads
+<code>dsp/ &nbsp;pitch detection, chroma, onsets</code>. It describes what the layer is
+<em>for</em>; each later document read it as what the layer <em>holds</em>. That line is
+the user&rsquo;s to change and is deliberately left alone.</p>
 
 <p>This matters beyond tidiness, and it changes the order of work. The measurement ADR
 0013 wanted cannot be run at all, because there is nothing to measure. The chord exercise
@@ -331,8 +339,13 @@ answer comes back &mdash; and if recall on inner voices is poor, the chord exerc
 itself MIDI-first, which ADR 0012 already permits an exercise to do.</p>
 
 <p>It is also the second time: ADR 0005 corrected ADR 0002 for the same mistake, a claim
-about this codebase taken from the prose around it rather than from the code. Worth
-recording plainly rather than filing quietly, because the lesson did not take.</p>
+about this codebase taken from the prose around it rather than from the code. So the ADR
+index now carries it as a standing convention &mdash; <em>check a claim about the code
+against the code, not against the record that made it</em> &mdash; written where the next
+record&rsquo;s author will read it rather than attempted as a test, because a link checker
+validates links and not claims. No step in the chain looked like an invention. Each author
+was citing a source that was locally authoritative, which is exactly why nothing caught
+it.</p>
 </section>
 
 <svg class="stave" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true">
@@ -368,7 +381,7 @@ than a work item, but it blocks the only user-reported defect currently open.</p
 
 <footer>
 Figures read from the repository by tools/report-facts.sh · main 2e9af03 · 4 October 2026<br>
-Revised the same day: the DSP layer does not compute chroma, and four documents said it did.
+Revised the same day: the DSP layer does not compute chroma, and three documents said it did.
 </footer>
 
 </div>

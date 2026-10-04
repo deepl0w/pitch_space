@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BAR_CHOICES, GRADE_CHOICES, PROGRESSION_DEFAULTS, generateProgression, gradeProgression, paletteFor, progressionScoreSpec, progressionVoices, type ProgressionSettings,
+  BAR_CHOICES, PROGRESSION_DEFAULTS, STYLE_CHOICES, generateProgression, gradeProgression, paletteFor, progressionScoreSpec, progressionVoices, type ProgressionSettings,
 } from './progressions';
 import { ALL_KEYS, keyId } from '../../theory/key';
 
@@ -29,19 +29,26 @@ const SEEDS = Array.from({ length: 300 }, (_, i) => i * 7919 + 1);
 const SWEEP_SEEDS = SEEDS.slice(0, 25);
 
 /** Both palette-widening switches off, which is the default shape. */
-const OFF = { appliedDominants: false, borrowed: false } as const;
+const OFF = { appliedDominants: false, borrowed: false, diminished: false } as const;
 
 /**
- * The furthest the settings panel can now reach.
+ * Everything the chord-vocabulary switches can turn on at once.
  *
- * Read off `GRADE_CHOICES` rather than written as a literal, because the
- * point of the two tests that use it is that they probe the *end* of the
- * range. A literal would have gone on passing while quietly testing the
- * middle — which is how the old top, grade 9 against a catalogue graded to
- * 10, became a finding about the catalogue in ADR 0021 when it was a
- * finding about the dial.
+ * There was a `TOP_GRADE` here, read off `GRADE_CHOICES` so the two tests
+ * that use it would probe the end of the range rather than its middle.
+ * The range is gone — the switches are independent now, so "the furthest
+ * the panel reaches" is all of them on rather than the largest of a
+ * list, and there is no longer an end to miss.
  */
-const TOP_GRADE = GRADE_CHOICES[GRADE_CHOICES.length - 1];
+const EVERYTHING_ON = {
+  sevenths: true, diminished: true, picardy: true, neapolitan: true,
+} as const;
+
+/** Nothing on, and everything on: the two corners the sweeps cross. */
+const VOCABULARIES: Array<Partial<ProgressionSettings>> = [
+  { sevenths: false, diminished: false, picardy: false, neapolitan: false },
+  { ...EVERYTHING_ON },
+];
 
 function settings(over: Partial<ProgressionSettings> = {}): ProgressionSettings {
   return { ...PROGRESSION_DEFAULTS, ...over };
@@ -67,29 +74,41 @@ describe('the palette contains every answer', () => {
    * it. Found by sweeping the real product of the controls; invisible to
    * every sweep that fixed one of them.
    *
-   * `bars` became a setting recently, when it stopped being inferred from
-   * a difficulty preset. A new control is a new dimension of this sweep,
-   * and that is the thing to remember rather than the particular numeral.
+   * `bars` became a setting when it stopped being inferred from a
+   * difficulty preset, and the sweep did not follow it; `styles` and the
+   * four vocabulary switches arrived the same way when the grade dial
+   * went. **A new control is a new dimension of this sweep**, and that is
+   * the thing to remember rather than the particular numeral.
+   *
+   * Styles are crossed one at a time rather than in combination. The
+   * palette does not depend on them — it is per mode and per switch —
+   * so what a style can do is make the *generator* reach a numeral the
+   * palette lacks, and a single style is the narrowest case where that
+   * could happen. All of them at once is the unnarrowed sweep already
+   * here as `[]`.
    */
-  it('over every seed, grade, mode and setting a user can reach', () => {
+  it('over every seed, mode and setting a user can reach', () => {
     for (const mode of ['major', 'minor'] as const) {
-      for (const grade of GRADE_CHOICES) {
+      for (const vocabulary of VOCABULARIES) {
         for (const applied of [false, true]) for (const varyCadence of [false, true]) {
           for (const borrowed of [false, true]) for (const bars of BAR_CHOICES) {
+            for (const styles of [[], ...STYLE_CHOICES.map((t) => [t])]) {
             const s = settings({
-              modes: [mode], grade, bars, varyCadence, borrowed, appliedDominants: applied,
+              modes: [mode], ...vocabulary, bars, styles, varyCadence,
+              borrowed, appliedDominants: applied,
             });
-            const palette = new Set(paletteFor(mode, { appliedDominants: applied, borrowed }));
+            const palette = new Set(paletteFor(mode, { appliedDominants: applied, borrowed, diminished: vocabulary.diminished === true }));
             for (const seed of SWEEP_SEEDS) {
               const exercise = generateProgression({ seed, settings: s });
               for (const numeral of exercise.numerals) {
                 expect(
                   palette.has(numeral),
-                  `${mode} grade ${grade} ${bars}b applied=${applied} vary=${varyCadence} `
-                  + `borrowed=${borrowed}: `
+                  `${mode} ${bars}b ${styles.join('+') || 'any style'} `
+                  + `applied=${applied} vary=${varyCadence} borrowed=${borrowed}: `
                   + `${numeral} is not offered`,
                 ).toBe(true);
               }
+            }
             }
           }
         }
@@ -107,16 +126,22 @@ describe('the palette contains every answer', () => {
    * used exactly once. It has to come from the mode alone.
    */
   it('without depending on what this seed produced', () => {
-    const s = settings({ grade: TOP_GRADE });
+    const s = settings({ ...EVERYTHING_ON });
     const palettes = SEEDS.slice(0, 50)
       .map((seed) => generateProgression({ seed, settings: s }).palette.join(','));
     expect(new Set(palettes).size).toBe(1);
   });
 
   it('opens with the mode\'s own triads, in degree order', () => {
-    expect(paletteFor('major', OFF).slice(0, 7))
-      .toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio']);
-    expect(paletteFor('minor', OFF).slice(0, 4)).toEqual(['i', 'iio', 'III', 'iv']);
+    expect(paletteFor('major', OFF).slice(0, 6))
+      .toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi']);
+    expect(paletteFor('minor', OFF).slice(0, 4)).toEqual(['i', 'III', 'iv', 'V']);
+
+    // The diminished ones keep their place in degree order when they are
+    // switched on, rather than being appended after everything else.
+    const on = { ...OFF, diminished: true } as const;
+    expect(paletteFor('major', on)).toContain('viio');
+    expect(paletteFor('minor', on)).toContain('iio');
   });
 
   it('adds the applied dominants when they are asked for', () => {
@@ -145,10 +170,14 @@ describe('the palette contains every answer', () => {
    * arrive from templates rather than from the transformation passes, and
    * the flags gated only the passes. Now that the flags exclude, a major
    * progression with applied dominants off contains neither — so the
-   * palette is the seven diatonic triads and nothing else.
+   * palette is the plain diatonic triads and nothing else.
+   *
+   * Six of them rather than seven: vii° left for the diminished switch
+   * when the grade dial went, and it is the one chord here that is not
+   * a plain triad of the key.
    */
   it('offers only the mode\'s own chords when nothing is switched on', () => {
-    expect(paletteFor('major', OFF)).toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio']);
+    expect(paletteFor('major', OFF)).toEqual(['I', 'ii', 'iii', 'IV', 'V', 'vi']);
   });
 
   it('offers nothing that can never be right', () => {
@@ -169,7 +198,7 @@ describe('the palette contains every answer', () => {
  * only one of them is the one a user would ever notice going wrong.
  */
 describe('every chord on the palette is reachable', () => {
-  it('at the grade that reaches furthest', () => {
+  it('with every switch turned on', () => {
     for (const mode of ['major', 'minor'] as const) {
       for (const applied of [false, true]) for (const borrowed of [false, true]) {
         // Every length at the top grade, not one of them. Length is the
@@ -181,12 +210,17 @@ describe('every chord on the palette is reachable', () => {
         // they can both be green and contradict one another.
         const produced = new Set(BAR_CHOICES.flatMap((bars) => [true, false].flatMap((vary) => {
           const s = settings({
-            modes: [mode], grade: TOP_GRADE, bars, borrowed,
+            modes: [mode], ...EVERYTHING_ON, bars, borrowed,
             varyCadence: vary, appliedDominants: applied,
           });
           return SWEEP_SEEDS.flatMap((seed) => generateProgression({ seed, settings: s }).numerals);
         })));
-        for (const numeral of paletteFor(mode, { appliedDominants: applied, borrowed })) {
+        // Every switch on, matching the settings the sweep above used:
+        // the palette and the generator have to be asked the same question.
+        const palette = paletteFor(mode, {
+          appliedDominants: applied, borrowed, diminished: EVERYTHING_ON.diminished,
+        });
+        for (const numeral of palette) {
           expect(produced.has(numeral), `${mode}: nothing ever produces ${numeral}`).toBe(true);
         }
       }
@@ -195,7 +229,7 @@ describe('every chord on the palette is reachable', () => {
 });
 
 describe('what the exercise hands the rest of the app', () => {
-  const s = settings({ grade: 5 });
+  const s = settings(EVERYTHING_ON);
 
   it('has a chord, a voicing and an item for every slot', () => {
     for (const seed of SEEDS.slice(0, 60)) {
@@ -236,7 +270,7 @@ describe('what the exercise hands the rest of the app', () => {
 });
 
 describe('grading a progression', () => {
-  const e = generateProgression({ seed: 7919, settings: settings({ grade: 1 }) });
+  const e = generateProgression({ seed: 7919, settings: settings(EVERYTHING_ON) });
 
   it('credits a right answer whole', () => {
     const result = gradeProgression(e, { numerals: [...e.numerals] });
@@ -289,7 +323,7 @@ describe('grading a progression', () => {
  */
 describe('varying the close', () => {
   function closes(vary: boolean): Set<string> {
-    const s = settings({ grade: 7, varyCadence: vary });
+    const s = settings({ ...EVERYTHING_ON, varyCadence: vary });
     return new Set(
       SEEDS.map((seed) => generateProgression({ seed, settings: s }).cadence ?? 'none'),
     );

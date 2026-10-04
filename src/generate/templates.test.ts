@@ -53,7 +53,10 @@ describe('the corpus as data', () => {
     for (const t of TEMPLATES) {
       expect(t.steps.reduce((sum, s) => sum + s.bars, 0), t.id).toBe(t.bars);
       expect(t.steps.length, t.id).toBeGreaterThanOrEqual(2);
-      expect(t.minGrade, t.id).toBeGreaterThanOrEqual(1);
+      // Every template carries at least one style tag, which matters more
+      // than it used to: the tags are now the only way into the corpus,
+      // where a `minGrade` used to be, so an untagged entry would be
+      // unreachable rather than merely undescribed.
       expect(t.tags.length, t.id).toBeGreaterThan(0);
     }
   });
@@ -262,7 +265,7 @@ describe('choosing a template', () => {
     for (const mode of ['major', 'minor'] as const) {
       for (const bars of [2, 4, 8, 12]) {
         for (const cadence of [null, 'HC', 'PAC'] as const) {
-          for (const t of candidateTemplates({ bars, mode, grade: 10, cadence })) {
+          for (const t of candidateTemplates({ bars, mode, cadence })) {
             expect(t.bars).toBe(bars);
             expect(t.modes).toContain(mode);
             expect(t.endsWith === null || t.endsWith === cadence).toBe(true);
@@ -276,26 +279,42 @@ describe('choosing a template', () => {
     }
   });
 
-  it('withholds a template until its grade, and never starts on a predominant after a dominant', () => {
-    const atGradeOne = candidateTemplates({ bars: 4, mode: 'major', grade: 1, cadence: null });
-    expect(atGradeOne.length).toBeGreaterThan(0);
-    for (const t of atGradeOne) expect(t.minGrade).toBeLessThanOrEqual(1);
+  it('offers only the styles asked for, and never starts on a predominant after a dominant', () => {
+    // What replaced "withholds a template until its grade". A style
+    // selection is a claim about what you want to practise and the query
+    // has to honour it exactly; a grade was a claim about you.
+    // A perfect authentic close at four bars, because `cadence: null`
+    // admits only templates that declare no cadence and the jazz ones all
+    // declare theirs — the trap this file already warns about further down.
+    const ask = { bars: 4, mode: 'major' as const, cadence: 'PAC' as const };
+    const jazz = candidateTemplates({ ...ask, styles: ['jazz'] });
+    expect(jazz.length).toBeGreaterThan(0);
+    for (const t of jazz) expect(t.tags, t.id).toContain('jazz');
+
+    // An empty selection is every style rather than none, which is the
+    // reading that leaves the generator something to quote.
+    const all = candidateTemplates({ ...ask, styles: [] });
+    expect(all.length).toBeGreaterThan(jazz.length);
+
+    // And a union widens rather than intersects.
+    const both = candidateTemplates({ ...ask, styles: ['jazz', 'classical'] });
+    expect(both.length).toBeGreaterThan(jazz.length);
 
     for (const mode of ['major', 'minor'] as const) {
       for (const bars of [2, 4, 8, 12]) {
         const after = candidateTemplates({
-          bars, mode, grade: 10, cadence: null, afterDominant: true,
+          bars, mode, cadence: null, afterDominant: true,
         });
         for (const t of after) expect(startsOn(t, mode), t.id).not.toBe('predominant');
       }
     }
     // The guard is only worth having if something would otherwise get through.
-    const unguarded = candidateTemplates({ bars: 4, mode: 'major', grade: 10, cadence: null });
+    const unguarded = candidateTemplates({ bars: 4, mode: 'major', cadence: null });
     expect(unguarded.some((t) => startsOn(t, 'major') === 'predominant')).toBe(true);
   });
 
   it('weights an exact cadence above one that would be rewritten', () => {
-    const query = { bars: 4, mode: 'major' as const, grade: 10, cadence: 'HC' as const };
+    const query = { bars: 4, mode: 'major' as const, cadence: 'HC' as const };
     const exact = TEMPLATES.find((t) => t.id === 'doo-wop')!;
     const open = TEMPLATES.find((t) => t.id === 'axis')!;
     expect(templateWeight(exact, query)).toBeGreaterThan(templateWeight(open, query));
@@ -340,7 +359,7 @@ describe('excluding what a template contains', () => {
    * declare no cadence, which none of these do.
    */
   function queryFor(t: Template, mode: Mode) {
-    return { bars: t.bars, mode, grade: t.minGrade, cadence: t.endsWith };
+    return { bars: t.bars, mode, cadence: t.endsWith };
   }
 
   function offered(t: Template, mode: Mode, flags: Record<string, boolean> = {}): boolean {

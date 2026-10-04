@@ -5,7 +5,8 @@ import { generateHarmony, planPhrases } from './generate/harmony';
 import { TEMPLATES, candidateTemplates } from './generate/templates';
 import { ALL_KEYS } from './theory/key';
 import type { CadenceType } from './theory/roman';
-import { BAR_CHOICES, GRADE_CHOICES } from './exercises/progression-id/progressions';
+import { BAR_CHOICES, STYLE_CHOICES } from './exercises/progression-id/progressions';
+import type { StyleTag } from './generate/templates';
 import { EXERCISE_TYPES } from './exercises/registry';
 import { TIME_SIGNATURES, timeSignature } from './theory/meter';
 import { makeRng } from './theory/rng';
@@ -21,7 +22,20 @@ import { makeRng } from './theory/rng';
  * the architecture test does.
  */
 
-const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+/**
+ * The constraint sets a caller can ask the cell selector for.
+ *
+ * This was a list of grades. The grades are gone from the catalogue —
+ * every cell is now described by what it is rather than by how advanced
+ * somebody judged it — so "every query the app can make" is the product
+ * of the switches instead of ten points on one line.
+ */
+const CONSTRAINTS = [
+  { allowRests: false, allowTuplets: false, syncopationsPerBar: 0 },
+  { allowRests: true, allowTuplets: false, syncopationsPerBar: 0 },
+  { allowRests: true, allowTuplets: true, syncopationsPerBar: 0 },
+  { allowRests: true, allowTuplets: true, syncopationsPerBar: 3, allowAdjacentTuplets: true },
+];
 
 /** Enough to see what each exercise's defaults produce; this is a shape check. */
 const SEEDS_FOR_ITEMS = Array.from({ length: 40 }, (_, i) => i * 7919 + 1);
@@ -60,13 +74,15 @@ describe('reaching the cell catalogue', () => {
    */
   const SEEDS = 60;
 
-  /** Every cell id `chooseCells` will actually hand back at these grades. */
-  function reachedAt(grades: readonly number[]): Set<string> {
+  /** Every cell id `chooseCells` will actually hand back under these constraints. */
+  function reachedAt(sets: typeof CONSTRAINTS): Set<string> {
     const reached = new Set<string>();
     for (const ts of TIME_SIGNATURES) {
-      for (const grade of grades) {
+      for (const constraints of sets) {
         for (let seed = 0; seed < SEEDS; seed += 1) {
-          const placements = chooseCells(makeRng(seed), { timeSignature: ts, bars: 1, grade });
+          const placements = chooseCells(makeRng(seed), {
+            timeSignature: ts, bars: 1, ...constraints,
+          });
           for (const placement of placements ?? []) reached.add(placement.cell.id);
         }
       }
@@ -81,7 +97,7 @@ describe('reaching the cell catalogue', () => {
    * inside a per-test timeout where it competes with 47 other files for
    * workers. Here it is paid once, during collection.
    */
-  const REACHED_ANYWHERE = reachedAt(GRADES);
+  const REACHED_ANYWHERE = reachedAt(CONSTRAINTS);
 
   it('holds nothing dead — every cell is reachable by some query', () => {
     // The obligation itself, and the thing templates could not claim.
@@ -164,7 +180,12 @@ describe('reaching the template corpus', () => {
 
   function reachedWith(vary: boolean, applied: boolean, borrowed = false): Set<string> {
     const out = new Set<string>();
-    for (const bars of BAR_CHOICES) for (const grade of GRADE_CHOICES) {
+    // Every length crossed with every style selection the panel offers,
+    // plus the unnarrowed one. The grades this used to cross are gone:
+    // the corpus is now reached by saying which tradition you want, so
+    // that is what "every query the app can make" has become.
+    const selections: Array<readonly StyleTag[]> = [[], ...STYLE_CHOICES.map((t) => [t])];
+    for (const bars of BAR_CHOICES) for (const styles of selections) {
       for (const mode of ['major', 'minor'] as const) {
         const key = ALL_KEYS.find((k) => k.mode === mode && k.accidentals === 0)!;
         {
@@ -175,7 +196,11 @@ describe('reaching the template corpus', () => {
                 key,
                 timeSignature: timeSignature('4/4'),
                 bars,
-                grade,
+                styles,
+                sevenths: true,
+                diminished: true,
+                picardy: true,
+                neapolitan: true,
                 allowInversions: false,
                 allowBorrowed: borrowed,
                 allowAppliedDominants,
@@ -260,8 +285,7 @@ describe('reaching the template corpus', () => {
     for (const id of needsBorrowing) {
       const t = TEMPLATES.find((x) => x.id === id)!;
       const query = {
-        bars: t.bars, mode: 'major' as const, grade: Math.max(...GRADE_CHOICES),
-        cadence: t.endsWith, allowApplied: true,
+        bars: t.bars, mode: 'major' as const, cadence: t.endsWith, allowApplied: true,
       };
       expect(
         candidateTemplates({ ...query, allowBorrowed: false }).map((c) => c.id),
@@ -365,9 +389,10 @@ describe('reaching the template corpus', () => {
     expect(t.endsWith).toBe('HC');
     expect(EVERYTHING.has(t.id)).toBe(true);
 
-    // The pairing is gone: every grade is askable at every length.
-    expect(Math.max(...GRADE_CHOICES)).toBeGreaterThanOrEqual(t.minGrade);
+    // The pairing is gone twice over: the grade that half of it turned
+    // on no longer exists, and the length is the user's own control.
     expect(BAR_CHOICES).toContain(4);
+    expect(t.tags.some((tag) => STYLE_CHOICES.includes(tag)), 'unreachable by style').toBe(true);
   });
 
   it('now plans a phrase as long as the twelve-bar templates need', () => {

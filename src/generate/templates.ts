@@ -60,7 +60,6 @@ export interface Template {
    * claim — in which case enforcement rewrites the tail.
    */
   endsWith: CadenceType | null;
-  minGrade: number;
   tags: readonly StyleTag[];
 }
 
@@ -73,13 +72,12 @@ function s(
 
 function template(
   id: string, name: string, modes: readonly Mode[], bars: number,
-  steps: TemplateStep[], endsWith: CadenceType | null, minGrade: number,
-  tags: StyleTag[],
+  steps: TemplateStep[], endsWith: CadenceType | null, tags: StyleTag[],
 ): Template {
   const got = steps.reduce((sum, step) => sum + step.bars, 0);
   if (got !== bars) throw new Error(`template ${id}: steps fill ${got} bars, declared ${bars}`);
   if (steps.length < 2) throw new Error(`template ${id}: a progression needs two chords`);
-  return { id, name, modes, bars, steps, endsWith, minGrade, tags };
+  return { id, name, modes, bars, steps, endsWith, tags };
 }
 
 const BOTH: readonly Mode[] = ['major', 'minor'];
@@ -111,66 +109,66 @@ export const TEMPLATES: readonly Template[] = [
   // popular music. The rotations are different progressions, not the same one
   // started elsewhere: where the loop begins decides what it sounds like.
   template('axis', 'I–V–vi–IV', MAJOR, 4,
-    [s(1, 1), s(1, 5), s(1, 6), s(1, 4)], null, 1, ['pop', 'rock']),
+    [s(1, 1), s(1, 5), s(1, 6), s(1, 4)], null, ['pop', 'rock']),
   template('axis-vi', 'vi–IV–I–V', MAJOR, 4,
-    [s(1, 6), s(1, 4), s(1, 1), s(1, 5)], 'HC', 1, ['pop', 'rock']),
+    [s(1, 6), s(1, 4), s(1, 1), s(1, 5)], 'HC', ['pop', 'rock']),
   template('axis-iv', 'IV–I–V–vi', MAJOR, 4,
-    [s(1, 4), s(1, 1), s(1, 5), s(1, 6)], 'DC', 2, ['pop', 'rock']),
+    [s(1, 4), s(1, 1), s(1, 5), s(1, 6)], 'DC', ['pop', 'rock']),
   template('axis-v', 'V–vi–IV–I', MAJOR, 4,
-    [s(1, 5), s(1, 6), s(1, 4), s(1, 1)], null, 2, ['pop', 'rock']),
+    [s(1, 5), s(1, 6), s(1, 4), s(1, 1)], null, ['pop', 'rock']),
 
   // --- the fifties loops --------------------------------------------------
   template('doo-wop', 'I–vi–IV–V', MAJOR, 4,
-    [s(1, 1), s(1, 6), s(1, 4), s(1, 5)], 'HC', 1, ['pop', 'rock']),
+    [s(1, 1), s(1, 6), s(1, 4), s(1, 5)], 'HC', ['pop', 'rock']),
   template('doo-wop-ii', 'I–vi–ii–V', MAJOR, 4,
-    [s(1, 1), s(1, 6), s(1, 2), s(1, 5)], 'HC', 2, ['pop', 'jazz']),
+    [s(1, 1), s(1, 6), s(1, 2), s(1, 5)], 'HC', ['pop', 'jazz']),
   template('royal-road', 'IV–V–iii–vi', MAJOR, 4,
-    [s(1, 4), s(1, 5), s(1, 3), s(1, 6)], null, 4, ['pop']),
+    [s(1, 4), s(1, 5), s(1, 3), s(1, 6)], null, ['pop']),
 
   // --- two-fives ----------------------------------------------------------
   template('ii-V-I', 'ii–V–I', MAJOR, 4,
-    [s(1, 2), s(1, 5), s(2, 1)], 'PAC', 3, ['jazz', 'classical']),
+    [s(1, 2), s(1, 5), s(2, 1)], 'PAC', ['jazz', 'classical']),
   // Named for the chords it contains: the tonic here is the plain triad the
   // steps ask for, and a cadence's tonic is rewritten to one in any case.
   template('ii7-V7-I', 'ii7–V7–I', MAJOR, 4,
     [s(1, 2, { typeId: 'min7' }), s(1, 5, { typeId: 'dom7' }), s(2, 1)],
-    'PAC', 5, ['jazz']),
+    'PAC', ['jazz']),
   template('ii-V', 'ii–V', MAJOR, 2,
-    [s(1, 2), s(1, 5)], 'HC', 3, ['jazz', 'classical']),
+    [s(1, 2), s(1, 5)], 'HC', ['jazz', 'classical']),
   template('iiø-V-i', 'iiø7–V7–i', MINOR, 4,
     [s(1, 2, { typeId: 'm7b5' }), s(1, 5, { typeId: 'dom7' }), s(2, 1)],
-    'PAC', 5, ['jazz']),
+    'PAC', ['jazz']),
 
   // --- cadential two-bar units -------------------------------------------
   // The shortest thing that is still a progression, and what a four-bar period
   // is built from.
-  template('V-I', 'V–I', BOTH, 2, [s(1, 5), s(1, 1)], 'PAC', 1, ['classical', 'folk']),
-  template('I-V', 'I–V', BOTH, 2, [s(1, 1), s(1, 5)], 'HC', 1, ['classical', 'folk']),
-  template('I-IV', 'I–IV', BOTH, 2, [s(1, 1), s(1, 4)], null, 1, ['folk', 'pop']),
+  template('V-I', 'V–I', BOTH, 2, [s(1, 5), s(1, 1)], 'PAC', ['classical', 'folk']),
+  template('I-V', 'I–V', BOTH, 2, [s(1, 1), s(1, 5)], 'HC', ['classical', 'folk']),
+  template('I-IV', 'I–IV', BOTH, 2, [s(1, 1), s(1, 4)], null, ['folk', 'pop']),
   template('I-IV-V', 'I–IV–V', BOTH, 2,
-    [s(0.5, 1), s(0.5, 4), s(1, 5)], 'HC', 2, ['folk']),
-  template('plagal', 'IV–I', BOTH, 2, [s(1, 4), s(1, 1)], 'PC', 1, ['classical', 'folk']),
+    [s(0.5, 1), s(0.5, 4), s(1, 5)], 'HC', ['folk']),
+  template('plagal', 'IV–I', BOTH, 2, [s(1, 4), s(1, 1)], 'PC', ['classical', 'folk']),
   template('i-VI', 'i–VI', MINOR, 2, [s(1, 1), s(1, 6, { fn: 'predominant' })],
-    null, 2, ['pop', 'rock']),
+    null, ['pop', 'rock']),
 
   // --- four-bar closes ----------------------------------------------------
   template('folk', 'I–IV–V–I', MAJOR, 4,
-    [s(1, 1), s(1, 4), s(1, 5), s(1, 1)], 'PAC', 1, ['folk', 'classical']),
+    [s(1, 1), s(1, 4), s(1, 5), s(1, 1)], 'PAC', ['folk', 'classical']),
   template('desc-fifths', 'iii–vi–ii–V–I', MAJOR, 4,
-    [s(0.5, 3), s(0.5, 6), s(1, 2), s(1, 5), s(1, 1)], 'PAC', 4, ['classical', 'jazz']),
+    [s(0.5, 3), s(0.5, 6), s(1, 2), s(1, 5), s(1, 1)], 'PAC', ['classical', 'jazz']),
   template('desc-fifths-minor', 'III–VI–iiø7–V–i', MINOR, 4,
     [s(0.5, 3), s(0.5, 6, { fn: 'predominant' }), s(1, 2, { typeId: 'm7b5' }),
-      s(1, 5), s(1, 1)], 'PAC', 5, ['classical', 'jazz']),
+      s(1, 5), s(1, 1)], 'PAC', ['classical', 'jazz']),
   template('minor-authentic', 'i–iv–V–i', MINOR, 4,
-    [s(1, 1), s(1, 4), s(1, 5), s(1, 1)], 'PAC', 2, ['folk', 'classical']),
+    [s(1, 1), s(1, 4), s(1, 5), s(1, 1)], 'PAC', ['folk', 'classical']),
   template('cadential-four', 'I–vi–ii–V–I', MAJOR, 4,
-    [s(1, 1), s(1, 6), s(0.5, 2), s(0.5, 5), s(1, 1)], 'PAC', 3, ['classical', 'jazz']),
+    [s(1, 1), s(1, 6), s(0.5, 2), s(0.5, 5), s(1, 1)], 'PAC', ['classical', 'jazz']),
   // A vii°6 standing in for the dominant closes an imperfect authentic
   // cadence, not a perfect one: the figure is the point and a PAC needs V in
   // root position.
   template('leading-tone-close', 'I–IV–viio6–I', MAJOR, 4,
     [s(1, 1), s(1, 4), s(1, 7, { typeId: 'dim', inversion: 1, fn: 'dominant' }), s(1, 1)],
-    'IAC', 6, ['classical', 'baroque']),
+    'IAC', ['classical', 'baroque']),
 
   // --- modal loops --------------------------------------------------------
   // Numerals in a minor key are read against the natural minor here, which is
@@ -178,19 +176,19 @@ export const TEMPLATES: readonly Template[] = [
   // the subtonic prints VII, not bVII, and carries no alteration.
   template('andalusian', 'i–VII–VI–V', MINOR, 4,
     [s(1, 1), s(1, 7, { fn: 'other' }), s(1, 6, { fn: 'predominant' }), s(1, 5)],
-    'HC', 3, ['flamenco', 'rock', 'classical']),
+    'HC', ['flamenco', 'rock', 'classical']),
   template('minor-axis', 'i–VI–III–VII', MINOR, 4,
     [s(1, 1), s(1, 6, { fn: 'predominant' }), s(1, 3), s(1, 7, { fn: 'other' })],
-    null, 3, ['pop', 'rock']),
+    null, ['pop', 'rock']),
   template('phrygian-half', 'i–iv6–V', MINOR, 2,
-    [s(0.5, 1), s(0.5, 4, { inversion: 1 }), s(1, 5)], 'HC', 5, ['classical', 'flamenco']),
+    [s(0.5, 1), s(0.5, 4, { inversion: 1 }), s(1, 5)], 'HC', ['classical', 'flamenco']),
 
   // --- eight bars ---------------------------------------------------------
   template('pachelbel', 'I–V–vi–iii–IV–I–IV–V', MAJOR, 8,
     [s(1, 1), s(1, 5), s(1, 6), s(1, 3), s(1, 4), s(1, 1), s(1, 4), s(1, 5)],
-    'HC', 2, ['baroque', 'classical', 'pop']),
+    'HC', ['baroque', 'classical', 'pop']),
   template('pachelbel-head', 'I–V–vi–iii', MAJOR, 4,
-    [s(1, 1), s(1, 5), s(1, 6), s(1, 3)], null, 2, ['baroque', 'pop']),
+    [s(1, 1), s(1, 5), s(1, 6), s(1, 3)], null, ['baroque', 'pop']),
   // Rhythm changes, the A section. The bar-six iv is the borrowed chord the
   // tune is known for, and the bar-five I7 is a dominant of IV however it is
   // spelled, so it is written as one.
@@ -200,7 +198,7 @@ export const TEMPLATES: readonly Template[] = [
     s(0.5, 1), s(0.5, 5, { typeId: 'dom7', appliedTo: 4 }),
     s(0.5, 4), s(0.5, 4, { typeId: 'min' }),
     s(0.5, 1), s(0.5, 5), s(1, 1),
-  ], 'PAC', 6, ['jazz']),
+  ], 'PAC', ['jazz']),
   // The bridge: four applied dominants round the circle, each resolving to the
   // next rather than to its own target. That chain is why the resolution test
   // asks for a chord *rooted on* the target rather than for the target itself.
@@ -209,7 +207,7 @@ export const TEMPLATES: readonly Template[] = [
     s(2, 5, { typeId: 'dom7', appliedTo: 2 }),
     s(2, 5, { typeId: 'dom7', appliedTo: 5 }),
     s(2, 5, { typeId: 'dom7' }),
-  ], 'HC', 7, ['jazz']),
+  ], 'HC', ['jazz']),
 
   // La Folía, and the eight-bar descent that answers it. Both exist so a
   // minor key has eight-bar phrases of its own rather than falling back to the
@@ -217,11 +215,11 @@ export const TEMPLATES: readonly Template[] = [
   template('folia', 'La Folía', MINOR, 8, [
     s(1, 1), s(1, 5), s(1, 1), s(1, 7, { fn: 'other' }),
     s(1, 3), s(1, 7, { fn: 'other' }), s(1, 1), s(1, 5),
-  ], 'HC', 4, ['baroque', 'classical', 'flamenco']),
+  ], 'HC', ['baroque', 'classical', 'flamenco']),
   template('minor-descent', 'i–VII–VI–III–iv–iiø7–V–i', MINOR, 8, [
     s(1, 1), s(1, 7, { fn: 'other' }), s(1, 6, { fn: 'predominant' }), s(1, 3),
     s(1, 4), s(1, 2, { typeId: 'm7b5' }), s(1, 5), s(1, 1),
-  ], 'PAC', 5, ['classical', 'baroque']),
+  ], 'PAC', ['classical', 'baroque']),
 
   // --- twelve-bar blues ---------------------------------------------------
   // All three end on the turnaround dominant, because within one chorus the
@@ -232,7 +230,7 @@ export const TEMPLATES: readonly Template[] = [
     s(1, 1), s(1, 1), s(1, 1), s(1, 1),
     s(1, 4), s(1, 4), s(1, 1), s(1, 1),
     s(1, 5), s(1, 4), s(1, 1), s(1, 5),
-  ], 'HC', 2, ['blues', 'folk']),
+  ], 'HC', ['blues', 'folk']),
   template('blues-quick-change', 'Twelve-bar blues, quick change', MAJOR, 12, [
     s(1, 1, { typeId: 'dom7' }), s(1, 4, { typeId: 'dom7' }),
     s(1, 1, { typeId: 'dom7' }), s(1, 1, { typeId: 'dom7' }),
@@ -240,7 +238,7 @@ export const TEMPLATES: readonly Template[] = [
     s(1, 1, { typeId: 'dom7' }), s(1, 1, { typeId: 'dom7' }),
     s(1, 5, { typeId: 'dom7' }), s(1, 4, { typeId: 'dom7' }),
     s(1, 1, { typeId: 'dom7' }), s(1, 5, { typeId: 'dom7' }),
-  ], 'HC', 5, ['blues', 'rock']),
+  ], 'HC', ['blues', 'rock']),
   template('blues-jazz', 'Jazz blues', MAJOR, 12, [
     s(1, 1, { typeId: 'dom7' }), s(1, 4, { typeId: 'dom7' }), s(1, 1, { typeId: 'dom7' }),
     // ii7–V7 of IV, which is how the fourth bar leads into the subdominant.
@@ -252,7 +250,7 @@ export const TEMPLATES: readonly Template[] = [
     s(1, 2, { typeId: 'min7' }), s(1, 5, { typeId: 'dom7' }),
     s(0.5, 1, { typeId: 'dom7' }), s(0.5, 5, { typeId: 'dom7', appliedTo: 2 }),
     s(0.5, 2, { typeId: 'min7' }), s(0.5, 5, { typeId: 'dom7' }),
-  ], 'HC', 8, ['jazz', 'blues']),
+  ], 'HC', ['jazz', 'blues']),
 ];
 
 const BY_ID = new Map(TEMPLATES.map((t) => [t.id, t]));
@@ -299,10 +297,20 @@ export function endsOn(t: Template, mode: Mode): HarmonicFunction {
 export interface TemplateQuery {
   bars: number;
   mode: Mode;
-  grade: number;
   /** The cadence the phrase has been planned to take, or null for none. */
   cadence: CadenceType | null;
-  style?: StyleTag;
+  /**
+   * Which traditions to quote from. Empty or absent means all of them.
+   *
+   * This and `minGrade` on the entries were doing overlapping work, and
+   * only one of them was saying anything a user could act on. A grade
+   * ordered the corpus by how advanced somebody judged each entry to be
+   * and then made that order the only way in, so the twelve-bar blues
+   * arrived at the same moment as the half-diminished ii — which is not
+   * a relationship anybody claimed, it is what you get when one number
+   * is the only query.
+   */
+  styles?: readonly StyleTag[];
   /** Set when the previous phrase ended on a dominant. */
   afterDominant?: boolean;
   /**
@@ -317,6 +325,8 @@ export interface TemplateQuery {
    */
   allowApplied?: boolean;
   allowBorrowed?: boolean;
+  /** Exclude templates that quote a diminished chord, as above. */
+  allowDiminished?: boolean;
 }
 
 /** A seventh's underlying triad, for comparing a step's quality to the mode's. */
@@ -389,6 +399,36 @@ export function isBorrowedIn(step: TemplateStep, mode: Mode): boolean {
 const CARRIES_APPLIED = new Set(
   TEMPLATES.filter((t) => t.steps.some((s) => s.appliedTo !== undefined)).map((t) => t.id),
 );
+/**
+ * Templates that quote a diminished chord of their own.
+ *
+ * The same shape as the two beside it, and for the reason ADR 0017
+ * records: a flag that only declines to *add* a chord is not a flag that
+ * turns it off, because the corpus quotes chords the transformation
+ * passes never touch. Turning diminished triads off and still hearing
+ * ii° out of `iiø-V-i` is that bug again, and the sweep over the real
+ * product of the settings is what caught it — the second defect that
+ * sweep has found since it was widened.
+ *
+ * Sevenths are reduced to triads before the user is asked, so a m7b5
+ * counts here: what reaches the page is a ii°.
+ */
+const DIMINISHED_TYPES = new Set(['dim', 'dim7', 'm7b5']);
+/**
+ * Keyed by mode, like the borrowed set, because a step that names no
+ * quality takes the mode's: a bare second degree is a minor triad in
+ * major and a diminished one in minor. Reading `step.typeId` alone
+ * missed every template that simply writes `ii` and let a ii° through
+ * with the switch off — caught by the sweep rather than by inspection,
+ * which is the second time that has happened here.
+ */
+const CARRIES_DIMINISHED = new Set(
+  TEMPLATES.flatMap((t) => t.modes
+    .filter((mode) => templateNumerals(t, mode)
+      .some(({ numeral: n }) => DIMINISHED_TYPES.has(n.typeId)))
+    .map((mode) => `${t.id}:${mode}`)),
+);
+
 /** Keyed by mode, because borrowing is relative to the mode borrowed into. */
 const CARRIES_BORROWED = new Set(
   TEMPLATES.flatMap((t) => t.modes
@@ -409,12 +449,13 @@ export function candidateTemplates(query: TemplateQuery): Template[] {
   return TEMPLATES.filter((t) => {
     if (t.bars !== query.bars) return false;
     if (!t.modes.includes(query.mode)) return false;
-    if (t.minGrade > query.grade) return false;
     if (t.endsWith !== null && t.endsWith !== query.cadence) return false;
-    if (query.style !== undefined && !t.tags.includes(query.style)) return false;
+    if (query.styles?.length && !t.tags.some((tag) => query.styles!.includes(tag))) return false;
     if (query.afterDominant && startsOn(t, query.mode) === 'predominant') return false;
     if (query.allowApplied === false && CARRIES_APPLIED.has(t.id)) return false;
     if (query.allowBorrowed === false && CARRIES_BORROWED.has(`${t.id}:${query.mode}`)) return false;
+    if (query.allowDiminished === false
+      && CARRIES_DIMINISHED.has(`${t.id}:${query.mode}`)) return false;
     return true;
   });
 }
@@ -422,6 +463,6 @@ export function candidateTemplates(query: TemplateQuery): Template[] {
 /** Exact cadences first, so a phrase that closes itself is preferred to one rewritten. */
 export function templateWeight(t: Template, query: TemplateQuery): number {
   let weight = t.endsWith === query.cadence ? 4 : 1;
-  if (query.style !== undefined && t.tags[0] === query.style) weight += 2;
+  if (query.styles?.length && query.styles.includes(t.tags[0])) weight += 2;
   return weight;
 }

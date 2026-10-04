@@ -3,7 +3,7 @@ import { ALL_KEYS, type Key, findKey, keyName } from '../theory/key';
 import { diatonicOf, pitchClass, pitchName } from '../theory/pitch';
 import { identifyChord, spellChord } from '../theory/chord';
 import { timeSignature } from '../theory/meter';
-import { makeRng, pick, rngInt } from '../theory/rng';
+import { makeRng, pick, rngInt, type Rng } from '../theory/rng';
 import {
   type CadenceType, type RomanNumeral, numeralText, realizeNumeral,
 } from '../theory/roman';
@@ -24,9 +24,34 @@ import {
 
 const METERS = ['4/4', '3/4', '2/4', '2/2', '6/8', '9/8', '7/8', '5/4'].map(timeSignature);
 const BARS = [2, 3, 4, 5, 6, 8, 12, 16];
-const STYLES: Array<StyleTag | undefined> = [
-  undefined, undefined, 'pop', 'rock', 'folk', 'jazz', 'blues', 'classical', 'baroque', 'flamenco',
+/**
+ * Style selections, not styles: the corpus query takes a set now, and an
+ * empty one means the whole corpus. Singletons dominate because the
+ * narrow case is the one that can starve the query, and a pair is here to
+ * cover a union actually widening it.
+ */
+const STYLES: Array<readonly StyleTag[]> = [
+  [], [], ['pop'], ['rock'], ['folk'], ['jazz'], ['blues'], ['classical'], ['baroque'],
+  ['flamenco'], ['jazz', 'blues'], ['classical', 'baroque'],
 ];
+
+/**
+ * The chord vocabulary, drawn independently.
+ *
+ * Independently is the point. These were five thresholds on one `grade`,
+ * so a sweep over grades could never produce sevenths without the
+ * templates that came with the same number, and "does the seventh switch
+ * do what it says" was not a question this suite could put. Four
+ * booleans drawn separately ask it.
+ */
+function capabilities(r: Rng) {
+  return {
+    sevenths: rngInt(r, 0, 1) === 1,
+    diminished: rngInt(r, 0, 1) === 1,
+    picardy: rngInt(r, 0, 1) === 1,
+    neapolitan: rngInt(r, 0, 1) === 1,
+  };
+}
 const CADENCES: Array<HarmonyOptions['cadences']> = [
   undefined, undefined, { final: 'PAC' }, { final: 'HC' }, { final: 'IAC' },
   { final: 'DC' }, { final: 'PC' }, { antecedent: 'IAC' }, { antecedent: 'PAC', final: 'HC' },
@@ -46,8 +71,8 @@ function caseAt(index: number): Case {
     key: pick(r, ALL_KEYS),
     timeSignature: pick(r, METERS),
     bars: pick(r, BARS),
-    grade: rngInt(r, 1, 10),
-    style: pick(r, STYLES),
+    styles: pick(r, STYLES),
+    ...capabilities(r),
     cadences: pick(r, CADENCES),
     form: pick(r, FORMS),
     improviseRate: pick(r, [0, 0.35, 0.35, 1]),
@@ -58,7 +83,9 @@ function caseAt(index: number): Case {
   };
   const harmony = generateHarmony(makeRng(index), options);
   const label = `seed ${index} ${keyName(options.key)} ${options.timeSignature.id} `
-    + `${options.bars}b grade ${options.grade} ${options.style ?? 'any'}`;
+    + `${options.bars}b ${options.styles?.length ? options.styles.join('+') : 'any style'}`
+    + `${options.sevenths ? ' +7ths' : ''}${options.diminished ? ' +dim' : ''}`
+    + `${options.picardy ? ' +picardy' : ''}${options.neapolitan ? ' +N6' : ''}`;
   return { options, harmony, label };
 }
 
@@ -437,7 +464,7 @@ describe('determinism', () => {
   it('gives different progressions for different seeds', () => {
     // A generator that ignored its seed would pass every other test here.
     const options: HarmonyOptions = {
-      key: ALL_KEYS[0], timeSignature: timeSignature('4/4'), bars: 8, grade: 8,
+      key: ALL_KEYS[0], timeSignature: timeSignature('4/4'), bars: 8, sevenths: true,
     };
     const texts = new Set<string>();
     for (let seed = 0; seed < 400; seed++) {
@@ -466,7 +493,21 @@ describe('determinism', () => {
  * chord spelled by quality rather than by alteration, which the first filter
  * let through.
  */
-const WITHOUT_GRADES = [1, 3, 4, 5, 6, 7, 8, 9, 10];
+/**
+ * The vocabulary settings the flag sweep varies underneath the two flags
+ * it is actually about.
+ *
+ * It varied `grade` here, for the same reason: something has to move
+ * other than the flags, or the sweep only ever reaches one corner of the
+ * generator and the flags are tested against a single backdrop.
+ */
+const VOCABULARIES = [
+  { sevenths: false, diminished: false, picardy: false, neapolitan: false },
+  { sevenths: true, diminished: false, picardy: false, neapolitan: false },
+  { sevenths: false, diminished: true, picardy: false, neapolitan: false },
+  { sevenths: true, diminished: true, picardy: true, neapolitan: false },
+  { sevenths: true, diminished: true, picardy: true, neapolitan: true },
+];
 
 /**
  * One case twice over: the same draw, generated once with both flags off and
@@ -479,8 +520,8 @@ function flagCase(index: number, allow: boolean): Case {
     key: pick(r, ALL_KEYS),
     timeSignature: pick(r, METERS),
     bars: pick(r, BARS),
-    grade: pick(r, WITHOUT_GRADES),
-    style: pick(r, STYLES),
+    ...pick(r, VOCABULARIES),
+    styles: pick(r, STYLES),
     cadences: pick(r, CADENCES),
     form: pick(r, FORMS),
     // Both ends: 0 always quotes a template, 1 always improvises, so the
@@ -490,7 +531,11 @@ function flagCase(index: number, allow: boolean): Case {
     allowBorrowed: allow,
   };
   const harmony = generateHarmony(makeRng(index), options);
-  return { options, harmony, label: `seed ${index} grade ${options.grade} allow=${allow}` };
+  return {
+    options,
+    harmony,
+    label: `seed ${index} 7ths=${options.sevenths} dim=${options.diminished} allow=${allow}`,
+  };
 }
 
 const WITHOUT = Array.from({ length: 2000 }, (_, i) => flagCase(i, false));
@@ -525,7 +570,11 @@ describe('a flag that is switched off', () => {
     // the one above them would pass on a sweep that generated nothing to
     // exclude.
     expect(WITHOUT).toHaveLength(2000);
-    expect(new Set(WITHOUT.map((c) => c.options.grade)).size).toBe(WITHOUT_GRADES.length);
+    expect(new Set(WITHOUT.map(
+      (c) => `${c.options.sevenths}${c.options.diminished}${c.options.neapolitan}`,
+    )).size).toBe(new Set(VOCABULARIES.map(
+      (v) => `${v.sevenths}${v.diminished}${v.neapolitan}`,
+    )).size);
     expect(new Set(WITHOUT.flatMap((c) => c.harmony.events.map((e) => e.source))))
       .toEqual(new Set(['template', 'functional']));
     expect(WITHOUT.reduce((n, c) => n + c.harmony.events.length, 0)).toBeGreaterThan(10000);
@@ -606,9 +655,10 @@ describe('a flag that is switched off', () => {
         key: findKey('C_major'),
         timeSignature: timeSignature('4/4'),
         bars: carrier.bars,
-        grade: 10,
+        sevenths: true,
+        diminished: true,
         form: 'single',
-        style: 'jazz',
+        styles: ['jazz'],
         // Always quote: the state machine cannot select a template, so
         // improvising would be testing the wrong half.
         improviseRate: 0,

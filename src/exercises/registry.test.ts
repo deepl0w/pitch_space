@@ -296,8 +296,9 @@ describe('every exercise type’s generator', () => {
  */
 describe('every exercise type’s askable items', () => {
   const WIDE: Record<string, unknown> = {
-    maxAccidentals: 7, window: 24, grade: 8, bars: 16,
+    maxAccidentals: 7, window: 24, bars: 16,
     modes: ['major', 'minor'], varyCadence: true, appliedDominants: true, borrowed: true,
+    sevenths: true, diminished: true, picardy: true, neapolitan: true,
     degrees: [1, 2, 3, 4, 5, 6, 7], directions: ['up', 'down'],
   };
   const SWEEP_SEEDS = Array.from({ length: 220 }, (_, i) => i * 7919 + 1);

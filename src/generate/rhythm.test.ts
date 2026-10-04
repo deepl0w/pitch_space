@@ -1,19 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { CELLS, cellsAtGrade, scaleCell, valueForEvent } from './cells';
+import { CELLS, cellsOfKind, scaleCell, valueForEvent } from './cells';
 import { generateRhythm, kindForBeat } from './rhythm';
 import { TIME_SIGNATURES, beamSpanIndex, ticksOf, timeSignature } from '../theory/meter';
 import { makeRng } from '../theory/rng';
 
-const GRADES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 const SEEDS = Array.from({ length: 40 }, (_, i) => i * 2654435761 % 0xffffffff);
 
-/** Every meter at every grade, over a spread of seeds. */
+/**
+ * The constraint sets a user can actually ask for.
+ *
+ * This swept ten grades, which was ten points on one line through a
+ * space with four axes in it. The axes are what the caller sets now, so
+ * the sweep takes their corners: nothing allowed, each thing on its own,
+ * and everything at once.
+ */
+const CONSTRAINTS: Array<Partial<Parameters<typeof generateRhythm>[1]>> = [
+  { allowRests: false, allowTuplets: false, syncopationsPerBar: 0 },
+  { allowRests: true, allowTuplets: false, syncopationsPerBar: 0 },
+  { allowRests: false, allowTuplets: true, syncopationsPerBar: 0 },
+  { allowRests: false, allowTuplets: false, syncopationsPerBar: 2 },
+  { allowRests: true, allowTuplets: true, syncopationsPerBar: 1 },
+  { allowRests: true, allowTuplets: true, syncopationsPerBar: 3, allowAdjacentTuplets: true },
+];
+
+/** Every meter under every constraint set, over a spread of seeds. */
 function everyRhythm(bars = 4) {
   return TIME_SIGNATURES.flatMap((ts) =>
-    GRADES.flatMap((grade) =>
+    CONSTRAINTS.flatMap((constraints) =>
       SEEDS.slice(0, 8).map((seed) => ({
-        ts, grade, seed,
-        bars: generateRhythm(makeRng(seed), { timeSignature: ts, bars, grade }),
+        ts, constraints, seed,
+        bars: generateRhythm(makeRng(seed), { timeSignature: ts, bars, ...constraints }),
       }))));
 }
 
@@ -28,24 +44,30 @@ describe('the cell library', () => {
   });
 
   /**
-   * The cheapest real invariant in the engine, and it is only cheap because
-   * cellsAtGrade is exported: asked of the generator instead, it would be a
-   * sampling argument that can pass while the subset relation is false.
+   * What replaced "each grade is a superset of the one below".
+   *
+   * That invariant was free because the grades nested by construction,
+   * and it went with them. The partition by kind is the one that is left
+   * and the one the generator actually depends on: a meter's beat is
+   * simple or compound, `cellsOfKind` is asked for one of those, and a
+   * cell in neither bucket or in both would be a cell the selector can
+   * never place or can place wrongly.
    */
-  it('makes each grade a superset of the one below it', () => {
-    for (let grade = 1; grade < 10; grade++) {
-      const here = new Set(cellsAtGrade(grade).map((c) => c.id));
-      const next = new Set(cellsAtGrade(grade + 1).map((c) => c.id));
-      for (const id of here) expect(next.has(id), `${id} vanished at grade ${grade + 1}`).toBe(true);
-    }
+  it('splits cleanly into the two kinds of beat the meters need', () => {
+    const simple = cellsOfKind('simple');
+    const compound = cellsOfKind('compound');
+    expect(simple.length).toBeGreaterThan(0);
+    expect(compound.length).toBeGreaterThan(0);
+    expect(simple.length + compound.length).toBe(CELLS.length);
+    expect(cellsOfKind()).toHaveLength(CELLS.length);
   });
 
-  it('offers something for every meter at every grade', () => {
+  it('offers something for every meter', () => {
     for (const ts of TIME_SIGNATURES) {
       for (const beatTicks of ts.beatDurations) {
         const kind = kindForBeat(beatTicks);
         expect(kind, `${ts.id} beat of ${beatTicks}`).not.toBeNull();
-        expect(cellsAtGrade(1, kind!).length, `${ts.id} at grade 1`).toBeGreaterThan(0);
+        expect(cellsOfKind(kind!).length, ts.id).toBeGreaterThan(0);
       }
     }
   });
@@ -54,7 +76,7 @@ describe('the cell library', () => {
     for (const ts of TIME_SIGNATURES) {
       for (const beatTicks of ts.beatDurations) {
         const kind = kindForBeat(beatTicks)!;
-        for (const cell of cellsAtGrade(10, kind)) {
+        for (const cell of cellsOfKind(kind)) {
           for (const event of scaleCell(cell, beatTicks)) {
             expect(Number.isInteger(event.ticks), `${cell.id} on ${beatTicks}`).toBe(true);
           }
@@ -66,10 +88,10 @@ describe('the cell library', () => {
 
 describe('generated bars', () => {
   it('always sum to exactly the meter', () => {
-    for (const { ts, grade, seed, bars } of everyRhythm()) {
+    for (const { ts, constraints, seed, bars } of everyRhythm()) {
       for (const bar of bars) {
         const sum = bar.events.reduce((s, e) => s + e.durationTicks, 0);
-        expect(sum, `${ts.id} g${grade} seed ${seed} bar ${bar.index}`).toBe(ts.barTicks);
+        expect(sum, `${ts.id} ${JSON.stringify(constraints)} seed ${seed} bar ${bar.index}`).toBe(ts.barTicks);
       }
     }
   });
@@ -99,8 +121,8 @@ describe('generated bars', () => {
     }
   });
 
-  it('keep every tuplet contiguous and inside one beat below grade 9', () => {
-    for (const { ts, grade, bars } of everyRhythm()) {
+  it('keep every tuplet contiguous, and inside one beat unless asked otherwise', () => {
+    for (const { ts, constraints, bars } of everyRhythm()) {
       for (const bar of bars) {
         const groups = new Map<number, typeof bar.events>();
         for (const event of bar.events) {
@@ -115,7 +137,7 @@ describe('generated bars', () => {
             + members[members.length - 1].durationTicks - members[0].startTick;
           expect(span).toBe(members.reduce((s, e) => s + e.durationTicks, 0));
           expect(members.length).toBe(members[0].tupletRatio!.count);
-          if (grade < 9) {
+          if (constraints.allowAdjacentTuplets !== true) {
             const relative = members[0].startTick - bar.startTick;
             const beat = ts.beatStarts.findIndex((start, i) =>
               relative >= start && relative < start + ts.beatDurations[i]);
@@ -160,11 +182,11 @@ describe('generated bars', () => {
   });
 
   it('sound something in every bar', () => {
-    for (const { ts, grade, seed, bars } of everyRhythm()) {
+    for (const { ts, constraints, seed, bars } of everyRhythm()) {
       for (const bar of bars) {
         expect(
           bar.events.some((e) => !e.isRest),
-          `${ts.id} g${grade} seed ${seed} bar ${bar.index} is silent`,
+          `${ts.id} ${JSON.stringify(constraints)} seed ${seed} bar ${bar.index} is silent`,
         ).toBe(true);
       }
     }
@@ -173,7 +195,7 @@ describe('generated bars', () => {
   it('honour a ban on rests, tuplets or syncopation', () => {
     for (const ts of TIME_SIGNATURES) {
       const bars = generateRhythm(makeRng(7), {
-        timeSignature: ts, bars: 8, grade: 10,
+        timeSignature: ts, bars: 8,
         allowRests: false, allowTuplets: false,
       });
       for (const bar of bars) {
@@ -188,7 +210,9 @@ describe('generated bars', () => {
   it('reproduce exactly from a seed, and differ across seeds', () => {
     const ts = timeSignature('4/4');
     const make = (seed: number) =>
-      JSON.stringify(generateRhythm(makeRng(seed), { timeSignature: ts, bars: 4, grade: 7 }));
+      JSON.stringify(generateRhythm(makeRng(seed), {
+        timeSignature: ts, bars: 4, syncopationsPerBar: 1, allowTuplets: true,
+      }));
     expect(make(1234)).toBe(make(1234));
     const distinct = new Set(SEEDS.map(make));
     expect(distinct.size).toBeGreaterThan(SEEDS.length * 0.8);
@@ -196,8 +220,8 @@ describe('generated bars', () => {
 
   it('say so rather than loop when nothing fits', () => {
     expect(() => generateRhythm(makeRng(1), {
-      timeSignature: timeSignature('4/4'), bars: 1, grade: 1,
-      allowRests: false, allowTuplets: false, allowSyncopation: false,
+      timeSignature: timeSignature('4/4'), bars: 1,
+      allowRests: false, allowTuplets: false, syncopationsPerBar: 0,
     })).not.toThrow();
   });
 });

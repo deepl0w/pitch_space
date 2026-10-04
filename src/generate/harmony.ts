@@ -90,15 +90,45 @@ export interface HarmonyOptions {
   key: Key;
   timeSignature: TimeSignature;
   bars: number;
-  /** 1-10, as elsewhere in the generator: a slice of the corpus and of the devices. */
-  grade: number;
   form?: PhraseForm;
-  style?: StyleTag;
+  /**
+   * Which traditions the progressions may be quoted from. Empty or absent
+   * means all of them.
+   *
+   * This replaced a `grade: number`, and the replacement is the point
+   * rather than the mechanism. One ordinal gated six unrelated
+   * decisions — which templates, which chords are in the vocabulary,
+   * sevenths at cadences, the Picardy third, sevenths on applied
+   * dominants, and the Neapolitan — so asking for any one of them meant
+   * accepting the other five, and asking for a plain blues was
+   * impossible because blues sat at a grade that had already turned on
+   * things a blues does not use.
+   *
+   * Every one of those is now its own option below. Nothing here is a
+   * level, and none of them implies another.
+   */
+  styles?: readonly StyleTag[];
   /** How often a phrase is improvised by the state machine rather than quoted. */
   improviseRate?: number;
   allowAppliedDominants?: boolean;
   allowBorrowed?: boolean;
   allowInversions?: boolean;
+  /**
+   * Seventh chords: ii7, V7, the half-diminished ii, and a seventh on a
+   * cadential dominant or an applied one.
+   *
+   * One option rather than four, because a corpus that uses sevenths
+   * uses them in all those places and a learner who wants them wants
+   * them wherever they belong. Splitting it further would be
+   * configurability for its own sake.
+   */
+  sevenths?: boolean;
+  /** The diminished triads: ii° in minor and vii° in major. */
+  diminished?: boolean;
+  /** A major tonic closing a minor progression. */
+  picardy?: boolean;
+  /** The Neapolitan sixth, which is a specific gesture rather than a tier. */
+  neapolitan?: boolean;
   /** Overrides what the plan asks for, which is how DC, PC and IAC are reached. */
   cadences?: { antecedent?: CadenceType; final?: CadenceType };
   /** The modal minor v, which is a style flag and never a default. */
@@ -141,11 +171,16 @@ function formsFor(bars: number, style?: StyleTag): Array<{ value: PhraseForm; we
  */
 export function planPhrases(
   rng: Rng,
-  options: { bars: number; form?: PhraseForm; style?: StyleTag; cadences?: HarmonyOptions['cadences'] },
+  options: {
+    bars: number; form?: PhraseForm;
+    styles?: readonly StyleTag[]; cadences?: HarmonyOptions['cadences'];
+  },
 ): PhrasePlan {
   const { bars } = options;
   if (bars < 2) throw new Error(`A progression needs at least two bars; asked for ${bars}`);
-  const available = formsFor(bars, options.style);
+  // One style shapes the form; several do not, because a twelve-bar blues
+  // form is a claim about blues and not about "blues or jazz or folk".
+  const available = formsFor(bars, options.styles?.length === 1 ? options.styles[0] : undefined);
   const requested = options.form;
   const form = requested !== undefined && available.some((f) => f.value === requested)
     ? requested
@@ -208,17 +243,20 @@ interface Context {
   key: Key;
   mode: Mode;
   ts: TimeSignature;
-  grade: number;
-  style?: StyleTag;
+  styles?: readonly StyleTag[];
   modalMinorV: boolean;
+  sevenths: boolean;
+  diminished: boolean;
+  picardy: boolean;
+  neapolitan: boolean;
   /**
    * Resolved once, so corpus selection and the transformation passes agree
    * about what was asked for (ADR 0017).
    *
-   * Both default by grade. Resolving them at the two use sites separately
-   * is how they came to disagree in the first place: the pass read the
-   * option and the query did not read it at all, so the flags excluded
-   * nothing and only declined to add.
+   * Resolving them at the two use sites separately is how they came to
+   * disagree in the first place: the pass read the option and the query
+   * did not read it at all, so the flags excluded nothing and only
+   * declined to add.
    */
   allowApplied: boolean;
   allowBorrowed: boolean;
@@ -250,11 +288,28 @@ interface PoolEntry {
   typeId: string;
   chromaticAlter?: number;
   weight: number;
-  minGrade: number;
+  /**
+   * The option this chord waits for, or absent for one always in play.
+   *
+   * Read off the chord rather than off a tier. These carried a
+   * `minGrade` — ii7 and V7 at 4, ii° at 5, iiø7 and vii° at 6 — and the
+   * numbers were describing the chord's quality in every case: the ones
+   * at 4 are sevenths and the ones at 5 and 6 are diminished. Saying so
+   * costs a word and means a user who wants sevenths gets sevenths
+   * rather than sevenths and whatever else grade 4 included.
+   *
+   * iii had a grade of its own and now has no gate at all. It is a plain
+   * diatonic triad; nothing about it needs permission, and it was at 4
+   * because 4 was where the list had got to.
+   */
+  needs?: 'sevenths' | 'diminished';
 }
 
-function p(degree: Degree, typeId: string, weight: number, minGrade = 1, chromaticAlter = 0): PoolEntry {
-  return { degree, typeId, weight, minGrade, chromaticAlter };
+function p(
+  degree: Degree, typeId: string, weight: number,
+  needs?: PoolEntry['needs'], chromaticAlter = 0,
+): PoolEntry {
+  return { degree, typeId, weight, needs, chromaticAlter };
 }
 
 /**
@@ -271,19 +326,24 @@ function p(degree: Degree, typeId: string, weight: number, minGrade = 1, chromat
  */
 const POOLS: Record<Mode, Record<MachineFunction, PoolEntry[]>> = {
   major: {
-    tonic: [p(1, 'maj', 8), p(6, 'min', 3), p(3, 'min', 1, 4)],
-    predominant: [p(4, 'maj', 5), p(2, 'min', 5), p(2, 'min7', 2, 4), p(6, 'min', 1)],
-    dominant: [p(5, 'maj', 8), p(5, 'dom7', 5, 4), p(7, 'dim', 1, 6)],
+    tonic: [p(1, 'maj', 8), p(6, 'min', 3), p(3, 'min', 1)],
+    predominant: [
+      p(4, 'maj', 5), p(2, 'min', 5), p(2, 'min7', 2, 'sevenths'), p(6, 'min', 1),
+    ],
+    dominant: [p(5, 'maj', 8), p(5, 'dom7', 5, 'sevenths'), p(7, 'dim', 1, 'diminished')],
   },
   minor: {
     tonic: [p(1, 'min', 8), p(6, 'maj', 3), p(3, 'maj', 2)],
-    predominant: [p(4, 'min', 5), p(6, 'maj', 2), p(2, 'dim', 2, 5), p(2, 'm7b5', 2, 6)],
-    dominant: [p(5, 'maj', 8), p(5, 'dom7', 5, 4), p(7, 'dim', 1, 6, 1)],
+    predominant: [
+      p(4, 'min', 5), p(6, 'maj', 2), p(2, 'dim', 2, 'diminished'),
+      p(2, 'm7b5', 2, 'sevenths'),
+    ],
+    dominant: [p(5, 'maj', 8), p(5, 'dom7', 5, 'sevenths'), p(7, 'dim', 1, 'diminished', 1)],
   },
 };
 
 function poolFor(ctx: Context, fn: MachineFunction, avoid?: RomanNumeral): PoolEntry[] {
-  const all = POOLS[ctx.mode][fn].filter((entry) => entry.minGrade <= ctx.grade);
+  const all = POOLS[ctx.mode][fn].filter((entry) => entry.needs === undefined || ctx[entry.needs]);
   // Repeating a chord across a bar line is not wrong, but a machine that does
   // it as often as chance allows sounds stuck.
   const fresh = all.filter((entry) => entry.degree !== avoid?.degree);
@@ -306,7 +366,7 @@ function machineFill(ctx: Context, bars: number, startAt: MachineFunction): Roma
   for (let i = 0; i < bars; i++) {
     out.push(machineChord(ctx, fn, out[out.length - 1]));
     const rows = TRANSITIONS[fn];
-    const choices = fn === 'dominant' && ctx.style === 'blues'
+    const choices = fn === 'dominant' && ctx.styles?.includes('blues')
       ? [...rows, BLUES_RETROGRESSION]
       : rows;
     fn = weightedPick(ctx.rng, choices);
@@ -352,20 +412,19 @@ function fill(ctx: Context, plan: PhrasePlan, improviseRate: number): Slot[] {
       continue;
     }
     const query = {
-      bars: ph.bars, mode: ctx.mode, grade: ctx.grade, cadence: ph.cadence,
-      style: ctx.style, afterDominant,
-      // The *resolved* values, not the raw options: both default by grade,
-      // and a filter reading the raw option would exclude nothing whenever
-      // the caller left the flag unset while the pass below happily added
-      // the same chords. The query and the pass have to agree about what
-      // was asked for.
+      bars: ph.bars, mode: ctx.mode, styles: ctx.styles, cadence: ph.cadence, afterDominant,
+      // The *resolved* values, not the raw options: a filter reading the
+      // raw option would exclude nothing whenever the caller left the flag
+      // unset while the pass below happily added the same chords. The
+      // query and the pass have to agree about what was asked for.
       allowApplied: ctx.allowApplied, allowBorrowed: ctx.allowBorrowed,
+      allowDiminished: ctx.diminished,
     };
     let candidates = candidateTemplates(query);
     // A style the corpus cannot serve at this length narrows to nothing; fall
     // back to the whole corpus rather than to silence.
-    if (candidates.length === 0 && ctx.style !== undefined) {
-      candidates = candidateTemplates({ ...query, style: undefined });
+    if (candidates.length === 0 && ctx.styles?.length) {
+      candidates = candidateTemplates({ ...query, styles: undefined });
     }
     const quote = candidates.length > 0 && !chance(ctx.rng, improviseRate);
     if (quote) {
@@ -382,7 +441,7 @@ function fill(ctx: Context, plan: PhrasePlan, improviseRate: number): Slot[] {
         phrase: ph.index,
         locked: false,
         source: 'functional' as const,
-        tags: ctx.style ? [ctx.style] : [],
+        tags: ctx.styles?.length === 1 ? [ctx.styles[0]] : [],
       })));
     }
     afterDominant = endsOnDominant(byPhrase[ph.index], ph.cadence);
@@ -420,7 +479,7 @@ function dominantNumeral(ctx: Context, existing?: RomanNumeral): RomanNumeral {
   const keepSeventh = existing !== undefined && existing.degree === 5
     && existing.appliedTo === undefined
     && chordType(existing.typeId).family === 'seventh';
-  const seventh = keepSeventh || (ctx.grade >= 4 && chance(ctx.rng, 0.4));
+  const seventh = keepSeventh || (ctx.sevenths && chance(ctx.rng, 0.4));
   return numeral(5, seventh ? 'dom7' : 'maj', { fn: 'dominant' });
 }
 
@@ -455,7 +514,7 @@ function planCadence(ctx: Context, slots: readonly Slot[], indices: readonly num
   const writes: CadenceWrite[] = [];
 
   // A Picardy third: the only borrowing that belongs to the cadence itself.
-  const picardy = ctx.mode === 'minor' && ctx.grade >= 5
+  const picardy = ctx.mode === 'minor' && ctx.picardy
     && (cadence === 'PAC' || cadence === 'IAC') && chance(ctx.rng, 0.25);
 
   switch (cadence) {
@@ -557,23 +616,32 @@ function applyAppliedDominants(ctx: Context, slots: Slot[], rate: number): void 
     if (target.appliedTo !== undefined || target.chromaticAlter !== 0) continue;
     if (!TONICISABLE[ctx.mode].includes(target.degree)) continue;
     if (!chance(ctx.rng, rate)) continue;
-    writeSlot(here, numeral(5, ctx.grade >= 6 ? 'dom7' : 'maj', { appliedTo: target.degree }));
+    writeSlot(here, numeral(5, ctx.sevenths ? 'dom7' : 'maj', { appliedTo: target.degree }));
   }
 }
 
 function borrowedOptions(ctx: Context): Array<{ value: RomanNumeral; weight: number }> {
   const out: Array<{ value: RomanNumeral; weight: number }> = [];
+  // The half-diminished ii is a borrowing *and* a diminished chord, so it
+  // waits for both switches. A chord that two settings each describe has
+  // to satisfy both or one of them is not telling the truth — turning
+  // diminished triads off and still hearing ii° because borrowing was on
+  // is the same complaint ADR 0017 makes, one level down.
   if (ctx.mode === 'major') {
     out.push({ value: numeral(4, 'min', { fn: 'predominant' }), weight: 5 });
-    out.push({ value: numeral(2, 'm7b5', { fn: 'predominant' }), weight: 3 });
+    if (ctx.diminished) {
+      out.push({ value: numeral(2, 'm7b5', { fn: 'predominant' }), weight: 3 });
+    }
     out.push({ value: numeral(6, 'maj', { chromaticAlter: -1, fn: 'predominant' }), weight: 2 });
     out.push({ value: numeral(7, 'maj', { chromaticAlter: -1, fn: 'predominant' }), weight: 1 });
   } else {
     // The Dorian fourth, which is the borrowing a minor key actually makes.
     out.push({ value: numeral(4, 'maj', { fn: 'predominant' }), weight: 3 });
-    out.push({ value: numeral(2, 'm7b5', { fn: 'predominant' }), weight: 3 });
+    if (ctx.diminished) {
+      out.push({ value: numeral(2, 'm7b5', { fn: 'predominant' }), weight: 3 });
+    }
   }
-  if (ctx.grade >= 8) {
+  if (ctx.neapolitan) {
     // The Neapolitan, in first inversion because that is where it lives.
     out.push({
       value: numeral(2, 'maj', { chromaticAlter: -1, inversion: 1, fn: 'predominant' }),
@@ -768,15 +836,23 @@ export function generateHarmony(rng: Rng, options: HarmonyOptions): Harmony {
     key: options.key,
     mode: options.key.mode,
     ts: options.timeSignature,
-    grade: options.grade,
-    style: options.style,
+    styles: options.styles,
     modalMinorV: options.modalMinorV ?? false,
-    allowApplied: options.allowAppliedDominants ?? options.grade >= 5,
-    allowBorrowed: options.allowBorrowed ?? options.grade >= 7,
+    // Every device is off unless asked for. Under `grade` these defaulted
+    // on above a threshold, so a caller that named none of them still got
+    // whatever its number happened to buy; now a caller that names none
+    // gets plain diatonic harmony, which is the thing you can describe
+    // without reference to a table.
+    sevenths: options.sevenths ?? false,
+    diminished: options.diminished ?? false,
+    picardy: options.picardy ?? false,
+    neapolitan: options.neapolitan ?? false,
+    allowApplied: options.allowAppliedDominants ?? false,
+    allowBorrowed: options.allowBorrowed ?? false,
   };
 
   const plan = planPhrases(rng, {
-    bars: options.bars, form: options.form, style: options.style, cadences: options.cadences,
+    bars: options.bars, form: options.form, styles: options.styles, cadences: options.cadences,
   });
   const slots = fill(ctx, plan, options.improviseRate ?? 0.35);
   layOut(slots, ctx.ts);
@@ -795,7 +871,7 @@ export function generateHarmony(rng: Rng, options: HarmonyOptions): Harmony {
 
   if (ctx.allowApplied) applyAppliedDominants(ctx, slots, 0.3);
   if (ctx.allowBorrowed) applyBorrowing(ctx, slots, 0.25);
-  if (options.allowInversions ?? ctx.grade >= 3) applyInversions(ctx, slots, 0.6);
+  if (options.allowInversions ?? false) applyInversions(ctx, slots, 0.6);
 
   // The transformations above are written to leave locked slots alone, and
   // this is what makes that a fact rather than a convention.

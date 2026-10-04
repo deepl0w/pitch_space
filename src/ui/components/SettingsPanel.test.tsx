@@ -267,11 +267,17 @@ describe('every registered exercise type', () => {
           onChange={() => {}}
         />,
       ));
-      expect(container.querySelectorAll('.field'))
-        .toHaveLength(definition.settings.fields.length);
+      // The fields that apply to the defaults, not all of them. A field
+      // may declare itself irrelevant — the Picardy third has nothing to
+      // do when no minor key is in play — and a panel that drew it anyway
+      // would be the inert control `FieldRelevance` exists to prevent.
+      const shown = definition.settings.fields
+        .filter((f) => f.relevant?.(definition.settings.defaults) !== false);
+      expect(container.querySelectorAll('.field')).toHaveLength(shown.length);
+
       // Every control starts on a value the field actually offers, so no
       // select renders blank and no chip row comes up empty.
-      for (const field of definition.settings.fields) {
+      for (const field of shown) {
         if (field.kind !== 'multi') continue;
         const chosen = field.selected(definition.settings.defaults);
         expect(chosen.length).toBeGreaterThan(0);

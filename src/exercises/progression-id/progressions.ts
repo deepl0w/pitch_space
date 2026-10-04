@@ -6,7 +6,7 @@ import {
   CADENCE_NAMES, type CadenceType, type RomanNumeral, numeralText, realizePitches,
 } from '../../theory/roman';
 import { generateHarmony } from '../../generate/harmony';
-import { TEMPLATES } from '../../generate/templates';
+import type { StyleTag } from '../../generate/templates';
 import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
@@ -59,13 +59,28 @@ export const CLEFS: readonly Clef[] = ['treble', 'bass'];
 
 export interface ProgressionSettings extends BaseSettings {
   /**
-   * How much of the corpus the generator may use, 1 to 10.
+   * Which traditions to draw progressions from. Empty means all of them.
    *
-   * The catalogues' own ordering rather than a scale invented here: it is
-   * compared against `grade` on `CELLS` and `minGrade` on `TEMPLATES` and
-   * the harmony pools, unchanged.
+   * This and the four switches below replaced a single `grade` dial, and
+   * the dial is what was wrong rather than its range. One number gated
+   * six unrelated things — which templates, which chords were in the
+   * vocabulary, sevenths at cadences, the Picardy third, sevenths on
+   * applied dominants and the Neapolitan — so a learner who wanted to
+   * drill twelve-bar blues had to accept half-diminished predominants
+   * along with it, and one who wanted sevenths had to accept whatever
+   * else grade 4 happened to include. None of those implications was
+   * ever claimed by anyone; they are what you get when a list of
+   * features is sorted and the sort becomes the only way in.
    */
-  grade: number;
+  styles: readonly StyleTag[];
+  /** ii7, V7, iiø7, and a seventh on a cadential or applied dominant. */
+  sevenths: boolean;
+  /** The diminished triads: vii° in major, ii° in minor. */
+  diminished: boolean;
+  /** A major tonic closing a minor progression. */
+  picardy: boolean;
+  /** The Neapolitan sixth. */
+  neapolitan: boolean;
   /**
    * How long the progression is, asked for directly.
    *
@@ -141,57 +156,22 @@ export interface ProgressionResponse {
  */
 export const BAR_CHOICES = [2, 4, 6, 8, 12, 16] as const;
 
-/**
- * The generator's own grade, settable directly.
- *
- * This replaces a `SHAPE_AT` table that mapped a shared 1-to-5
- * `difficulty` onto `{bars, grade}`. Two problems, and the second is the
- * one that mattered. Its `bars` had already been overtaken by a real
- * length control and survived only as a fallback. And its five rows
- * reached grades 2, 4, 5, 7 and 9 — so grades 1, 3, 6, 8 and **10** were
- * unreachable from the app however the user set it, which is the whole of
- * ADR 0021's finding that two rhythm cells sit above anything the dial can
- * ask for. They are not stranded by the catalogue. They were stranded by
- * this table, and removing it is the fix.
- *
- * `grade` is the catalogues' own ordering — `minGrade` on `TEMPLATES` and
- * on the harmony pools — so this is not a new scale invented for the
- * settings panel. It is the existing one, stopping being private.
- *
- * **The range is read off the corpus, not written as 10.** The cell
- * catalogue is graded to 10, but this exercise does not generate rhythm
- * and never queries it; what this grade reaches is the template corpus,
- * which tops out at 8, over harmony pools that top out at 6. Offering 9
- * and 10 here would be two options that cannot change the question, which
- * is the same complaint ADR 0011 makes about a catalogue entry nothing
- * can reach — and the complaint this exercise's own palette answers by
- * leaving the modal minor `v` off.
- */
-export const GRADE_CHOICES: readonly number[] =
-  Array.from({ length: Math.max(...TEMPLATES.map((t) => t.minGrade)) }, (_, i) => i + 1);
+/** Every tradition the corpus is tagged with, in the order they are offered. */
+export const STYLE_CHOICES: readonly StyleTag[] = [
+  'classical', 'baroque', 'folk', 'pop', 'rock', 'jazz', 'blues', 'flamenco',
+];
 
-/**
- * What a grade opens up, counted rather than described.
- *
- * Two attempts at prose failed the same way. The original read
- * "1 — 4 bars" through "5 — 8 bars", where the one concrete fact in it was
- * not the thing that moved. Its replacement banded ten grades into five
- * phrases, which printed "1 — the plainest progressions" directly above
- * "2 — the plainest progressions" and so said the control does nothing
- * between them — when grade 2 opens nine templates, more than any other
- * step.
- *
- * So the label is read out of the corpus. It cannot drift, it changes at
- * exactly the grades where something changes, and the number is the one
- * the user is choosing between.
- */
-function gradeLabel(grade: number): string {
-  const n = TEMPLATES.filter((t) => t.minGrade <= grade).length;
-  return `${grade} — ${n} of ${TEMPLATES.length} progressions`;
-}
+const STYLE_LABELS: Record<StyleTag, string> = {
+  classical: 'Classical', baroque: 'Baroque', folk: 'Folk', pop: 'Pop',
+  rock: 'Rock', jazz: 'Jazz', blues: 'Blues', flamenco: 'Flamenco',
+};
 
 export const PROGRESSION_DEFAULTS: ProgressionSettings = {
-  grade: 4,
+  styles: STYLE_CHOICES,
+  sevenths: false,
+  diminished: false,
+  picardy: false,
+  neapolitan: false,
   presentation: 'listen',
   bars: 4,
   modes: ['major'],
@@ -230,11 +210,31 @@ const ALL_CADENCES: readonly CadenceType[] = ['PAC', 'IAC', 'HC', 'DC', 'PC'];
  * that can never be right is a control that lies about what it offers.
  */
 const PALETTE: Record<Mode, readonly string[]> = {
-  major: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'viio'],
-  // The Picardy third and the raised leading-tone diminished triad are both
-  // reachable in minor without borrowing: raising the leading tone is how a
-  // minor key cadences rather than a loan from elsewhere.
-  minor: ['i', 'iio', 'III', 'iv', 'V', 'VI', 'VII', 'I', '#viio'],
+  major: ['I', 'ii', 'iii', 'IV', 'V', 'vi'],
+  // The Picardy third is reachable in minor without borrowing: raising the
+  // leading tone is how a minor key cadences rather than a loan from
+  // elsewhere.
+  minor: ['i', 'III', 'iv', 'V', 'VI', 'VII', 'I'],
+};
+
+/**
+ * What the diminished-triads setting adds.
+ *
+ * These sat in the base palette, which was right while a grade dial
+ * decided them: the palette was deliberately blind to the grade, so it
+ * listed vii° always and the generator produced it only above grade 6.
+ * Measured, that left one button on screen that no setting could make
+ * the right answer — the single over-listing this exercise had, and the
+ * reason the schedule's item list could not promise an exact count.
+ *
+ * With a switch of its own there is nothing to be blind about. The
+ * palette grows when the user turns diminished chords on, the same way
+ * it grows for sevenths and borrowing, and the exercise stops offering
+ * a chord it will not set.
+ */
+const DIMINISHED: Record<Mode, readonly string[]> = {
+  major: ['viio'],
+  minor: ['iio', '#viio'],
 };
 
 /**
@@ -312,10 +312,11 @@ const TRIAD_OF: Record<string, string> = {
  * question.
  */
 export function paletteFor(
-  mode: Mode, { appliedDominants, borrowed }: PaletteOptions,
+  mode: Mode, { appliedDominants, borrowed, diminished }: PaletteOptions,
 ): string[] {
   return [
     ...PALETTE[mode],
+    ...(diminished ? DIMINISHED[mode] : []),
     ...(appliedDominants ? APPLIED[mode] : []),
     ...(borrowed ? BORROWED[mode] : []),
     ...(appliedDominants && borrowed ? BORROWED_APPLIED[mode] : []),
@@ -326,6 +327,7 @@ export function paletteFor(
 export interface PaletteOptions {
   appliedDominants: boolean;
   borrowed: boolean;
+  diminished: boolean;
 }
 
 /**
@@ -373,7 +375,11 @@ export function generateProgression(
     key,
     timeSignature: timeSignature('4/4'),
     bars,
-    grade: settings.grade,
+    styles: settings.styles,
+    sevenths: settings.sevenths,
+    diminished: settings.diminished,
+    picardy: settings.picardy,
+    neapolitan: settings.neapolitan,
     // All three exclude rather than merely decline to add (ADR 0017), so
     // the palette is exactly what can be heard.
     allowInversions: false,
@@ -504,12 +510,20 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       apply: (s, option) => ({ ...s, presentation: option === 'read' ? 'read' : 'listen' }),
     },
     {
-      kind: 'choice',
-      id: 'grade',
-      label: 'Grade',
-      options: GRADE_CHOICES.map((g) => ({ id: `${g}`, label: gradeLabel(g) })),
-      selected: (s) => `${s.grade}`,
-      apply: (s, option) => ({ ...s, grade: coerceGrade(Number(option)) }),
+      kind: 'multi',
+      id: 'styles',
+      label: 'Styles',
+      options: STYLE_CHOICES.map((t) => ({ id: t, label: STYLE_LABELS[t] })),
+      selected: (s) => s.styles,
+      // Refused when empty, like the other multi-selects: unticking your
+      // last style is a slip, and the honest response is for the tick not
+      // to come off. The generator reads an empty list as "all styles"
+      // because a stored or hand-edited one can still arrive that way,
+      // but the panel never produces one — a row of chips with none lit
+      // cannot say whether it means everything or nothing.
+      apply: (s, options) => (options.length === 0 ? s : {
+        ...s, styles: STYLE_CHOICES.filter((t) => options.includes(t)),
+      }),
     },
     {
       kind: 'choice',
@@ -535,24 +549,63 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       selected: (s) => s.clef,
       apply: (s, option) => ({ ...s, clef: option === 'bass' ? 'bass' : 'treble' }),
     },
+    /*
+      The switches are named and not explained. Each carried a
+      parenthetical gloss — "(V of a chord other than the tonic)",
+      "(vii° in major, ii° in minor)" — which read well while there were
+      two of them and turned the panel into a wall of wrapped uppercase
+      at seven. These are standard terms for anyone practising chord
+      progressions by ear, and the readout names every chord it played
+      after each answer, which teaches them better than a label can.
+    */
     {
       kind: 'toggle',
       id: 'appliedDominants',
-      label: 'Applied dominants (V of a chord other than the tonic)',
+      label: 'Applied dominants',
       selected: (s) => s.appliedDominants,
       apply: (s, on) => ({ ...s, appliedDominants: on }),
     },
     {
       kind: 'toggle',
+      id: 'sevenths',
+      label: 'Sevenths',
+      selected: (s) => s.sevenths,
+      apply: (s, on) => ({ ...s, sevenths: on }),
+    },
+    {
+      kind: 'toggle',
+      id: 'diminished',
+      label: 'Diminished triads',
+      selected: (s) => s.diminished,
+      apply: (s, on) => ({ ...s, diminished: on }),
+    },
+    {
+      kind: 'toggle',
+      id: 'picardy',
+      label: 'Picardy third',
+      // Nothing to close major when nothing is in minor.
+      relevant: (s) => s.modes.includes('minor'),
+      selected: (s) => s.picardy,
+      apply: (s, on) => ({ ...s, picardy: on }),
+    },
+    {
+      kind: 'toggle',
+      id: 'neapolitan',
+      label: 'Neapolitan sixth',
+      selected: (s) => s.neapolitan,
+      apply: (s, on) => ({ ...s, neapolitan: on }),
+    },
+    {
+      kind: 'toggle',
       id: 'borrowed',
-      label: 'Borrowed chords (from the parallel major or minor)',
+      label: 'Borrowed chords',
       selected: (s) => s.borrowed,
       apply: (s, on) => ({ ...s, borrowed: on }),
     },
     {
       kind: 'toggle',
       id: 'varyCadence',
-      label: 'Vary the close (not every phrase ends V–I)',
+      label: 'Vary the close',
       selected: (s) => s.varyCadence,
       apply: (s, on) => ({ ...s, varyCadence: on }),
     },
@@ -561,7 +614,13 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as
       Record<string, unknown>;
     return {
-      grade: coerceGrade(raw.grade),
+      styles: Array.isArray(raw.styles) && raw.styles.length > 0
+        ? STYLE_CHOICES.filter((t) => (raw.styles as unknown[]).includes(t))
+        : PROGRESSION_DEFAULTS.styles,
+      sevenths: raw.sevenths === true,
+      diminished: raw.diminished === true,
+      picardy: raw.picardy === true,
+      neapolitan: raw.neapolitan === true,
       presentation: raw.presentation === 'read' ? 'read' : 'listen',
       bars: BAR_CHOICES.includes(raw.bars as typeof BAR_CHOICES[number])
         ? raw.bars as number : PROGRESSION_DEFAULTS.bars,
@@ -574,7 +633,3 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
   },
 };
 
-function coerceGrade(value: unknown): number {
-  const n = Number(value);
-  return GRADE_CHOICES.includes(n) ? n : PROGRESSION_DEFAULTS.grade;
-}

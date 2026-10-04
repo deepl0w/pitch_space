@@ -4,7 +4,7 @@ import {
 import { type Rng, weightedPick } from '../theory/rng';
 import {
   COMPOUND_BEAT, SIMPLE_BEAT, type CellEvent, type RhythmCell,
-  cellsAtGrade, scaleCell, valueForEvent,
+  cellsOfKind, scaleCell, valueForEvent,
 } from './cells';
 
 /**
@@ -43,11 +43,27 @@ export interface RhythmBar {
 export interface RhythmOptions {
   timeSignature: TimeSignature;
   bars: number;
-  /** 1-10. Selects the slice of the cell library in play. */
-  grade: number;
   allowRests?: boolean;
   allowTuplets?: boolean;
-  allowSyncopation?: boolean;
+  /**
+   * How many syncopated cells one bar may carry. Zero bars them.
+   *
+   * A number because that is what it always was: a `grade` chose between
+   * 0, 1 and 3 through a `syncopationBudget` table, so the dial was
+   * spelling a quantity it could have simply named. Asking for two was
+   * impossible, and asking for one meant also asking for everything else
+   * grade 7 turned on.
+   */
+  syncopationsPerBar?: number;
+  /**
+   * Whether two tuplets may run back to back.
+   *
+   * Its own option rather than a consequence, because two tuplets
+   * running is a texture rather than a figure and whether you want it is
+   * a question about what you are practising, not about how far along
+   * you are.
+   */
+  allowAdjacentTuplets?: boolean;
 }
 
 /**
@@ -64,12 +80,6 @@ export function kindForBeat(beatTicks: number): RhythmCell['kind'] | null {
   return null;
 }
 
-/** How many syncopated cells a bar may carry, by grade. */
-function syncopationBudget(grade: number): number {
-  if (grade < 7) return 0;
-  return grade >= 9 ? 3 : 1;
-}
-
 interface Placement { cell: RhythmCell; beat: number }
 
 function isAllowed(
@@ -81,7 +91,6 @@ function isAllowed(
 
   if (cell.tags.includes('rest') && options.allowRests === false) return false;
   if (tupletCell && options.allowTuplets === false) return false;
-  if (syncopated && options.allowSyncopation === false) return false;
 
   // The downbeat has to be articulated before anything pushes against it. A
   // bar that opens off the beat reads as a mistake, not as syncopation.
@@ -89,12 +98,10 @@ function isAllowed(
 
   if (syncopated) {
     const used = chosen.filter((p) => p.cell.tags.includes('syncopated')).length;
-    if (used >= syncopationBudget(options.grade)) return false;
+    if (used >= (options.syncopationsPerBar ?? 0)) return false;
   }
 
-  // Two tuplets running is a texture, not a figure, until the grade where
-  // cross-rhythm is the point.
-  if (tupletCell && options.grade < 9) {
+  if (tupletCell && options.allowAdjacentTuplets !== true) {
     const previous = chosen[chosen.length - 1];
     if (previous?.cell.tags.includes('tuplet')) return false;
   }
@@ -110,19 +117,24 @@ function isAllowed(
   return true;
 }
 
-/** Weight the choice so the newest material at a grade is actually heard. */
-function weightFor(cell: RhythmCell, grade: number): number {
-  const distance = grade - cell.grade;
-  return cell.grade === grade ? 3 : Math.max(1, 6 - distance);
-}
+/**
+ * Every admissible cell is as likely as every other.
+ *
+ * There was a weighting here that favoured "the newest material at a
+ * grade" — cells whose own grade equalled the one asked for got three
+ * times the weight, tapering below. It was a reasonable thing to want
+ * out of a dial and it cannot survive the dial: with the library
+ * selected by what it *is* rather than by a tier, there is no "newest"
+ * to favour, and inventing one would be the ordering coming back under
+ * another name. A user who wants fewer even quarters unticks them.
+ */
 
 /**
  * Choose cells filling one bar, beat by beat, backtracking on a dead end.
  *
  * Returns null when the bar cannot be filled at all, which happens when the
- * constraints exclude everything — a grade with no cells of the kind this
- * meter's beats need, for instance. The caller reports that rather than
- * looping.
+ * constraints exclude everything — no cells of the kind this meter's beats
+ * need, for instance. The caller reports that rather than looping.
  */
 export function chooseCells(rng: Rng, options: RhythmOptions): Placement[] | null {
   const ts = options.timeSignature;
@@ -133,7 +145,7 @@ export function chooseCells(rng: Rng, options: RhythmOptions): Placement[] | nul
   while (beat < ts.beatStarts.length) {
     const kind = kindForBeat(ts.beatDurations[beat]);
     const banned = excluded[chosen.length] ?? new Set<string>();
-    const candidates = kind === null ? [] : cellsAtGrade(options.grade, kind).filter((cell) => {
+    const candidates = kind === null ? [] : cellsOfKind(kind).filter((cell) => {
       if (banned.has(cell.id)) return false;
       if (beat + cell.beats > ts.beatStarts.length) return false;
       // A two-beat cell needs the next beat to be the same length, which is
@@ -155,7 +167,7 @@ export function chooseCells(rng: Rng, options: RhythmOptions): Placement[] | nul
 
     excluded[chosen.length] = banned;
     const cell = weightedPick(rng, candidates.map((value) => ({
-      value, weight: weightFor(value, options.grade),
+      value, weight: 1,
     })));
     chosen.push({ cell, beat });
     beat += cell.beats;
@@ -163,10 +175,24 @@ export function chooseCells(rng: Rng, options: RhythmOptions): Placement[] | nul
   return chosen;
 }
 
-let nextTupletId = 1;
-
-/** Turn chosen cells into events with absolute ticks, values and beams. */
-function layOut(placements: Placement[], ts: TimeSignature, barStart: number): RhythmEvent[] {
+/**
+ * Turn chosen cells into events with absolute ticks, values and beams.
+ *
+ * `nextId` is passed in rather than held in a module-level counter.
+ * It was one — `let nextTupletId = 1` beside this function, incremented
+ * and never reset — so the same seed produced the same rhythm with
+ * *different* tuplet ids on a second call, and a progression reported by
+ * its seed did not reproduce. The determinism test could not see it
+ * because the settings it used never reached a tuplet; widening that
+ * sweep is what surfaced it.
+ *
+ * Ids are per-generation and start at 1, so the identity of a tuplet is
+ * a fact about the rhythm it is in rather than about how many rhythms
+ * the process happened to make first.
+ */
+function layOut(
+  placements: Placement[], ts: TimeSignature, barStart: number, nextId: () => number,
+): RhythmEvent[] {
   const events: RhythmEvent[] = [];
   for (const { cell, beat } of placements) {
     const beatTicks = ts.beatDurations[beat];
@@ -176,7 +202,7 @@ function layOut(placements: Placement[], ts: TimeSignature, barStart: number): R
     for (const event of scaled) {
       const value = valueForEvent(event);
       if (value === null) throw new Error(`cell ${cell.id} produced an unnotatable duration`);
-      if (event.tuplet && tupletId === undefined) tupletId = nextTupletId++;
+      if (event.tuplet && tupletId === undefined) tupletId = nextId();
       events.push({
         startTick: at,
         durationTicks: event.ticks,
@@ -222,15 +248,20 @@ function addBeams(events: RhythmEvent[], ts: TimeSignature, barStart: number): R
 export function generateRhythm(rng: Rng, options: RhythmOptions): RhythmBar[] {
   const ts = options.timeSignature;
   const bars: RhythmBar[] = [];
+  // Per call, so two generations from one seed agree. See `layOut`.
+  let tupletCount = 0;
+  const nextTupletId = () => (tupletCount += 1);
   for (let index = 0; index < options.bars; index++) {
     const placements = chooseCells(rng, options);
     if (placements === null) {
       throw new Error(
-        `No rhythm fits ${ts.id} at grade ${options.grade} with these constraints`,
+        `No rhythm fits ${ts.id} with these constraints`,
       );
     }
     const startTick = index * ts.barTicks;
-    bars.push({ index, startTick, ticks: ts.barTicks, events: layOut(placements, ts, startTick) });
+    bars.push({
+      index, startTick, ticks: ts.barTicks, events: layOut(placements, ts, startTick, nextTupletId),
+    });
   }
   return bars;
 }

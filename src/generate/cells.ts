@@ -6,8 +6,16 @@ import { TICKS_PER_QUARTER, type NoteValue, type TimeSignature, valueOfTicks } f
  * Real rhythm is not a random walk over note values; it is built from a stock
  * of figures that players already have in their hands. Generating from a
  * catalogue of those figures is what makes a bar scan, and it is also what
- * makes a grade mean something — a grade is a slice of this list rather
- * than a separate mechanism.
+ * makes a constraint mean something: "no tuplets" or "one syncopation a
+ * bar" is a slice of this list rather than a separate mechanism.
+ *
+ * Each cell carried a `grade` as well, and a selector asked for all the
+ * cells at or below a number. That ordering was one person's judgement of
+ * how advanced each figure is, offered as the only way into the library,
+ * so a learner who wanted to drill a dotted figure had to accept
+ * everything judged easier than it. The tags say what a figure *is* —
+ * even, dotted, syncopated, tuplet, rest, sustained — and that is what a
+ * caller selects on now.
  *
  * Cells are written against a reference beat and scaled to whatever beat the
  * meter actually has, so one `[8 8]` serves a quarter-note beat in 4/4 and a
@@ -33,8 +41,6 @@ export interface RhythmCell {
   /** Which beat division the cell is written for. */
   kind: 'simple' | 'compound';
   events: readonly CellEvent[];
-  /** Lowest grade at which this cell may be used. */
-  grade: number;
   tags: readonly CellTag[];
 }
 
@@ -59,12 +65,12 @@ function tuplet(count: number, inTheTimeOf: number, unit: number): CellEvent[] {
 
 function cell(
   id: string, name: string, beats: 1 | 2, kind: RhythmCell['kind'],
-  events: CellEvent[], grade: number, tags: CellTag[],
+  events: CellEvent[], tags: CellTag[],
 ): RhythmCell {
   const want = (kind === 'simple' ? SIMPLE_BEAT : COMPOUND_BEAT) * beats;
   const got = events.reduce((sum, e) => sum + e.ticks, 0);
   if (got !== want) throw new Error(`cell ${id}: ${got} ticks, expected ${want}`);
-  return { id, name, beats, kind, events, grade, tags };
+  return { id, name, beats, kind, events, tags };
 }
 
 /**
@@ -74,60 +80,60 @@ function cell(
  */
 export const CELLS: readonly RhythmCell[] = [
   // --- simple beat -------------------------------------------------------
-  cell('q', 'Beat', 1, 'simple', [note(Q)], 1, ['even', 'sustained']),
-  cell('qr', 'Beat rest', 1, 'simple', [rest(Q)], 2, ['rest']),
-  cell('ee', 'Two evens', 1, 'simple', [note(E), note(E)], 3, ['even']),
-  cell('er_e', 'Off-beat entry', 1, 'simple', [rest(E), note(E)], 4, ['rest', 'syncopated']),
-  cell('e_er', 'Note then rest', 1, 'simple', [note(E), rest(E)], 4, ['rest']),
-  cell('ssss', 'Four sixteenths', 1, 'simple', [note(S), note(S), note(S), note(S)], 5, ['even']),
-  cell('e_ss', 'Long–short–short', 1, 'simple', [note(E), note(S), note(S)], 5, ['even']),
-  cell('ss_e', 'Short–short–long', 1, 'simple', [note(S), note(S), note(E)], 5, ['even', 'sustained']),
-  cell('dotted_e_s', 'Dotted figure', 1, 'simple', [note(E + S), note(S)], 6, ['dotted']),
-  cell('s_dotted_e', 'Reverse dotted (Scotch snap)', 1, 'simple', [note(S), note(E + S)], 6, ['dotted', 'syncopated', 'sustained']),
-  cell('s_e_s', 'Syncopated beat', 1, 'simple', [note(S), note(E), note(S)], 7, ['syncopated']),
-  cell('sr_sss', 'Rest then three sixteenths', 1, 'simple', [rest(S), note(S), note(S), note(S)], 7, ['rest', 'syncopated']),
-  cell('triplet_e', 'Eighth triplet', 1, 'simple', tuplet(3, 2, E), 8, ['tuplet', 'even']),
-  cell('s_tt', 'Thirty-second pair', 1, 'simple', [note(S), note(S), note(T), note(T), note(S)], 9, ['even']),
-  cell('quintuplet_s', 'Quintuplet', 1, 'simple', tuplet(5, 4, S), 10, ['tuplet']),
-  cell('septuplet_s', 'Septuplet', 1, 'simple', tuplet(7, 4, S), 10, ['tuplet']),
+  cell('q', 'Beat', 1, 'simple', [note(Q)], ['even', 'sustained']),
+  cell('qr', 'Beat rest', 1, 'simple', [rest(Q)], ['rest']),
+  cell('ee', 'Two evens', 1, 'simple', [note(E), note(E)], ['even']),
+  cell('er_e', 'Off-beat entry', 1, 'simple', [rest(E), note(E)], ['rest', 'syncopated']),
+  cell('e_er', 'Note then rest', 1, 'simple', [note(E), rest(E)], ['rest']),
+  cell('ssss', 'Four sixteenths', 1, 'simple', [note(S), note(S), note(S), note(S)], ['even']),
+  cell('e_ss', 'Long–short–short', 1, 'simple', [note(E), note(S), note(S)], ['even']),
+  cell('ss_e', 'Short–short–long', 1, 'simple', [note(S), note(S), note(E)], ['even', 'sustained']),
+  cell('dotted_e_s', 'Dotted figure', 1, 'simple', [note(E + S), note(S)], ['dotted']),
+  cell('s_dotted_e', 'Reverse dotted (Scotch snap)', 1, 'simple', [note(S), note(E + S)], ['dotted', 'syncopated', 'sustained']),
+  cell('s_e_s', 'Syncopated beat', 1, 'simple', [note(S), note(E), note(S)], ['syncopated']),
+  cell('sr_sss', 'Rest then three sixteenths', 1, 'simple', [rest(S), note(S), note(S), note(S)], ['rest', 'syncopated']),
+  cell('triplet_e', 'Eighth triplet', 1, 'simple', tuplet(3, 2, E), ['tuplet', 'even']),
+  cell('s_tt', 'Thirty-second pair', 1, 'simple', [note(S), note(S), note(T), note(T), note(S)], ['even']),
+  cell('quintuplet_s', 'Quintuplet', 1, 'simple', tuplet(5, 4, S), ['tuplet']),
+  cell('septuplet_s', 'Septuplet', 1, 'simple', tuplet(7, 4, S), ['tuplet']),
 
   // --- two simple beats --------------------------------------------------
-  cell('h', 'Two beats held', 2, 'simple', [note(Q * 2)], 1, ['even', 'sustained']),
-  cell('hr', 'Two beats rest', 2, 'simple', [rest(Q * 2)], 2, ['rest']),
-  cell('dq_e', 'Dotted quarter and eighth', 2, 'simple', [note(Q + E), note(E)], 4, ['dotted', 'sustained']),
-  cell('q_ee', 'Beat then two evens', 2, 'simple', [note(Q), note(E), note(E)], 3, ['even']),
-  cell('ee_q', 'Two evens then beat', 2, 'simple', [note(E), note(E), note(Q)], 3, ['even', 'sustained']),
+  cell('h', 'Two beats held', 2, 'simple', [note(Q * 2)], ['even', 'sustained']),
+  cell('hr', 'Two beats rest', 2, 'simple', [rest(Q * 2)], ['rest']),
+  cell('dq_e', 'Dotted quarter and eighth', 2, 'simple', [note(Q + E), note(E)], ['dotted', 'sustained']),
+  cell('q_ee', 'Beat then two evens', 2, 'simple', [note(Q), note(E), note(E)], ['even']),
+  cell('ee_q', 'Two evens then beat', 2, 'simple', [note(E), note(E), note(Q)], ['even', 'sustained']),
   // The canonical 4/4 syncopation. It spans two beats and cannot be built
   // from two one-beat cells without inventing a tie across the beat.
-  cell('e_q_e', 'Syncopation across the beat', 2, 'simple', [note(E), note(Q), note(E)], 7, ['syncopated', 'sustained']),
-  cell('qr_q', 'Rest then beat', 2, 'simple', [rest(Q), note(Q)], 4, ['rest', 'sustained']),
-  cell('q_qr', 'Beat then rest', 2, 'simple', [note(Q), rest(Q)], 3, ['rest']),
+  cell('e_q_e', 'Syncopation across the beat', 2, 'simple', [note(E), note(Q), note(E)], ['syncopated', 'sustained']),
+  cell('qr_q', 'Rest then beat', 2, 'simple', [rest(Q), note(Q)], ['rest', 'sustained']),
+  cell('q_qr', 'Beat then rest', 2, 'simple', [note(Q), rest(Q)], ['rest']),
 
   // --- compound beat -----------------------------------------------------
-  cell('dq', 'Compound beat', 1, 'compound', [note(Q + E)], 1, ['even', 'sustained']),
-  cell('dqr', 'Compound beat rest', 1, 'compound', [rest(Q + E)], 2, ['rest']),
-  cell('eee', 'Three evens', 1, 'compound', [note(E), note(E), note(E)], 3, ['even']),
-  cell('q_e', 'Long–short', 1, 'compound', [note(Q), note(E)], 4, ['even']),
-  cell('ee_er', 'Two then rest', 1, 'compound', [note(E), note(E), rest(E)], 5, ['rest']),
-  cell('er_ee', 'Off-beat entry', 1, 'compound', [rest(E), note(E), note(E)], 6, ['rest', 'syncopated']),
-  cell('e_q', 'Short–long', 1, 'compound', [note(E), note(Q)], 7, ['syncopated', 'sustained']),
-  cell('e_ss_e', 'Divided middle', 1, 'compound', [note(E), note(S), note(S), note(E)], 7, ['even']),
-  cell('ssssss', 'Six sixteenths', 1, 'compound', [note(S), note(S), note(S), note(S), note(S), note(S)], 8, ['even']),
-  cell('duplet_e', 'Duplet', 1, 'compound', tuplet(2, 3, E), 9, ['tuplet']),
-  cell('dh', 'Full compound bar', 2, 'compound', [note((Q + E) * 2)], 2, ['even', 'sustained']),
-  cell('dq_eee', 'Held then divided', 2, 'compound', [note(Q + E), note(E), note(E), note(E)], 4, ['even']),
-  cell('eee_dq', 'Divided then held', 2, 'compound', [note(E), note(E), note(E), note(Q + E)], 4, ['even', 'sustained']),
+  cell('dq', 'Compound beat', 1, 'compound', [note(Q + E)], ['even', 'sustained']),
+  cell('dqr', 'Compound beat rest', 1, 'compound', [rest(Q + E)], ['rest']),
+  cell('eee', 'Three evens', 1, 'compound', [note(E), note(E), note(E)], ['even']),
+  cell('q_e', 'Long–short', 1, 'compound', [note(Q), note(E)], ['even']),
+  cell('ee_er', 'Two then rest', 1, 'compound', [note(E), note(E), rest(E)], ['rest']),
+  cell('er_ee', 'Off-beat entry', 1, 'compound', [rest(E), note(E), note(E)], ['rest', 'syncopated']),
+  cell('e_q', 'Short–long', 1, 'compound', [note(E), note(Q)], ['syncopated', 'sustained']),
+  cell('e_ss_e', 'Divided middle', 1, 'compound', [note(E), note(S), note(S), note(E)], ['even']),
+  cell('ssssss', 'Six sixteenths', 1, 'compound', [note(S), note(S), note(S), note(S), note(S), note(S)], ['even']),
+  cell('duplet_e', 'Duplet', 1, 'compound', tuplet(2, 3, E), ['tuplet']),
+  cell('dh', 'Full compound bar', 2, 'compound', [note((Q + E) * 2)], ['even', 'sustained']),
+  cell('dq_eee', 'Held then divided', 2, 'compound', [note(Q + E), note(E), note(E), note(E)], ['even']),
+  cell('eee_dq', 'Divided then held', 2, 'compound', [note(E), note(E), note(E), note(Q + E)], ['even', 'sustained']),
 ];
 
 /**
- * The cells available at a grade.
+ * The cells written for a kind of beat.
  *
  * Exported rather than filtered inline where the generator needs it, so the
  * subset property can be asserted directly against the real sets instead of
  * inferred from a sample of generated bars.
  */
-export function cellsAtGrade(grade: number, kind?: RhythmCell['kind']): RhythmCell[] {
-  return CELLS.filter((c) => c.grade <= grade && (kind === undefined || c.kind === kind));
+export function cellsOfKind(kind?: RhythmCell['kind']): RhythmCell[] {
+  return CELLS.filter((c) => kind === undefined || c.kind === kind);
 }
 
 /** Whether a cell's figures fit a meter's beat division. */

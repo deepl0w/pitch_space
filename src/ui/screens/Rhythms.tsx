@@ -135,7 +135,15 @@ function figuresFor(ts: TimeSignature): Array<{ cell: RhythmCell; events: Timed[
       }
     }
   });
-  return out.sort((a, b) => a.cell.grade - b.cell.grade || a.cell.beats - b.cell.beats);
+  // Ordered by how much is in the figure, then by its length. This sorted
+  // by `cell.grade` — somebody's judgement of how advanced each figure
+  // was — which is exactly the ordering that left this page and the
+  // settings panels. Counting the events says the same thing about a
+  // reference page without claiming a tier: a held note before a divided
+  // one, and a plain beat before a syncopated one.
+  return out.sort((a, b) => a.cell.events.length - b.cell.events.length
+    || a.cell.beats - b.cell.beats
+    || (a.cell.id < b.cell.id ? -1 : 1));
 }
 
 function Card({ title, meta, ts, events, play }: {

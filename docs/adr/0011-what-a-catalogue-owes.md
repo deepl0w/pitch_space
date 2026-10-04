@@ -153,3 +153,37 @@ undone: all 37 reachable across grades 1–10, 35 at the five grades the only
 difficulty mapping in the codebase uses. The two stranded are the grade-10
 tuplets. [0021](0021-a-catalogues-top-grade-must-be-reachable.md) has the
 measurement and what follows from it.
+
+## Correction, 4 October 2026 — the count, and what has changed since
+
+**Obligation 3 says "three of thirty-three templates". The table directly
+above it sums to thirty-five**, and `templates.ts` held thirty-five when this
+record was written:
+
+```bash
+git show 928ac46:src/generate/templates.ts | grep -cE "^\s+template\("   # 35
+```
+
+The table was right and the prose was an arithmetic slip on the day, not drift
+since. The substance is unaffected — three templates, named here as
+`leading-tone-close`, `axis-iv` and `plagal`, is the finding and it stands.
+
+It is worth recording because of where the wrong number went.
+`docs/ARCHITECTURE.md` carried "three of the thirty-three" until today, having
+taken it from this record's prose rather than from this record's table. That is
+the first convention in [the index](README.md) — check a claim about the code
+against the code, not against the record that made it — catching a record that
+disagreed with itself.
+
+**What has changed since: the trigger below has fired.** "A progression
+exercise is built. That is the first production caller of the harmony
+generator" — it exists, and
+[`progressions.ts`](../../src/exercises/progression-id/progressions.ts) passes
+`cadences: { final: pick(rng, ALL_CADENCES) }` when its `varyCadence` setting
+is on, where `ALL_CADENCES` is all five. So the three templates are no longer
+unreachable; they are **settings-gated**. `varyCadence` defaults to `false`,
+and with it off the planner's vocabulary is still PAC, or HC for blues, so the
+sentence "on the default path they cannot be shown" remains true as written.
+
+The distribution is unchanged from the table above, measured today: HC 14,
+PAC 11, null 7, IAC 1, DC 1, PC 1.

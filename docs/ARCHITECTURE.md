@@ -354,9 +354,12 @@ catalogue is the product and the generator is plumbing: twenty correct
 templates are worth more than any cleverness in the thing that reads them.
 [ADR 0011](adr/0011-what-a-catalogue-owes.md) says what one owes — construction-time
 well-formedness, stable ids, asserted musical claims, and reachability. That
-last is the one none of them pays: three of the thirty-three templates declare
-a closing cadence the phrase planner never asks for by default, so on the
-default path they cannot be shown.
+last is the one none of them pays in full: three of the thirty-five templates —
+`leading-tone-close`, `axis-iv` and `plagal` — declare a closing cadence the
+phrase planner does not ask for by default, so on the default path they cannot
+be shown. Progression identification's `varyCadence` setting reaches them, by
+passing `cadences.final` explicitly, but it is off by default, so the three are
+settings-gated rather than unreachable.
 
 ## What is not built
 

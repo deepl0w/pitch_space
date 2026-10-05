@@ -18,6 +18,16 @@ export interface MenuEntry {
   blurb: string;
   /** The longer line under the heading, where the screen wants one. */
   lede?: string;
+  /**
+   * The route to go back to, when it is not the home screen.
+   *
+   * Set where a screen is reached from somewhere other than home: audio
+   * calibration lives inside settings now, and its back link still said
+   * "Everything" and jumped two levels, which contradicts the hierarchy
+   * the cog had just established. The user role found it the hour after
+   * the cog landed.
+   */
+  parent?: string;
   ready: boolean;
 }
 
@@ -98,6 +108,7 @@ export const SETUP_MENU: readonly MenuEntry[] = [
   },
   {
     route: 'calibration',
+    parent: 'settings',
     name: 'Audio calibration',
     blurb: 'Measure what your device\'s microphone delay costs, so timing is judged fairly.',
     lede: 'Your device takes a moment to get sound from the microphone into '
@@ -155,8 +166,19 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
 
 /** The entry for a route, so a screen can title itself from the same object. */
 export function entryFor(route: string): MenuEntry {
-  const found = [...EXERCISE_MENU, ...REFERENCE_MENU, ...SETUP_MENU]
-    .find((e) => e.route === route);
+  const found = maybeEntryFor(route);
   if (!found) throw new Error(`No menu entry for route: ${route}`);
   return found;
+}
+
+/** The same lookup, for callers that have a route which may not be a screen. */
+export function maybeEntryFor(route: string): MenuEntry | undefined {
+  return [...EXERCISE_MENU, ...REFERENCE_MENU, ...SETUP_MENU].find((e) => e.route === route);
+}
+
+/** Where a screen's back link goes, and what it is called. */
+export function backFrom(route: string): { route: string; label: string } {
+  const parent = maybeEntryFor(route)?.parent;
+  const to = parent ? maybeEntryFor(parent) : undefined;
+  return to ? { route: to.route, label: to.name } : { route: '', label: 'Everything' };
 }

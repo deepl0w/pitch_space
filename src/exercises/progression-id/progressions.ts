@@ -6,6 +6,7 @@ import {
   CADENCE_NAMES, type CadenceType, type RomanNumeral, numeralText, realizePitches,
 } from '../../theory/roman';
 import { generateHarmony } from '../../generate/harmony';
+import { keysField, keysIn } from '../types';
 import type { StyleTag } from '../../generate/templates';
 import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
@@ -59,6 +60,8 @@ export const PROGRESSION_EXERCISE_ID = 'progression-id';
 export const CLEFS: readonly Clef[] = ['treble', 'bass'];
 
 export interface ProgressionSettings extends BaseSettings {
+  /** Which keys to draw from. Empty is every key this exercise can use. */
+  keys: readonly string[];
   /**
    * Which traditions to draw progressions from. Empty means all of them.
    *
@@ -180,6 +183,7 @@ export const PROGRESSION_DEFAULTS: ProgressionSettings = {
   borrowed: false,
   varyCadence: false,
   clef: 'treble',
+  keys: [],
 };
 
 const ALL_CADENCES: readonly CadenceType[] = ['PAC', 'IAC', 'HC', 'DC', 'PC'];
@@ -366,7 +370,10 @@ export function generateProgression(
   // Any key within four accidentals, so the exercise trains the function
   // rather than the chord names. Someone who only ever hears C major learns
   // "that was F", which is what this exercise exists not to teach.
-  const key = pick(rng, ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4));
+  const key = pick(rng, keysIn(
+    ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4),
+    settings.keys,
+  ));
   // A fallback and not the setting: a stored length from a release that
   // offered a different set, or a hand-edited one, lands here.
   const bars = BAR_CHOICES.includes(settings.bars as typeof BAR_CHOICES[number])
@@ -539,6 +546,7 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       selected: (s) => [...s.modes],
       apply: (s, options) => ({ ...s, modes: coerceModes(options) }),
     },
+    keysField(ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= 4)),
     {
       kind: 'choice',
       id: 'clef',
@@ -621,6 +629,8 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
     const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as
       Record<string, unknown>;
     return {
+      keys: Array.isArray(raw.keys)
+        ? raw.keys.filter((k): k is string => typeof k === 'string') : [],
       styles: Array.isArray(raw.styles) && raw.styles.length > 0
         ? STYLE_CHOICES.filter((t) => (raw.styles as unknown[]).includes(t))
         : PROGRESSION_DEFAULTS.styles,

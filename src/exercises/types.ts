@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Voice } from '../audio/output/synth';
 import type { ScoreSpec } from './render/toVexflow';
+import { type Key, keyId, keyName } from '../theory/key';
 
 /**
  * What an exercise type is, as a contract rather than as a convention.
@@ -342,6 +343,54 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
  * recomputing them, which would be two callers deciding separately what the
  * question looks like.
  */
+/**
+ * Which keys an exercise may draw from, as a multi-select of key ids.
+ *
+ * Shared because three exercises answer the same question and should not
+ * answer it three ways. The semantics that matter:
+ *
+ * **Empty means every key the exercise would otherwise have used**, not
+ * none. A stored or hand-edited list can arrive empty and the generator
+ * has to keep working; the panel never produces one, because it refuses
+ * to unselect the last — a row of chips with none lit cannot say whether
+ * it means everything or nothing.
+ *
+ * **It narrows, it does not widen.** An exercise that only ever used keys
+ * within four accidentals still does; choosing a key outside that range
+ * selects nothing rather than reaching further than the exercise meant
+ * to. The setting picks from what is askable, and what is askable is the
+ * exercise's own business.
+ */
+export function keysIn(
+  pool: readonly Key[], chosen: readonly string[],
+): readonly Key[] {
+  if (chosen.length === 0) return pool;
+  const narrowed = pool.filter((k) => chosen.includes(keyId(k)));
+  // Falling back rather than throwing: a mode switch can leave a key list
+  // that names nothing in the new mode, and the honest response to "A
+  // minor, major only" is to ask a major key rather than to break.
+  return narrowed.length > 0 ? narrowed : pool;
+}
+
+/** The field itself, so the three panels read identically. */
+export function keysField<S extends { keys: readonly string[] }>(
+  pool: readonly Key[],
+): SettingField<S> {
+  return {
+    kind: 'multi',
+    id: 'keys',
+    label: 'Keys',
+    options: pool.map((k) => ({ id: keyId(k), label: keyName(k) })),
+    // Stored empty means "all", but the panel must never show it that way:
+    // a row of chips with none lit cannot say whether it means everything
+    // or nothing, and the registry guard refuses a multi-select that
+    // starts with nothing selected. So the default reads as every key lit,
+    // which is also what it does.
+    selected: (s) => (s.keys.length ? s.keys : pool.map(keyId)),
+    apply: (s, options) => (options.length === 0 ? s : { ...s, keys: [...options] }),
+  };
+}
+
 export interface PromptDrawnScores {
   /** The question's stave, or null once it has been answered. */
   questionScore: ScoreSpec | null;

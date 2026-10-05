@@ -321,3 +321,20 @@ same fault at 2.9 ms. That does not fix the correspondence, and it means the
 capture layer [0012](0012-the-judge-consumes-performed-notes-not-audio.md)
 anticipates would shrink this failure by a factor of thirty-two as a side
 effect of being written.
+
+## Note, 5 October 2026 — the citation above no longer resolves
+
+The Context cites `docs/findings/2026-10-04.md`. That directory is now
+deliberately outside the repository: the tree is public and the fleet's
+internal writing stays out of it, enforced by `.gitignore`. The link was
+correct when written and will not open for a reader of the public tree, or
+for any worktree other than the one that ran the sweep.
+
+Nothing is lost from the argument. The seven measurements, the two clusters
+and the microphone correction are all reproduced in this record; the citation
+pointed at the sweep's fuller account, not at the reasoning.
+
+Left as a dangling link rather than quietly de-linked, because a published
+record is append-only and this is the only such citation in `docs/`. If it is
+ever worth silencing for the link checker, that is an edit to a published
+record and wants deciding as one.

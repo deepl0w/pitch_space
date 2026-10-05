@@ -43,6 +43,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0026](0026-a-measurement-signal-does-not-inherit-a-listening-level.md) | A measurement signal does not inherit a listening level | Accepted |
 | [0027](0027-configure-by-naming-what-an-exercise-contains.md) | Configure an exercise by naming what it contains, not by a difficulty ordinal | Accepted |
 | [0028](0028-a-question-only-absolute-pitch-can-answer.md) | A question only absolute pitch can answer is not a hard question | Accepted |
+| [0029](0029-a-prompt-is-a-component-and-may-use-one.md) | A prompt is a component, and may use one | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in
@@ -133,13 +134,18 @@ its default vocabulary is two values" — and its finding has survived every
 change since, because a reader can see which half to re-check when the planner
 changes.
 
-This is close to
-[a proxy is not the mechanism](../process/2026-10-04-a-proxy-is-not-the-mechanism.md)
-and is not the same fault. That one is about reaching for a correlate when the
-mechanism is available: a matching test count is not `git merge-base`. This one
-is about using a legitimate instrument and not stating its range, so a true
-measurement supports a conclusion wider than itself. The first substitutes the
-wrong tool; the second over-reads the right one.
+This is close to a sibling rule in `CLAUDE.md` — when a mechanism exists to
+answer a question directly, a correlate of the answer is not a substitute for
+running it — and is not the same fault. **That one is reaching for a correlate
+when the mechanism is available**: a matching test count is not
+`git merge-base`, and a name you constructed is not a name `ListAgents` gave
+you. **This one is using a legitimate instrument and not stating its range**,
+so a true measurement supports a conclusion wider than itself. The first
+substitutes the wrong tool; the second over-reads the right one.
+
+The fuller write-up of the first lives in `docs/process/`, which is deliberately
+not in the repository, so the distinction is stated here rather than cited —
+a reader of the public tree cannot open that file.
 
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code

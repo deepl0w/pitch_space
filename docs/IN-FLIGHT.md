@@ -104,6 +104,66 @@ unasserted. And nothing yet checks that aiming does not distort *what else*
 is asked: a generator that honoured every wish by always picking the same
 root would pass the contract and be a worse exercise.
 
+### Owed to `process` — main cannot establish that the fleet was told
+
+**Written here because process is not reachable to be told, which is the
+subject.** The user has now raised this four times and asked directly that
+process be informed.
+
+**The structural fact.** `SendMessage` reaches a session only while it is
+registered in `ListAgents`. A suspended role is absent from that list, and
+a message to its last known name is refused — measured again just now:
+`intelligent-hypatia-c5ce53-ec` returns *"No agent named … is reachable"*.
+So at any moment main can deliver to whichever roles happen to be awake,
+and **"the fleet has been told" is not a property main can establish.**
+`announce --done` records that main tried, which is a different claim, and
+the gap between the two is where every one of the following sits.
+
+**Four shapes of the same mistake, in order.**
+
+Main told the user to start sessions that were already running — three
+times, because it read an absent `ListAgents` row as a session not
+existing. Then it built `tools/relay.sh` and handed the user blocks of
+text to paste into each session, which the user rejected outright: *"that's
+your job to communicate and you should know that."* Then it messaged the
+one role that happened to be awake and recorded the announcement as done.
+Throughout, its messages were long enough that process asked for three
+lines and a pointer instead.
+
+The first two treat the user as the fleet's plumbing. The third is worse
+and quieter: it satisfies the guard while leaving three roles uninformed,
+and nothing in the protocol can tell that apart from a real delivery.
+
+`CLAUDE.md` now says main never asks the user to relay, and `relay.sh` is
+deleted. That removes the wrong fallback and does not supply a right one.
+
+**What is actually missing, and why the repository is the answer.** The
+fleet already has a channel that does not care who is awake: a commit.
+`fleet.sh sync` carries it to every worktree and `fleet.sh brief` prints
+what landed at every session start. That is how this entry will reach
+process. What does not exist is anything that makes *an announcement* use
+that channel — `announce` writes a sha into an untracked file in the main
+checkout, which no other worktree can read.
+
+The shape worth considering, for process to accept or replace: a committed
+file that `announce` appends to — what landed and what main wants looked
+at — which `brief` prints and each role clears its own line from. Then
+"told" is a property of the repository rather than of who was addressable
+at the moment main looked, `SendMessage` becomes the fast path instead of
+the only one, and the thing the guard checks is the thing that matters.
+
+**The narrower question that belongs with it:** `announce --done` should
+probably not be satisfiable while a role remains unreached. Today it is
+one command with no argument and no notion of per-role delivery, so main
+can honestly run it having reached one of four.
+
+**Unrelated and also owed:** main committed twice with a failing check,
+having run `./test.sh --all` and read the tail of its output rather than
+its result. The tester did the same within the hour. Running the check and
+reading the check are different acts, and the convention naming that is
+already on the ADR index — which suggests the fix is mechanical rather
+than more care.
+
 ### Owed to `process` — announcing is not holding, and the guard is not catching it
 
 **This is the user's instruction, not main's suggestion.** Their words after

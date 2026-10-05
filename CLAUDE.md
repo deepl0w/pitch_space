@@ -336,6 +336,10 @@ reproduce exactly.
   tuning problem with no ground truth; a test that pins them makes tuning
   impossible. Assert that a suspension resolves down by step, not that a
   particular seed produces a particular tune.
+- **A mistake that recurs is a signal to write a rule, not to try harder.**
+  The ADR README's conventions and `fleet.sh check` both exist because a
+  first occurrence was fixed and a second one was not going to be caught by
+  more care alone. See the fleet skill, "The review cycle".
 - **A tracked document does not chase a figure the next commit can change.**
   Either the number is read out of the repository when someone asks for it
   (`tools/report-facts.sh`), or the document says which commit it describes

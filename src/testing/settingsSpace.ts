@@ -74,17 +74,38 @@ export function applyValue(field: AnyField, settings: unknown, value: unknown): 
  * walk `valuesOf` instead.
  */
 export function widestSettings(type: AnyExerciseDefinition, over: object = {}): unknown {
-  let settings: unknown = type.settings.coerce({
-    ...(type.settings.defaults as object), ...over,
-  });
-  for (const field of type.settings.fields as AnyField[]) {
-    const widest = field.kind === 'toggle' ? true
-      : field.kind === 'multi' ? optionIds(field, settings)
-        : undefined;
-    if (widest === undefined) continue;
-    settings = type.settings.coerce(applyValue(field, settings, widest));
+  const withOver = (s: unknown) => type.settings.coerce({ ...(s as object), ...over });
+  let settings: unknown = withOver(type.settings.defaults);
+  /*
+    Repeated until nothing moves, because one control can narrow another's
+    options and the fields are not declared in dependency order.
+
+    `degree-id` declares tonics before modes. A single pass opened the
+    tonics the default mode can build, then widened the mode — and left the
+    three tonics that widening had just made available unselected, so the
+    "widest" settings asked no question in B, F♯ or C♯ minor. A helper whose
+    whole job is to open every pool must not depend on the order the schema
+    happens to list the fields in; that is the same shape as the sweeps this
+    file exists to replace, one level up.
+
+    Bounded by the field count because that is how many passes a chain of
+    fields each unlocking the next can need, and a pair that never settles
+    is a schema defect rather than something to spin on.
+  */
+  for (let pass = 0; pass <= type.settings.fields.length; pass += 1) {
+    const before = JSON.stringify(settings);
+    for (const field of type.settings.fields as AnyField[]) {
+      const widest = field.kind === 'toggle' ? true
+        : field.kind === 'multi' ? optionIds(field, settings)
+          : undefined;
+      if (widest === undefined) continue;
+      // The caller's own keys win on every pass, not just at the end: a
+      // sweep asking for one mode must have the tonics resolved against
+      // that mode, rather than against the widened one and then narrowed
+      // back to a selection the panel would not show.
+      settings = withOver(applyValue(field, settings, widest));
+    }
+    if (JSON.stringify(settings) === before) break;
   }
-  // The caller's own keys win: a sweep asking for one presentation must get
-  // it back, whatever a toggle above did.
-  return type.settings.coerce({ ...(settings as object), ...over });
+  return settings;
 }

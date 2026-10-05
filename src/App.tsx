@@ -9,6 +9,7 @@ import { Calibration } from './ui/screens/Calibration';
 import { Settings } from './ui/screens/Settings';
 import { PracticeScreen } from './ui/screens/PracticeScreen';
 import { findFamily } from './exercises/registry';
+import { backFrom } from './ui/menu';
 import { appSynth, stopSound } from './ui/sound';
 import { useSettings } from './state/settingsStore';
 
@@ -89,7 +90,9 @@ export default function App() {
     */
     <main className={exercise ? 'shell' : undefined}>
       {Screen && !exercise && (
-        <button className="back" onClick={() => go('')}>&larr; Everything</button>
+        <button className="back" onClick={() => go(backFrom(route).route)}>
+          &larr; {backFrom(route).label}
+        </button>
       )}
       {exercise
         ? <PracticeScreen exerciseId={route} onSwitch={go} onBack={() => go('')} />

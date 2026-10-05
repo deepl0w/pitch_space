@@ -2,7 +2,8 @@
 import { StrictMode, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { RhythmPrompt, cursorAt } from './RhythmPrompt';
+import { RhythmPrompt } from './RhythmPrompt';
+import { cursorAt } from './cursor';
 import { midiOf } from '../../theory/pitch';
 import {
   RHYTHM_DEFAULTS, RHYTHM_PITCH, beatSeconds, generateRhythmExercise, leadInSeconds,

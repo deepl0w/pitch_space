@@ -45,6 +45,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0028](0028-a-question-only-absolute-pitch-can-answer.md) | A question only absolute pitch can answer is not a hard question | Accepted |
 | [0029](0029-a-prompt-is-a-component-and-may-use-one.md) | A prompt is a component, and may use one | Accepted |
 | [0030](0030-a-corpus-can-weight-the-catalogue-but-cannot-write-it.md) | A corpus can weight the catalogue, but cannot write it | Accepted |
+| [0031](0031-a-control-may-not-resolve-a-contradiction-it-is-still-displaying.md) | A control may not resolve a contradiction it is still displaying | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in

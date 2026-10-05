@@ -150,7 +150,14 @@ function vary(rng: Rng, contour: readonly (number | null)[], degree: number): (n
 export function planMotifs(rng: Rng, options: MotifOptions): MotifPlan {
   const ts: TimeSignature = options.timeSignature;
   const form = formFor(options.bars);
-  const labels = [...new Set(form.map(baseOf))];
+  /*
+    Deduplicated by scan rather than through a Set. The order of these
+    decides which ideas get generated when `ideas` asks for fewer than the
+    form names, so it is a musical choice — and ADR 0002 bars a Set from
+    making one. Insertion order happens to be what a Set would give; the
+    rule is that the code should not have to know that.
+  */
+  const labels = form.map(baseOf).filter((label, i, all) => all.indexOf(label) === i);
   const wanted = Math.max(1, Math.min(options.ideas ?? labels.length, labels.length));
   const used = labels.slice(0, wanted);
 

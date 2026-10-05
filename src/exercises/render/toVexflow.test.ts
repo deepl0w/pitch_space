@@ -287,3 +287,95 @@ describe('the ink every mark is drawn in', () => {
     for (const mark of off) expect(mark).toContain('rgb(200, 30, 30)');
   });
 });
+
+/**
+ * What `drawScore` reports about where it put things.
+ *
+ * The claim worth pinning is a *relation*, not a pixel. A golden x is a
+ * snapshot of whatever VexFlow's formatter did this week and breaks on an
+ * upgrade that moved every note by a point, which teaches nobody anything;
+ * the ordering survives that and is what anything drawn over the stave
+ * actually depends on.
+ *
+ * Returned rather than measured off the SVG, for the reason the type's own
+ * comment gives: querying the DOM for noteheads means trusting document
+ * order to match the spec, and a rest, a tuplet bracket or a beam adds
+ * elements that are not notes. So these assert the contract the caller is
+ * given, which is the thing a cursor is interpolating along.
+ */
+describe('where the engraver says it put the notes', () => {
+  const layoutOf = (spec: ScoreSpec) => drawScore(host(), spec, { width: 760 });
+
+  /** A line of plain quarter notes, long enough that spacing has to decide. */
+  const run = (count: number): ScoreSpec => ({
+    clef: 'treble',
+    notes: Array.from({ length: count }, (_, i) => ({
+      pitches: [parsePitch(['C4', 'E4', 'G4', 'B4', 'D5'][i % 5])],
+      value: noteValue('q'),
+    })),
+  });
+
+  it('reports one placement per note, in the order they were handed in', () => {
+    // Index rather than position in the array, so a caller can match without
+    // counting — and so this fails loudly if the two ever disagree.
+    for (const count of [1, 4, 8]) {
+      const layout = layoutOf(run(count));
+      expect(layout.notes, `${count} notes`).toHaveLength(count);
+      expect(layout.notes.map((n) => n.index)).toEqual([...Array(count).keys()]);
+    }
+  });
+
+  it('lays them out strictly left to right', () => {
+    // Strictly, not merely non-decreasing: two notes sharing an x would make
+    // a cursor between them ambiguous and a click on one of them a coin toss.
+    const xs = layoutOf(run(8)).notes.map((n) => n.x);
+    for (let i = 1; i < xs.length; i += 1) {
+      expect(xs[i], `note ${i} at ${xs[i]} is not right of note ${i - 1} at ${xs[i - 1]}`)
+        .toBeGreaterThan(xs[i - 1]);
+    }
+  });
+
+  it('puts every note on the stave it drew', () => {
+    // The first note starts after the clef, the key and the meter, which is
+    // what `notesStartX` is for; nothing may sit past the right edge.
+    const layout = layoutOf({ ...run(6), key: findKey('Eb_major'), timeSignature: timeSignature('4/4') });
+    for (const note of layout.notes) {
+      expect(note.x, `note ${note.index} starts left of the notes`)
+        .toBeGreaterThanOrEqual(layout.stave.notesStartX);
+      expect(note.x, `note ${note.index} runs off the stave`)
+        .toBeLessThanOrEqual(layout.stave.x + layout.stave.width);
+    }
+  });
+
+  it('describes a stave with height and width whatever is on it', () => {
+    // `top` and `bottom` are the outer lines, so a cursor spanning them needs
+    // them the right way round — and an empty score still has a stave.
+    for (const spec of [run(4), { clef: 'treble' as const, notes: [] }]) {
+      const { stave } = layoutOf(spec);
+      expect(stave.bottom).toBeGreaterThan(stave.top);
+      expect(stave.width).toBeGreaterThan(0);
+      expect(stave.notesStartX).toBeGreaterThanOrEqual(stave.x);
+    }
+  });
+
+  it('reports no placements for a score with no notes', () => {
+    expect(layoutOf({ clef: 'treble', notes: [] }).notes).toEqual([]);
+  });
+
+  it('still reports one per note when rests and beams add marks of their own', () => {
+    // The off-by-one the type's comment is about: eighth notes beam and rests
+    // draw, so the SVG holds more shapes than there are notes.
+    const spec: ScoreSpec = {
+      clef: 'treble',
+      notes: [
+        { pitches: [parsePitch('C4')], value: noteValue('8') },
+        { pitches: [], value: noteValue('8') },
+        { pitches: [parsePitch('E4')], value: noteValue('8') },
+        { pitches: [parsePitch('G4')], value: noteValue('8') },
+      ],
+    };
+    const layout = layoutOf(spec);
+    expect(layout.notes).toHaveLength(spec.notes.length);
+    expect(layout.notes.map((n) => n.index)).toEqual([0, 1, 2, 3]);
+  });
+});

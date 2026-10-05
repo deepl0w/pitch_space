@@ -196,6 +196,8 @@ describe('stopAll', () => {
 
   it('can be called twice without reopening anything', () => {
     synth.play(notes(2));
+    expect(soundingAfter(audioClock() + 0.1).length).toBeGreaterThan(0);
+
     synth.stopAll();
     synth.stopAll();
     expect(contextCount()).toBe(1);
@@ -269,6 +271,10 @@ describe('the first play, on a context that is still waking up', () => {
     synth.play(bar());
     await woken();
 
+    // The count first, because `missed` is a filter: a double that recorded
+    // no attacks at all reports none behind the clock, and the two readings
+    // are indistinguishable from the assertion alone.
+    expect(attackTimes()).toHaveLength(8);
     expect(missed()).toEqual([]);
   });
 
@@ -296,6 +302,7 @@ describe('the first play, on a context that is still waking up', () => {
     await woken();
 
     expect(audioClock()).toBe(0);
+    expect(attackTimes()).toHaveLength(8);
     expect(missed()).toEqual([]);
   });
 });
@@ -315,6 +322,23 @@ describe('a passage waiting on a cold context', () => {
     Array.from({ length: 8 }, (_, i) => ({ midi: 72, start: i * 0.268, duration: 0.24 }));
 
   it('never arrives if the screen went away while it was waking', async () => {
+    /*
+      The control runs first, and it has to be a whole passage rather than a
+      reading taken before `woken`. A deferred passage builds nothing until
+      the context wakes, so `oscillators()` is empty at every point before
+      that whether or not anything was cut — which makes the obvious control
+      the one reading that proves nothing.
+    */
+    suspendUntilResumed(0.2);
+    synth.play(bar());
+    await woken();
+    expect(oscillators().length, 'the bar sounds nothing even when it is left alone')
+      .toBeGreaterThan(0);
+
+    resetAudio();
+    installAudioContext();
+    synth = new Synth();
+
     suspendUntilResumed(0.2);
     synth.play(bar());
     synth.stopAll(); // the user navigates before a sample has played

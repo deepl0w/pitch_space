@@ -1,7 +1,8 @@
 import type { ComponentType } from 'react';
 import type { Voice } from '../audio/output/synth';
 import type { ScoreSpec } from './render/toVexflow';
-import { type Key, keyId, keyName } from '../theory/key';
+import type { Key } from '../theory/key';
+import { pitchName } from '../theory/pitch';
 
 /**
  * What an exercise type is, as a contract rather than as a convention.
@@ -344,31 +345,38 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
  * question looks like.
  */
 /**
- * Which keys an exercise may draw from, as a multi-select of key ids.
+ * Which tonics an exercise may build on, as a multi-select of note names.
  *
- * Shared because three exercises answer the same question and should not
- * answer it three ways. The semantics that matter:
+ * Tonics rather than keys, and that is the whole design. These exercises
+ * already have a **Modes** control, so offering "C major, C minor, D
+ * major, …" beside it lists every combination twice and — worse — leaves
+ * minor keys lit while the mode is major, where they change nothing. A
+ * chip that is on and has no effect is the defect this project keeps
+ * finding. Tonic and mode compose instead: twelve chips and two, rather
+ * than eighteen that half-contradict two.
  *
- * **Empty means every key the exercise would otherwise have used**, not
+ * **Empty means every tonic the exercise would otherwise have used**, not
  * none. A stored or hand-edited list can arrive empty and the generator
  * has to keep working; the panel never produces one, because it refuses
- * to unselect the last — a row of chips with none lit cannot say whether
- * it means everything or nothing.
+ * to unselect the last.
  *
  * **It narrows, it does not widen.** An exercise that only ever used keys
- * within four accidentals still does; choosing a key outside that range
- * selects nothing rather than reaching further than the exercise meant
- * to. The setting picks from what is askable, and what is askable is the
- * exercise's own business.
+ * within four accidentals still does, so asking for a tonic it cannot
+ * build that mode on selects nothing there rather than reaching further
+ * than the exercise meant to — and falls back rather than breaking,
+ * because "A♭, minor only" is a reasonable thing to click your way into
+ * and an empty pool is not an answer to it.
  */
 export function keysIn(
-  pool: readonly Key[], chosen: readonly string[],
+  pool: readonly Key[], chosenTonics: readonly string[],
 ): readonly Key[] {
-  if (chosen.length === 0) return pool;
-  const narrowed = pool.filter((k) => chosen.includes(keyId(k)));
-  // Falling back rather than throwing: a mode switch can leave a key list
-  // that names nothing in the new mode, and the honest response to "A
-  // minor, major only" is to ask a major key rather than to break.
+  if (chosenTonics.length === 0) return pool;
+  // The stored ids are prefixed; the prefix is stripped here rather than
+  // spelled at every call site. Bare names are accepted too, because a
+  // settings blob stored before the prefix existed is still a real thing
+  // a browser can hand back.
+  const wanted = new Set(chosenTonics.map((t) => t.replace(/^tonic:/, '')));
+  const narrowed = pool.filter((k) => wanted.has(pitchName(k.tonic, false)));
   return narrowed.length > 0 ? narrowed : pool;
 }
 
@@ -376,17 +384,25 @@ export function keysIn(
 export function keysField<S extends { keys: readonly string[] }>(
   pool: readonly Key[],
 ): SettingField<S> {
+  const tonics = [...new Set(pool.map((k) => pitchName(k.tonic, false)))];
   return {
     kind: 'multi',
     id: 'keys',
-    label: 'Keys',
-    options: pool.map((k) => ({ id: keyId(k), label: keyName(k) })),
-    // Stored empty means "all", but the panel must never show it that way:
-    // a row of chips with none lit cannot say whether it means everything
-    // or nothing, and the registry guard refuses a multi-select that
-    // starts with nothing selected. So the default reads as every key lit,
-    // which is also what it does.
-    selected: (s) => (s.keys.length ? s.keys : pool.map(keyId)),
+    label: 'Tonics',
+    /*
+      The id is prefixed and the label is the engraved note name. They have
+      to differ: the registry guard refuses an option labelled with its own
+      id, on the grounds that a label is for a reader and an id is for the
+      parser — and `F` would otherwise be both, while `Db` would be an id
+      shown to a musician who writes `D♭`.
+    */
+    options: tonics.map((t) => ({
+      id: `tonic:${t}`,
+      label: t.replace('b', '♭').replace('#', '♯'),
+    })),
+    // Stored empty means "all", and the panel must never show it that way:
+    // a row with none lit cannot say whether it means everything or nothing.
+    selected: (s) => (s.keys.length ? s.keys : tonics.map((t) => `tonic:${t}`)),
     apply: (s, options) => (options.length === 0 ? s : { ...s, keys: [...options] }),
   };
 }

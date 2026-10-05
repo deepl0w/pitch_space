@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { APP_RULES, customProperties, rulesFor } from '../testing/stylesheet';
 
 /**
  * The dark palette is written twice and the two copies must agree.
@@ -9,33 +9,40 @@ import { describe, expect, it } from 'vitest';
  * scopes, so the values are duplicated — and a duplication kept in step by
  * a comment is a constraint that cannot fail, which is the thing this
  * repository keeps finding. So it is kept in step by this instead.
+ *
+ * **What the defect actually looked like matters for what is asserted.**
+ * Choosing Dark set the attribute correctly and changed no colour, because
+ * the dark values existed only inside `@media (prefers-color-scheme: dark)`.
+ * Anything asserting on state would have passed; it was found by reading a
+ * computed background in a browser. So these ask what the stylesheet *says*
+ * rather than what the app *stores* — and, below, that what it says is
+ * different from the light palette, which is the half that agreement
+ * between two identical copies cannot give you.
  */
-const CSS = readFileSync(new URL('../index.css', import.meta.url).pathname, 'utf8');
 
-/** The custom properties a rule sets, as `name: value` in source order. */
-function declarationsOf(selector: string): string[] {
-  const code = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
-  const at = code.indexOf(selector);
-  if (at < 0) return [];
-  const open = code.indexOf('{', at);
-  const close = code.indexOf('}', open);
-  return [...code.slice(open + 1, close).matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)]
-    .map((m) => `${m[1]}: ${m[2].trim()}`);
+/** The custom properties a rule sets, wherever it sits. */
+function paletteOf(selector: string): Map<string, string> {
+  const bodies = selector.startsWith(':root:not')
+    // This one lives inside the colour-scheme query, so it is not a
+    // top-level rule and `rulesFor` will not see it.
+    ? APP_RULES.filter((r) => r.selectors.includes(selector)).map((r) => r.body)
+    : rulesFor(selector);
+  return customProperties(bodies.join(''));
 }
 
 describe('the dark palette', () => {
-  const bySystem = declarationsOf(':root:not([data-theme="light"])');
-  const byChoice = declarationsOf(':root[data-theme="dark"]');
+  const light = paletteOf(':root');
+  const bySystem = paletteOf(':root:not([data-theme="light"])');
+  const byChoice = paletteOf(':root[data-theme="dark"]');
 
-  it('is actually declared in both places, or this test proves nothing', () => {
-    expect(bySystem.length, 'the system-preference block').toBeGreaterThan(5);
-    expect(byChoice.length, 'the chosen-dark block').toBeGreaterThan(5);
+  it('is actually declared in all three places, or this test proves nothing', () => {
+    expect(light.size, 'the light palette').toBeGreaterThan(5);
+    expect(bySystem.size, 'the system-preference block').toBeGreaterThan(5);
+    expect(byChoice.size, 'the chosen-dark block').toBeGreaterThan(5);
   });
 
-  it('sets the same properties to the same values in both', () => {
-    // Order included: if they diverge, saying so by position is a clearer
-    // failure than a set comparison that reports only membership.
-    expect(byChoice).toEqual(bySystem);
+  it('sets the same properties to the same values in both dark blocks', () => {
+    expect([...byChoice.entries()]).toEqual([...bySystem.entries()]);
   });
 
   it('overrides every colour the light palette defines', () => {
@@ -46,9 +53,28 @@ describe('the dark palette', () => {
       the ledger-line bug looked, and it is invisible until someone opens
       the screen it is on.
     */
-    const light = declarationsOf(':root {').map((d) => d.split(':')[0]);
-    expect(light.length).toBeGreaterThan(5);
-    const dark = byChoice.map((d) => d.split(':')[0]);
-    expect([...light].sort()).toEqual([...dark].sort());
+    expect([...byChoice.keys()].sort()).toEqual([...light.keys()].sort());
+  });
+
+  it('is actually dark, rather than a second copy of the light one', () => {
+    /*
+      The hole the three cases above leave, and it is the shape of the
+      defect they were written for.
+
+      They say the two dark blocks agree with each other and name the same
+      properties as light. Replace every dark value with its light value
+      and all three still pass — the blocks agree, the names match, and
+      choosing Dark changes no colour at all, which is exactly what was
+      just fixed. Agreement between two copies says nothing about what the
+      copies contain.
+
+      Every property, not most: a palette where one colour happened to suit
+      both themes would be a deliberate choice worth writing down here,
+      rather than something to leave as slack the next identical value can
+      hide in.
+    */
+    for (const [name, value] of light) {
+      expect(byChoice.get(name), `${name} is the same in both themes`).not.toBe(value);
+    }
   });
 });

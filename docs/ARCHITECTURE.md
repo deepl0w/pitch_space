@@ -132,9 +132,10 @@ is where every claim an exercise makes actually sits.
 ## The exercise contract
 
 [`src/exercises/types.ts`](../src/exercises/types.ts) says what an exercise type
-is, as a contract rather than a convention. There will be six — sight reading,
-note identification, rhythm, chord, chord progression, scale — and the intent
-is that the sixth costs almost nothing.
+is, as a contract rather than a convention. Six exist — note identification,
+chord progression, key, chord, scale and rhythm — and sight reading is the one
+in the brief still unwritten. The intent was that the sixth cost almost
+nothing, and it did.
 
 The seams it defines:
 
@@ -145,12 +146,30 @@ The seams it defines:
 | `settings.fields` | A *description* of the settings, so one generic panel serves every type |
 | `settings.coerce` | Total function from `unknown`, because stored settings outlive the release that wrote them |
 | `Prompt` | The only per-exercise component; handed audio rather than reaching for it |
-| `questionScore` / `answerScore` | Engraving stays on the definition so `exercises/` never imports `ui/` |
+| `questionScore` / `answerScore` | Engraving stays on the definition, so the parts of an exercise that are not components never import `ui/` |
+| `items(settings)` | Everything these settings make askable, which the scheduler needs and the attempt log cannot supply |
 
 The last one is load-bearing for [ADR 0003](adr/0003-one-importer-for-the-notation-library.md).
 A prompt that rendered its own stave would make `exercises/` import `ui/` import
 `exercises/render/`, and the containment is easiest to keep while that arrow
 points one way.
+
+**One exercise draws its own staves, and the rule is narrower than it looks.**
+Rhythm identification sets `promptDrawsScores`, so the screen draws neither
+stave and hands both specs down; its prompt needs the stave to *move*, with a
+cursor on the audio clock and the notes coloured by how they were played. That
+prompt imports `Score`, so `exercises/` does reach into `ui/` in exactly one
+place. [ADR 0029](adr/0029-a-prompt-is-a-component-and-may-use-one.md) settles
+it: the rule that matters is that an exercise's **non-component** code —
+`generate`, `grade`, the settings schema, `items` — stays free of the UI, which
+is what keeps it testable with no DOM. A `Prompt` was always a component.
+
+The engraver reports where it put each note, as a `ScoreLayout`, rather than
+letting the UI measure the drawn SVG. 0029 has the argument; the short version
+is that counting noteheads in the DOM goes off by one the first time a rest or
+a tuplet bracket adds an element, and that it would put VexFlow-shaped
+knowledge in `ui/` **while importing nothing**, so ADR 0003's guard would keep
+passing as the containment it exists for eroded.
 
 That containment pays for itself twice. It was written so the renderer stays
 replaceable; it also turns out to be what makes VexFlow's weight removable from
@@ -363,16 +382,32 @@ settings-gated rather than unreachable.
 
 ## What is not built
 
-- **Nothing captures audio.** `audio/dsp/` is complete and unused; there is no
-  microphone, worklet or capture layer, so no exercise is yet answered by
-  playing it.
-- **Four of six exercise types.** Sight reading, note identification, rhythm,
-  chord, progression and scale are listed in the menu as planned; two exist.
-- **Spaced repetition.** Designed in [`docs/ROADMAP.md`](ROADMAP.md), with the
-  seam it attaches to already in place — `grade` returns outcomes rather than a
-  score precisely so the scheduler has somewhere to attach.
-- **The shipping targets.** `CLAUDE.md` describes a PWA and an Android APK.
-  `vite-plugin-pwa` is a declared dependency that `vite.config.ts` never
-  imports, and the `android:*` npm scripts invoke `npx cap` with no Capacitor
-  dependency, no `capacitor.config.*` and no `android/` directory. Today the
-  app builds as neither.
+**This is the section that rots, and it rots silently.** Building something
+does not prompt anyone to delete its entry here, where a claim about what
+*exists* is contradicted the moment a reader opens the file it describes. On
+5 October three of its four entries were false and had been for days. Check
+this list against the tree before trusting it, and prefer a command to a
+sentence:
+
+```bash
+grep -n "    id: '" src/exercises/registry.ts   # the exercise types that exist
+ls src/audio/capture/                           # what the capture layer holds
+```
+
+- **No exercise is answered by playing it.** This is the one that still
+  stands, and it is the gap between the app and its own description. The
+  analysis chain in `audio/dsp/` is complete and nothing feeds it: `capture/`
+  holds `measureLatency.ts` and nothing else, so the only microphone use in
+  the app is the calibration step, which grades nothing. There is no worklet
+  and no analysis worker.
+- **Six exercise types exist**, which the menu no longer overstates —
+  note identification, chord progression, key, chord, scale and rhythm.
+  Sight reading is the one named in the brief that has no exercise.
+- **Spaced repetition is built and not wired.**
+  [`src/state/schedule.ts`](../src/state/schedule.ts) is pure with its clock
+  injected, and takes `items(settings)` from the exercise contract as its
+  denominator. Nothing in the UI calls it yet, so no user sees a due count.
+- **The Android target.** `CLAUDE.md` describes a PWA and an Android APK. The
+  PWA half now exists — `vite.config.ts` imports and configures `VitePWA`. The
+  APK does not: the `android:*` scripts invoke `npx cap` with no Capacitor
+  dependency, no `capacitor.config.*` and no `android/` directory.

@@ -69,9 +69,19 @@ export const EXERCISE_MENU: readonly MenuEntry[] = [
 ];
 
 /**
- * Not an exercise and not a reference, so it gets its own list rather than
- * being wedged into one of theirs. One entry today; the shape is here so the
- * next thing that is neither does not have to invent it.
+ * Not an exercise and not a reference — and no longer drawn on the home
+ * screen at all.
+ *
+ * These two were cards under a "Setup" heading, which offered the same
+ * destination twice: Settings links to calibration and names it in its own
+ * blurb. Settings is now a cog in the home header and calibration is reached
+ * from inside it, so this list is no longer a menu. It stays because
+ * `entryFor` is where both screens read their own title and lede, which is
+ * what keeps a heading from drifting away from the thing that opened it.
+ *
+ * So adding an entry here does *not* put it on screen. Whatever route it
+ * names has to be reachable from somewhere, or it is a screen with a title
+ * and no door.
  */
 export const SETUP_MENU: readonly MenuEntry[] = [
   {

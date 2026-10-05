@@ -22,7 +22,7 @@ export const rhythmIdentification = defineExercise<
   id: RHYTHM_EXERCISE_ID,
   name: 'Rhythm',
   description: 'Read or hear a rhythm, then play it back in time.',
-  presentations: ['listen', 'read'],
+  presentations: ['read'],
   settings: rhythmSettingsSchema,
   generate: generateRhythmExercise,
   items: rhythmItems,

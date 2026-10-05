@@ -9,7 +9,6 @@ import type { ScoreNote, ScoreSpec } from '../render/toVexflow';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
-import { presentationField } from '../types';
 
 /**
  * Read or hear a rhythm, then play it back in time.
@@ -84,9 +83,18 @@ export interface RhythmResponse {
 }
 
 export const RHYTHM_DEFAULTS: RhythmSettings = {
-  // Nothing to read until it is answered, so listening is the default and
-  // reading is the harder way round.
-  presentation: 'listen',
+  /*
+    Read, and only read. Listening was offered until it was tried as a
+    learner rather than as a test: it played a rhythm, took your taps and
+    told you "you were behind the beat", and never drew the rhythm at any
+    point — not while you answered, not after. There was nothing to learn
+    from, because the thing you got wrong was never shown to you.
+
+    Hearing a rhythm and playing it back is a real skill and this is not a
+    judgement on it. It needs the notation revealed against your attempt to
+    be worth practising, and that is a different exercise from this one.
+  */
+  presentation: 'read',
   meter: '4/4',
   bars: 2,
   tempo: 84,
@@ -374,8 +382,8 @@ export function rhythmScoreSpec(exercise: RhythmExercise): ScoreSpec {
   return { notes, clef: 'treble', timeSignature: timeSignature(exercise.meter) };
 }
 
-export function rhythmQuestionSpec(exercise: RhythmExercise): ScoreSpec | null {
-  return exercise.presentation === 'read' ? rhythmScoreSpec(exercise) : null;
+export function rhythmQuestionSpec(exercise: RhythmExercise): ScoreSpec {
+  return rhythmScoreSpec(exercise);
 }
 
 function coerceNumber(value: unknown, allowed: readonly number[], fallback: number): number {
@@ -386,7 +394,8 @@ function coerceNumber(value: unknown, allowed: readonly number[], fallback: numb
 export function coerceRhythmSettings(stored: unknown): RhythmSettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Record<string, unknown>;
   return {
-    presentation: raw.presentation === 'read' ? 'read' : 'listen',
+    // Only one presentation exists; a stored 'listen' is from before it went.
+    presentation: 'read',
     meter: METER_CHOICES.includes(raw.meter as string)
       ? raw.meter as string : RHYTHM_DEFAULTS.meter,
     bars: coerceNumber(raw.bars, BAR_CHOICES, RHYTHM_DEFAULTS.bars),
@@ -403,7 +412,6 @@ export const rhythmSettingsSchema: SettingsSchema<RhythmSettings> = {
   defaults: RHYTHM_DEFAULTS,
   coerce: coerceRhythmSettings,
   fields: [
-    presentationField(),
     {
       kind: 'choice', id: 'meter', label: 'Metre',
       options: METER_CHOICES.map((id) => ({ id, label: id })),

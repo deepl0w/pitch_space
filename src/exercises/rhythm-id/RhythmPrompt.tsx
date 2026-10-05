@@ -51,33 +51,29 @@ export function RhythmPrompt({
   const [phase, setPhase] = useState<Phase>('ready');
   const [taps, setTaps] = useState<number[]>([]);
   const startedAt = useRef<number | null>(null);
-  const reading = exercise.presentation === 'read';
   const answered = result !== null;
 
   const lead = leadInSeconds(exercise);
   const total = lead + (exercise.onsets[exercise.onsets.length - 1] ?? 0);
 
-  /** Hear the rhythm. Reading plays the count-in only — the staff is the question. */
+  /*
+    The count-in, on its own. The rhythm is on the staff, so sounding it
+    would answer the question rather than ask it; what a player needs
+    before tapping is the tempo, and that is what the clicks carry.
+
+    Held for the count-in and not for the whole question. It used to wait
+    `total`, the length of a rhythm it was not playing — about nine
+    seconds at 84bpm over two bars against roughly three of clicks — so
+    the controls stayed disabled and the button went on reading "Playing…"
+    for six seconds after the last sound. A label that outlasts the thing
+    it describes is worse than no label, because it is the one piece of
+    evidence the page is still working.
+  */
   function listen() {
     setPhase('listening');
-    audio.play(rhythmVoices(exercise, { silent: reading }));
-    window.setTimeout(() => setPhase('ready'), (total + SETTLE) * 1000);
+    audio.play(rhythmVoices(exercise, { silent: true }));
+    window.setTimeout(() => setPhase('ready'), (lead + SETTLE) * 1000);
   }
-
-  /*
-    Heard once on arrival, like every other listening exercise. A rhythm
-    exercise that waits to be asked is a screen that looks like it has
-    not loaded — and the question is the sound, so playing it is what
-    putting the question means.
-  */
-  const autoplayed = useRef(false);
-  useEffect(() => {
-    if (reading || autoplayed.current) return;
-    autoplayed.current = true;
-    listen();
-    // Mount only; the exercise cannot change without a remount (ADR 0015).
-    // oxlint-disable-next-line exhaustive-deps
-  }, []);
 
   /** Count in, then take taps. The count-in is what gives the answer a tempo. */
   function begin() {
@@ -132,9 +128,7 @@ export function RhythmPrompt({
   return (
     <div className="prompt">
       <p className="question">
-        {reading
-          ? <>Read it, then play it back in time.</>
-          : <>Listen, then play it back in time.</>}
+        Read it, then play it back in time.
       </p>
 
       <div className="actions">
@@ -157,7 +151,7 @@ export function RhythmPrompt({
           seconds a two-bar question takes at 84bpm.
         */}
         <button type="button" onClick={listen} disabled={phase !== 'ready' || answered}>
-          {phase === 'listening' ? 'Playing…' : reading ? 'Count me in' : 'Play it again'}
+          {phase === 'listening' ? 'Counting you in…' : 'Count me in'}
         </button>
         <button type="button" onClick={begin} disabled={phase !== 'ready' || answered}>
           {phase === 'tapping' ? 'Listening for taps…' : 'Tap it back'}

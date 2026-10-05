@@ -111,65 +111,90 @@ function arrive(ex: RhythmExercise) {
 }
 
 describe('putting the question', () => {
-  it('sounds it once, unasked, when it is to be heard', () => {
+  it('plays nothing on arrival, because the question is on the staff', () => {
+    /*
+      It used to sound the rhythm unasked, which was right while there was
+      a listening mode and is the answer now that there is not. The staff
+      carries the question; playing it would read the answer out.
+    */
     render(exercise());
-    expect(audio.plays).toHaveLength(1);
-    expect(audio.plays[0].length).toBeGreaterThan(0);
-  });
-
-  it('sounds it once under a double mount, not twice over itself', () => {
-    render(exercise(), { strict: true });
-    expect(audio.plays).toHaveLength(1);
-  });
-
-  it('sounds only the count-in when the rhythm is on the staff', () => {
-    // Playing the notes would answer a reading question.
-    const ex = exercise({ presentation: 'read' });
-    render(ex);
     expect(audio.plays).toEqual([]);
+  });
+
+  it('still plays nothing under a double mount', () => {
+    // The autoplay this guarded is gone. Kept pointed the other way: a
+    // StrictMode remount must not find some other path to the speaker.
+    render(exercise(), { strict: true });
+    expect(audio.plays).toEqual([]);
+  });
+
+  it('sounds the count-in, and only the count-in, when asked', () => {
+    const ex = exercise();
+    render(ex);
     click(hear());
-    const heard = audio.plays[0];
-    expect(heard.length).toBe(ex.countInBeats);
+    expect(audio.plays).toHaveLength(1);
+    expect(audio.plays[0].length).toBe(ex.countInBeats);
   });
 });
 
 describe('what the controls say while they wait', () => {
-  it('never goes quiet for the whole nine seconds it is busy', () => {
+  it('names what is happening for every instant the controls are disabled', () => {
     /*
-      The defect, stated as the property it actually violated. A two-bar
-      question at 84bpm takes about nine seconds, and for all of it every
-      control was disabled and still wore its idle label — from the user's
-      side, a page that had stopped.
+      The defect this came from, stated as the property it violated: for
+      the whole wait every control was disabled and still wore its idle
+      label, which from the player's side is a page that has stopped.
 
-      What the fix gives is one control that names the state, not two: while
-      the rhythm sounds, the hear button reads "Playing…" and the answer
-      button is simply unavailable, which is legible because the thing
-      beside it says why. So the property is that *something* on screen
-      names what is happening at every instant of the wait — asserted across
-      the whole duration, because the gap was the duration and not a moment
-      in it.
+      Asserted across the whole duration rather than at a moment in it,
+      because the gap was the duration.
     */
-    const IDLE = ['Play it again', 'Tap it back', 'Count me in'];
+    const IDLE = ['Count me in', 'Tap it back'];
     const ex = exercise();
     render(ex);
-    const total = leadInSeconds(ex) + (ex.onsets[ex.onsets.length - 1] ?? 0);
-    for (let elapsed = 0; elapsed < total; elapsed += 0.5) {
+    click(hear());
+    const lead = leadInSeconds(ex);
+    for (let elapsed = 0; elapsed < lead; elapsed += 0.25) {
       const speaks = buttons().some((b) => !IDLE.includes(b.textContent?.trim() ?? ''));
-      expect(speaks, `nothing on screen said what was happening at ${elapsed.toFixed(1)}s`)
-        .toBe(true);
-      advance(0.5);
+      expect(speaks, `nothing said what was happening at ${elapsed.toFixed(2)}s`).toBe(true);
+      advance(0.25);
     }
   });
 
-  it('says it is playing, and offers the question again once it has stopped', () => {
+  it('holds the controls for the count-in, not for the rhythm it is not playing', () => {
+    /*
+      The count-in is about three seconds at 84bpm and the rhythm it
+      precedes is about nine. The wait was written against the rhythm, so
+      the buttons stayed disabled and the label went on reading that it
+      was playing for six seconds after the last click — the single piece
+      of evidence the page was alive, outlasting the thing it described.
+
+      Pinned as the relationship rather than as a number: the wait tracks
+      the count-in, and is nowhere near the whole question.
+    */
+    const ex = exercise();
+    const lead = leadInSeconds(ex);
+    const whole = lead + ex.onsets[ex.onsets.length - 1];
+    expect(whole, 'the two spans are too close for this to prove anything')
+      .toBeGreaterThan(lead * 2);
+
+    render(ex);
+    click(hear());
+    expect(hear().disabled).toBe(true);
+
+    advance(lead + 1);
+    expect(hear().disabled, 'still held after the count-in finished').toBe(false);
+    expect(labelled('Count me in')).toBeDefined();
+  });
+
+  it('says it is counting, and offers the count-in again once it has stopped', () => {
     const ex = exercise();
     render(ex);
-    expect(labelled('Playing…')).toBeDefined();
+    click(hear());
+    expect(labelled('Counting you in…')).toBeDefined();
     expect(hear().disabled).toBe(true);
     expect(answer().disabled).toBe(true);
 
-    arrive(ex);
-    expect(labelled('Play it again')).toBeDefined();
+    advance(leadInSeconds(ex) + 1);
+    expect(labelled('Count me in')).toBeDefined();
     expect(hear().disabled).toBe(false);
     expect(answer().disabled).toBe(false);
   });

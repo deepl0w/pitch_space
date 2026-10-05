@@ -327,6 +327,12 @@ length and for the right reason. Finding whole-phrase forms needs
 repeated-sequence mining at phrase length, which is harder than parsing the
 corpora.
 
+That argument is now a decision rather than a survey note:
+[ADR 0030](adr/0030-a-corpus-can-weight-the-catalogue-but-cannot-write-it.md)
+settles that a corpus may set weights and may not add or remove entries, with
+rhythm cells as the stated exception. The rest of this section is the plan it
+constrains.
+
 So the first phase is **measuring the hand-written catalogue rather than
 replacing it**: is the royal road really a thing in 1960s pop, does the axis
 dominate rock the way the comment asserts, and which templates are flat

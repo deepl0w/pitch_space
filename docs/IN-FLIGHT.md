@@ -110,12 +110,23 @@ root would pass the contract and be a worse exercise.
 subject.** The user has now raised this four times and asked directly that
 process be informed.
 
-**The structural fact.** `SendMessage` reaches a session only while it is
-registered in `ListAgents`. A suspended role is absent from that list, and
-a message to its last known name is refused — measured again just now:
-`intelligent-hypatia-c5ce53-ec` returns *"No agent named … is reachable"*.
-So at any moment main can deliver to whichever roles happen to be awake,
-and **"the fleet has been told" is not a property main can establish.**
+**The rule to design against, which the user stated and main had been
+quietly inverting:** every role session is present. If main cannot reach
+one, that is main's mistake, not the role's absence. Main had been
+reporting roles as gone on the evidence of an empty `ListAgents` row,
+which is a reading about addressability and not about existence.
+
+**What is observed.** `SendMessage` succeeds only for names currently in
+`ListAgents`; a last-known name is refused — measured: for
+`intelligent-hypatia-c5ce53-ec`, *"No agent named … is reachable"*. Three
+roles have been unlisted for the last stretch of this session while being,
+on the user's account, present throughout. **Main does not know the
+mechanism**, and that is the gap: there is no way from here to distinguish
+"wrong name", "not registered right now" and "something about how these
+sessions attach", so main cannot tell a fixable error from a wait.
+
+The consequence either way is the same and is the thing worth fixing:
+**"the fleet has been told" is not a property main can establish.**
 `announce --done` records that main tried, which is a different claim, and
 the gap between the two is where every one of the following sits.
 

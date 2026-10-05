@@ -165,14 +165,33 @@ the agents informed is main's job and it does not get delegated upwards —
 if the user has to carry a message, the protocol has failed, not succeeded
 by another route.
 
-So when a role will not take a message, there is nothing to hand anyone.
-The repository is the other channel and it already works: `fleet.sh brief`
-runs at every session start and prints the subject lines of whatever landed
-while that worktree was away, so a session that was never messaged begins
-its standing review from the brief alone. An unreachable role is a
-suspended one, it will be caught up by `brief` when it wakes, and main
-messages it then. Record the announcement, say in one line to the user
-which roles could not be reached, and carry on.
+**Every role is present. If main cannot reach one, that is main's
+mistake and not a fact about the fleet.** The user has said so directly,
+and it is the rule to work from rather than a reassurance: the sessions
+are permanent and standing, so "the architect is not there" is never the
+finding. The finding is that main looked in the wrong place, used an
+expired name, or read a listing taken at the wrong moment.
+
+This matters because the wrong conclusion is comfortable. An absent row
+licenses main to do nothing and still feel it has done its job — and
+three of the four shapes this mistake has taken ended there. So:
+
+- **Never report a role as absent**, to the user or in a document. Say
+  main could not reach it, which is the thing actually observed.
+- **Never let unreachability close the matter.** Re-read `ListAgents` at
+  the moment of sending, not earlier in the turn. A name from before is
+  expired. If a send is refused, that is a prompt to look again rather
+  than a result.
+- **Never hand the problem upwards.** The user is not the fallback.
+
+The repository carries what a message would have carried, and it carries
+it to every worktree regardless of who was awake: `fleet.sh brief` prints
+at every session start what landed while that worktree was away, and
+`docs/IN-FLIGHT.md` is how main says what it wants looked at. Use both —
+not as a substitute for messaging, which is still main's job, but because
+a delivery that depends on timing is not a delivery the protocol can
+rely on. **What is missing is anything that makes `announce` itself use
+that channel**; `docs/IN-FLIGHT.md` carries the argument for process.
 
 **`docs/IN-FLIGHT.md` says what is coming, the same way `announce` says what
 came.** Before architect or feature starts something that will change an

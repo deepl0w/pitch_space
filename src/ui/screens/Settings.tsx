@@ -90,12 +90,15 @@ export function Settings({ go }: { go(route: string): void }) {
             against what you played. Currently: <strong>{latency}</strong>.
           </p>
         </Field>
+        {/* Inside the panel it belongs to: it sat outside, so the one
+            control on this screen that opens another one floated between
+            two cards and read as belonging to neither. */}
+        <div className="actions">
+          <button type="button" onClick={() => go('calibration')}>
+            Measure the delay
+          </button>
+        </div>
       </Panel>
-      <div className="actions">
-        <button type="button" onClick={() => go('calibration')}>
-          Measure the delay
-        </button>
-      </div>
 
       <Panel>
         <Field label="Instrument">

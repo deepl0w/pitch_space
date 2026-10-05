@@ -1,7 +1,5 @@
 import { makeRng, pick } from '../../theory/rng';
-import { ALL_KEYS, type Key, type Mode, keyId, keyName, keyPitches, relativeKey, signatureLetters } from '../../theory/key';
-import type { Pitch } from '../../theory/pitch';
-import { noteValue } from '../../theory/meter';
+import { ALL_KEYS, type Key, type Mode, keyId, keyName, relativeKey, signatureLetters } from '../../theory/key';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
@@ -22,26 +20,21 @@ export const KEY_EXERCISE_ID = 'key-id';
 
 export const CLEFS: readonly Clef[] = ['treble', 'bass', 'alto', 'tenor'];
 
-/**
- * Where the evidence for the key comes from.
- *
- * Three genuinely different skills wearing one name. Reading a signature is
- * counting sharps. Inferring a key from the accidentals written into the
- * notes is what you do with music that has no signature, or has modulated
- * away from the one it prints. Hearing the key is neither — it is finding the
- * tonic by ear, and a musician can be fluent at the first two and lost at the
- * third.
- */
-/**
- * What the key is read off. There is no heard source, and that is a
- * decision rather than an omission — see {@link KEY_DEFAULTS}.
- */
-export type KeySource = 'signature' | 'accidentals';
+/*
+  This exercise reads a key signature and names the key. It had two other
+  sources and has shed both.
 
-export const KEY_SOURCE_LABELS: Record<KeySource, string> = {
-  signature: 'From the key signature',
-  accidentals: 'From the notes, with no signature',
-};
+  Hearing the key went first: with no reference pitch it asks for absolute
+  pitch and nothing else (ADR 0028).
+
+  Inferring the key from accidentals written into the notes, with the
+  signature withheld, went second. It is a real skill — it is what you do
+  with music that has modulated away from the signature it prints — but
+  what this exercise drew was a plain ascending scale, which does not pose
+  that question. Naming the key of a written-out scale is reading the scale,
+  and the answer is its first note. Offering it beside the signature reading
+  implied two skills where the app only ever exercised one.
+*/
 
 export interface KeySettings extends BaseSettings {
   /** How far round the circle to go: 0 is C major alone, 7 is all fifteen. */
@@ -49,7 +42,6 @@ export interface KeySettings extends BaseSettings {
   /** Which modes may be asked about. */
   modes: readonly Mode[];
   clefs: readonly Clef[];
-  readSource: KeySource;
 }
 
 export interface KeyExercise extends ExerciseBase {
@@ -57,11 +49,8 @@ export interface KeyExercise extends ExerciseBase {
   readonly keyId: string;
   readonly mode: Mode;
   readonly clef: Clef;
-  readonly source: KeySource;
   /** Every key of the asked-for mode within the accidental limit, as answer options. */
   readonly choices: readonly string[];
-  /** The notes shown or sounded, spelled. Empty when the signature is the question. */
-  readonly pitches: readonly Pitch[];
 }
 
 export interface KeyResponse {
@@ -108,7 +97,6 @@ export const KEY_DEFAULTS: KeySettings = {
   presentation: 'read',
   modes: ['major'],
   clefs: ['treble'],
-  readSource: 'signature',
 };
 
 /** Keys askable within the limit, in circle-of-fifths order. */
@@ -116,11 +104,6 @@ export function keyPool(settings: KeySettings, mode: Mode): Key[] {
   return ALL_KEYS
     .filter((k) => k.mode === mode && Math.abs(k.accidentals) <= settings.maxAccidentals)
     .sort((a, b) => a.accidentals - b.accidentals);
-}
-
-/** The scale of the key, which is where its accidentals are visible. */
-function scaleFor(key: Key): Pitch[] {
-  return keyPitches({ ...key, tonic: { ...key.tonic, octave: 4 } });
 }
 
 /**
@@ -154,7 +137,6 @@ export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
   const mode = pick(rng, modes);
   const clef = pick(rng, clefs);
 
-  const source: KeySource = spec.settings.readSource;
   // Six flats and six sharps are different signatures and telling them
   // apart is the skill, so nothing collapses here.
   const pool = keyPool(spec.settings, mode);
@@ -168,8 +150,6 @@ export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
     `signature:${key.accidentals}` as ItemId,
   ];
 
-  const pitches = source === 'signature' ? [] : scaleFor(key);
-
   return {
     type: KEY_EXERCISE_ID,
     seed: spec.seed,
@@ -178,9 +158,7 @@ export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
     keyId: keyId(key),
     mode,
     clef,
-    source,
     choices: pool.map(keyId),
-    pitches,
   };
 }
 
@@ -212,14 +190,7 @@ export function gradeKey(exercise: KeyExercise, response: KeyResponse): Result {
  */
 export function keyScoreSpec(exercise: KeyExercise): ScoreSpec {
   const key = ALL_KEYS.find((k) => keyId(k) === exercise.keyId)!;
-  if (exercise.source === 'signature') return { notes: [], clef: exercise.clef, key };
-  // No signature on purpose when the notes are the question: finding the
-  // key from the accidentals *is* the question, and printing the signature
-  // would answer it.
-  return {
-    notes: exercise.pitches.map((p) => ({ pitches: [p], value: noteValue('q') })),
-    clef: exercise.clef,
-  };
+  return { notes: [], clef: exercise.clef, key };
 }
 
 /** What the question itself shows, which is the whole of it here. */
@@ -250,7 +221,6 @@ export function coerceKeySettings(stored: unknown): KeySettings {
     presentation: 'read',
     modes: coerceModes(raw.modes),
     clefs: coerceClefs(raw.clefs),
-    readSource: raw.readSource === 'accidentals' ? 'accidentals' : 'signature',
   };
 }
 
@@ -281,23 +251,12 @@ export const keySettingsSchema: SettingsSchema<KeySettings> = {
   coerce: coerceKeySettings,
   fields: [
     /*
-      No mode control. Key identification is a reading exercise and
-      nothing else now — see the note on `KEY_DEFAULTS`. A choice with
-      one option cannot change the question, which is the rule this app
-      already applies to an inert field.
+      No presentation control and no source control. Both were choices
+      between one real option and one that should not have been offered,
+      and a choice with one option cannot change the question — the rule
+      this app already applies to an inert field. The note at the top of
+      this file says what each of them was and why it went.
     */
-    {
-      kind: 'choice', id: 'readSource', label: 'Read from',
-      options: [
-        { id: 'signature', label: 'The key signature' },
-        { id: 'accidentals', label: 'The notes, no signature' },
-      ],
-      selected: (s) => s.readSource,
-      apply: (s, option) => ({
-        ...s,
-        readSource: option === 'accidentals' ? 'accidentals' : 'signature',
-      }),
-    },
     {
       kind: 'choice', id: 'maxAccidentals', label: 'Up to how many accidentals',
       options: ACCIDENTAL_CHOICES.map((n) => ({ id: String(n), label: accidentalLabel(n) })),

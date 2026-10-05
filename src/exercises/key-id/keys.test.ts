@@ -62,15 +62,13 @@ describe('the mode this exercise does not have', () => {
     // default, because that is where it hid.
     for (const mode of MODES) {
       for (const maxAccidentals of LIMITS) {
-        for (const readSource of ['signature', 'accidentals'] as const) {
-          const settings = read({ modes: [mode], maxAccidentals, readSource });
-          for (let seed = 0; seed < 40; seed += 1) {
-            const exercise = generateKey({ seed, settings });
-            expect(
-              keyIdentification.questionScore?.(exercise),
-              `${mode} ${maxAccidentals} ${readSource} seed ${seed}`,
-            ).not.toBeNull();
-          }
+        const settings = read({ modes: [mode], maxAccidentals });
+        for (let seed = 0; seed < 40; seed += 1) {
+          const exercise = generateKey({ seed, settings });
+          expect(
+            keyIdentification.questionScore?.(exercise),
+            `${mode} ${maxAccidentals} seed ${seed}`,
+          ).not.toBeNull();
         }
       }
     }
@@ -91,13 +89,11 @@ describe('the mode this exercise does not have', () => {
 
 describe('a question asked by eye', () => {
   it('still records the signature, which is what it showed', () => {
-    for (const readSource of ['signature', 'accidentals'] as const) {
-      const ex = generateKey({ seed: 11, settings: read({ readSource }) });
-      const result = gradeKey(ex, { keyId: ex.keyId });
-      const key = ALL_KEYS.find((k) => keyId(k) === ex.keyId)!;
-      expect(result.outcomes.map((o) => o.item))
-        .toEqual([`key:${ex.keyId}`, `signature:${key.accidentals}`]);
-    }
+    const ex = generateKey({ seed: 11, settings: read() });
+    const result = gradeKey(ex, { keyId: ex.keyId });
+    const key = ALL_KEYS.find((k) => keyId(k) === ex.keyId)!;
+    expect(result.outcomes.map((o) => o.item))
+      .toEqual([`key:${ex.keyId}`, `signature:${key.accidentals}`]);
   });
 
   it('still tells the reader what the signature was', () => {

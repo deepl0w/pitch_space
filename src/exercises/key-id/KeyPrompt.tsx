@@ -25,9 +25,7 @@ export function KeyPrompt({
   return (
     <div className="prompt">
       <p className="question">
-        {exercise.source === 'signature'
-          ? <>Which <strong>{exercise.mode}</strong> key has this signature?</>
-          : <>These notes are a <strong>{exercise.mode}</strong> scale. Which key?</>}
+        Which <strong>{exercise.mode}</strong> key has this signature?
       </p>
 
       <div className="choices">

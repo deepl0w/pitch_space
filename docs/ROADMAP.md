@@ -17,6 +17,10 @@ it ships or is dropped.
 - [Importing sheet music](#importing-sheet-music)
   - [What a score is for, once it is in](#what-a-score-is-for-once-it-is-in)
   - [The parts that will actually be hard](#the-parts-that-will-actually-be-hard)
+- [Learning the catalogues from real music](#learning-the-catalogues-from-real-music)
+  - [Practising on a song you chose](#practising-on-a-song-you-chose)
+  - [A workbench for the corpus, once there is one](#a-workbench-for-the-corpus-once-there-is-one)
+  - [Recordings to go with them](#recordings-to-go-with-them)
 - [A settings screen](#a-settings-screen)
 - [Taking your progress with you](#taking-your-progress-with-you)
 - [Bringing your own material](#bringing-your-own-material)
@@ -264,6 +268,168 @@ What a believable version needs, from those three:
 Until then `src/state/schedule.ts` has no production caller, which is
 the honest state and recorded in `docs/IN-FLIGHT.md` rather than hidden
 behind a surface that said the wrong thing.
+
+## Learning the catalogues from real music
+
+The templates in `src/generate/templates.ts` and the cells in `cells.ts` are
+hand-written, and `CLAUDE.md` calls the template catalogue the actual musical
+asset. The question is whether a corpus of real repertoire could be analysed
+to derive or check them. The corpora have been surveyed and the licences read
+at source rather than inferred, because this repository is public and MIT.
+
+**The usable set covers classical, baroque, pop, rock and rhythm, and does
+not cover folk, jazz, blues or flamenco.** That is worse than expected and
+it is not a copyright problem: the Essen Folksong Collection, the obvious
+folk source, ships the CCARH MuseData agreement, which says in terms that
+the data may not "be embedded or included in teaching materials for
+commercial or non-commercial distribution". This app is teaching material
+distributed free, so that is fatal independently of everything else. The
+Humdrum bulk download pulls the same repository and inherits it. Jazz is
+non-commercial (the Jazz Harmony Treebank is CC BY-NC-SA, widely miscited as
+CC BY) or ODbL (Weimar); flamenco's COFLA/TONAS forbids redistribution; for
+blues there is no annotated corpus at all. Those four tags stay hand-written.
+
+What is clean, in the order worth taking:
+
+| Corpus | Licence of the files downloaded | Gives |
+| --- | --- | --- |
+| [Rock Corpus RS200](http://rockcorpus.midside.com/) | CC BY 4.0, commercial use stated outright | 200 songs as roman numerals, with timings |
+| [McGill Billboard](https://ddmal.ca/research/The_McGill_Billboard_Project_(Chord_Analysis_Dataset)/) | CC0 | 740 songs: chords, key, metre, sections, phrases |
+| OpenScore Lieder and String Quartets | CC0-1.0 | 1,300 songs and 100+ quartets, scores |
+| [Groove MIDI](https://magenta.tensorflow.org/datasets/groove) | CC BY 4.0 | 22,000 measures of played rhythm |
+| [haydn_op20_harm](https://github.com/napulen/haydn_op20_harm) | Apache-2.0 | six quartets with functional analysis |
+
+**The DCML corpora are the best fit and their licence contradicts itself.**
+They are the only source carrying roman numerals, key, phrase *and* cadence
+labels together, which is exactly the shape of `PhrasePlan` — and the
+aggregate Zenodo deposit says CC BY 4.0 while the component deposits and the
+GitHub repositories say CC BY-NC-SA 4.0. The conservative reading is NC,
+which rules them out of anything shipped. It is also cheap to resolve by
+asking them, and worth asking, because annotated cadences and phrases are
+worth more here than anything else on offer.
+
+**Share-alike is a separate problem from non-commercial and survives a
+favourable answer on everything else.** A `templates.ts` derived from a
+CC BY-SA corpus would arguably have to carry CC BY-SA inside an MIT
+repository. The way round it is to derive from the CC0 OpenScore encodings
+rather than reuse CC BY-SA analyses of the same works.
+
+**The question the whole plan turns on is whether a derived template is a
+derivative work at all.** A chord progression as such is generally treated as
+an unprotectable building block and a specific melody is not, so `I–vi–IV–V`
+with a style tag is probably not something a licence can attach to. That is a
+position and not a certainty, and nothing here is legal advice.
+
+**And one argument against the premise, which is the most useful thing in the
+survey.** The templates earn their place by being recognisable whole forms —
+the twelve-bar blues, rhythm changes, the axis, La Folía. A frequency count
+over a corpus does not produce those; it produces common two- and three-chord
+joins, which is the Markov chain `templates.ts` already argues against at
+length and for the right reason. Finding whole-phrase forms needs
+repeated-sequence mining at phrase length, which is harder than parsing the
+corpora.
+
+So the first phase is **measuring the hand-written catalogue rather than
+replacing it**: is the royal road really a thing in 1960s pop, does the axis
+dominate rock the way the comment asserts, and which templates are flat
+weights that the corpus would weight differently. That ships nothing derived
+from the corpus at all, which sidesteps most of the licensing above. The
+rhythm cells are the exception where counting genuinely produces the right
+object, because a beat-sized figure *is* a frequent short pattern — Groove
+MIDI is the source, and the caveat is that it is overwhelmingly 4/4, so it
+does nothing for the additive metres this file already names as thin.
+
+### Practising on a song you chose
+
+The corpus above is material someone else picked. The thing a learner
+actually asks for is "build me exercises from *this* song" — the one they
+are learning, or the one stuck in their head. Two routes, and they are not
+equally available.
+
+**A file the user already has** is the one that can work. It stays on the
+device, is decoded with the Web Audio API the app already owns, and never
+uploads — which makes the licensing question disappear, because nothing is
+copied or distributed. It needs the polyphonic side of the analysis chain
+that is designed and not built: chroma, a chord recogniser over it, beat
+tracking. `docs/ARCHITECTURE.md` says plainly that the chord exercise needs
+chroma written first, and this needs the same thing plus a beat grid.
+
+Expect it to be worse than the generator for a while, and say so in the UI
+rather than discovering it in a review: chord recognition on a dense mix is
+materially harder than on the clean synthesised triads the detector will
+first be tested against, and a wrong chord presented as the answer teaches
+the wrong thing with the app's authority behind it.
+
+**A streaming service is probably not available at all**, and this is worth
+recording before someone spends a week on it. The major services do not hand
+an application decodable audio: playback SDKs are DRM-protected by design,
+so the samples never reach code that could analyse them, and the terms
+generally forbid it even where a path exists. Spotify also withdrew the
+audio-features and audio-analysis endpoints from new applications, which
+were the obvious way to get a tempo and a key without touching the audio —
+**that should be checked rather than taken from this file**, since it is the
+kind of fact that changes. What a service realistically offers is
+*identification and metadata*: which song, its tempo, maybe its key. That is
+enough to look a song up in a corpus or to set a metronome, and not enough
+to derive a progression from.
+
+So the honest shape is: import a file, analyse locally, and treat any
+service connection as a way of *finding* a song rather than of hearing one.
+
+### A workbench for the corpus, once there is one
+
+Wanted as soon as material is imported rather than after: **a tool for
+looking at the database and the relations in it** — which excerpts, scores
+and recordings exist, what has been extracted from each, and, the part that
+is actually hard to get any other way, **where each part is used**. A
+template derived from bar 9 of a quartet should be traceable back to it, and
+the quartet should be able to say which templates, cells and audio excerpts
+came out of it.
+
+And **editing by hand**: labelling and relabelling. Any analysis of real
+music is partly wrong — MusicNet's own authors estimate a 4% labelling error
+rate, a derived cadence type is an inference, and a style tag is a judgement
+rather than a measurement. A corpus that can only be regenerated is one
+where every correction has to be expressed as a better algorithm. Being able
+to say "this is a half cadence, not an imperfect authentic one" and have it
+stick is what makes a corpus improve instead of merely change.
+
+Two things follow that are worth deciding before any of it is built. A hand
+correction has to survive re-importing the source, so corrections live apart
+from the extraction rather than being written back into it. And a derived
+entry should carry its provenance — which file, which bars, which extraction
+run — because that is the same field the usage view reads and the same one
+that makes a licence question answerable later rather than archaeological.
+
+Not a user-facing screen. This is a maintainer's tool over the build-time
+corpus, in the same family as `tools/report-facts.sh`.
+
+### Recordings to go with them
+
+Separate from the sampled instruments above, and with a trap one layer worse:
+a public-domain *work* says nothing about a *recording* of it, because the
+performance and the master are their own rights. Bach dying in 1750 does not
+free a 1998 recording of him.
+
+- **Short real examples** — a cadence, a rhythm — want
+  [MusicNet](https://zenodo.org/records/5120004), CC BY 4.0, 330 classical
+  recordings with over a million note labels giving every onset, instrument
+  and metrical position. Those labels are what make it possible to cut bar 12
+  of a quartet and know exactly where it begins. 11.1 GB, a build-time input;
+  a two-second excerpt is about 8 KB as mono Opus, so forty of them is the
+  same order as the piano pack and precaches the same way. The authors
+  estimate 4% labelling error, so a cut phrase wants listening to.
+- **Whole performances against a score** want the **Open Goldberg
+  Variations** and the **Open Well-Tempered Clavier** (Kimiko Ishizaka), which
+  are the rare case of **CC0 on the recording and CC0 on the score** — the
+  combination that defeats the trap. No note alignment shipped, but the onset
+  and pitch detectors already exist and DTW against a CC0 score is known work.
+- **Aligned but non-commercial, so build-time at best:** ASAP/MAESTRO
+  (CC BY-NC-SA 4.0, widely miscited as CC BY), PHENICX-Anechoic. URMP states
+  no licence anywhere, which is a finding rather than a gap.
+
+Prefer **CC0 for anything that ships**, since it carries no notice into the
+bundle, and CC BY for anything that stays at build time.
 
 ## A settings screen
 

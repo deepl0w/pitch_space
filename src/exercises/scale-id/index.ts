@@ -23,6 +23,9 @@ export const scaleIdentification = defineExercise<
   name: 'Scale identification',
   description: 'Hear or read a scale and name which one it is.',
   presentations: ['listen', 'read'],
+  // Exact: an item is a projection of a setting, so narrowing to one
+  // is invertible rather than approximate. See ExerciseSpec.prefer.
+  aims: 'exact',
   settings: scaleSettingsSchema,
   generate: generateScale,
   items: scaleItems,

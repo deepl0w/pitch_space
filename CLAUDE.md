@@ -138,7 +138,7 @@ truth, and a test that pins them makes tuning impossible.
 **Telling each other is a delivery, not a printout.** `fleet.sh announce`
 lists who has not heard that main moved; it cannot send anything. The
 delivery is `SendMessage` addressed to the session by name — `ListAgents`
-prints the names — or, where that fails, the user relaying it. An
+prints the names. An
 announcement nobody sends reads exactly like one nobody needed, which is why
 `announce` now records the commit it announced and `status` shows who is
 still owed the news.
@@ -157,16 +157,50 @@ whether a role is alive when the roster says otherwise (its branch, not the
 roster). Here it is enough to say it bit main three times in one day and the
 skill's version is the one to read before it bites again.
 
-So when a role genuinely will not take a message, the fallback is not to
-start anything. Run **`tools/relay.sh`**, which prints a paste-ready block
-per owed role — what landed, in subject lines, and the instruction to sync
-first — and give it to the user to paste in. Then `fleet.sh announce --done`
-as usual: delivered by hand is still delivered.
+**The user is not a message bus, and main does not ask them to be one.**
+This is the third shape of the same mistake: first main told them to start
+sessions that were already running, then it handed them blocks of text to
+paste into each one. Both treat the user as the fleet's plumbing. Keeping
+the agents informed is main's job and it does not get delegated upwards —
+if the user has to carry a message, the protocol has failed, not succeeded
+by another route.
 
-A worktree that was never told is not stuck, though: `fleet.sh brief` runs at
-every session start and now prints the subject lines of whatever landed while
-you were away, so a cold session can begin its standing review from the brief
-alone.
+**Do not guess whether a role is there. Run `tools/sessions.sh`.**
+
+This is the project's first convention — when a mechanism exists to answer
+a question directly, a correlate is not a substitute for running it — and
+main has broken it on this exact question four times in a day. `ListAgents`
+answers *can I address this right now*. It does not answer *is this session
+alive*. Those come apart, and every one of the following came from reading
+the first as the second: telling the user to start sessions that were
+already running, handing them blocks of text to paste in, and recording an
+announcement as delivered having reached one role of four.
+
+The command separates the three states, because the right response differs:
+
+- **running and addressable** — message it. That is main's job, it does not
+  get delegated upwards, and nothing else substitutes for it.
+- **running but orphaned** — alive with no socket, because its launch
+  directory was renamed or removed. This is the write-pin hazard above,
+  seen from outside: the agent reads, runs tests and uses git normally and
+  cannot save. It cannot be messaged and it cannot be fixed from main.
+- **not running** — there is nothing to reach. Say that, not that the role
+  is absent; whether it comes back is the user's business. `fleet.sh brief`
+  prints what landed at its next start, so it is caught up rather than lost.
+
+Two things that follow and are easy to get backwards. An unreachable role
+is never a reason to do nothing and call the job done — `announce --done`
+records that main tried, which is a weaker claim than the fleet knowing,
+and the gap between them is the whole failure. And the user is **not** the
+fallback: if they have to carry a message, the protocol has failed rather
+than succeeded by another route.
+
+What carries regardless of who is awake is the repository. `fleet.sh brief`
+prints what landed; `docs/IN-FLIGHT.md` is how main says what it wants
+looked at. Use both — not instead of messaging, but because a delivery that
+depends on timing is not one the protocol can rely on. **What is missing is
+anything that makes `announce` itself use that channel**, and
+`docs/IN-FLIGHT.md` carries the argument for process.
 
 **`docs/IN-FLIGHT.md` says what is coming, the same way `announce` says what
 came.** Before architect or feature starts something that will change an

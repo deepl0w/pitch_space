@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react';
 import type { Voice } from '../audio/output/synth';
 import type { ScoreSpec } from './render/toVexflow';
+import type { Key, Mode } from '../theory/key';
+import { pitchName } from '../theory/pitch';
 
 /**
  * What an exercise type is, as a contract rather than as a convention.
@@ -174,7 +176,43 @@ export interface BaseSettings {
 export interface ExerciseSpec<S> {
   seed: number;
   settings: S;
+  /**
+   * The item the schedule would like asked, if the generator can oblige.
+   *
+   * **A wish and not a command**, which is the whole design. The obvious
+   * seam was `focus(settings, item)` returning narrowed settings, and four
+   * of the seven exercises cannot meet that contract: a roman numeral is an
+   * *outcome* of harmony generation and a rhythm cell an outcome of the
+   * filler, so there is no setting meaning "ask me a `viio`" and there
+   * could not be one without the generator becoming a search.
+   *
+   * Worse, `focus` would not fail loudly. A progression asked to aim at
+   * `viio` would return settings making it slightly likelier, the schedule
+   * would record that it aimed, and nothing downstream could tell the
+   * difference. So the generator answers honestly instead: it aims if it
+   * can, ignores the wish if it cannot, and the caller reconciles against
+   * `exercise.items`, which already exists and is already trusted.
+   *
+   * See {@link ExerciseDefinition.aims} for what a definition promises.
+   */
+  prefer?: ItemId;
 }
+
+/**
+ * What a definition can do about a {@link ExerciseSpec.prefer}.
+ *
+ * Three values rather than two, and the third is the point. A boolean
+ * invites the exercises that cannot aim exactly to implement something
+ * plausible, which is precisely the silent failure this seam exists to
+ * avoid.
+ */
+export type Aiming =
+  /** The item asked for is the item asked. The askable set is a projection of a setting. */
+  | 'exact'
+  /** The wish narrows the field and cannot close it. */
+  | 'lossy'
+  /** Not expressible as an input. The wish is ignored, and that is honest. */
+  | 'none';
 
 /** What every generated exercise carries, whatever else it carries. */
 export interface ExerciseBase {
@@ -342,6 +380,101 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
  * recomputing them, which would be two callers deciding separately what the
  * question looks like.
  */
+/**
+ * Which tonics an exercise may build on, as a multi-select of note names.
+ *
+ * Tonics rather than keys, and that is the whole design. These exercises
+ * already have a **Modes** control, so offering "C major, C minor, D
+ * major, …" beside it lists every combination twice and — worse — leaves
+ * minor keys lit while the mode is major, where they change nothing. A
+ * chip that is on and has no effect is the defect this project keeps
+ * finding. Tonic and mode compose instead: twelve chips and two, rather
+ * than eighteen that half-contradict two.
+ *
+ * **Empty means every tonic the exercise would otherwise have used**, not
+ * none. A stored or hand-edited list can arrive empty and the generator
+ * has to keep working; the panel never produces one, because it refuses
+ * to unselect the last.
+ *
+ * **It narrows, it does not widen.** An exercise that only ever used keys
+ * within four accidentals still does, so asking for a tonic it cannot
+ * build that mode on selects nothing there rather than reaching further
+ * than the exercise meant to — and falls back rather than breaking,
+ * because "A♭, minor only" is a reasonable thing to click your way into
+ * and an empty pool is not an answer to it.
+ */
+export function keysIn(
+  all: readonly Key[], chosenTonics: readonly string[], modes: readonly Mode[],
+): readonly Key[] {
+  // The stored ids are prefixed; the prefix is stripped here rather than
+  // spelled at every call site. Bare names are accepted too, because a
+  // settings blob stored before the prefix existed is still a real thing
+  // a browser can hand back.
+  const wanted = new Set(chosenTonics.map((t) => t.replace(/^tonic:/, '')));
+  const byTonic = wanted.size === 0
+    ? all : all.filter((k) => wanted.has(pitchName(k.tonic, false)));
+  const byMode = (ks: readonly Key[]) => ks.filter((k) => modes.includes(k.mode));
+
+  const both = byMode(byTonic);
+  if (both.length > 0) return both;
+
+  /*
+    Nothing can be built from the chosen tonics in the chosen modes. One of
+    the two has to give, and **it is the mode**.
+
+    The case is real and reachable from the panel, and the asymmetry is
+    the accidental limit rather than anything about tonics. Within four
+    accidentals **A♭, E♭ and B♭ are major-only** and **B, F♯ and C♯ are
+    minor-only**; the chips are the union, so either kind is one click
+    away. Asking for A♭ with minor only selects nothing.
+
+    It gives the tonic. That is a decision and not an accident of the
+    filter: the mode carries a default and the tonic list does not, so the
+    tonic is the more specific and more recent choice. A♭ with minor only
+    gives A♭ major — not what was asked for, but recognisably adjacent,
+    and never nine keys when one was chosen.
+
+    That last part is what this replaced. It used to hand back the whole
+    pool, so ticking one tonic gave you *every* key, which is not a weaker
+    version of the request but the opposite of it, and ADR 0017 already
+    decided a setting excludes rather than declines to act.
+
+    A tonic in neither pool — D♯, say, whose minor is six sharps — still
+    falls through to the mode alone, because there is no key to honour.
+    The panel cannot produce that; a hand-edited settings blob can.
+  */
+  if (byTonic.length > 0) return byTonic;
+  const modeOnly = byMode(all);
+  return modeOnly.length > 0 ? modeOnly : all;
+}
+
+/** The field itself, so the three panels read identically. */
+export function keysField<S extends { keys: readonly string[] }>(
+  pool: readonly Key[],
+): SettingField<S> {
+  const tonics = [...new Set(pool.map((k) => pitchName(k.tonic, false)))];
+  return {
+    kind: 'multi',
+    id: 'keys',
+    label: 'Tonics',
+    /*
+      The id is prefixed and the label is the engraved note name. They have
+      to differ: the registry guard refuses an option labelled with its own
+      id, on the grounds that a label is for a reader and an id is for the
+      parser — and `F` would otherwise be both, while `Db` would be an id
+      shown to a musician who writes `D♭`.
+    */
+    options: tonics.map((t) => ({
+      id: `tonic:${t}`,
+      label: t.replace('b', '♭').replace('#', '♯'),
+    })),
+    // Stored empty means "all", and the panel must never show it that way:
+    // a row with none lit cannot say whether it means everything or nothing.
+    selected: (s) => (s.keys.length ? s.keys : tonics.map((t) => `tonic:${t}`)),
+    apply: (s, options) => (options.length === 0 ? s : { ...s, keys: [...options] }),
+  };
+}
+
 export interface PromptDrawnScores {
   /** The question's stave, or null once it has been answered. */
   questionScore: ScoreSpec | null;
@@ -371,6 +504,16 @@ export interface ExerciseDefinition<S extends BaseSettings, E extends ExerciseBa
   presentations: readonly Presentation[];
   settings: SettingsSchema<S>;
   generate(spec: ExerciseSpec<S>): E;
+  /**
+   * What this exercise promises about {@link ExerciseSpec.prefer}.
+   *
+   * Absent means `none`. The failure worth guarding is not a definition
+   * that declines to aim — it is one that claims `exact` and returns
+   * something else, because the schedule records that it aimed and is then
+   * confidently wrong about what it taught. `aiming.test.ts` holds each
+   * definition to whichever it declares.
+   */
+  aims?: Aiming;
   grade(exercise: E, response: R): Result;
   Prompt: ComponentType<PromptProps<S, E, R>>;
   /**

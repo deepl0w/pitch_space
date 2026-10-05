@@ -18,6 +18,10 @@ export interface Voice {
   gain?: number;
 }
 
+/**
+ * The level a chord sits at without clipping, measured rather than picked.
+ * The user's volume scales this; it is not a ceiling the user can raise.
+ */
 const MASTER_GAIN = 0.22;
 
 /** A few partials with a little inharmonicity reads as struck rather than buzzy. */
@@ -35,6 +39,30 @@ export class Synth {
   private generation = 0;
 
   /**
+   * The user's level, 0 to 1, multiplying {@link MASTER_GAIN}.
+   *
+   * Held here rather than read from the settings store, because this class
+   * is in `audio/output/` and the store is state — the layer rule is what
+   * lets the whole engine run under vitest. The composition root pushes it
+   * in; nothing here reaches out for it.
+   */
+  private volume = 1;
+
+  /** Set the output level. Takes effect immediately, mid-passage included. */
+  setVolume(fraction: number): void {
+    this.volume = Math.min(1, Math.max(0, fraction));
+    // Applied directly rather than ramped: a user dragging a slider wants
+    // the level they are dragging to, and a ramp on every input event
+    // queues automation faster than it drains.
+    if (this.master) this.master.gain.value = this.level();
+  }
+
+  /** The gain actually applied: the engine's level scaled by the user's. */
+  private level(): number {
+    return MASTER_GAIN * this.volume;
+  }
+
+  /**
    * Browsers refuse to start an AudioContext until a gesture, so this is
    * called from the click that wants sound rather than at module load.
    */
@@ -42,7 +70,7 @@ export class Synth {
     if (!this.context) {
       this.context = new AudioContext();
       this.master = this.context.createGain();
-      this.master.gain.value = MASTER_GAIN;
+      this.master.gain.value = this.level();
       this.master.connect(this.context.destination);
     }
     // Handed back rather than dropped. `currentTime` does not move while a
@@ -152,7 +180,7 @@ export class Synth {
       try { oscillator.stop(now + 0.015); } catch { /* already stopped */ }
     }
     this.scheduled = [];
-    this.master.gain.setValueAtTime(MASTER_GAIN, now + 0.02);
+    this.master.gain.setValueAtTime(this.level(), now + 0.02);
   }
 
   /** Release the audio hardware entirely. */

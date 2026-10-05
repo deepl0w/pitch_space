@@ -2,7 +2,7 @@ import { makeRng, pick } from '../../theory/rng';
 import {
   CHORD_TYPES, INVERSION_LABELS, chord, chordSymbol, chordType, voiceChord, type ChordType,
 } from '../../theory/chord';
-import { midiOf, parsePitch, type Pitch } from '../../theory/pitch';
+import { midiOf, parsePitch, pitchName, type Pitch } from '../../theory/pitch';
 import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
@@ -56,6 +56,15 @@ export interface ChordSettings extends BaseSettings {
   /** Which chord qualities may be asked. Never empty; the panel refuses that. */
   types: readonly string[];
   /**
+   * Which roots to build on, by sounding pitch name. Empty is all twelve.
+   *
+   * The roots rather than the keys, because this exercise has no key: a
+   * chord quality is the same shape wherever it starts, which is the whole
+   * reason the root is drawn at random. Narrowing it is for the learner
+   * who wants the shapes under one hand before moving them.
+   */
+  roots: readonly string[];
+  /**
    * Ask which note is in the bass as well as what the chord is.
    *
    * Off by default because it is a markedly harder question by ear and
@@ -98,6 +107,7 @@ export const CHORD_DEFAULTS: ChordSettings = {
   sounding: 'block',
   openVoicing: false,
   clef: 'treble',
+  roots: [],
 };
 
 /**
@@ -149,10 +159,24 @@ export function generateChord(spec: ExerciseSpec<ChordSettings>): ChordExercise 
   const rng = makeRng(spec.seed);
   const settings = spec.settings;
   const types = allowedTypes(settings);
-  const chosen = types.length > 0 ? pick(rng, types) : chordType(CHORD_DEFAULTS.types[0]);
-  const root = pick(rng, ROOTS);
+  // The wish names a quality and, when inversions are on, an inversion.
+  // Both are projections of settings, so both are aimed exactly; the
+  // inversion half is read further down where the inversion is chosen.
+  const wished = types.find((t) => chordItemId(t.id, null) === spec.prefer
+    || inversionsOf(t).some((inv) => chordItemId(t.id, inv) === spec.prefer));
+  const chosen = wished
+    ?? (types.length > 0 ? pick(rng, types) : chordType(CHORD_DEFAULTS.types[0]));
+  // Empty means all twelve, the same rule the other multi-selects follow.
+  const allowedRoots = settings.roots.length
+    ? ROOTS.filter((r) => settings.roots.includes(pitchName(r, true)))
+    : ROOTS;
+  const root = pick(rng, allowedRoots.length ? allowedRoots : ROOTS);
   const inversions = inversionsOf(chosen);
-  const inversion = settings.inversions ? pick(rng, inversions) : 0;
+  const wishedInversion = settings.inversions
+    ? inversions.find((inv) => chordItemId(chosen.id, inv) === spec.prefer)
+    : undefined;
+  const inversion = wishedInversion
+    ?? (settings.inversions ? pick(rng, inversions) : 0);
   const voiced = voiceChord(chord(root, chosen, inversion), { open: settings.openVoicing });
 
   return {
@@ -254,6 +278,8 @@ export function coerceChordSettings(stored: unknown): ChordSettings {
     sounding: sounding in SOUNDING_LABELS ? sounding : CHORD_DEFAULTS.sounding,
     openVoicing: raw.openVoicing === true,
     clef: CLEFS.includes(raw.clef as Clef) ? raw.clef as Clef : CHORD_DEFAULTS.clef,
+    roots: Array.isArray(raw.roots)
+      ? raw.roots.filter((r): r is string => typeof r === 'string') : [],
   };
 }
 
@@ -262,6 +288,23 @@ export const chordSettingsSchema: SettingsSchema<ChordSettings> = {
   coerce: coerceChordSettings,
   fields: [
     presentationField(),
+    {
+      kind: 'multi', id: 'roots', label: 'Roots',
+      // The id carries the octave and the label does not: the registry
+      // guard asks that an option be labelled for a reader rather than
+      // reusing the parser's string, and the sounding root is what the
+      // setting actually names.
+      options: ROOTS.map((r) => ({
+        id: pitchName(r, true),
+        // Engraved, like the tonic chips elsewhere: a musician reads `D♭`,
+        // and `Db` is the parser's spelling showing through.
+        label: pitchName(r, false).replace('b', '♭').replace('#', '♯'),
+      })),
+      selected: (s) => (s.roots.length ? s.roots : ROOTS.map((r) => pitchName(r, true))),
+      // Refused when empty, like every other multi-select here: a row with
+      // none lit cannot say whether it means all or nothing.
+      apply: (s, options) => (options.length === 0 ? s : { ...s, roots: [...options] }),
+    },
     {
       kind: 'multi', id: 'types', label: 'Chords',
       options: CHORD_TYPES.map((t) => ({ id: t.id, label: t.name })),

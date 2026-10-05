@@ -258,8 +258,23 @@ export function generateInterval(spec: ExerciseSpec<IntervalSettings>): Interval
   const { settings } = spec;
   const rng = makeRng(spec.seed);
 
-  const semitones = pick(rng, settings.semitones);
-  const direction = pick(rng, settings.directions);
+  /*
+    The wish, honoured exactly when it names an interval and direction the
+    settings currently allow. Exact because an item here *is* a
+    (semitones, direction) pair, so there is nothing lossy about narrowing
+    to one — and a wish outside the settings is ignored rather than
+    widening the pool, which would let the schedule ask about intervals
+    the user has switched off.
+
+    A unison has one item and both directions produce it, so a wish for it
+    pins the semitones and leaves the direction to the seed.
+  */
+  const wished = settings.semitones.flatMap(
+    (st) => settings.directions.map((dir) => ({ st, dir })),
+  ).find(({ st, dir }) => intervalItemId(st, dir) === spec.prefer);
+
+  const semitones = wished?.st ?? pick(rng, settings.semitones);
+  const direction = wished?.dir ?? pick(rng, settings.directions);
   const preferFlats = chance(rng, 0.5);
 
   const [windowLow, windowHigh] = pitchWindow(settings);

@@ -48,55 +48,136 @@ driven by a time between two onsets lands between their two x positions
 — that is the whole correctness of following the music, and it is
 checkable without a browser.
 
-### `main` — `prefer`: the schedule asks, the generator answers honestly
+### `main` — `prefer` has landed, and the three-way split was wrong
 
-**Branch:** `main`, not started. Written here first because the tester
-is writing the contract test against this shape before it exists, which
-is what this file is for.
+**Branch:** `main`, landed. Kept here until tester and architect have
+reviewed, because it corrects a prediction this file made.
 
-**The problem.** `schedule.ts` decides which item should come next and
-nothing can act on it: `generate(spec)` takes a seed and settings and
-picks from the pool itself. The obvious seam is a `focus(settings,
-item)` returning settings narrowed so that item is what gets asked.
+`generate(spec, { prefer })` exists, `aims` is on every definition, and
+`src/exercises/aiming.test.ts` is armed — the `.todo` guard is gone, which
+was the one-word change the file said belonged in this commit.
 
-**Why that seam is wrong**, which the tester established and I accept.
-The exercises divide three ways on whether `items(settings)` is
-invertible:
+**What this entry got wrong.** It predicted a three-way split: invertible,
+lossy, and not-an-input, with key identification and degree identification
+in the middle. **There is no middle.** Five exercises aim exactly and two
+cannot aim at all.
 
-| | Exercises | Why |
-| --- | --- | --- |
-| **Invertible** | `interval-id`, `scale-id`, `chord-id` | the askable set is a projection of one setting, so narrowing to a single item is exact |
-| **Lossy** | `key-id`, `degree-id` | narrowing gets close and cannot isolate — `maxAccidentals` narrows the circle but never to one key, and `degree-id`'s `key:` item is drawn from any key within four accidentals with no setting over it |
-| **Not an input** | `progression-id`, `rhythm-id` | a numeral is an outcome of harmony generation and a cell an outcome of the filler; there is no setting meaning "ask me a `viio`" and there could not be one without the generator becoming a search |
+The reasoning for `lossy` was that `maxAccidentals` narrows the circle and
+never to one key, and that degree identification cannot aim the key it also
+reports. Both were true *of the seam that was rejected*. `focus(settings,
+item)` could only express a wish by tightening a setting, and no setting
+names one key — so under that design the middle was real. `prefer` does not
+go through the settings: generation picks a key from a pool, so it can pick
+the one it was asked for.
 
-A `focus` every definition implements would make four of them promise
-something they cannot do — and it would not fail loudly. A progression
-exercise asked to aim at `viio` would return settings making it *more
-likely*, the schedule would record that it aimed, and nothing could
-detect the difference. That is a palette listing a chord it cannot
-produce, one layer up.
+Degree identification needs a sharper statement than the one this entry
+first gave, which said it "does not report the key at all". **It does.**
+`generateDegree` puts `key:<id>` in the exercise's `items`, so an attempt
+is credited against it. What is true is narrower: `degreeItems(settings)`
+lists `degree:<n>:<mode>` and nothing else, so the key is in what gets
+*recorded* and not in what the schedule can *ask for*. Aiming is exact
+with respect to the denominator, which is what `aims` promises.
 
-**The shape instead.** `generate(spec, { prefer?: ItemId })`. A
-generator that can aim does; one that cannot ignores the hint. The
-schedule reconciles against `exercise.items`, which already exists and
-is already trusted, rather than assuming it got what it asked for.
+That gap is a real finding rather than a wrinkle, and the tester hit it by
+asserting every produced item was askable: an item accrues history that
+nothing will ever schedule against. It is ADR 0007's contained-versus-
+tested with the sides reversed — usually the worry is a denominator
+listing what cannot be asked, and here it is a numerator recording what
+was never counted.
 
-**The cost, named rather than discovered later:** the schedule cannot
-promise progress on a specific item. It cannot promise that for
-progressions and rhythm under any design, so this makes an existing
-limit visible rather than creating one.
+The lesson is narrower than "we were wrong". **The limitation was a
+property of a design, and it was recorded as a property of the exercises.**
+It then survived into a contract test, which specified three kinds of
+promise, and the third turned out to have no members.
 
-**For tester.** The claim to pin: *a hint that aims at an item must
-produce that item, for any exercise that claims it can aim.* Two things
-that come out of the measurement already done:
+`lossy` stays in the type and in the test. Nothing declares it, and the
+alternative — removing it and adding it back when something needs it — is
+worse: the next exercise that genuinely narrows without closing would
+otherwise be pushed to claim `exact` because that is the only word for
+"aims", which is the silent failure this seam exists to avoid.
 
-- The seed budget is load-bearing and per-exercise. Four unreachable
-  chords at 400 seeds were all luck; at 1500 there are none.
-  `chord-id` has ninety-nine askable items and `interval-id` twelve.
-- A generator that ignores the hint must pass. The test cannot assert
-  "the preferred item appeared" — it has to assert "if it claims to
-  aim, it hit", with a guard that at least one exercise claims it or
-  the whole thing passes vacuously.
+**For tester.** `aiming.test.ts` passes. Two things it does not cover. The
+`exact` cases are checked at the widest settings only, so a wish for an
+item the settings exclude — reachable, since the schedule reads history
+rather than current settings — is handled (ignored, not obeyed) and
+unasserted. And nothing yet checks that aiming does not distort *what else*
+is asked: a generator that honoured every wish by always picking the same
+root would pass the contract and be a worse exercise.
+
+### Owed to `process` — main cannot establish that the fleet was told
+
+**Written here because process is not reachable to be told, which is the
+subject.** The user has now raised this four times and asked directly that
+process be informed.
+
+**Measured, not inferred — which took four tries.** `ListAgents` reads
+`$XDG_RUNTIME_DIR/cc-socks`, so an absent row means no socket, which is not
+the same as no session. The process table tells them apart, and
+`tools/sessions.sh` now runs that check so nobody has to reconstruct the
+pipeline again. At the time of writing: tester running and addressable;
+architect, process and user **not running at all** — no process, not merely
+unlisted; and two processes alive in directories that no longer exist
+(`.claude/worktrees/architect (deleted)` and `reverent-turing-c9f745
+(deleted)`), which is the write-pin hazard seen from outside and is worth
+a look on its own.
+
+Main had been asserting the opposite in both directions within one hour —
+first that unlisted roles had no sessions, then, on the user's correction,
+that every role was present and unreachability was always main's error.
+Neither was checked. The second went into `CLAUDE.md` and has been removed:
+a protocol rule that the machine contradicts is worse than the mistake it
+was written to correct, because the next session reads it and concludes its
+own tooling is broken.
+
+The consequence either way is the same and is the thing worth fixing:
+**"the fleet has been told" is not a property main can establish.**
+`announce --done` records that main tried, which is a different claim, and
+the gap between the two is where every one of the following sits.
+
+**Four shapes of the same mistake, in order.**
+
+Main told the user to start sessions that were already running — three
+times, because it read an absent `ListAgents` row as a session not
+existing. Then it built `tools/relay.sh` and handed the user blocks of
+text to paste into each session, which the user rejected outright: *"that's
+your job to communicate and you should know that."* Then it messaged the
+one role that happened to be awake and recorded the announcement as done.
+Throughout, its messages were long enough that process asked for three
+lines and a pointer instead.
+
+The first two treat the user as the fleet's plumbing. The third is worse
+and quieter: it satisfies the guard while leaving three roles uninformed,
+and nothing in the protocol can tell that apart from a real delivery.
+
+`CLAUDE.md` now says main never asks the user to relay, and `relay.sh` is
+deleted. That removes the wrong fallback and does not supply a right one.
+
+**What is actually missing, and why the repository is the answer.** The
+fleet already has a channel that does not care who is awake: a commit.
+`fleet.sh sync` carries it to every worktree and `fleet.sh brief` prints
+what landed at every session start. That is how this entry will reach
+process. What does not exist is anything that makes *an announcement* use
+that channel — `announce` writes a sha into an untracked file in the main
+checkout, which no other worktree can read.
+
+The shape worth considering, for process to accept or replace: a committed
+file that `announce` appends to — what landed and what main wants looked
+at — which `brief` prints and each role clears its own line from. Then
+"told" is a property of the repository rather than of who was addressable
+at the moment main looked, `SendMessage` becomes the fast path instead of
+the only one, and the thing the guard checks is the thing that matters.
+
+**The narrower question that belongs with it:** `announce --done` should
+probably not be satisfiable while a role remains unreached. Today it is
+one command with no argument and no notion of per-role delivery, so main
+can honestly run it having reached one of four.
+
+**Unrelated and also owed:** main committed twice with a failing check,
+having run `./test.sh --all` and read the tail of its output rather than
+its result. The tester did the same within the hour. Running the check and
+reading the check are different acts, and the convention naming that is
+already on the ADR index — which suggests the fix is mechanical rather
+than more care.
 
 ### Owed to `process` — announcing is not holding, and the guard is not catching it
 

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { createSettingsStore } from './settingsStore';
 import { memorySlot, type Slot } from './persistence';
 import { versioned, type Versioned } from './migrate';
-import { SETTINGS_DEFAULTS, SETTINGS_SCHEMA, UNCALIBRATED, type SettingsDoc } from './schema';
+import {
+  APPEARANCE_DEFAULTS, SETTINGS_DEFAULTS, SETTINGS_SCHEMA, UNCALIBRATED, type SettingsDoc,
+} from './schema';
 
 /**
  * The preferences store, over a slot a test owns.
@@ -27,7 +29,8 @@ function countingSlot(initial: Stored | null = null): Slot<Stored> & { writes: S
 }
 
 const doc = (over: Partial<SettingsDoc> = {}): SettingsDoc => ({
-  exercises: {}, lastExercise: null, audio: { ...UNCALIBRATED }, ...over,
+  exercises: {}, lastExercise: null, audio: { ...UNCALIBRATED },
+  appearance: { ...APPEARANCE_DEFAULTS }, ...over,
 });
 
 describe('hydrating the settings store', () => {

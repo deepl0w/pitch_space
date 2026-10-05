@@ -6,7 +6,7 @@ import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
-import { presentationField } from '../types';
+import { keysField, keysIn, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -51,6 +51,8 @@ export interface DegreeSettings extends BaseSettings {
   clef: Clef;
   /** Re-establish the key before every question, or only at the start. */
   reestablish: boolean;
+  /** Which keys to draw from. Empty is every key this exercise can use. */
+  keys: readonly string[];
 }
 
 export interface DegreeExercise extends ExerciseBase {
@@ -97,22 +99,41 @@ export const DEGREE_DEFAULTS: DegreeSettings = {
   naming: 'number',
   clef: 'treble',
   reestablish: true,
+  keys: [],
 };
 
 export function generateDegree(spec: ExerciseSpec<DegreeSettings>): DegreeExercise {
   const rng = makeRng(spec.seed);
   const settings = spec.settings;
   const modes = settings.modes.length ? settings.modes : DEGREE_DEFAULTS.modes;
-  const mode = pick(rng, modes);
+  /*
+    The wish. An item here is a degree and a mode, both of which are
+    inputs, so this is exact — another correction to the prediction in
+    `docs/IN-FLIGHT.md`, which called it lossy because the exercise also
+    reports the key and no setting names one. It does not report the key:
+    `degreeItems` lists `degree:<n>:<mode>` and nothing else, so the key is
+    not in the schedule's denominator and there is nothing lossy about
+    aiming at what is.
+  */
+  const wishedPair = modes.flatMap(
+    (m) => (settings.degrees.length ? settings.degrees : DEGREE_DEFAULTS.degrees)
+      .map((d) => ({ m, d })),
+  ).find(({ m, d }) => `degree:${d}:${m}` === spec.prefer);
+
+  const mode = wishedPair?.m ?? pick(rng, modes);
 
   // Any key, so the exercise trains the function rather than the pitch. A
   // learner who only ever hears C major learns "that was E", which is the
   // thing this exercise exists not to teach.
-  const keys = ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4);
+  const keys = keysIn(
+    ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= 4),
+    settings.keys,
+    [mode],
+  );
   const key = pick(rng, keys);
 
   const allowed = settings.degrees.length ? settings.degrees : DEGREE_DEFAULTS.degrees;
-  const degree = pick(rng, allowed);
+  const degree = wishedPair?.d ?? pick(rng, allowed);
   const scale = keyPitches({ ...key, tonic: { ...key.tonic, octave: 4 } });
   const pitch = scale[degree - 1];
 
@@ -208,6 +229,8 @@ export function coerceDegreeSettings(stored: unknown): DegreeSettings {
   return {
     presentation: raw.presentation === 'read' ? 'read' : 'listen',
     degrees: coerceDegrees(raw.degrees, DEGREE_DEFAULTS.degrees),
+    keys: Array.isArray(raw.keys)
+      ? raw.keys.filter((k): k is string => typeof k === 'string') : [],
     modes: modes.length ? modes : DEGREE_DEFAULTS.modes,
     naming: raw.naming === 'solfege' ? 'solfege' : 'number',
     clef: CLEFS.includes(raw.clef as Clef) ? raw.clef as Clef : DEGREE_DEFAULTS.clef,
@@ -220,6 +243,7 @@ export const degreeSettingsSchema: SettingsSchema<DegreeSettings> = {
   coerce: coerceDegreeSettings,
   fields: [
     presentationField(),
+    keysField(ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= 4)),
     {
       // The only control over which degrees are asked. There was a preset
       // picker beside it and the two went out of step the moment a chip was

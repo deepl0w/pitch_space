@@ -75,6 +75,14 @@ export const EXERCISE_MENU: readonly MenuEntry[] = [
  */
 export const SETUP_MENU: readonly MenuEntry[] = [
   {
+    route: 'settings',
+    name: 'Settings',
+    blurb: 'Theme, volume, audio calibration, and what the app knows about you.',
+    lede: 'The preferences that are not about a particular exercise. What an '
+      + 'exercise asks lives in its own panel, beside the question it changes.',
+    ready: true,
+  },
+  {
     route: 'calibration',
     name: 'Audio calibration',
     blurb: 'Measure what your device\'s microphone delay costs, so timing is judged fairly.',

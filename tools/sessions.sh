@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+#
+# Which role sessions are actually running, and which can be messaged.
+#
+# This exists because main kept *guessing*. An empty `ListAgents` row was
+# read, on three separate occasions, as a session that did not exist —
+# which led to telling the user to start sessions already running, and then
+# to handing them text to paste. Each time the fix was to go and look, and
+# each time looking was a one-off shell pipeline nobody could run again.
+#
+# The project's first convention says it plainly: when a mechanism exists to
+# answer a question directly, a correlate of the answer is not a substitute
+# for running it. `ListAgents` answers "can I address this right now"; it
+# does not answer "is this session alive". Those come apart, and the gap is
+# where every one of those mistakes lived.
+#
+# Three states, which need telling apart because the response differs:
+#
+#   running, addressable  — message it; that is main's job and nothing else
+#                           substitutes for it
+#   running, orphaned     — alive with no socket. Its launch directory was
+#                           renamed or removed, which is the write-pin
+#                           hazard CLAUDE.md describes: it reads and runs
+#                           tests normally and cannot save. It cannot be
+#                           messaged and it cannot be fixed from here.
+#   not running           — nothing to reach. `fleet.sh brief` catches it up
+#                           at its next start; say so rather than calling it
+#                           absent, since whether it comes back is the
+#                           user's business and not main's reading.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+socks="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/cc-socks"
+
+printf '%-12s %-30s %s\n' ROLE DIR STATE
+for branch in $(git for-each-ref --format='%(refname:short)' 'refs/heads/claude/*'); do
+    role=${branch#claude/}
+    dir=$(git worktree list --porcelain | awk -v b="refs/heads/$branch" '
+        /^worktree /{w=$2} $0=="branch "b{print w}')
+    [ -n "$dir" ] || continue
+    base=$(basename "$dir")
+
+    pid=""
+    for p in $(pgrep -f claude 2>/dev/null || true); do
+        cwd=$(readlink "/proc/$p/cwd" 2>/dev/null || true)
+        [ "$cwd" = "$dir" ] && { pid=$p; break; }
+    done
+
+    if [ -z "$pid" ]; then
+        state='not running — brief will catch it up'
+    elif [ -S "$socks/$pid.sock" ]; then
+        state="running, addressable (pid $pid) — ListAgents for its current name"
+    else
+        state="running, ORPHANED (pid $pid) — no socket; cannot save or be messaged"
+    fi
+    printf '%-12s %-30s %s\n' "$role" "$base" "$state"
+done
+
+# Sessions alive in a directory that no longer exists. They are not in the
+# table above because there is no worktree to match them to, and they are
+# worth naming: a session pinned to a deleted directory is the failure mode
+# that looks like a working agent right up to its first save.
+orphans=$(for p in $(pgrep -f claude 2>/dev/null || true); do
+    cwd=$(readlink "/proc/$p/cwd" 2>/dev/null || true)
+    case "$cwd" in *"(deleted)"*) printf '  pid %s  %s\n' "$p" "$cwd";; esac
+done)
+[ -n "$orphans" ] && { printf '\nAlive in a deleted directory:\n%s\n' "$orphans"; }
+exit 0

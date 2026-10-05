@@ -14,7 +14,7 @@ import { assertStepsCoverVersions, type MigrationStep, type Versioned } from './
 
 /** Unchanged by the rename to Pitch Space, for the reason `DB_NAME` gives. */
 export const SETTINGS_KEY = 'music-practice:settings';
-export const SETTINGS_SCHEMA = 2;
+export const SETTINGS_SCHEMA = 3;
 
 /**
  * Where an input-latency correction came from.
@@ -72,7 +72,37 @@ export interface SettingsDocV2 extends SettingsDocV1 {
   audio: AudioSettings;
 }
 
-export type SettingsDoc = SettingsDocV2;
+/**
+ * How the app looks and sounds, as opposed to what it asks.
+ *
+ * Separate from `audio` above, which is a *measurement* of the hardware and
+ * not a preference — ADR 0018 turns on that distinction, and a volume the
+ * user dragged sitting in the same object as a latency the app measured is
+ * how the two become indistinguishable.
+ */
+export interface AppearanceSettings {
+  /**
+   * `system` follows `prefers-color-scheme`, which is what the stylesheet
+   * does when no `data-theme` attribute is set. It is the default because a
+   * user who has told their operating system has already answered.
+   */
+  theme: 'system' | 'light' | 'dark';
+  /**
+   * Output level, 0 to 1, as a fraction of the engine's own level rather
+   * than an absolute: `synth.ts` sets a master gain chosen so a chord does
+   * not clip, and this scales it. One is that level and not full scale.
+   */
+  volume: number;
+}
+
+export const APPEARANCE_DEFAULTS: AppearanceSettings = { theme: 'system', volume: 1 };
+
+/** Version 3 adds the preferences that are not about a particular exercise. */
+export interface SettingsDocV3 extends SettingsDocV2 {
+  appearance: AppearanceSettings;
+}
+
+export type SettingsDoc = SettingsDocV3;
 
 /** Nothing measured. The shape every first run and every decline has. */
 export const UNCALIBRATED: AudioSettings = {
@@ -88,7 +118,10 @@ export const UNCALIBRATED: AudioSettings = {
  * changed what every later first run was given.
  */
 export function settingsDefaults(): SettingsDoc {
-  return { exercises: {}, lastExercise: null, audio: { ...UNCALIBRATED } };
+  return {
+    exercises: {}, lastExercise: null,
+    audio: { ...UNCALIBRATED }, appearance: { ...APPEARANCE_DEFAULTS },
+  };
 }
 
 /** The defaults as a value, for comparison. Call {@link settingsDefaults} to own one. */
@@ -105,6 +138,13 @@ export const SETTINGS_MIGRATIONS: readonly MigrationStep[] = [
   // than a default, which is the same reasoning the attempt migration used
   // for 'listen' — and the same reason it must be null and not zero.
   (data) => ({ ...(data as Record<string, unknown>), audio: { ...UNCALIBRATED } }),
+  // 2 -> 3: nobody who wrote a v2 document had expressed a preference, so
+  // the defaults are what happened rather than a guess at what they wanted
+  // — and `system` in particular is the absence of a choice rather than a
+  // choice of light or dark.
+  (data) => ({
+    ...(data as Record<string, unknown>), appearance: { ...APPEARANCE_DEFAULTS },
+  }),
 ];
 
 /**
@@ -117,7 +157,7 @@ export const SETTINGS_MIGRATIONS: readonly MigrationStep[] = [
  */
 export function coerceSettings(data: unknown): SettingsDoc {
   if (typeof data !== 'object' || data === null) return settingsDefaults();
-  const doc = data as Partial<SettingsDocV2>;
+  const doc = data as Partial<SettingsDocV3>;
   const exercises = typeof doc.exercises === 'object' && doc.exercises !== null
     ? { ...doc.exercises }
     : {};
@@ -125,7 +165,28 @@ export function coerceSettings(data: unknown): SettingsDoc {
     exercises,
     lastExercise: typeof doc.lastExercise === 'string' ? doc.lastExercise : null,
     audio: coerceAudio(doc.audio),
+    appearance: coerceAppearance(doc.appearance),
   };
+}
+
+/**
+ * Repairs field by field, because these are independent preferences.
+ *
+ * Unlike {@link coerceAudio} below, where three fields are one fact: a
+ * nonsense volume says nothing about the theme, so keeping the readable
+ * half is the behaviour that costs the user least.
+ */
+function coerceAppearance(value: unknown): AppearanceSettings {
+  if (typeof value !== 'object' || value === null) return { ...APPEARANCE_DEFAULTS };
+  const a = value as Partial<AppearanceSettings>;
+  const theme = a.theme === 'light' || a.theme === 'dark' || a.theme === 'system'
+    ? a.theme : APPEARANCE_DEFAULTS.theme;
+  // Finite and in range. A stored NaN would silence the app with no way
+  // back from inside the slider.
+  const volume = typeof a.volume === 'number' && Number.isFinite(a.volume)
+    ? Math.min(1, Math.max(0, a.volume))
+    : APPEARANCE_DEFAULTS.volume;
+  return { theme, volume };
 }
 
 /**

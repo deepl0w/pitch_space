@@ -27,6 +27,14 @@ keystore.properties
 .claude/adr-claims
 .claude/announced
 
+# Per-worktree efficiency instrument: timing and (self-reported, usually
+# absent) token counts for session starts and commits. Local to the
+# checkout that wrote it, same as the clock file beside it — nobody else's
+# stats are this worktree's to read, and a shared file several roles wrote
+# to would be the merge conflict the protocol's own files already avoid.
+.claude/stats.jsonl
+.claude/.stats_clock
+
 # Scratch results from tools/report-facts.sh --run, if ever written here.
 .report-tests.json
 

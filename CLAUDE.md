@@ -138,7 +138,7 @@ truth, and a test that pins them makes tuning impossible.
 **Telling each other is a delivery, not a printout.** `fleet.sh announce`
 lists who has not heard that main moved; it cannot send anything. The
 delivery is `SendMessage` addressed to the session by name — `ListAgents`
-prints the names — or, where that fails, the user relaying it. An
+prints the names. An
 announcement nobody sends reads exactly like one nobody needed, which is why
 `announce` now records the commit it announced and `status` shows who is
 still owed the news.
@@ -157,16 +157,22 @@ whether a role is alive when the roster says otherwise (its branch, not the
 roster). Here it is enough to say it bit main three times in one day and the
 skill's version is the one to read before it bites again.
 
-So when a role genuinely will not take a message, the fallback is not to
-start anything. Run **`tools/relay.sh`**, which prints a paste-ready block
-per owed role — what landed, in subject lines, and the instruction to sync
-first — and give it to the user to paste in. Then `fleet.sh announce --done`
-as usual: delivered by hand is still delivered.
+**The user is not a message bus, and main does not ask them to be one.**
+This is the third shape of the same mistake: first main told them to start
+sessions that were already running, then it handed them blocks of text to
+paste into each one. Both treat the user as the fleet's plumbing. Keeping
+the agents informed is main's job and it does not get delegated upwards —
+if the user has to carry a message, the protocol has failed, not succeeded
+by another route.
 
-A worktree that was never told is not stuck, though: `fleet.sh brief` runs at
-every session start and now prints the subject lines of whatever landed while
-you were away, so a cold session can begin its standing review from the brief
-alone.
+So when a role will not take a message, there is nothing to hand anyone.
+The repository is the other channel and it already works: `fleet.sh brief`
+runs at every session start and prints the subject lines of whatever landed
+while that worktree was away, so a session that was never messaged begins
+its standing review from the brief alone. An unreachable role is a
+suspended one, it will be caught up by `brief` when it wakes, and main
+messages it then. Record the announcement, say in one line to the user
+which roles could not be reached, and carry on.
 
 **`docs/IN-FLIGHT.md` says what is coming, the same way `announce` says what
 came.** Before architect or feature starts something that will change an

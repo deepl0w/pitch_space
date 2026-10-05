@@ -228,6 +228,41 @@ h2 { font-size: 0.95rem; margin: 0 0 0.75rem; font-weight: 600; color: var(--mut
 }
 
 .field { display: flex; flex-direction: column; gap: 0.3rem; flex: 1 1 11rem; min-width: 0; }
+
+/*
+ * Prose and actions inside a panel take a row to themselves.
+ *
+ * A panel is a wrapping flex row, which is right for the exercise settings
+ * — a dozen short controls flowing side by side. It is wrong the moment a
+ * panel holds a sentence and a button: at a desktop width the sentence
+ * takes the left edge, the button the right, and the metre of blank
+ * between them reads as two unrelated things rather than one. The
+ * calibration screen had a button on the same line as the paragraph
+ * explaining it, which is the same fault twice.
+ *
+ * `max-width` on the prose for the usual reason, and because the sentence
+ * is what is being read rather than the panel.
+ */
+.panel > p { flex: 1 1 100%; max-width: 44rem; margin: 0; }
+.panel > .actions { flex: 1 1 100%; margin: 0; }
+.panel > .field > p { margin: 0; max-width: 44rem; }
+
+/*
+ * Volume. A slider rather than five chips, because loudness is continuous
+ * and a row of percentages asks the reader to pick a number when what
+ * they want is to turn it until it sounds right.
+ */
+.slider { display: flex; align-items: center; gap: 0.75rem; max-width: 22rem; }
+.slider input[type="range"] {
+  flex: 1 1 auto; min-width: 0; accent-color: var(--accent);
+  /* A thumb is the one control a finger drags rather than taps, so it gets
+     the full target height even where a chip would not. */
+  height: 44px;
+}
+.slider output {
+  min-width: 3.5ch; text-align: right; font-variant-numeric: tabular-nums;
+  color: var(--muted); font-size: 0.88rem;
+}
 .field > span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 
 select {
@@ -235,6 +270,26 @@ select {
   background: var(--bg); color: var(--ink);
   border: 1px solid var(--line); border-radius: 6px; width: 100%;
 }
+
+/*
+ * Text and number fields, which had no rule at all and were taking the
+ * browser's own — grey on grey under a dark `color-scheme`, which was hard
+ * to read, and full width because a flex column stretches its children.
+ *
+ * The width is set from the content rather than the container: the only
+ * one of these today is a latency in milliseconds, three digits at most,
+ * and a box the width of the page invites a sentence into a field that
+ * takes a number.
+ */
+input[type="text"], input[type="number"] {
+  font: inherit; font-size: 0.88rem; padding: 0.4rem 0.5rem;
+  background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 6px;
+  align-self: flex-start; width: 8ch;
+}
+input[type="number"] { text-align: right; }
+input::placeholder { color: var(--muted); opacity: 1; }
+input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .score {
   background: var(--surface); border: 1px solid var(--line);

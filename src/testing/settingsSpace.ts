@@ -26,11 +26,25 @@ export type AnyField = SettingField<unknown>;
  * still a control that does something, and the all-and-each pair finds that
  * without the combinatorics.
  */
-export function valuesOf(field: AnyField): unknown[] {
+export function valuesOf(field: AnyField, settings: unknown = undefined): unknown[] {
   if (field.kind === 'toggle') return [true, false];
   if (field.kind === 'choice') return field.options.map((o) => o.id);
-  const ids = field.options.map((o) => o.id);
+  const ids = optionIds(field, settings);
   return [ids, ...ids.map((id) => [id])];
+}
+
+/**
+ * A multi-select's option ids, resolving the ones that depend on settings.
+ *
+ * Those exist because one control can constrain another — a tonic the
+ * chosen mode cannot build is not offered — so a sweep that read the list
+ * without the settings would cross combinations the panel never shows.
+ */
+export function optionIds(field: AnyField, settings: unknown): string[] {
+  if (field.kind === 'toggle') return [];
+  const options = typeof field.options === 'function'
+    ? field.options(settings) : field.options;
+  return options.map((o) => o.id);
 }
 
 /** `field.apply`, with the value narrowed to what that kind of field takes. */
@@ -59,7 +73,7 @@ export function widestSettings(type: AnyExerciseDefinition, over: object = {}): 
   });
   for (const field of type.settings.fields as AnyField[]) {
     const widest = field.kind === 'toggle' ? true
-      : field.kind === 'multi' ? field.options.map((o) => o.id)
+      : field.kind === 'multi' ? optionIds(field, settings)
         : undefined;
     if (widest === undefined) continue;
     settings = type.settings.coerce(applyValue(field, settings, widest));

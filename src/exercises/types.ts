@@ -263,7 +263,24 @@ export type SettingField<S> =
     apply(settings: S, option: string): S;
   }
   | {
-    kind: 'multi'; id: string; label: string; options: readonly SettingOption[];
+    kind: 'multi'; id: string; label: string;
+    /**
+     * The chips to offer, which may depend on the other settings.
+     *
+     * A function where one control's choices are constrained by another's.
+     * Tonics are the case: within four accidentals A♭ exists in major and
+     * not in minor, so offering all twelve beside a mode switch lets a
+     * learner pick a combination that cannot be built — and the app then
+     * has to either ignore the tonic or ignore the mode, silently, while
+     * both controls still show what was asked for. The user role found
+     * exactly that and called it a bug rather than a surprise: "Minor
+     * stays visually selected the whole time with nothing indicating the
+     * override."
+     *
+     * Not offering it is the only answer that does not lie. A static list
+     * is still a list, so a field with no such coupling passes one.
+     */
+    options: readonly SettingOption[] | ((settings: S) => readonly SettingOption[]);
     relevant?: FieldRelevance<S>;
     selected(settings: S): readonly string[];
     /** May refuse: an empty pool is not a setting, it is a broken generator. */

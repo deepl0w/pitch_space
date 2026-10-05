@@ -115,6 +115,38 @@ export function OneOf({ options, chosen, onChange }: {
   );
 }
 
+/**
+ * A continuous value, dragged rather than chosen.
+ *
+ * Reports as it moves: `onChange` fires on every input event, so what the
+ * reader hears while dragging is what they are setting. That is the whole
+ * point of a slider over a row of chips for something audible — the ear
+ * is the instrument, and a value that only applied on release would make
+ * it useless for the one thing it is for.
+ */
+export function Slider({ label, value, onChange, format }: {
+  label: string;
+  /** 0 to 1. */
+  value: number;
+  onChange(next: number): void;
+  format(value: number): string;
+}) {
+  return (
+    <div className="slider">
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={Math.round(value * 100)}
+        aria-label={label}
+        onChange={(e) => onChange(Number(e.currentTarget.value) / 100)}
+      />
+      <output>{format(value)}</output>
+    </div>
+  );
+}
+
 export function Panel({ children }: { children: ReactNode }) {
   return <section className="panel">{children}</section>;
 }

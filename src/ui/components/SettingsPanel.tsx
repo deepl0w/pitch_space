@@ -89,7 +89,8 @@ export function SettingsPanel<S>({ fields, settings, onChange }: {
         return (
           <Field key={field.id} label={field.label} group>
             <Chips
-              options={field.options}
+              options={typeof field.options === 'function'
+                ? field.options(settings) : field.options}
               chosen={field.selected(settings)}
               onChange={(next) => onChange(field.apply(settings, next))}
               /*

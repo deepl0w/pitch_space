@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_TYPES } from './registry';
 import { keysIn } from './types';
+import type { SettingOption } from './types';
 import { ALL_KEYS, type Mode, keyId } from '../theory/key';
 import { pitchName } from '../theory/pitch';
 
@@ -26,6 +27,15 @@ const POOL = ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= 4);
 const poolFor = (mode: Mode) => POOL.filter((k) => k.mode === mode);
 /** `keysIn` takes the unfiltered pool and the modes, and orders them itself. */
 const narrow = (mode: Mode, tonics: readonly string[]) => keysIn(POOL, tonics, [mode]);
+
+/** A multi-select's options, which may be a function of the settings. */
+function resolveOptions(
+  field: { options: readonly SettingOption[] | ((s: never) => readonly SettingOption[]) },
+  settings: unknown,
+): readonly SettingOption[] {
+  return typeof field.options === 'function'
+    ? field.options(settings as never) : field.options;
+}
 
 describe('narrowing a pool to chosen tonics', () => {
   it('leaves the pool alone when nothing is chosen', () => {
@@ -145,7 +155,7 @@ describe('every exercise that offers the control', () => {
     */
     for (const { type, field } of withTonics) {
       if (field.kind !== 'multi') continue;
-      for (const option of field.options.slice(0, 4)) {
+      for (const option of resolveOptions(field, type.settings.defaults).slice(0, 4)) {
         const settings = type.settings.coerce({
           ...(type.settings.defaults as object), [field.id]: [option.id],
         });

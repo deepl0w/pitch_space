@@ -29,7 +29,11 @@ export interface MenuEntry {
 const BLURBS: Record<string, string> = {
   'note-id': 'Name a note — by the distance to a reference, or by what it is '
     + 'doing in a key. By ear or on the staff.',
-  'key-id': 'Name the key, from its signature, from the notes, or by ear.',
+  // Signature only. The by-ear mode went in ADR 0028 — it asked for absolute
+  // pitch — and the notes-without-signature mode went with it, because what
+  // it drew was a plain ascending scale whose answer is its own first note.
+  // The blurb outlived both and still offered all three.
+  'key-id': 'Read a key signature and name the key it belongs to.',
   'progression-id': 'Hear a progression and name what each chord is doing in the key.',
   'scale-id': 'Name a scale from twenty types, in any key — by ear or off the staff.',
   'chord-id': 'Name a chord\u2019s quality, and its bass note if you want the harder question.',

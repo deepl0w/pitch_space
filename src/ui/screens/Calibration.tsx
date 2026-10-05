@@ -112,12 +112,16 @@ export function Calibration({ measureWith = measureInputLatency }: {
           ]}
         />
 
+        {/*
+          The lede above already says what the delay is. This says what it
+          costs you to leave it unmeasured, which is the different half —
+          the two were near-identical sentences one above the other.
+        */}
         <p className="secondary">
-          Your device takes a moment to get sound from the microphone into the
-          app, and it will not say how long. Until this is measured, rhythm
-          exercises judge your timing without allowing for it — so you may
-          read as slightly late when you were not.{' '}
-          <strong>Nothing here is required.</strong> Everything works without it.
+          Until it is measured, rhythm exercises judge your timing without
+          allowing for it, so you may read as slightly late when you were
+          not. <strong>Nothing here is required.</strong> Everything works
+          without it.
         </p>
       </Panel>
 
@@ -152,7 +156,7 @@ export function Calibration({ measureWith = measureInputLatency }: {
             max={500}
             step={5}
             value={typed}
-            placeholder="e.g. 60"
+            placeholder="60"
             onChange={(e) => setTyped(e.target.value)}
           />
         </Field>

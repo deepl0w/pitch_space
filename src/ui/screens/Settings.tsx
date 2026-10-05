@@ -1,5 +1,5 @@
 import { entryFor } from '../menu';
-import { Field, OneOf, Panel } from '../controls';
+import { Field, OneOf, Panel, Slider } from '../controls';
 import { appSynth } from '../sound';
 import { settingsStore, useSettings } from '../../state/settingsStore';
 
@@ -31,8 +31,7 @@ export function Settings({ go }: { go(route: string): void }) {
     settingsStore.getState().setAppearance({ theme });
   }
 
-  function setVolume(percent: string) {
-    const volume = Number(percent) / 100;
+  function setVolume(volume: number) {
     settingsStore.getState().setAppearance({ volume });
     // Pushed into the engine as well as stored, so the change is audible on
     // the next sound rather than on the next reload. `App` does the same on
@@ -75,10 +74,11 @@ export function Settings({ go }: { go(route: string): void }) {
 
       <Panel>
         <Field label="Volume">
-          <OneOf
-            options={[0, 25, 50, 75, 100].map((n) => ({ id: `${n}`, label: `${n}%` }))}
-            chosen={`${Math.round(appearance.volume * 100)}`}
+          <Slider
+            label="Volume"
+            value={appearance.volume}
             onChange={setVolume}
+            format={(v) => `${Math.round(v * 100)}%`}
           />
         </Field>
       </Panel>

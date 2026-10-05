@@ -75,6 +75,14 @@ const UNAIDED_CEILING: Record<string, number> = {
 };
 const FALLBACK_CEILING = 2500;
 
+/** A multi-select's options, which may depend on the other settings. */
+function resolved(
+  field: { options: readonly { id: string }[] | ((s: never) => readonly { id: string }[]) },
+  settings: unknown,
+): readonly { id: string }[] {
+  return typeof field.options === 'function' ? field.options(settings as never) : field.options;
+}
+
 describe('asking for a particular item', () => {
   it('has something that claims it can aim', () => {
     /*
@@ -132,11 +140,11 @@ describe('asking for a particular item', () => {
       if (type.aims !== 'exact') continue;
       const field = type.settings.fields.find(
         (f): f is Extract<typeof f, { kind: 'multi' }> =>
-          f.kind === 'multi' && f.options.length > 2,
+          f.kind === 'multi' && resolved(f, type.settings.defaults).length > 2,
       );
       if (field === undefined) continue;
 
-      const [kept, excluded] = field.options;
+      const [kept, excluded] = resolved(field, type.settings.defaults);
       const narrow = type.settings.coerce({
         ...(type.settings.defaults as object), [field.id]: [kept.id],
       });

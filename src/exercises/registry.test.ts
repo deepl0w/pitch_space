@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { optionIds } from '../testing/settingsSpace';
 import { EXERCISE_FAMILIES, EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
 import { itemLabel } from './itemLabel';
 import { SCALE_TYPES } from '../theory/scale';
@@ -102,10 +103,15 @@ describe('every exercise type’s settings', () => {
       for (const field of d.settings.fields) {
         expect(field.label.length).toBeGreaterThan(0);
         if (field.kind === 'toggle') continue;
-        expect(field.options.length).toBeGreaterThan(0);
-        const optionIds = field.options.map((o) => o.id);
-        expect(new Set(optionIds).size).toBe(optionIds.length);
-        for (const option of field.options) expect(option.label.length).toBeGreaterThan(0);
+        // Resolved against the defaults, because a multi-select's options
+        // may depend on the other settings — a tonic the chosen mode
+        // cannot build is not offered.
+        const options = field.kind === 'multi' && typeof field.options === 'function'
+          ? field.options(d.settings.defaults) : field.options as readonly { id: string; label: string }[];
+        expect(options.length).toBeGreaterThan(0);
+        const ids = options.map((o) => o.id);
+        expect(new Set(ids).size).toBe(ids.length);
+        for (const option of options) expect(option.label.length).toBeGreaterThan(0);
       }
     });
   });
@@ -135,7 +141,8 @@ describe('every exercise type’s settings', () => {
     each((d) => {
       for (const field of d.settings.fields) {
         if (field.kind === 'toggle') continue;
-        for (const option of field.options) {
+        for (const option of (field.kind === 'multi' && typeof field.options === 'function'
+          ? field.options(d.settings.defaults) : field.options as readonly { id: string; label: string }[])) {
           if (option.label === option.id && written.test(option.id)) continue;
           expect(
             option.label,
@@ -155,7 +162,7 @@ describe('every exercise type’s settings', () => {
           expect(field.options.map((o) => o.id)).toContain(field.selected(d.settings.defaults));
         }
         if (field.kind === 'multi') {
-          const known = field.options.map((o) => o.id);
+          const known = optionIds(field, d.settings.defaults);
           for (const chosen of field.selected(d.settings.defaults)) expect(known).toContain(chosen);
         }
       }

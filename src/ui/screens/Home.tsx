@@ -53,17 +53,29 @@ export function Home({ go }: { go: (route: string) => void }) {
 }
 
 /** Drawn rather than imported: one icon does not earn a dependency. */
+/**
+ * A cog.
+ *
+ * Two earlier attempts, and the second was worse than the first. A single
+ * outline tracing the silhouette came out a lumpy blob at twenty pixels,
+ * because the teeth were smaller than the stroke joining them and
+ * antialiasing filled the gaps. Replacing it with a ring and eight radial
+ * strokes drew a **sun**: a cog's teeth are part of its rim, and spokes
+ * sticking out of a circle are rays.
+
+ * So it is filled rather than stroked, and the teeth are trapezoids on the
+ * rim — tooth top, flank, valley floor, repeated eight times — with the
+ * centre punched out by `evenodd` rather than drawn over, so it works on
+ * any background. Generated rather than hand-written, which is why the
+ * numbers are exact.
+ */
 function CogIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <path
-        d="M12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"
-        fill="none" stroke="currentColor" strokeWidth="1.6"
-      />
-      <path
-        d="M19.4 13a7.6 7.6 0 0 0 0-2l1.7-1.3-1.8-3.1-2 .8a7.7 7.7 0 0 0-1.7-1l-.3-2.1h-3.6l-.3 2.1a7.7 7.7 0 0 0-1.7 1l-2-.8-1.8 3.1L7.6 11a7.6 7.6 0 0 0 0 2l-1.7 1.3 1.8 3.1 2-.8c.5.4 1.1.7 1.7 1l.3 2.1h3.6l.3-2.1c.6-.3 1.2-.6 1.7-1l2 .8 1.8-3.1Z"
-        fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"
-      />
+    <svg
+      viewBox="0 0 24 24" width="20" height="20"
+      fill="currentColor" fillRule="evenodd" aria-hidden="true" focusable="false"
+    >
+      <path d="M 9.71 2.06L 14.29 2.06L 14.22 4.73L 15.57 5.29L 17.41 3.35L 20.65 6.59L 18.71 8.43L 19.27 9.78L 21.94 9.71L 21.94 14.29L 19.27 14.22L 18.71 15.57L 20.65 17.41L 17.41 20.65L 15.57 18.71L 14.22 19.27L 14.29 21.94L 9.71 21.94L 9.78 19.27L 8.43 18.71L 6.59 20.65L 3.35 17.41L 5.29 15.57L 4.73 14.22L 2.06 14.29L 2.06 9.71L 4.73 9.78L 5.29 8.43L 3.35 6.59L 6.59 3.35L 8.43 5.29L 9.78 4.73ZM 8.40 12.00a 3.60 3.60 0 1 0 7.20 0a 3.60 3.60 0 1 0 -7.20 0Z" />
     </svg>
   );
 }

@@ -317,7 +317,9 @@ describe('the interval settings schema', () => {
         }
       }
       if (field.kind === 'multi') {
-        const ids = field.options.slice(0, 2).map((o) => o.id);
+        const options = typeof field.options === 'function'
+          ? field.options(INTERVAL_DEFAULTS) : field.options;
+        const ids = options.slice(0, 2).map((o) => o.id);
         expect([...field.selected(field.apply(INTERVAL_DEFAULTS, ids))]).toEqual(ids);
       }
     }

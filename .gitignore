@@ -22,10 +22,8 @@ keystore.properties
 .claude/worktrees/
 .claude/settings.local.json
 
-# Coordination state: ADR numbers claimed across branches and worktrees,
-# and the last main commit the fleet was told about.
+# Coordination state: ADR numbers claimed across branches and worktrees.
 .claude/adr-claims
-.claude/announced
 
 # Per-worktree efficiency instrument: timing and (self-reported, usually
 # absent) token counts for session starts and commits. Local to the

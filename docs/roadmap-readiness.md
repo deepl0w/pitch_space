@@ -48,7 +48,12 @@ definition as the schedule's denominator — which the log cannot supply,
 because the log says what *has* been asked and the first session is the gap
 between that and this.
 
-**The weighting seam exists and is the right shape.** The roadmap asks for
+**The weighting seam exists and is the right shape**, and is now recorded as
+[0032](adr/0032-the-generator-is-a-draw-not-a-search.md) — with the limit that
+record names: five of seven exercises can be steered exactly and two cannot be
+steered at all, because the generator draws rather than searches. Spaced
+repetition for progressions and rhythm can observe what came out and not ask
+for what is due. The roadmap asks for
 "constraints first (hard filter), then scheduling weights (soft preference),
 then the seeded draw". `ExerciseSpec.prefer` is that, implemented as a wish
 the generator may decline rather than a command — which is what lets it work

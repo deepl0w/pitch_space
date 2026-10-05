@@ -26,6 +26,9 @@ it ships or is dropped.
 - [Bringing your own material](#bringing-your-own-material)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
+[`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
+code as it stands and lists six places the two do not yet meet.
+
 ## Spaced repetition
 
 The app currently generates exercises from a difficulty setting and a set of
@@ -48,9 +51,15 @@ The unit the schedule tracks. These are not exercises — an exercise is a
 | Chord quality | `chord:m7b5`, `chord:dom7:inv2` |
 | Key signature | `key:Eb_major`, `key:C#_minor` |
 | Scale | `scale:harmonic_minor` |
-| Rhythmic cell | `rhythm:dotted_e_s`, `rhythm:e_q_e` |
-| Progression | `harmony:ii-V-I`, `harmony:deceptive` |
-| Note reading | `read:treble:ledger_above:A5` |
+| Rhythmic cell | `cell:dotted_e_s`, `cell:e_q_e` |
+| Progression | `progression:major:V`, `progression:minor:iv` |
+| Note reading | not yet written; sight reading is unbuilt |
+
+**The ids above are read off the code, not invented here**, because history
+is already accruing against them and the code is what it accrues against.
+An earlier version of this table named `rhythm:`, `harmony:` and `read:`
+prefixes that no exercise writes, which is how a migration gets planned
+against a vocabulary that does not exist.
 
 Ids must be stable across releases, because they key a user's history. That
 makes them the same kind of commitment as the preset ids in the sibling tuner,

@@ -18,6 +18,7 @@ it ships or is dropped.
   - [What a score is for, once it is in](#what-a-score-is-for-once-it-is-in)
   - [The parts that will actually be hard](#the-parts-that-will-actually-be-hard)
 - [Learning the catalogues from real music](#learning-the-catalogues-from-real-music)
+  - [A workbench for the corpus, once there is one](#a-workbench-for-the-corpus-once-there-is-one)
   - [Recordings to go with them](#recordings-to-go-with-them)
 - [A settings screen](#a-settings-screen)
 - [Taking your progress with you](#taking-your-progress-with-you)
@@ -336,6 +337,34 @@ rhythm cells are the exception where counting genuinely produces the right
 object, because a beat-sized figure *is* a frequent short pattern — Groove
 MIDI is the source, and the caveat is that it is overwhelmingly 4/4, so it
 does nothing for the additive metres this file already names as thin.
+
+### A workbench for the corpus, once there is one
+
+Wanted as soon as material is imported rather than after: **a tool for
+looking at the database and the relations in it** — which excerpts, scores
+and recordings exist, what has been extracted from each, and, the part that
+is actually hard to get any other way, **where each part is used**. A
+template derived from bar 9 of a quartet should be traceable back to it, and
+the quartet should be able to say which templates, cells and audio excerpts
+came out of it.
+
+And **editing by hand**: labelling and relabelling. Any analysis of real
+music is partly wrong — MusicNet's own authors estimate a 4% labelling error
+rate, a derived cadence type is an inference, and a style tag is a judgement
+rather than a measurement. A corpus that can only be regenerated is one
+where every correction has to be expressed as a better algorithm. Being able
+to say "this is a half cadence, not an imperfect authentic one" and have it
+stick is what makes a corpus improve instead of merely change.
+
+Two things follow that are worth deciding before any of it is built. A hand
+correction has to survive re-importing the source, so corrections live apart
+from the extraction rather than being written back into it. And a derived
+entry should carry its provenance — which file, which bars, which extraction
+run — because that is the same field the usage view reads and the same one
+that makes a licence question answerable later rather than archaeological.
+
+Not a user-facing screen. This is a maintainer's tool over the build-time
+corpus, in the same family as `tools/report-facts.sh`.
 
 ### Recordings to go with them
 

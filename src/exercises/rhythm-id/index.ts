@@ -23,6 +23,9 @@ export const rhythmIdentification = defineExercise<
   name: 'Rhythm',
   description: 'Read or hear a rhythm, then play it back in time.',
   presentations: ['read'],
+  // The stave carries a moving cursor and the marks for how it was played,
+  // so it belongs inside the component holding the clock. See PromptDrawnScores.
+  promptDrawsScores: true,
   settings: rhythmSettingsSchema,
   generate: generateRhythmExercise,
   items: rhythmItems,

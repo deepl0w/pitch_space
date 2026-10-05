@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { drawScore, type ScoreSpec } from '../../exercises/render/toVexflow';
+import { drawScore, type ScoreLayout, type ScoreSpec } from '../../exercises/render/toVexflow';
 
 /**
  * VexFlow draws imperatively into a DOM node it owns, which is the opposite of
@@ -8,8 +8,28 @@ import { drawScore, type ScoreSpec } from '../../exercises/render/toVexflow';
  * fighting: React never reconciles inside this div, and VexFlow never sees a
  * node React is about to replace.
  */
-export function Score({ spec, height }: { spec: ScoreSpec; height?: number }) {
+export function Score({ spec, height, onLayout, cursorX }: {
+  spec: ScoreSpec;
+  height?: number;
+  /**
+   * Where the engraver put each note, handed up after every draw — which
+   * includes every resize, because the x positions change with the width.
+   * A caller that stores these must take the newest and not the first.
+   */
+  onLayout?: (layout: ScoreLayout) => void;
+  /**
+   * Draw a playback cursor at this x, in the same pixels `onLayout`
+   * reports. Null or absent draws none.
+   *
+   * Owned here rather than by the caller because the cursor's *height* is
+   * the stave's, which only this component knows, and because the SVG is
+   * redrawn at the measured width rather than scaled — so these pixels are
+   * only interchangeable with CSS pixels inside this box.
+   */
+  cursorX?: number | null;
+}) {
   const host = useRef<HTMLDivElement>(null);
+  const [stave, setStave] = useState<ScoreLayout['stave'] | null>(null);
   const [width, setWidth] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [scheme, setScheme] = useState(0);
@@ -46,9 +66,32 @@ export function Score({ spec, height }: { spec: ScoreSpec; height?: number }) {
   useEffect(() => {
     const node = host.current;
     if (!node || width === 0) return;
-    const colour = getComputedStyle(node).getPropertyValue('--score-ink').trim() || undefined;
+    const style = getComputedStyle(node);
+    const token = (name: string) => style.getPropertyValue(name).trim();
+    const colour = token('--score-ink') || undefined;
+    /*
+      A note's colour is resolved here rather than passed straight through.
+
+      VexFlow writes it into a presentation attribute — `fill` on the note's
+      group — and presentation attributes do not accept `var()`. So
+      `fill="var(--right)"` is simply invalid, the mark keeps the default
+      ink, and the result looks exactly like colouring that was never asked
+      for. This is the same reason the ink itself is read here and handed in
+      rather than set from the stylesheet: the note above makes that case
+      for the staff lines and it holds for the noteheads too.
+    */
+    const resolved = {
+      ...spec,
+      notes: spec.notes.map((note) => {
+        const match = /^var\(\s*(--[\w-]+)\s*\)$/.exec(note.colour ?? '');
+        return match ? { ...note, colour: token(match[1]) || undefined } : note;
+      }),
+    };
     try {
-      drawScore(node, spec, { width, height, colour });
+      const layout = drawScore(node, resolved, { width, height, colour });
+      onLayout?.(layout);
+      // oxlint-disable-next-line react/set-state-in-effect
+      setStave(layout.stave);
       // The rule says an effect should synchronize React with an external
       // system, which is exactly what this is: VexFlow is the external system,
       // and whether it could engrave the spec is only knowable by asking it.
@@ -63,13 +106,32 @@ export function Score({ spec, height }: { spec: ScoreSpec; height?: number }) {
       node.replaceChildren();
       // Same exception as the success path above.
       // oxlint-disable-next-line react/set-state-in-effect
+      setStave(null);
+      // oxlint-disable-next-line react/set-state-in-effect
       setError(cause instanceof Error ? cause.message : String(cause));
     }
-  }, [spec, width, height, scheme]);
+  }, [spec, width, height, scheme, onLayout]);
 
   return (
     <div className="score">
-      <div ref={host} className="score-host" />
+      <div ref={host} className="score-host">
+        {/*
+          Rendered as a sibling of what VexFlow owns rather than inside it.
+          The effect calls `replaceChildren` on `.score-host`, so anything
+          React puts in there is wiped on the next draw — and a resize
+          redraws.
+        */}
+      </div>
+      {cursorX != null && stave && (
+        <div
+          className="score-cursor"
+          style={{
+            left: `${cursorX}px`,
+            top: `${stave.top - 8}px`,
+            height: `${stave.bottom - stave.top + 16}px`,
+          }}
+        />
+      )}
       {error && <p className="score-error">Could not engrave: {error}</p>}
     </div>
   );

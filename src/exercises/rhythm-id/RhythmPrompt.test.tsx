@@ -128,12 +128,18 @@ describe('putting the question', () => {
     expect(audio.plays).toEqual([]);
   });
 
-  it('sounds the count-in, and only the count-in, when asked', () => {
+  it('sounds the count-in and the rhythm when asked, with the staff showing', () => {
+    /*
+      The staff is up, so sounding the rhythm does not answer the question
+      — the question is whether you can play it. What this buys is the
+      join: the note you hear, the note on the page and the cursor over it
+      are the same note at the same instant.
+    */
     const ex = exercise();
     render(ex);
     click(hear());
     expect(audio.plays).toHaveLength(1);
-    expect(audio.plays[0].length).toBe(ex.countInBeats);
+    expect(audio.plays[0].length).toBe(ex.countInBeats + ex.onsets.length);
   });
 });
 
@@ -147,7 +153,7 @@ describe('what the controls say while they wait', () => {
       Asserted across the whole duration rather than at a moment in it,
       because the gap was the duration.
     */
-    const IDLE = ['Count me in', 'Tap it back'];
+    const IDLE = ['Hear it', 'Tap it back'];
     const ex = exercise();
     render(ex);
     click(hear());
@@ -159,16 +165,19 @@ describe('what the controls say while they wait', () => {
     }
   });
 
-  it('holds the controls for the count-in, not for the rhythm it is not playing', () => {
+  it('holds the controls for exactly as long as something is sounding', () => {
     /*
-      The count-in is about three seconds at 84bpm and the rhythm it
-      precedes is about nine. The wait was written against the rhythm, so
-      the buttons stayed disabled and the label went on reading that it
-      was playing for six seconds after the last click — the single piece
-      of evidence the page was alive, outlasting the thing it described.
+      The defect this comes from was the two spans disagreeing: the wait
+      was written against the whole rhythm while only the count-in played,
+      so the label went on saying it was playing for six seconds after the
+      last click — the one piece of evidence the page was alive,
+      outlasting the thing it described.
 
-      Pinned as the relationship rather than as a number: the wait tracks
-      the count-in, and is nowhere near the whole question.
+      Both halves have since moved: the rhythm sounds now too, so the long
+      wait is correct. Pinned as the relationship rather than either
+      number, because that is what was actually wrong and what would be
+      wrong again if either side changed alone. Still held while the
+      rhythm sounds; released after it.
     */
     const ex = exercise();
     const lead = leadInSeconds(ex);
@@ -181,20 +190,23 @@ describe('what the controls say while they wait', () => {
     expect(hear().disabled).toBe(true);
 
     advance(lead + 1);
-    expect(hear().disabled, 'still held after the count-in finished').toBe(false);
-    expect(labelled('Count me in')).toBeDefined();
+    expect(hear().disabled, 'released while the rhythm was still sounding').toBe(true);
+
+    advance(whole - lead);
+    expect(hear().disabled, 'still held after everything had sounded').toBe(false);
+    expect(labelled('Hear it')).toBeDefined();
   });
 
-  it('says it is counting, and offers the count-in again once it has stopped', () => {
+  it('says it is playing, and offers it again once it has stopped', () => {
     const ex = exercise();
     render(ex);
     click(hear());
-    expect(labelled('Counting you in…')).toBeDefined();
+    expect(labelled('Playing…')).toBeDefined();
     expect(hear().disabled).toBe(true);
     expect(answer().disabled).toBe(true);
 
-    advance(leadInSeconds(ex) + 1);
-    expect(labelled('Count me in')).toBeDefined();
+    advance(leadInSeconds(ex) + ex.onsets[ex.onsets.length - 1] + 1);
+    expect(labelled('Hear it')).toBeDefined();
     expect(hear().disabled).toBe(false);
     expect(answer().disabled).toBe(false);
   });

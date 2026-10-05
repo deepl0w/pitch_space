@@ -1,9 +1,44 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PromptProps } from '../types';
+import { Score } from '../../ui/notation/Score';
+import type { ScoreLayout } from '../render/toVexflow';
 import {
-  beatSeconds, leadInSeconds, rhythmVoices,
+  beatSeconds, leadInSeconds, rhythmVoices, secondsAt,
   type RhythmExercise, type RhythmResponse, type RhythmSettings,
 } from './rhythms';
+
+/**
+ * Where the cursor sits at a given moment, in the score's own pixels.
+ *
+ * The written events carry the time axis and the layout carries the space
+ * axis, and they are the same list in the same order — `rhythmScoreSpec`
+ * emits one note per event — so this is an interpolation between two
+ * parallel arrays rather than a search.
+ *
+ * Exported because it is the whole correctness of following the music and
+ * is worth testing without a browser: a time between two events must land
+ * between their two x positions.
+ */
+export function cursorAt(
+  seconds: number, times: readonly number[], layout: ScoreLayout,
+): number | null {
+  const xs = layout.notes;
+  if (xs.length === 0 || times.length === 0) return null;
+  // Strictly before: at the instant the first note sounds the line belongs
+  // on that note, not still waiting in front of it. With `<=` the cursor
+  // sat at the stave's note-start for the whole of the first note, which
+  // is the one moment the join between sound and notation is being made.
+  if (seconds < times[0]) return layout.stave.notesStartX;
+  for (let i = 1; i < Math.min(times.length, xs.length); i += 1) {
+    if (seconds < times[i]) {
+      const span = times[i] - times[i - 1];
+      // Two events at the same tick cannot both be reached; land on the later.
+      const through = span > 0 ? (seconds - times[i - 1]) / span : 1;
+      return xs[i - 1].x + (xs[i].x - xs[i - 1].x) * through;
+    }
+  }
+  return xs[xs.length - 1].x;
+}
 
 /**
  * Tap it back.
@@ -43,10 +78,10 @@ const SETTLE = 0.6;
 /** Space and Enter, because a rhythm is tapped with a thumb or a key. */
 const TAP_KEYS = new Set([' ', 'Spacebar', 'Enter']);
 
-type Phase = 'ready' | 'listening' | 'tapping' | 'done';
+type Phase = 'ready' | 'hearing' | 'tapping' | 'done';
 
 export function RhythmPrompt({
-  exercise, result, onRespond, audio,
+  exercise, result, onRespond, audio, scores,
 }: PromptProps<RhythmSettings, RhythmExercise, RhythmResponse>) {
   const [phase, setPhase] = useState<Phase>('ready');
   const [taps, setTaps] = useState<number[]>([]);
@@ -56,23 +91,46 @@ export function RhythmPrompt({
   const lead = leadInSeconds(exercise);
   const total = lead + (exercise.onsets[exercise.onsets.length - 1] ?? 0);
 
-  /*
-    The count-in, on its own. The rhythm is on the staff, so sounding it
-    would answer the question rather than ask it; what a player needs
-    before tapping is the tempo, and that is what the clicks carry.
+  const [layout, setLayout] = useState<ScoreLayout | null>(null);
+  const [elapsed, setElapsed] = useState<number | null>(null);
 
-    Held for the count-in and not for the whole question. It used to wait
-    `total`, the length of a rhythm it was not playing — about nine
-    seconds at 84bpm over two bars against roughly three of clicks — so
-    the controls stayed disabled and the button went on reading "Playing…"
-    for six seconds after the last sound. A label that outlasts the thing
-    it describes is worse than no label, because it is the one piece of
-    evidence the page is still working.
+  /* The written events' start times, which is the cursor's time axis. */
+  const times = useMemo(
+    () => exercise.bars.flatMap((b) => b.events)
+      .map((e) => secondsAt(e.startTick, exercise.tempo)),
+    [exercise],
+  );
+
+  /*
+    `onLayout` goes into the Score's effect dependencies, so an inline
+    function would redraw the stave on every render — and every tick of the
+    cursor is a render. VexFlow re-engraving sixty times a second is not a
+    thing to find out about later.
   */
-  function listen() {
-    setPhase('listening');
-    audio.play(rhythmVoices(exercise, { silent: true }));
-    window.setTimeout(() => setPhase('ready'), (lead + SETTLE) * 1000);
+  const onLayout = useCallback((next: ScoreLayout) => setLayout(next), []);
+
+  const cursorX = layout && elapsed !== null ? cursorAt(elapsed, times, layout) : null;
+
+  /*
+    Hear the rhythm, with the staff showing and the cursor running over it.
+
+    The listening mode this replaced played the rhythm and drew nothing, so
+    you could be wrong about it and never find out what it was. Playing it
+    while the line crosses the notes you are hearing is the opposite trade:
+    the sound and the notation teach each other, and the question is still
+    "can you play this", which the tapping answers.
+
+    Held for the whole thing because the whole thing is what sounds. It
+    used to wait `total` while playing only the count-in, which left the
+    button reading that it was playing for six seconds after the last
+    click; now the wait and the sound are the same span by construction
+    rather than by two numbers agreeing.
+  */
+  function hear() {
+    setPhase('hearing');
+    audio.play(rhythmVoices(exercise));
+    startedAt.current = performance.now();
+    window.setTimeout(() => setPhase('ready'), (total + SETTLE) * 1000);
   }
 
   /** Count in, then take taps. The count-in is what gives the answer a tempo. */
@@ -82,6 +140,89 @@ export function RhythmPrompt({
     audio.play(rhythmVoices(exercise, { silent: true }));
     startedAt.current = performance.now();
   }
+
+  /*
+    The cursor is driven from the same `performance.now()` zero as the taps,
+    for the reason in the note at the top of this file: it is the only clock
+    this component can see, and taking the cursor from a second one would
+    put the line and the measurement in different times. A cursor that
+    disagrees with the grade is worse than no cursor.
+  */
+  const running = phase === 'hearing' || phase === 'tapping';
+  useEffect(() => {
+    if (!running) { setElapsed(null); return; }
+    let frame = 0;
+    const step = () => {
+      if (startedAt.current === null) return;
+      setElapsed((performance.now() - startedAt.current) / 1000 - lead);
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [running, lead]);
+
+  /*
+    The written notes, marked by how they were played, once there is a
+    verdict. `ScoreNote.colour` has been in the renderer since it was
+    written and nothing had ever set it.
+
+    Keyed through `onsetCells`, which is how the grader credits a figure:
+    an attack belongs to a cell, the cell gets one verdict, and every
+    attack of that cell takes the cell's colour. Colouring per attack
+    instead would claim a precision the grading does not have.
+  */
+  const markedScore = useMemo(() => {
+    const base = scores?.questionScore ?? scores?.answerScore ?? null;
+    if (!base || !result) return base;
+    const verdict = new Map(result.outcomes.map((o) => [o.item, o.correct]));
+    const events = exercise.bars.flatMap((b) => b.events);
+    let attack = 0;
+    return {
+      ...base,
+      notes: base.notes.map((note, i) => {
+        const event = events[i];
+        if (!event || event.isRest || event.tiedFromPrevious) return note;
+        const cell = exercise.onsetCells[attack];
+        attack += 1;
+        const correct = cell === undefined ? undefined : verdict.get(`cell:${cell}`);
+        if (correct === undefined) return note;
+        return { ...note, colour: correct ? 'var(--right)' : 'var(--wrong)' };
+      }),
+    };
+  }, [scores, result, exercise]);
+
+  /*
+    The note sounding right now, lit while the rhythm plays.
+
+    The cursor says where in the bar you are; this says which written note
+    the sound you just heard belongs to, which is the join between the two
+    the exercise exists to teach. One note at a time and only while
+    playing — a trail of lit notes would be a second, slower cursor saying
+    the same thing less precisely.
+
+    Not applied once there is a verdict: the marking is the more important
+    thing to be looking at by then, and two colour schemes on one stave is
+    a stave saying nothing.
+  */
+  const sounding = useMemo(() => {
+    if (!markedScore || result || phase !== 'hearing' || elapsed === null) return markedScore;
+    if (elapsed < 0) return markedScore;
+    const events = exercise.bars.flatMap((b) => b.events);
+    let lit = -1;
+    for (let i = 0; i < times.length; i += 1) {
+      // A rest is a real event with a real position, and lighting it would
+      // say the silence was a note. The cursor is still over it, which is
+      // the honest way to show time passing through a rest.
+      if (times[i] <= elapsed && !events[i]?.isRest) lit = i;
+    }
+    if (lit < 0) return markedScore;
+    return {
+      ...markedScore,
+      notes: markedScore.notes.map(
+        (note, i) => (i === lit ? { ...note, colour: 'var(--accent)' } : note),
+      ),
+    };
+  }, [markedScore, result, phase, elapsed, times, exercise]);
 
   const tap = useCallback(() => {
     if (startedAt.current === null) return;
@@ -131,6 +272,10 @@ export function RhythmPrompt({
         Read it, then play it back in time.
       </p>
 
+      {sounding && (
+        <Score spec={sounding} onLayout={onLayout} cursorX={cursorX} />
+      )}
+
       <div className="actions">
         {/*
           Something on screen names what is happening at every instant
@@ -150,8 +295,8 @@ export function RhythmPrompt({
           looked like for the nine
           seconds a two-bar question takes at 84bpm.
         */}
-        <button type="button" onClick={listen} disabled={phase !== 'ready' || answered}>
-          {phase === 'listening' ? 'Counting you in…' : 'Count me in'}
+        <button type="button" onClick={hear} disabled={phase !== 'ready' || answered}>
+          {phase === 'hearing' ? 'Playing…' : 'Hear it'}
         </button>
         <button type="button" onClick={begin} disabled={phase !== 'ready' || answered}>
           {phase === 'tapping' ? 'Listening for taps…' : 'Tap it back'}

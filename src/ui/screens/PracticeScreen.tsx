@@ -416,9 +416,10 @@ function RoundView({ definition, round, settings, onRespond, audio }: {
         result={round.result}
         onRespond={onRespond}
         audio={audio}
+        scores={definition.promptDrawsScores ? { questionScore, answerScore } : undefined}
       />
-      {questionScore && <Score spec={questionScore} />}
-      {answerScore && <Score spec={answerScore} />}
+      {!definition.promptDrawsScores && questionScore && <Score spec={questionScore} />}
+      {!definition.promptDrawsScores && answerScore && <Score spec={answerScore} />}
     </>
   );
 }

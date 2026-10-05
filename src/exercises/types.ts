@@ -321,6 +321,32 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
   /** Hand the response up. The screen grades it and records the attempt. */
   onRespond(response: R): void;
   audio: AudioOut;
+  /**
+   * Set only when the definition sets `promptDrawsScores`; see
+   * {@link PromptDrawnScores}.
+   */
+  scores?: PromptDrawnScores;
+}
+
+/**
+ * An exercise whose prompt draws its own stave.
+ *
+ * The screen draws the question and the answer staves itself for every
+ * exercise, which is right while the stave is something to look at. Rhythm
+ * needs it to be something that *moves*: a cursor following the audio clock
+ * and the written notes coloured by how they were played. That wants the
+ * stave inside the component holding the clock and the taps, not beside it.
+ *
+ * So a definition can take it over. When it does, the screen draws neither
+ * stave and hands both specs to the prompt instead — rather than the prompt
+ * recomputing them, which would be two callers deciding separately what the
+ * question looks like.
+ */
+export interface PromptDrawnScores {
+  /** The question's stave, or null once it has been answered. */
+  questionScore: ScoreSpec | null;
+  /** The answer's stave, or null until there is one. */
+  answerScore: ScoreSpec | null;
 }
 
 /* -- the definition ------------------------------------------------------- */
@@ -368,6 +394,12 @@ export interface ExerciseDefinition<S extends BaseSettings, E extends ExerciseBa
    * there is nothing to show — which is the normal case when listening.
    */
   questionScore?(exercise: E): ScoreSpec | null;
+
+  /**
+   * The prompt draws both staves itself; the screen draws neither and
+   * passes the specs down. See {@link PromptDrawnScores}.
+   */
+  promptDrawsScores?: boolean;
   /**
    * Every item these settings make askable, whether or not it has ever
    * been asked.

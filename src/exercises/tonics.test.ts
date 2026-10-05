@@ -4,6 +4,7 @@ import { keysIn } from './types';
 import type { SettingOption } from './types';
 import { ALL_KEYS, type Mode, keyId } from '../theory/key';
 import { pitchName } from '../theory/pitch';
+import { optionIds, valuesOf, widestSettings, applyValue, type AnyField } from '../testing/settingsSpace';
 
 /**
  * Choosing which tonics a question may be built on.
@@ -161,6 +162,69 @@ describe('every exercise that offers the control', () => {
           .toEqual([wanted]);
       }
     }
+  });
+
+  it('builds on what the panel shows lit, for a pair the panel cannot offer', () => {
+    /*
+      The other half of "the mode wins", and the half nothing asserted.
+
+      `keysIn` resolving a stale tonic to the mode is one claim; the panel
+      displaying that same resolution is another, and they live in different
+      functions — `keysIn` returns a pool and `keysField.selected` returns
+      chips. Each was changed on its own twice in three days, and they agree
+      at the moment only because both were written to. Two independent
+      fallbacks that happen to coincide are exactly what a test is for: a
+      third change to either is otherwise silent, and the symptom is the one
+      the user role already reported, a control showing a selection that
+      nothing honours.
+
+      The offending pair is derived rather than written down. "A♭ with minor
+      only" is true today and was wrong once already in this file's history
+      — a case built on D♯ asserted the asymmetry and reached the
+      unrecognised-tonic branch instead, because D♯ minor is six sharps and
+      is not a chip at all. So the stale ids here are whatever widening
+      another control offers that this configuration does not, which stays
+      correct when the pool or the accidental cap moves.
+    */
+    let asked = 0;
+    for (const { type, field } of withTonics) {
+      if (field.kind !== 'multi') continue;
+      const wide = optionIds(field, widestSettings(type));
+      for (const other of type.settings.fields as AnyField[]) {
+        if (other.id === field.id) continue;
+        for (const value of valuesOf(other, type.settings.defaults)) {
+          const narrowed = type.settings.coerce(
+            applyValue(other, type.settings.coerce(type.settings.defaults), value),
+          );
+          const offered = optionIds(field, narrowed);
+          const stale = wide.filter((id) => !offered.includes(id));
+          if (stale.length === 0) continue;
+
+          // Only the stale ones chosen, so the generator has nothing it can
+          // honour and has to fall back — the blob a user gets by picking
+          // tonics and then changing the mode.
+          const settings = type.settings.coerce(applyValue(field, narrowed, stale));
+          const lit = new Set(field.selected(settings as never)
+            .map((id) => id.replace(/^tonic:/, '')));
+          expect([...lit].some((t) => stale.includes(`tonic:${t}`)),
+            `${type.id}.${field.id} lights a chip it does not offer`).toBe(false);
+
+          const built = new Set<string>();
+          for (let seed = 0; seed < 240; seed += 1) {
+            const exercise = type.generate({ seed, settings }) as {
+              keyId?: string; root?: { } };
+            if (typeof exercise.keyId === 'string') built.add(exercise.keyId.split('_')[0]);
+            else if (exercise.root) built.add(pitchName(exercise.root as never, false));
+          }
+          expect([...built].sort(),
+            `${type.id} with only ${stale.join(' ')} chosen under ${other.id}=${JSON.stringify(value)}`)
+            .toEqual([...lit].sort());
+          asked += 1;
+        }
+      }
+    }
+    expect(asked, 'no control narrows the tonics, so nothing above was tested')
+      .toBeGreaterThan(0);
   });
 
   it('builds on everything when nothing is chosen', () => {

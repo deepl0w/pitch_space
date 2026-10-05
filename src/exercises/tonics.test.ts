@@ -75,48 +75,38 @@ describe('narrowing a pool to chosen tonics', () => {
     }
   });
 
-  it('keeps the tonic and gives up the mode, rather than giving up the tonic', () => {
+  it('ignores a tonic the mode cannot build, and keeps the mode', () => {
     /*
-      The case where the two settings cannot both be satisfied. Within four
-      accidentals the two modes do not offer the same tonics: A♭, E♭ and B♭
-      are major-only — A♭ minor is seven flats — and B, F♯ and C♯ are
-      minor-only. The chips are the union, so either kind is one click away,
-      and `A♭` with minor only can give the tonic or the mode and not both.
+      The case where the two settings cannot both be satisfied: within four
+      accidentals A♭, E♭ and B♭ are major-only and B, F♯ and C♯ are
+      minor-only.
 
-      Not `D♯`, which is what the first version of this said and what the
-      comment on `keysIn` still says. D♯ minor is six sharps and outside the
-      limit, so `D♯` is not a chip at all — the old test reached the
-      *unrecognised tonic* path while claiming to test this one, and passed
-      for a reason it did not mean. That is why the asymmetry is asserted
-      below rather than described here.
+      **The mode wins, and this is the third answer to that question**,
+      which is worth recording because the first two were each a defect.
+      Returning the whole unnarrowed pool meant ticking one tonic handed
+      you every key — the opposite of the request. Letting the tonic win
+      instead gave a mode control reading "Minor" while every question
+      came out major, with nothing on screen saying so; the user role
+      called that a bug rather than a surprise.
 
-      It gives the tonic. That is a decision and not an accident of the
-      filter: the mode carries a default and the tonic list does not, so
-      the tonic is the more specific and more recent choice.
-
-      This used to hand back the whole pool — ticking one tonic gave you
-      *every* key, which is not a weaker version of what was asked but the
-      opposite of it, and ADR 0017 already decided a setting excludes
-      rather than declines to act. Caught in review rather than by this
-      file, which had pinned the old behaviour as merely surprising.
+      What makes the mode the right answer now is that the panel no longer
+      offers the pair: `keysField` lists only tonics the chosen modes can
+      build, and drops stored ones that are no longer offered. So this
+      branch is reachable only from a blob written before the mode
+      changed, and it resolves the way the panel would display it — no
+      tonic chosen, therefore no tonic filter.
     */
     const tonicsOf = (mode: Mode) => poolFor(mode).map((k) => pitchName(k.tonic, false));
-    // The asymmetry this case is about, asserted rather than assumed, so it
-    // cannot quietly stop being the thing under test.
-    expect(tonicsOf('minor')).not.toContain('Ab');
-    expect(tonicsOf('major')).not.toContain('B');
-    expect(tonicsOf('major')).toContain('Ab');
-    expect(tonicsOf('minor')).toContain('B');
-    // And the example that was wrong twice: `D#` is offered by neither, so
-    // a case built on it tests the unrecognised-tonic path instead of this
-    // one. Pinned so the example cannot come back.
-    expect([...tonicsOf('major'), ...tonicsOf('minor')]).not.toContain('D#');
+    expect(tonicsOf('minor'), 'A♭ minor is seven flats').not.toContain('Ab');
+    expect(tonicsOf('major'), 'A♭ major is four flats').toContain('Ab');
+    expect(tonicsOf('major'), 'B major is five sharps').not.toContain('B');
+    expect(tonicsOf('minor'), 'B minor is two sharps').toContain('B');
 
-    expect(narrow('minor', ['tonic:Ab']).map(keyId)).toEqual(['Ab_major']);
-    expect(narrow('major', ['tonic:B']).map(keyId)).toEqual(['B_minor']);
+    expect(narrow('minor', ['tonic:Ab']).map(keyId)).toEqual(poolFor('minor').map(keyId));
+    expect(narrow('major', ['tonic:B']).map(keyId)).toEqual(poolFor('major').map(keyId));
 
-    // And a tonic that the mode *can* build on still wins outright: the
-    // relaxation is for an empty result, never for a partial one.
+    // A tonic the mode *can* build still wins outright: the relaxation is
+    // for an empty result, never for a partial one.
     expect(narrow('minor', ['tonic:Ab', 'tonic:F']).map(keyId)).toEqual(['F_minor']);
   });
 

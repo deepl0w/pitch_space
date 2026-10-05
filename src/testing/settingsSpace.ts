@@ -26,7 +26,7 @@ export type AnyField = SettingField<unknown>;
  * still a control that does something, and the all-and-each pair finds that
  * without the combinatorics.
  */
-export function valuesOf(field: AnyField, settings: unknown = undefined): unknown[] {
+export function valuesOf(field: AnyField, settings: unknown): unknown[] {
   if (field.kind === 'toggle') return [true, false];
   if (field.kind === 'choice') return field.options.map((o) => o.id);
   const ids = optionIds(field, settings);
@@ -42,9 +42,15 @@ export function valuesOf(field: AnyField, settings: unknown = undefined): unknow
  */
 export function optionIds(field: AnyField, settings: unknown): string[] {
   if (field.kind === 'toggle') return [];
-  const options = typeof field.options === 'function'
-    ? field.options(settings) : field.options;
-  return options.map((o) => o.id);
+  if (typeof field.options !== 'function') return field.options.map((o) => o.id);
+  // Required rather than optional: a field whose options depend on the
+  // settings cannot answer without them, and defaulting to `undefined`
+  // turned that into a crash inside the field instead of a type error at
+  // the call site.
+  if (settings === undefined) {
+    throw new Error('optionIds needs the settings: this field\'s options depend on them');
+  }
+  return field.options(settings).map((o) => o.id);
 }
 
 /** `field.apply`, with the value narrowed to what that kind of field takes. */

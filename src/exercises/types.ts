@@ -423,53 +423,62 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
 export function keysIn(
   all: readonly Key[], chosenTonics: readonly string[], modes: readonly Mode[],
 ): readonly Key[] {
-  // The stored ids are prefixed; the prefix is stripped here rather than
-  // spelled at every call site. Bare names are accepted too, because a
-  // settings blob stored before the prefix existed is still a real thing
-  // a browser can hand back.
-  const wanted = new Set(chosenTonics.map((t) => t.replace(/^tonic:/, '')));
-  const byTonic = wanted.size === 0
-    ? all : all.filter((k) => wanted.has(pitchName(k.tonic, false)));
-  const byMode = (ks: readonly Key[]) => ks.filter((k) => modes.includes(k.mode));
+  const inMode = all.filter((k) => modes.includes(k.mode));
+  const pool = inMode.length > 0 ? inMode : all;
 
-  const both = byMode(byTonic);
-  if (both.length > 0) return both;
+  // The stored ids are prefixed; bare names are accepted too, because a
+  // settings blob written before the prefix existed is a real thing a
+  // browser can hand back.
+  const wanted = new Set(chosenTonics.map((t) => t.replace(/^tonic:/, '')));
+  if (wanted.size === 0) return pool;
+
+  const narrowed = pool.filter((k) => wanted.has(pitchName(k.tonic, false)));
+  if (narrowed.length > 0) return narrowed;
 
   /*
-    Nothing can be built from the chosen tonics in the chosen modes. One of
-    the two has to give, and **it is the mode**.
+    The chosen tonics name nothing this mode can build, so they are
+    ignored and the mode stands.
 
-    The case is real and reachable from the panel, and the asymmetry is
-    the accidental limit rather than anything about tonics. Within four
-    accidentals **A♭, E♭ and B♭ are major-only** and **B, F♯ and C♯ are
-    minor-only**; the chips are the union, so either kind is one click
-    away. Asking for A♭ with minor only selects nothing.
+    **The mode wins, and this is the second answer to that question.** It
+    first returned the whole unnarrowed pool, which meant ticking one
+    tonic handed you every key — the opposite of the request. Then the
+    tonic won and the mode gave way, which traded that for a mode control
+    showing "Minor" while every question came out major, and the user role
+    called it a bug: nothing on screen indicated the override.
 
-    It gives the tonic. That is a decision and not an accident of the
-    filter: the mode carries a default and the tonic list does not, so the
-    tonic is the more specific and more recent choice. A♭ with minor only
-    gives A♭ major — not what was asked for, but recognisably adjacent,
-    and never nine keys when one was chosen.
-
-    That last part is what this replaced. It used to hand back the whole
-    pool, so ticking one tonic gave you *every* key, which is not a weaker
-    version of the request but the opposite of it, and ADR 0017 already
-    decided a setting excludes rather than declines to act.
-
-    A tonic in neither pool — D♯, say, whose minor is six sharps — still
-    falls through to the mode alone, because there is no key to honour.
-    The panel cannot produce that; a hand-edited settings blob can.
+    What changed is that neither override is now reachable. `keysField`
+    only offers tonics the chosen modes can build, and its `selected`
+    ignores stored ones that are no longer offered — so a chip and the
+    generator cannot disagree. This branch is left for a settings blob
+    written before the mode changed, or edited by hand, and it resolves
+    the way the panel displays it: no tonic chosen, so no tonic filter.
   */
-  if (byTonic.length > 0) return byTonic;
-  const modeOnly = byMode(all);
-  return modeOnly.length > 0 ? modeOnly : all;
+  return pool;
 }
 
 /** The field itself, so the three panels read identically. */
-export function keysField<S extends { keys: readonly string[] }>(
+export function keysField<S extends { keys: readonly string[]; modes: readonly Mode[] }>(
   pool: readonly Key[],
 ): SettingField<S> {
-  const tonics = [...new Set(pool.map((k) => pitchName(k.tonic, false)))];
+  /*
+    Only the tonics the chosen modes can actually build.
+
+    Within four accidentals A♭ exists in major and not in minor, so a fixed
+    list of twelve beside a mode switch lets a learner ask for A♭ *and*
+    minor-only — a pair with no key in it. The app then had to drop one of
+    them silently while both controls still showed what was asked, and the
+    user role called that a bug rather than a surprise: "Minor stays
+    visually selected the whole time with nothing indicating the override."
+
+    Not offering the combination is the only answer that does not lie. The
+    chips change when the mode does, which is visible and explains itself.
+  */
+  const tonicsFor = (settings: S) => {
+    const modes = settings.modes.length > 0 ? settings.modes : (['major', 'minor'] as const);
+    const usable = pool.filter((k) => modes.includes(k.mode));
+    const names = (usable.length > 0 ? usable : pool).map((k) => pitchName(k.tonic, false));
+    return names.filter((t, i) => names.indexOf(t) === i);
+  };
   return {
     kind: 'multi',
     id: 'keys',
@@ -481,13 +490,24 @@ export function keysField<S extends { keys: readonly string[] }>(
       parser — and `F` would otherwise be both, while `Db` would be an id
       shown to a musician who writes `D♭`.
     */
-    options: tonics.map((t) => ({
+    options: (settings: S) => tonicsFor(settings).map((t) => ({
       id: `tonic:${t}`,
       label: t.replace('b', '♭').replace('#', '♯'),
     })),
     // Stored empty means "all", and the panel must never show it that way:
     // a row with none lit cannot say whether it means everything or nothing.
-    selected: (s) => (s.keys.length ? s.keys : tonics.map((t) => `tonic:${t}`)),
+    /*
+      Intersected with what is on offer, so the chips and the generator
+      never disagree. A tonic stored before the mode changed is no longer
+      shown, so it must not still be steering generation — and if that
+      leaves nothing, the honest reading is "no tonic chosen", which is
+      every tonic lit rather than a hidden selection of one.
+    */
+    selected: (s) => {
+      const offered = tonicsFor(s).map((t) => `tonic:${t}`);
+      const kept = s.keys.filter((k) => offered.includes(k.startsWith('tonic:') ? k : `tonic:${k}`));
+      return kept.length > 0 ? kept : offered;
+    },
     apply: (s, options) => (options.length === 0 ? s : { ...s, keys: [...options] }),
   };
 }

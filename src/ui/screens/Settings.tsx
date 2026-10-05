@@ -102,10 +102,15 @@ export function Settings({ go }: { go(route: string): void }) {
 
       <Panel>
         <Field label="Instrument">
+          {/*
+            No repository path here. This screen is served to anyone who
+            opens the site, and a reader there cannot follow a filename —
+            the user role caught it. What they can use is the reason.
+          */}
           <p className="secondary">
             One synthesised instrument for now. Sampled instruments are
-            planned — see <code>docs/ROADMAP.md</code> — and are waiting on a
-            sample pack small enough to keep the app working offline.
+            planned, and are waiting on a sample pack small enough to keep
+            the app working offline.
           </p>
         </Field>
       </Panel>

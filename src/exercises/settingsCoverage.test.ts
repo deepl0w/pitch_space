@@ -111,7 +111,8 @@ describe('every setting a user can reach', () => {
       expect(type.settings.fields.length, `${type.id} offers no settings at all`)
         .toBeGreaterThan(0);
       for (const field of type.settings.fields as AnyField[]) {
-        expect(valuesOf(field).length, `${type.id}.${field.id} enumerates no values`)
+        expect(valuesOf(field, type.settings.defaults).length,
+          `${type.id}.${field.id} enumerates no values`)
           .toBeGreaterThan(1);
       }
     }
@@ -141,7 +142,7 @@ describe('every setting a user can reach', () => {
         if (base === null) continue;
 
         const seen = new Set<string>();
-        for (const value of valuesOf(field)) {
+        for (const value of valuesOf(field, base)) {
           seen.add(fingerprint(type, type.settings.coerce(applyValue(field, base, value))));
         }
         if (seen.size <= 1) inert.push(`${type.id}.${field.id}`);

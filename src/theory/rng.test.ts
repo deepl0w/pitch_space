@@ -20,12 +20,34 @@ describe('makeRng', () => {
   });
 
   it('stays in [0, 1)', () => {
+    /*
+      Collected and asserted once, rather than twice per draw.
+
+      The draws were never the cost. Four hundred thousand `expect` calls
+      were: this took 1.6 seconds and the same loop reporting at the end
+      takes 6 milliseconds, and the proof sits in the test immediately below
+      — it draws the same 200,000 values from the same seed, asserts ten
+      times instead of four hundred thousand, and runs in 7ms.
+
+      That mattered beyond tidiness. At 1.6s against a 5000ms default this
+      sat inside the same margin that made the progression sweep fail on CI
+      and nowhere else, so it was a test reporting the runner rather than the
+      generator.
+
+      The diagnostic gets better rather than worse. Two bare comparisons
+      named the offending value; this names the draw it came from, which is
+      what you need to reproduce it.
+    */
     const rng = makeRng(1);
+    const outside: Array<{ draw: number; value: number }> = [];
     for (let i = 0; i < 200_000; i++) {
-      const v = rng.next();
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThan(1);
+      const value = rng.next();
+      // Written as a rejected range rather than two comparisons so that a
+      // NaN — which satisfies neither — is caught rather than slipping
+      // between them.
+      if (!(value >= 0 && value < 1)) outside.push({ draw: i, value });
     }
+    expect(outside).toEqual([]);
   });
 
   it('is roughly uniform', () => {

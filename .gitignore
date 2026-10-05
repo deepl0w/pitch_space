@@ -25,6 +25,12 @@ keystore.properties
 # Coordination state: ADR numbers claimed across branches and worktrees.
 .claude/adr-claims
 
+# Nothing writes this any more (announce reads branch state directly now),
+# but a stale copy from before that change can still be lying around in a
+# checkout, and un-ignoring it once already let one get swept into an
+# unrelated commit by git add -A. Kept ignored so that cannot happen twice.
+.claude/announced
+
 # Per-worktree efficiency instrument: timing and (self-reported, usually
 # absent) token counts for session starts and commits. Local to the
 # checkout that wrote it, same as the clock file beside it — nobody else's

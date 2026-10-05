@@ -333,7 +333,66 @@ Three things will be the work, and none of them is the parsing:
   as well as the media query (there is a `todo` pinning this in
   `Score.test.tsx`). It belongs on the settings screen above.
 - **Sampled instruments** as an optional download behind the `InstrumentPack`
-  seam, with the synthesised one staying the default.
+  seam, with the synthesised one staying the default. The candidates have
+  been researched and the licences read at source rather than inferred from
+  a page calling something free, which matters because this repository is
+  public and MIT.
+
+  The recommendation is **FreePats Upright Piano KW (small)**, CC0 by a
+  dedication shipped inside the archive, 26 FLAC samples at 2.24 MiB that
+  transcode to roughly 400 KB of Opus — small enough to precache beside the
+  existing 1.3 MB shell rather than becoming a download. Its SFZ maps onto
+  Web Audio directly: `pitch_keycenter` becomes a `playbackRate`, the loop
+  points become `loopStart`/`loopEnd`, and the mapping is a build-time JSON
+  manifest and about forty lines rather than an SFZ parser. The same project's
+  Spanish Classical Guitar is CC0 too, one sample per semitone.
+
+  The honest cost: one velocity layer and four to six semitones of stretch
+  per sample, so dynamics are gain-only and the hammer noise shifts pitch
+  with the note. The alternative that removes stretch entirely is
+  **FluidR3_GM**'s per-note packs — MIT in Frank Wen's own words, a sample on
+  every semitone, no mapping code at all, but 2 MB an instrument and it
+  sounds like the 2002 General MIDI soundfont it is. Settling that is an hour
+  of A/B listening, not an argument.
+
+  For a *choice* of instrument once one works, **MuseScore_General.sf3** is
+  MIT with its acknowledgements spelled out, 38 MB whole — the opt-in download
+  this entry already describes, or trimmed to a few presets at build time.
+
+  Excluded, with the reason, because each is easy to reach for: Philharmonia
+  forbids redistribution "as is", which is exactly shipping it as a pack;
+  WebAudioFont is GPL-3.0; MusyngKite and FatBoy are CC-BY-SA; FreePats' own
+  General MIDI set is GPL. Two are worse than excluded — GeneralUser GS says
+  in its own licence that its author "cannot be 100% sure where all of the
+  samples originated", and the Splendid Grand Piano's public-domain claim
+  rests on a secondhand assertion about Akai with no primary source. An
+  unverifiable licence is a finding, not a gap.
+
+  Two obligations if this is taken: a `THIRD-PARTY.md` carrying Frank Wen's
+  MIT notice and the MuseScore acknowledgements if either is used (CC0 needs
+  nothing), and an audio extension added to the workbox `globPatterns` in
+  `vite.config.ts` — the line that turns a sampled instrument from a download
+  into something the offline app actually has.
+
+  The larger cost is not the loader. `src/testing/audioContext.ts` implements
+  only the surface `Synth` uses and would need `createBufferSource`,
+  `decodeAudioData` and the buffer properties before any of this is testable,
+  and a sampler adds a second cold path — samples still loading when `play()`
+  is called — on top of the cold-context wake that `play()`'s generation
+  ticket already guards. That ticket is the model for it, and it wants a test
+  before the code.
+- **Real recordings as pitch-detector fixtures**, which is a different need
+  from playback and wants a different source. `src/audio/testing/signals.ts`
+  already names what it lacks — "there is no room, no body resonance and no
+  second note" — and a playback sample is normalised, close-miked and dry,
+  which is the opposite of a hard test. **VCSL** is CC0 and already stored as
+  individual notes named by pitch, velocity and round robin, so a dozen
+  trimmed to two seconds are committable at 50–100 KB each with no
+  attribution obligation at all. **TinySOL** (CC-BY 4.0, 2,913 isolated notes
+  from Ircam, 1.0 GB) is the better corpus for a downloaded run outside the
+  unit suite. The Iowa MIS recordings say they may be used "without
+  restrictions" on a web page, which is a statement and not a licence
+  instrument; usable, but record it as that.
 - **Multi-system scores**, which is when `drawScore` gets a real measured
   height to return rather than the caller's guess echoed back.
 - **More named rhythm patterns**, and patterns for the metres that have one or

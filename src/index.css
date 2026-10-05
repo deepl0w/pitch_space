@@ -206,6 +206,26 @@ select {
    way to colour the whole drawing: see the note there on why recolouring the
    emitted SVG from here leaves some marks black. */
 .score-host { min-height: 170px; }
+/* The playback cursor. Positioned in the SVG's own pixels, which only works
+   because the stave is redrawn at the measured width rather than scaled —
+   see the note in Score.tsx. `.score` is the positioning context, so the
+   cursor survives the `replaceChildren` that VexFlow does to `.score-host`. */
+.score { position: relative; }
+.score-cursor {
+  position: absolute;
+  width: 2px;
+  background: var(--accent, #c2410c);
+  border-radius: 1px;
+  pointer-events: none;
+  /* No transition: the position is already updated every frame against the
+     audio clock, and easing it would put the line behind the sound. */
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The cursor is the feedback, not decoration, so it still moves — but it
+     is the one moving thing on the page and deserves to be less insistent. */
+  .score-cursor { opacity: 0.7; }
+}
+
 .score-error { color: #b4442e; font-size: 0.85rem; padding: 0 0.5rem 0.5rem; margin: 0; }
 
 .actions { display: flex; gap: 0.6rem; margin: 1rem 0 1.75rem; flex-wrap: wrap; }

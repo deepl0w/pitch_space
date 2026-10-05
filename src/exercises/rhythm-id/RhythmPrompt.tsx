@@ -1,9 +1,40 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PromptProps } from '../types';
+import { Score } from '../../ui/notation/Score';
+import type { ScoreLayout } from '../render/toVexflow';
 import {
-  beatSeconds, leadInSeconds, rhythmVoices,
+  beatSeconds, leadInSeconds, rhythmVoices, secondsAt,
   type RhythmExercise, type RhythmResponse, type RhythmSettings,
 } from './rhythms';
+
+/**
+ * Where the cursor sits at a given moment, in the score's own pixels.
+ *
+ * The written events carry the time axis and the layout carries the space
+ * axis, and they are the same list in the same order — `rhythmScoreSpec`
+ * emits one note per event — so this is an interpolation between two
+ * parallel arrays rather than a search.
+ *
+ * Exported because it is the whole correctness of following the music and
+ * is worth testing without a browser: a time between two events must land
+ * between their two x positions.
+ */
+export function cursorAt(
+  seconds: number, times: readonly number[], layout: ScoreLayout,
+): number | null {
+  const xs = layout.notes;
+  if (xs.length === 0 || times.length === 0) return null;
+  if (seconds <= times[0]) return layout.stave.notesStartX;
+  for (let i = 1; i < Math.min(times.length, xs.length); i += 1) {
+    if (seconds < times[i]) {
+      const span = times[i] - times[i - 1];
+      // Two events at the same tick cannot both be reached; land on the later.
+      const through = span > 0 ? (seconds - times[i - 1]) / span : 1;
+      return xs[i - 1].x + (xs[i].x - xs[i - 1].x) * through;
+    }
+  }
+  return xs[xs.length - 1].x;
+}
 
 /**
  * Tap it back.
@@ -46,7 +77,7 @@ const TAP_KEYS = new Set([' ', 'Spacebar', 'Enter']);
 type Phase = 'ready' | 'listening' | 'tapping' | 'done';
 
 export function RhythmPrompt({
-  exercise, result, onRespond, audio,
+  exercise, result, onRespond, audio, scores,
 }: PromptProps<RhythmSettings, RhythmExercise, RhythmResponse>) {
   const [phase, setPhase] = useState<Phase>('ready');
   const [taps, setTaps] = useState<number[]>([]);
@@ -55,6 +86,26 @@ export function RhythmPrompt({
 
   const lead = leadInSeconds(exercise);
   const total = lead + (exercise.onsets[exercise.onsets.length - 1] ?? 0);
+
+  const [layout, setLayout] = useState<ScoreLayout | null>(null);
+  const [elapsed, setElapsed] = useState<number | null>(null);
+
+  /* The written events' start times, which is the cursor's time axis. */
+  const times = useMemo(
+    () => exercise.bars.flatMap((b) => b.events)
+      .map((e) => secondsAt(e.startTick, exercise.tempo)),
+    [exercise],
+  );
+
+  /*
+    `onLayout` goes into the Score's effect dependencies, so an inline
+    function would redraw the stave on every render — and every tick of the
+    cursor is a render. VexFlow re-engraving sixty times a second is not a
+    thing to find out about later.
+  */
+  const onLayout = useCallback((next: ScoreLayout) => setLayout(next), []);
+
+  const cursorX = layout && elapsed !== null ? cursorAt(elapsed, times, layout) : null;
 
   /*
     The count-in, on its own. The rhythm is on the staff, so sounding it
@@ -82,6 +133,55 @@ export function RhythmPrompt({
     audio.play(rhythmVoices(exercise, { silent: true }));
     startedAt.current = performance.now();
   }
+
+  /*
+    The cursor is driven from the same `performance.now()` zero as the taps,
+    for the reason in the note at the top of this file: it is the only clock
+    this component can see, and taking the cursor from a second one would
+    put the line and the measurement in different times. A cursor that
+    disagrees with the grade is worse than no cursor.
+  */
+  useEffect(() => {
+    if (phase !== 'tapping') { setElapsed(null); return; }
+    let frame = 0;
+    const step = () => {
+      if (startedAt.current === null) return;
+      setElapsed((performance.now() - startedAt.current) / 1000 - lead);
+      frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [phase, lead]);
+
+  /*
+    The written notes, marked by how they were played, once there is a
+    verdict. `ScoreNote.colour` has been in the renderer since it was
+    written and nothing had ever set it.
+
+    Keyed through `onsetCells`, which is how the grader credits a figure:
+    an attack belongs to a cell, the cell gets one verdict, and every
+    attack of that cell takes the cell's colour. Colouring per attack
+    instead would claim a precision the grading does not have.
+  */
+  const markedScore = useMemo(() => {
+    const base = scores?.questionScore ?? scores?.answerScore ?? null;
+    if (!base || !result) return base;
+    const verdict = new Map(result.outcomes.map((o) => [o.item, o.correct]));
+    const events = exercise.bars.flatMap((b) => b.events);
+    let attack = 0;
+    return {
+      ...base,
+      notes: base.notes.map((note, i) => {
+        const event = events[i];
+        if (!event || event.isRest || event.tiedFromPrevious) return note;
+        const cell = exercise.onsetCells[attack];
+        attack += 1;
+        const correct = cell === undefined ? undefined : verdict.get(`cell:${cell}`);
+        if (correct === undefined) return note;
+        return { ...note, colour: correct ? 'var(--right)' : 'var(--wrong)' };
+      }),
+    };
+  }, [scores, result, exercise]);
 
   const tap = useCallback(() => {
     if (startedAt.current === null) return;
@@ -130,6 +230,10 @@ export function RhythmPrompt({
       <p className="question">
         Read it, then play it back in time.
       </p>
+
+      {markedScore && (
+        <Score spec={markedScore} onLayout={onLayout} cursorX={cursorX} />
+      )}
 
       <div className="actions">
         {/*

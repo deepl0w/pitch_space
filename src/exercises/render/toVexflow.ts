@@ -47,6 +47,30 @@ export interface ScoreSpec {
 /** The one default. Score passes `height` through, so it must not have its own. */
 export const DEFAULT_SCORE_HEIGHT = 170;
 
+/** Where one note ended up, so something can be drawn over it. */
+export interface NotePlacement {
+  /** Index into the spec's `notes`, so a caller can match without counting. */
+  index: number;
+  /** Centre of the notehead, in pixels from the left of the drawn SVG. */
+  x: number;
+}
+
+/**
+ * Where the engraver put things.
+ *
+ * Returned rather than measured off the SVG afterwards. The alternative is
+ * querying the DOM for noteheads and trusting their document order to match
+ * the spec, which is the same mistake as recolouring the output from
+ * outside: it works until a rest, a tuplet bracket or a beam adds elements
+ * that are not notes, and then it is quietly off by one.
+ */
+export interface ScoreLayout {
+  /** One per spec note, in spec order, left to right. */
+  notes: readonly NotePlacement[];
+  /** The drawn stave, for placing a cursor that spans it. */
+  stave: { x: number; top: number; bottom: number; width: number; notesStartX: number };
+}
+
 export interface DrawOptions {
   width: number;
   /** Drawn at this many pixels; defaults to DEFAULT_SCORE_HEIGHT. */
@@ -127,7 +151,9 @@ function totalTicks(notes: readonly ScoreNote[]): number {
  * and will matter when a score breaks across systems rather than sitting on
  * one stave; until then there is nothing to report.
  */
-export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: DrawOptions): void {
+export function drawScore(
+  container: HTMLDivElement, spec: ScoreSpec, options: DrawOptions,
+): ScoreLayout {
   container.replaceChildren();
 
   const height = options.height ?? DEFAULT_SCORE_HEIGHT;
@@ -151,7 +177,14 @@ export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: D
   // draw — it is the whole question a key-signature exercise asks — so an
   // empty note list gets the clef, the signature and the barlines rather than
   // an early return and a blank box.
-  if (spec.notes.length === 0) return;
+  const staveGeometry = {
+    x: stave.getX(),
+    top: stave.getYForLine(0),
+    bottom: stave.getYForLine(4),
+    width: stave.getWidth(),
+    notesStartX: stave.getNoteStartX(),
+  };
+  if (spec.notes.length === 0) return { notes: [], stave: staveGeometry };
 
   const staveNotes = spec.notes.map((n) => toStaveNote(n, spec.clef, ink));
 
@@ -197,4 +230,11 @@ export function drawScore(container: HTMLDivElement, spec: ScoreSpec, options: D
     tuplet.setStyle({ fillStyle: ink, strokeStyle: ink });
     tuplet.setContext(context).draw();
   }
+
+  // Read after drawing, because formatting is what decides these and it has
+  // only just run.
+  return {
+    notes: staveNotes.map((note, index) => ({ index, x: note.getAbsoluteX() })),
+    stave: staveGeometry,
+  };
 }

@@ -124,3 +124,30 @@ evidence will be their tallies not moving.
   an admission that two exercise types are unschedulable.
 - **A third exercise type is added and the middle is still empty.** Evidence
   that the category is unreachable in practice, whatever this record argues.
+
+## Correction, 6 October 2026 — there is a search, and the claim is narrower than its title
+
+**`melody.ts` is a beam search.** Width 24, a temperature so a pure argmin
+does not make every seed the same line, and the file calls it one:
+`/* -- the search -- */`. This record was written from the exercise layer
+without reading it, and "the generator draws from a pool; it does not search
+for a result" is false of the generator one layer down.
+
+The decision is unaffected and the reason is the distinction the title
+flattened. **What `none` protects against is not searching; it is
+*unbounded* searching.** A beam search does a fixed amount of work — one pass
+per onset, a fixed width, no retry — so it is deterministic and its cost is
+known before it starts. Aiming an exercise at a wished item by
+generate-and-test is a loop with no bound on attempts, and that is what would
+put a loop where [0002](0002-generation-is-reproducible-from-its-seed.md) has
+arithmetic.
+
+So the claim, stated properly: **generation does bounded work per exercise and
+never retries until it gets the answer it wanted.** A bounded search inside a
+bar is consistent with that; an unbounded search for a bar is not. Read the
+title as shorthand for the second, and read
+[0033](0033-a-motif-is-a-preference-and-harmony-is-allowed-to-win.md) for what
+the bounded one is doing.
+
+It is the index's first convention catching its own author: a claim about the
+code checked against the layer that prompted it rather than against the code.

@@ -176,7 +176,43 @@ export interface BaseSettings {
 export interface ExerciseSpec<S> {
   seed: number;
   settings: S;
+  /**
+   * The item the schedule would like asked, if the generator can oblige.
+   *
+   * **A wish and not a command**, which is the whole design. The obvious
+   * seam was `focus(settings, item)` returning narrowed settings, and four
+   * of the seven exercises cannot meet that contract: a roman numeral is an
+   * *outcome* of harmony generation and a rhythm cell an outcome of the
+   * filler, so there is no setting meaning "ask me a `viio`" and there
+   * could not be one without the generator becoming a search.
+   *
+   * Worse, `focus` would not fail loudly. A progression asked to aim at
+   * `viio` would return settings making it slightly likelier, the schedule
+   * would record that it aimed, and nothing downstream could tell the
+   * difference. So the generator answers honestly instead: it aims if it
+   * can, ignores the wish if it cannot, and the caller reconciles against
+   * `exercise.items`, which already exists and is already trusted.
+   *
+   * See {@link ExerciseDefinition.aims} for what a definition promises.
+   */
+  prefer?: ItemId;
 }
+
+/**
+ * What a definition can do about a {@link ExerciseSpec.prefer}.
+ *
+ * Three values rather than two, and the third is the point. A boolean
+ * invites the exercises that cannot aim exactly to implement something
+ * plausible, which is precisely the silent failure this seam exists to
+ * avoid.
+ */
+export type Aiming =
+  /** The item asked for is the item asked. The askable set is a projection of a setting. */
+  | 'exact'
+  /** The wish narrows the field and cannot close it. */
+  | 'lossy'
+  /** Not expressible as an input. The wish is ignored, and that is honest. */
+  | 'none';
 
 /** What every generated exercise carries, whatever else it carries. */
 export interface ExerciseBase {
@@ -468,6 +504,16 @@ export interface ExerciseDefinition<S extends BaseSettings, E extends ExerciseBa
   presentations: readonly Presentation[];
   settings: SettingsSchema<S>;
   generate(spec: ExerciseSpec<S>): E;
+  /**
+   * What this exercise promises about {@link ExerciseSpec.prefer}.
+   *
+   * Absent means `none`. The failure worth guarding is not a definition
+   * that declines to aim — it is one that claims `exact` and returns
+   * something else, because the schedule records that it aimed and is then
+   * confidently wrong about what it taught. `aiming.test.ts` holds each
+   * definition to whichever it declares.
+   */
+  aims?: Aiming;
   grade(exercise: E, response: R): Result;
   Prompt: ComponentType<PromptProps<S, E, R>>;
   /**

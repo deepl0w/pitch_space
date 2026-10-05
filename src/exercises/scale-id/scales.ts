@@ -121,7 +121,20 @@ export function generateScale(spec: ExerciseSpec<ScaleSettings>): ScaleExercise 
   const rng = makeRng(spec.seed);
   const settings = spec.settings;
   const types = allowedTypes(settings);
-  const chosen = types.length > 0 ? pick(rng, types) : scaleType(SCALE_DEFAULTS.types[0]);
+  /*
+    The wish, honoured exactly when it names a type this exercise is
+    currently offering. Exact because the askable set is a projection of
+    one setting: an item *is* a scale type, so narrowing to one is
+    invertible rather than approximate.
+
+    A wish for something outside the settings is ignored rather than
+    obeyed. Widening the pool to reach it would make the schedule able to
+    ask questions the user has switched off, which is a worse failure than
+    not aiming.
+  */
+  const wished = types.find((t) => `scale:${t.id}` === spec.prefer);
+  const chosen = wished
+    ?? (types.length > 0 ? pick(rng, types) : scaleType(SCALE_DEFAULTS.types[0]));
   const root = settings.transpose ? pick(rng, ROOTS) : FIXED_ROOT;
 
   return {

@@ -48,55 +48,48 @@ driven by a time between two onsets lands between their two x positions
 — that is the whole correctness of following the music, and it is
 checkable without a browser.
 
-### `main` — `prefer`: the schedule asks, the generator answers honestly
+### `main` — `prefer` has landed, and the three-way split was wrong
 
-**Branch:** `main`, not started. Written here first because the tester
-is writing the contract test against this shape before it exists, which
-is what this file is for.
+**Branch:** `main`, landed. Kept here until tester and architect have
+reviewed, because it corrects a prediction this file made.
 
-**The problem.** `schedule.ts` decides which item should come next and
-nothing can act on it: `generate(spec)` takes a seed and settings and
-picks from the pool itself. The obvious seam is a `focus(settings,
-item)` returning settings narrowed so that item is what gets asked.
+`generate(spec, { prefer })` exists, `aims` is on every definition, and
+`src/exercises/aiming.test.ts` is armed — the `.todo` guard is gone, which
+was the one-word change the file said belonged in this commit.
 
-**Why that seam is wrong**, which the tester established and I accept.
-The exercises divide three ways on whether `items(settings)` is
-invertible:
+**What this entry got wrong.** It predicted a three-way split: invertible,
+lossy, and not-an-input, with key identification and degree identification
+in the middle. **There is no middle.** Five exercises aim exactly and two
+cannot aim at all.
 
-| | Exercises | Why |
-| --- | --- | --- |
-| **Invertible** | `interval-id`, `scale-id`, `chord-id` | the askable set is a projection of one setting, so narrowing to a single item is exact |
-| **Lossy** | `key-id`, `degree-id` | narrowing gets close and cannot isolate — `maxAccidentals` narrows the circle but never to one key, and `degree-id`'s `key:` item is drawn from any key within four accidentals with no setting over it |
-| **Not an input** | `progression-id`, `rhythm-id` | a numeral is an outcome of harmony generation and a cell an outcome of the filler; there is no setting meaning "ask me a `viio`" and there could not be one without the generator becoming a search |
+The reasoning for `lossy` was that `maxAccidentals` narrows the circle and
+never to one key, and that degree identification cannot aim the key it also
+reports. Both were true *of the seam that was rejected*. `focus(settings,
+item)` could only express a wish by tightening a setting, and no setting
+names one key — so under that design the middle was real. `prefer` does not
+go through the settings: generation picks a key from a pool, so it can pick
+the one it was asked for. And degree identification does not report the key
+at all; `degreeItems` lists `degree:<n>:<mode>` and nothing else, so the key
+was never in the schedule's denominator.
 
-A `focus` every definition implements would make four of them promise
-something they cannot do — and it would not fail loudly. A progression
-exercise asked to aim at `viio` would return settings making it *more
-likely*, the schedule would record that it aimed, and nothing could
-detect the difference. That is a palette listing a chord it cannot
-produce, one layer up.
+The lesson is narrower than "we were wrong". **The limitation was a
+property of a design, and it was recorded as a property of the exercises.**
+It then survived into a contract test, which specified three kinds of
+promise, and the third turned out to have no members.
 
-**The shape instead.** `generate(spec, { prefer?: ItemId })`. A
-generator that can aim does; one that cannot ignores the hint. The
-schedule reconciles against `exercise.items`, which already exists and
-is already trusted, rather than assuming it got what it asked for.
+`lossy` stays in the type and in the test. Nothing declares it, and the
+alternative — removing it and adding it back when something needs it — is
+worse: the next exercise that genuinely narrows without closing would
+otherwise be pushed to claim `exact` because that is the only word for
+"aims", which is the silent failure this seam exists to avoid.
 
-**The cost, named rather than discovered later:** the schedule cannot
-promise progress on a specific item. It cannot promise that for
-progressions and rhythm under any design, so this makes an existing
-limit visible rather than creating one.
-
-**For tester.** The claim to pin: *a hint that aims at an item must
-produce that item, for any exercise that claims it can aim.* Two things
-that come out of the measurement already done:
-
-- The seed budget is load-bearing and per-exercise. Four unreachable
-  chords at 400 seeds were all luck; at 1500 there are none.
-  `chord-id` has ninety-nine askable items and `interval-id` twelve.
-- A generator that ignores the hint must pass. The test cannot assert
-  "the preferred item appeared" — it has to assert "if it claims to
-  aim, it hit", with a guard that at least one exercise claims it or
-  the whole thing passes vacuously.
+**For tester.** `aiming.test.ts` passes. Two things it does not cover. The
+`exact` cases are checked at the widest settings only, so a wish for an
+item the settings exclude — reachable, since the schedule reads history
+rather than current settings — is handled (ignored, not obeyed) and
+unasserted. And nothing yet checks that aiming does not distort *what else*
+is asked: a generator that honoured every wish by always picking the same
+root would pass the contract and be a worse exercise.
 
 ### Owed to `process` — announcing is not holding, and the guard is not catching it
 

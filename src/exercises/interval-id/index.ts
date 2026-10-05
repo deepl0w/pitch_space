@@ -20,6 +20,9 @@ export const intervalIdentification = defineExercise<
   // Both: the same interval read off the staff and heard are different
   // skills, and a learner is routinely fluent at one and lost at the other.
   presentations: ['listen', 'read'],
+  // Exact: an item is a projection of a setting, so narrowing to one
+  // is invertible rather than approximate. See ExerciseSpec.prefer.
+  aims: 'exact',
   description: 'Say how far apart two notes are, by ear or from the staff.',
   settings: intervalSettingsSchema,
   generate: generateInterval,

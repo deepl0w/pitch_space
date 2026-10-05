@@ -27,6 +27,14 @@ export const progressionIdentification = defineExercise<
   name: 'Chord progressions',
   description: 'Hear a key established, then a progression. Name each chord by degree.',
   presentations: ['listen', 'read'],
+  /*
+    None, and that is the honest answer rather than a gap. A roman numeral
+    is an *outcome* of harmony generation and a rhythm cell an outcome of
+    the filler — there is no input meaning "ask me a viio", and there
+    could not be one without the generator becoming a search. The wish is
+    ignored; the schedule reconciles against exercise.items.
+  */
+  aims: 'none',
   settings: progressionSettings,
   generate: generateProgression,
   items: progressionItems,

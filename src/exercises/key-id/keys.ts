@@ -134,13 +134,34 @@ export function generateKey(spec: ExerciseSpec<KeySettings>): KeyExercise {
   // shape from a release that allowed an empty list.
   const modes: readonly Mode[] = spec.settings.modes.length ? spec.settings.modes : KEY_DEFAULTS.modes;
   const clefs: readonly Clef[] = spec.settings.clefs.length ? spec.settings.clefs : KEY_DEFAULTS.clefs;
-  const mode = pick(rng, modes);
   const clef = pick(rng, clefs);
 
+  /*
+    The wish, which this exercise can meet exactly — and that is a
+    correction to what `docs/IN-FLIGHT.md` predicted.
+
+    It was listed as lossy on the reasoning that `maxAccidentals` narrows
+    the circle and never to one key. True, and it was about the *rejected*
+    seam: `focus(settings, item)` could only have expressed a wish by
+    tightening a setting, and no setting names one key. `prefer` does not
+    go through the settings at all — generation picks a key from a pool,
+    so it can pick the one asked for. The lossiness was a property of the
+    design that was not taken.
+
+    Both item kinds are reachable. A `key:` wish names one key; a
+    `signature:` wish names two, and either satisfies it, because the item
+    *is* the signature and a learner who reads two sharps off B minor has
+    learned the thing that counts in D major.
+  */
+  const askable = modes.flatMap((m) => keyPool(spec.settings, m).map((k) => ({ m, k })));
+  const wished = askable.find(({ k }) => `key:${keyId(k)}` === spec.prefer
+    || `signature:${k.accidentals}` === spec.prefer);
+
+  const mode = wished?.m ?? pick(rng, modes);
   // Six flats and six sharps are different signatures and telling them
   // apart is the skill, so nothing collapses here.
   const pool = keyPool(spec.settings, mode);
-  const key = pick(rng, pool);
+  const key = wished?.k ?? pick(rng, pool);
 
   const items: ItemId[] = [
     `key:${keyId(key)}` as ItemId,

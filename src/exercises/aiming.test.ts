@@ -76,16 +76,13 @@ const UNAIDED_CEILING: Record<string, number> = {
 const FALLBACK_CEILING = 2500;
 
 describe('asking for a particular item', () => {
-  it.todo('has something that claims it can aim', () => {
+  it('has something that claims it can aim', () => {
     /*
       The guard against everything below passing over an empty set.
 
-      It is `todo` rather than failing because `prefer` has not landed, and a
-      red suite in `main` stops every other worktree's run — the project's own
-      argument that an ignored check is worse than none applies to a check
-      everybody has learned to see red. Removing `.todo` is the one-word
-      change that arms this file, and it belongs in the commit that adds
-      `aims` to the first definition.
+      It was `todo` while `prefer` did not exist, with a note saying the
+      one-word change belonged in the commit that added `aims` to the first
+      definition. This is that commit.
     */
     expect(aimable().filter((d) => d.aims !== undefined && d.aims !== 'none').length)
       .toBeGreaterThan(0);

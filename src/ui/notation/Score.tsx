@@ -66,9 +66,29 @@ export function Score({ spec, height, onLayout, cursorX }: {
   useEffect(() => {
     const node = host.current;
     if (!node || width === 0) return;
-    const colour = getComputedStyle(node).getPropertyValue('--score-ink').trim() || undefined;
+    const style = getComputedStyle(node);
+    const token = (name: string) => style.getPropertyValue(name).trim();
+    const colour = token('--score-ink') || undefined;
+    /*
+      A note's colour is resolved here rather than passed straight through.
+
+      VexFlow writes it into a presentation attribute — `fill` on the note's
+      group — and presentation attributes do not accept `var()`. So
+      `fill="var(--right)"` is simply invalid, the mark keeps the default
+      ink, and the result looks exactly like colouring that was never asked
+      for. This is the same reason the ink itself is read here and handed in
+      rather than set from the stylesheet: the note above makes that case
+      for the staff lines and it holds for the noteheads too.
+    */
+    const resolved = {
+      ...spec,
+      notes: spec.notes.map((note) => {
+        const match = /^var\(\s*(--[\w-]+)\s*\)$/.exec(note.colour ?? '');
+        return match ? { ...note, colour: token(match[1]) || undefined } : note;
+      }),
+    };
     try {
-      const layout = drawScore(node, spec, { width, height, colour });
+      const layout = drawScore(node, resolved, { width, height, colour });
       onLayout?.(layout);
       // oxlint-disable-next-line react/set-state-in-effect
       setStave(layout.stave);

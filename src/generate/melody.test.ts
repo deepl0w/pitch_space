@@ -2,11 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { generateMelody, type MelodyNote, type MelodySlot } from './melody';
 import { generateHarmony, type Harmony } from './harmony';
 import { generateRhythm } from './rhythm';
+import { baseOf, planMotifs } from './motif';
 import { ALL_KEYS, type Key } from '../theory/key';
 import { spellChord } from '../theory/chord';
 import { midiOf } from '../theory/pitch';
 import { TICKS_PER_QUARTER, beatLevel, metricWeight, timeSignature } from '../theory/meter';
 import { makeRng } from '../theory/rng';
+
+/** The meter the motif planner is exercised in. */
+const TS44 = timeSignature('4/4');
 
 /**
  * What the melody generator claims, and how the claims are checkable.
@@ -313,4 +317,93 @@ describe('the awkward inputs', () => {
       expect(midiOf(note.pitch)).toBeLessThanOrEqual(67);
     }
   });
+});
+
+/**
+ * What a shape buys, asserted as a relation rather than as a rate.
+ *
+ * `offShape`'s comment records the measurement it was tuned on — 12% interval
+ * agreement between restated bars with no shape, 46% at the shipped weight —
+ * and those numbers belong in a comment and not in here. They are tuning:
+ * the whole point of a per-semitone penalty is that somebody can move it, and
+ * a test pinning 46% would make the dial unturnable, which this project has a
+ * convention against.
+ *
+ * The claim underneath them is not tuning. **A bar that restates a motif
+ * agrees with its original more than an unrelated bar does** — if that is
+ * false the shape is doing nothing, whatever the rate happens to be, and no
+ * amount of retuning is the answer.
+ *
+ * Asserted with a margin well under what was measured. Over twenty batches of
+ * forty seeds, across every key and at both phrase lengths, the smallest
+ * margin seen was twelve points and the aggregate was about twenty-one; the
+ * threshold here is eight. Chosen so the case fails when the relation breaks
+ * rather than when somebody turns the dial, which is the line between pinning
+ * a constraint and pinning a taste.
+ */
+describe('restating a motif', () => {
+  /** Interval agreement between every pair of bars, split by whether they restate. */
+  function agreementPairs(seed: number, key: Key, bars: number) {
+    const plan = planMotifs(makeRng(seed), { timeSignature: TS44, bars });
+    const harmony = generateHarmony(makeRng(seed), { key, timeSignature: TS44, bars });
+
+    const slots: MelodySlot[] = [];
+    const barOf: number[] = [];
+    plan.bars.forEach((bar, index) => {
+      for (const event of bar.events) {
+        if (event.isRest || event.tiedFromPrevious) continue;
+        slots.push({ startTick: event.startTick, durationTicks: event.durationTicks });
+        barOf.push(index);
+      }
+    });
+
+    const notes = generateMelody(makeRng(seed), {
+      harmony, slots, range: [60, 84], shape: plan.shape,
+    });
+    // Intervals within a bar only: the step across a barline belongs to
+    // neither bar's idea.
+    const perBar: number[][] = plan.bars.map(() => []);
+    for (let i = 1; i < notes.length; i += 1) {
+      if (barOf[i] !== barOf[i - 1]) continue;
+      perBar[barOf[i]].push(midiOf(notes[i].pitch) - midiOf(notes[i - 1].pitch));
+    }
+
+    const form = plan.form.map(baseOf);
+    const out: Array<{ restates: boolean; agreement: number }> = [];
+    for (let i = 0; i < form.length; i += 1) {
+      for (let j = i + 1; j < form.length; j += 1) {
+        const length = Math.min(perBar[i].length, perBar[j].length);
+        if (length === 0) continue;
+        let same = 0;
+        for (let k = 0; k < length; k += 1) if (perBar[i][k] === perBar[j][k]) same += 1;
+        out.push({ restates: form[i] === form[j], agreement: same / length });
+      }
+    }
+    return out;
+  }
+
+  const sample = (() => {
+    const restated: number[] = [];
+    const unrelated: number[] = [];
+    for (let seed = 0; seed < 120; seed += 1) {
+      const key = ALL_KEYS[seed % ALL_KEYS.length];
+      for (const pair of agreementPairs(seed, key, seed % 2 === 0 ? 4 : 8)) {
+        (pair.restates ? restated : unrelated).push(pair.agreement);
+      }
+    }
+    const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+    return { restated, unrelated, mean };
+  })();
+
+  it('compares enough bars of both kinds for the margin to mean anything', () => {
+    expect(sample.restated.length).toBeGreaterThan(100);
+    expect(sample.unrelated.length).toBeGreaterThan(100);
+  });
+
+  it('agrees with its original more than an unrelated bar does', () => {
+    const margin = sample.mean(sample.restated) - sample.mean(sample.unrelated);
+    expect(margin, `restated ${(100 * sample.mean(sample.restated)).toFixed(0)}% against `
+      + `unrelated ${(100 * sample.mean(sample.unrelated)).toFixed(0)}%`).toBeGreaterThan(0.08);
+  });
+
 });

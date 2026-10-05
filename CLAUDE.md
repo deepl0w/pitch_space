@@ -138,10 +138,10 @@ truth, and a test that pins them makes tuning impossible.
 **Telling each other is a delivery, not a printout.** `fleet.sh announce`
 lists who has not heard that main moved; it cannot send anything. The
 delivery is `SendMessage` addressed to the session by name — `ListAgents`
-prints the names. An
-announcement nobody sends reads exactly like one nobody needed, which is why
-`announce` now records the commit it announced and `status` shows who is
-still owed the news.
+prints the names. "Told" is not a flag main sets about itself — it is a
+role's own branch catching up, which `announce` and `status` read directly
+and which clears itself the moment a role syncs, whether or not any message
+reached it.
 
 **The role sessions are permanent, and main does not start them.** They run
 in the user's desktop app, they are part of this project's standing
@@ -189,18 +189,18 @@ The command separates the three states, because the right response differs:
   prints what landed at its next start, so it is caught up rather than lost.
 
 Two things that follow and are easy to get backwards. An unreachable role
-is never a reason to do nothing and call the job done — `announce --done`
-records that main tried, which is a weaker claim than the fleet knowing,
-and the gap between them is the whole failure. And the user is **not** the
-fallback: if they have to carry a message, the protocol has failed rather
-than succeeded by another route.
+is never a reason to do nothing — there is no flag to set that makes it
+told anyway; `announce` and `status` keep showing it behind until its own
+branch says otherwise, which is the honest state of things. And the user is
+**not** the fallback: if they have to carry a message, the protocol has
+failed rather than succeeded by another route.
 
 What carries regardless of who is awake is the repository. `fleet.sh brief`
 prints what landed; `docs/IN-FLIGHT.md` is how main says what it wants
-looked at. Use both — not instead of messaging, but because a delivery that
-depends on timing is not one the protocol can rely on. **What is missing is
-anything that makes `announce` itself use that channel**, and
-`docs/IN-FLIGHT.md` carries the argument for process.
+looked at; `announce` and `status` now read each role's own branch rather
+than a flag main sets about itself, so "told" stops being main's claim and
+becomes the fleet's own state. Use the message as the fast path regardless —
+the repository catches a role up, but only a `SendMessage` reaches it now.
 
 **`docs/IN-FLIGHT.md` says what is coming, the same way `announce` says what
 came.** Before architect or feature starts something that will change an

@@ -83,6 +83,26 @@ function resolved(
   return typeof field.options === 'function' ? field.options(settings as never) : field.options;
 }
 
+/**
+ * The items a generator never asked for, having been asked for each of them.
+ *
+ * Split out so the contract has one statement and two callers: the sweep
+ * over whatever declares `lossy`, which is empty, and the stand-ins that
+ * show the sweep would catch something if it were not.
+ */
+function unreached(
+  type: { id: string; generate(spec: { seed: number; settings: unknown; prefer?: string }):
+    { items: readonly string[] } },
+  items: readonly string[], settings: unknown, budget: number,
+): string[] {
+  return items.filter((item) => {
+    for (let seed = 0; seed < budget; seed += 1) {
+      if (type.generate({ seed, settings, prefer: item }).items.includes(item)) return false;
+    }
+    return true;
+  });
+}
+
 describe('asking for a particular item', () => {
   it('has something that claims it can aim', () => {
     /*
@@ -201,22 +221,68 @@ describe('asking for a particular item', () => {
   });
 
   it('reaches what was asked for, where it claims lossy', () => {
-    // Weaker on purpose: lossy means the field narrows, not that it closes.
-    // The budget is the unaided ceiling, so an aim that made an item harder
-    // to find than no aim at all still fails.
+    /*
+      Weaker than `exact` on purpose: lossy means the field narrows, not
+      that it closes. The budget is the unaided ceiling, so an aim that made
+      an item *harder* to find than no aim at all still fails.
+
+      **Nothing declares `lossy` today, so this loop runs over nothing**, and
+      [ADR 0032](../../docs/adr/0032-the-generator-is-a-draw-not-a-search.md)
+      is right that an empty sweep is indistinguishable from a tautology
+      from the outside. It is the first and not the second, and the case
+      below is how that is shown rather than argued: the predicate this uses
+      is held against stand-ins that break the contract in each of the two
+      ways a real one could. The record says the difference is between a
+      line nobody has crossed and a thing that cannot happen — so the answer
+      belongs in a test that fails, not in a sentence.
+    */
     for (const type of aimable()) {
       if (type.aims !== 'lossy') continue;
       const settings = widestSettings(type);
       const budget = UNAIDED_CEILING[type.id] ?? FALLBACK_CEILING;
-      for (const item of type.items(settings)) {
-        let reached = false;
-        for (let seed = 0; seed < budget && !reached; seed += 1) {
-          reached = type.generate({ seed, settings, prefer: item }).items.includes(item);
-        }
-        expect(reached, `${type.id} was asked for ${item} and never asked it in ${budget} seeds`)
-          .toBe(true);
-      }
+      const missed = unreached(type, [...type.items(settings)], settings, budget);
+      expect(missed, `${type.id} was asked for these and never asked them in ${budget} seeds`)
+        .toEqual([]);
     }
+  });
+
+  it('is a check that can fail, which is what the empty case rests on', () => {
+    /*
+      The predicate above, run against generators that exist only here.
+
+      Two ways a lossy aim goes wrong, and the second is the one worth the
+      trouble. A generator that ignores the wish outright is the obvious
+      failure. A generator that honours it *eventually*, past the budget, is
+      the subtle one: it reaches every item, so a test asking only "is this
+      reachable" passes it, while in practice the schedule's preference has
+      made the item rarer than leaving it alone would have. The budget is
+      the unaided ceiling precisely so that counts as a failure, and that
+      sentence was a comment with nothing behind it until now.
+    */
+    const items = ['a', 'b', 'c'];
+    const stub = (
+      id: string, reach: (seed: number, prefer: string | undefined) => string,
+    ) => ({ id, generate: ({ seed, prefer }: { seed: number; prefer?: string }) =>
+      ({ items: [reach(seed, prefer)] }) });
+
+    const biasing = stub('biasing', (seed, prefer) =>
+      (seed % 3 === 0 && prefer !== undefined ? prefer : 'a'));
+    expect(unreached(biasing, items, null, 40),
+      'a generator that biases towards the wish should satisfy the check').toEqual([]);
+
+    const ignoring = stub('ignoring', () => 'a');
+    expect(unreached(ignoring, items, null, 40),
+      'a generator that ignores the wish should fail the check').toEqual(['b', 'c']);
+
+    const dawdling = stub('dawdling', (seed, prefer) =>
+      (seed >= 40 && prefer !== undefined ? prefer : 'a'));
+    expect(unreached(dawdling, items, null, 40),
+      'aiming that pushes an item past the unaided ceiling should fail the check')
+      .toEqual(['b', 'c']);
+    // And the same generator passes on a budget that forgives it, so the
+    // case above is the budget doing the work rather than the stub never
+    // reaching anything.
+    expect(unreached(dawdling, items, null, 60)).toEqual([]);
   });
 
   it('still generates something answerable when it ignores the wish', () => {

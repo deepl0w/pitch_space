@@ -4,7 +4,7 @@ import { localStorageSlot, type Slot } from './persistence';
 import { migrate, versioned, type Versioned } from './migrate';
 import {
   coerceSettings, settingsDefaults, SETTINGS_KEY, SETTINGS_MIGRATIONS, SETTINGS_SCHEMA,
-  UNCALIBRATED, type LatencySource, type SettingsDoc,
+  UNCALIBRATED, type AppearanceSettings, type LatencySource, type SettingsDoc,
 } from './schema';
 
 /**
@@ -41,6 +41,8 @@ export interface SettingsState {
    * zero (ADR 0018), and is what the user needs after changing headphones.
    */
   setInputLatency(latencyMs: number | null, source: LatencySource): void;
+  /** Change one appearance or output preference, leaving the others alone. */
+  setAppearance(change: Partial<AppearanceSettings>): void;
   reset(): void;
 }
 
@@ -85,6 +87,9 @@ export function createSettingsStore(
           ? { ...UNCALIBRATED }
           : { inputLatencyMs: latencyMs, source, measuredAt: Date.now() };
         commit({ ...get().doc, audio });
+      },
+      setAppearance(change) {
+        commit({ ...get().doc, appearance: { ...get().doc.appearance, ...change } });
       },
       reset() {
         // Clearing is the one thing a non-persisting store may still write,

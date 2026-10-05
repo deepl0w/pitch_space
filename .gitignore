@@ -38,3 +38,13 @@ keystore.properties
 # still referred to by path. They are simply not pushed.
 docs/findings/
 docs/process/
+
+# Per-worktree session telemetry, written by the fleet tooling about the
+# session reading it. Untracked for the same reason `node_modules` is — it
+# is runtime state of this checkout, not of the project — and ignored
+# rather than merely uncommitted because the commit guard fires on
+# anything untracked. A guard that fires on files nobody may commit is how
+# a guard comes to be scrolled past, and this one would fire at every idle
+# for every role.
+.claude/stats.jsonl
+.claude/.stats_clock

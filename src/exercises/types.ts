@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Voice } from '../audio/output/synth';
 import type { ScoreSpec } from './render/toVexflow';
-import type { Key } from '../theory/key';
+import type { Key, Mode } from '../theory/key';
 import { pitchName } from '../theory/pitch';
 
 /**
@@ -368,16 +368,44 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
  * and an empty pool is not an answer to it.
  */
 export function keysIn(
-  pool: readonly Key[], chosenTonics: readonly string[],
+  all: readonly Key[], chosenTonics: readonly string[], modes: readonly Mode[],
 ): readonly Key[] {
-  if (chosenTonics.length === 0) return pool;
   // The stored ids are prefixed; the prefix is stripped here rather than
   // spelled at every call site. Bare names are accepted too, because a
   // settings blob stored before the prefix existed is still a real thing
   // a browser can hand back.
   const wanted = new Set(chosenTonics.map((t) => t.replace(/^tonic:/, '')));
-  const narrowed = pool.filter((k) => wanted.has(pitchName(k.tonic, false)));
-  return narrowed.length > 0 ? narrowed : pool;
+  const byTonic = wanted.size === 0
+    ? all : all.filter((k) => wanted.has(pitchName(k.tonic, false)));
+  const byMode = (ks: readonly Key[]) => ks.filter((k) => modes.includes(k.mode));
+
+  const both = byMode(byTonic);
+  if (both.length > 0) return both;
+
+  /*
+    Nothing can be built from the chosen tonics in the chosen modes. One of
+    the two has to give, and **it is the mode**.
+
+    The case is real and reachable from the panel: `D♯` is offered because
+    D♯ minor exists within the accidental limit, and there is no D♯ major
+    inside it, so `D♯` with major only selects nothing. This used to return
+    the unnarrowed pool — so ticking one tonic handed you *every* key, which
+    is not a weaker version of what was asked but the opposite of it, and
+    ADR 0017 already decided that a setting excludes rather than declining
+    to act. The architect caught it; it is the diminished-triads bug again
+    with the subject changed.
+
+    The tonic wins because it is the more specific choice and the one just
+    made — the mode has a default and the tonic list does not. So `D♯` with
+    major only gives D♯ minor: not what was asked for, but recognisably
+    adjacent to it, and never twelve keys when one was chosen.
+
+    Only an unrecognisable tonic falls through to the mode alone, which the
+    panel cannot produce and a hand-edited settings blob can.
+  */
+  if (byTonic.length > 0) return byTonic;
+  const modeOnly = byMode(all);
+  return modeOnly.length > 0 ? modeOnly : all;
 }
 
 /** The field itself, so the three panels read identically. */

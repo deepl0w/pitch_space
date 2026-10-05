@@ -371,8 +371,9 @@ export function generateProgression(
   // rather than the chord names. Someone who only ever hears C major learns
   // "that was F", which is what this exercise exists not to teach.
   const key = pick(rng, keysIn(
-    ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4),
+    ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= 4),
     settings.keys,
+    [mode],
   ));
   // A fallback and not the setting: a stored length from a release that
   // offered a different set, or a hand-edited one, lands here.

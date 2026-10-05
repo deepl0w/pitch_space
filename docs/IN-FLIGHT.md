@@ -110,20 +110,24 @@ root would pass the contract and be a worse exercise.
 subject.** The user has now raised this four times and asked directly that
 process be informed.
 
-**The rule to design against, which the user stated and main had been
-quietly inverting:** every role session is present. If main cannot reach
-one, that is main's mistake, not the role's absence. Main had been
-reporting roles as gone on the evidence of an empty `ListAgents` row,
-which is a reading about addressability and not about existence.
+**Measured, not inferred — which took four tries.** `ListAgents` reads
+`$XDG_RUNTIME_DIR/cc-socks`, so an absent row means no socket, which is not
+the same as no session. The process table tells them apart, and
+`tools/sessions.sh` now runs that check so nobody has to reconstruct the
+pipeline again. At the time of writing: tester running and addressable;
+architect, process and user **not running at all** — no process, not merely
+unlisted; and two processes alive in directories that no longer exist
+(`.claude/worktrees/architect (deleted)` and `reverent-turing-c9f745
+(deleted)`), which is the write-pin hazard seen from outside and is worth
+a look on its own.
 
-**What is observed.** `SendMessage` succeeds only for names currently in
-`ListAgents`; a last-known name is refused — measured: for
-`intelligent-hypatia-c5ce53-ec`, *"No agent named … is reachable"*. Three
-roles have been unlisted for the last stretch of this session while being,
-on the user's account, present throughout. **Main does not know the
-mechanism**, and that is the gap: there is no way from here to distinguish
-"wrong name", "not registered right now" and "something about how these
-sessions attach", so main cannot tell a fixable error from a wait.
+Main had been asserting the opposite in both directions within one hour —
+first that unlisted roles had no sessions, then, on the user's correction,
+that every role was present and unreachability was always main's error.
+Neither was checked. The second went into `CLAUDE.md` and has been removed:
+a protocol rule that the machine contradicts is worse than the mistake it
+was written to correct, because the next session reads it and concludes its
+own tooling is broken.
 
 The consequence either way is the same and is the thing worth fixing:
 **"the fleet has been told" is not a property main can establish.**

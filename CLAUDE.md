@@ -165,33 +165,42 @@ the agents informed is main's job and it does not get delegated upwards —
 if the user has to carry a message, the protocol has failed, not succeeded
 by another route.
 
-**Every role is present. If main cannot reach one, that is main's
-mistake and not a fact about the fleet.** The user has said so directly,
-and it is the rule to work from rather than a reassurance: the sessions
-are permanent and standing, so "the architect is not there" is never the
-finding. The finding is that main looked in the wrong place, used an
-expired name, or read a listing taken at the wrong moment.
+**Do not guess whether a role is there. Run `tools/sessions.sh`.**
 
-This matters because the wrong conclusion is comfortable. An absent row
-licenses main to do nothing and still feel it has done its job — and
-three of the four shapes this mistake has taken ended there. So:
+This is the project's first convention — when a mechanism exists to answer
+a question directly, a correlate is not a substitute for running it — and
+main has broken it on this exact question four times in a day. `ListAgents`
+answers *can I address this right now*. It does not answer *is this session
+alive*. Those come apart, and every one of the following came from reading
+the first as the second: telling the user to start sessions that were
+already running, handing them blocks of text to paste in, and recording an
+announcement as delivered having reached one role of four.
 
-- **Never report a role as absent**, to the user or in a document. Say
-  main could not reach it, which is the thing actually observed.
-- **Never let unreachability close the matter.** Re-read `ListAgents` at
-  the moment of sending, not earlier in the turn. A name from before is
-  expired. If a send is refused, that is a prompt to look again rather
-  than a result.
-- **Never hand the problem upwards.** The user is not the fallback.
+The command separates the three states, because the right response differs:
 
-The repository carries what a message would have carried, and it carries
-it to every worktree regardless of who was awake: `fleet.sh brief` prints
-at every session start what landed while that worktree was away, and
-`docs/IN-FLIGHT.md` is how main says what it wants looked at. Use both —
-not as a substitute for messaging, which is still main's job, but because
-a delivery that depends on timing is not a delivery the protocol can
-rely on. **What is missing is anything that makes `announce` itself use
-that channel**; `docs/IN-FLIGHT.md` carries the argument for process.
+- **running and addressable** — message it. That is main's job, it does not
+  get delegated upwards, and nothing else substitutes for it.
+- **running but orphaned** — alive with no socket, because its launch
+  directory was renamed or removed. This is the write-pin hazard above,
+  seen from outside: the agent reads, runs tests and uses git normally and
+  cannot save. It cannot be messaged and it cannot be fixed from main.
+- **not running** — there is nothing to reach. Say that, not that the role
+  is absent; whether it comes back is the user's business. `fleet.sh brief`
+  prints what landed at its next start, so it is caught up rather than lost.
+
+Two things that follow and are easy to get backwards. An unreachable role
+is never a reason to do nothing and call the job done — `announce --done`
+records that main tried, which is a weaker claim than the fleet knowing,
+and the gap between them is the whole failure. And the user is **not** the
+fallback: if they have to carry a message, the protocol has failed rather
+than succeeded by another route.
+
+What carries regardless of who is awake is the repository. `fleet.sh brief`
+prints what landed; `docs/IN-FLIGHT.md` is how main says what it wants
+looked at. Use both — not instead of messaging, but because a delivery that
+depends on timing is not one the protocol can rely on. **What is missing is
+anything that makes `announce` itself use that channel**, and
+`docs/IN-FLIGHT.md` carries the argument for process.
 
 **`docs/IN-FLIGHT.md` says what is coming, the same way `announce` says what
 came.** Before architect or feature starts something that will change an

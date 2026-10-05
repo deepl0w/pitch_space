@@ -159,14 +159,24 @@ export function generateChord(spec: ExerciseSpec<ChordSettings>): ChordExercise 
   const rng = makeRng(spec.seed);
   const settings = spec.settings;
   const types = allowedTypes(settings);
-  const chosen = types.length > 0 ? pick(rng, types) : chordType(CHORD_DEFAULTS.types[0]);
+  // The wish names a quality and, when inversions are on, an inversion.
+  // Both are projections of settings, so both are aimed exactly; the
+  // inversion half is read further down where the inversion is chosen.
+  const wished = types.find((t) => chordItemId(t.id, null) === spec.prefer
+    || inversionsOf(t).some((inv) => chordItemId(t.id, inv) === spec.prefer));
+  const chosen = wished
+    ?? (types.length > 0 ? pick(rng, types) : chordType(CHORD_DEFAULTS.types[0]));
   // Empty means all twelve, the same rule the other multi-selects follow.
   const allowedRoots = settings.roots.length
     ? ROOTS.filter((r) => settings.roots.includes(pitchName(r, true)))
     : ROOTS;
   const root = pick(rng, allowedRoots.length ? allowedRoots : ROOTS);
   const inversions = inversionsOf(chosen);
-  const inversion = settings.inversions ? pick(rng, inversions) : 0;
+  const wishedInversion = settings.inversions
+    ? inversions.find((inv) => chordItemId(chosen.id, inv) === spec.prefer)
+    : undefined;
+  const inversion = wishedInversion
+    ?? (settings.inversions ? pick(rng, inversions) : 0);
   const voiced = voiceChord(chord(root, chosen, inversion), { open: settings.openVoicing });
 
   return {

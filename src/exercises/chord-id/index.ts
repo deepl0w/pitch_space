@@ -24,6 +24,9 @@ export const chordIdentification = defineExercise<
   name: 'Chord identification',
   description: 'Hear or read a chord and name its quality.',
   presentations: ['listen', 'read'],
+  // Exact: an item is a projection of a setting, so narrowing to one
+  // is invertible rather than approximate. See ExerciseSpec.prefer.
+  aims: 'exact',
   settings: chordSettingsSchema,
   generate: generateChord,
   items: chordItems,

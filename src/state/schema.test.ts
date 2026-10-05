@@ -41,8 +41,11 @@ describe('coercing a settings document', () => {
   it('repairs anything at all into a usable document', () => {
     const rubbish = [undefined, null, 0, '', 'nonsense', [], true, () => {}];
     for (const value of rubbish) {
-      expect(coerceSettings(value))
-        .toEqual({ exercises: {}, lastExercise: null, audio: { ...UNCALIBRATED } });
+      // Against `settingsDefaults()` rather than a document written out
+      // here: the claim is "rubbish repairs to the defaults", and spelling
+      // the defaults a second time makes every schema addition break this
+      // test for a reason that has nothing to do with what it asserts.
+      expect(coerceSettings(value)).toEqual(settingsDefaults());
     }
   });
 

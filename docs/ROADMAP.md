@@ -18,6 +18,8 @@ it ships or is dropped.
   - [What a score is for, once it is in](#what-a-score-is-for-once-it-is-in)
   - [The parts that will actually be hard](#the-parts-that-will-actually-be-hard)
 - [Learning the catalogues from real music](#learning-the-catalogues-from-real-music)
+  - [Practising on a song you chose](#practising-on-a-song-you-chose)
+  - [A workbench for the corpus, once there is one](#a-workbench-for-the-corpus-once-there-is-one)
   - [Recordings to go with them](#recordings-to-go-with-them)
 - [A settings screen](#a-settings-screen)
 - [Taking your progress with you](#taking-your-progress-with-you)
@@ -342,6 +344,71 @@ rhythm cells are the exception where counting genuinely produces the right
 object, because a beat-sized figure *is* a frequent short pattern — Groove
 MIDI is the source, and the caveat is that it is overwhelmingly 4/4, so it
 does nothing for the additive metres this file already names as thin.
+
+### Practising on a song you chose
+
+The corpus above is material someone else picked. The thing a learner
+actually asks for is "build me exercises from *this* song" — the one they
+are learning, or the one stuck in their head. Two routes, and they are not
+equally available.
+
+**A file the user already has** is the one that can work. It stays on the
+device, is decoded with the Web Audio API the app already owns, and never
+uploads — which makes the licensing question disappear, because nothing is
+copied or distributed. It needs the polyphonic side of the analysis chain
+that is designed and not built: chroma, a chord recogniser over it, beat
+tracking. `docs/ARCHITECTURE.md` says plainly that the chord exercise needs
+chroma written first, and this needs the same thing plus a beat grid.
+
+Expect it to be worse than the generator for a while, and say so in the UI
+rather than discovering it in a review: chord recognition on a dense mix is
+materially harder than on the clean synthesised triads the detector will
+first be tested against, and a wrong chord presented as the answer teaches
+the wrong thing with the app's authority behind it.
+
+**A streaming service is probably not available at all**, and this is worth
+recording before someone spends a week on it. The major services do not hand
+an application decodable audio: playback SDKs are DRM-protected by design,
+so the samples never reach code that could analyse them, and the terms
+generally forbid it even where a path exists. Spotify also withdrew the
+audio-features and audio-analysis endpoints from new applications, which
+were the obvious way to get a tempo and a key without touching the audio —
+**that should be checked rather than taken from this file**, since it is the
+kind of fact that changes. What a service realistically offers is
+*identification and metadata*: which song, its tempo, maybe its key. That is
+enough to look a song up in a corpus or to set a metronome, and not enough
+to derive a progression from.
+
+So the honest shape is: import a file, analyse locally, and treat any
+service connection as a way of *finding* a song rather than of hearing one.
+
+### A workbench for the corpus, once there is one
+
+Wanted as soon as material is imported rather than after: **a tool for
+looking at the database and the relations in it** — which excerpts, scores
+and recordings exist, what has been extracted from each, and, the part that
+is actually hard to get any other way, **where each part is used**. A
+template derived from bar 9 of a quartet should be traceable back to it, and
+the quartet should be able to say which templates, cells and audio excerpts
+came out of it.
+
+And **editing by hand**: labelling and relabelling. Any analysis of real
+music is partly wrong — MusicNet's own authors estimate a 4% labelling error
+rate, a derived cadence type is an inference, and a style tag is a judgement
+rather than a measurement. A corpus that can only be regenerated is one
+where every correction has to be expressed as a better algorithm. Being able
+to say "this is a half cadence, not an imperfect authentic one" and have it
+stick is what makes a corpus improve instead of merely change.
+
+Two things follow that are worth deciding before any of it is built. A hand
+correction has to survive re-importing the source, so corrections live apart
+from the extraction rather than being written back into it. And a derived
+entry should carry its provenance — which file, which bars, which extraction
+run — because that is the same field the usage view reads and the same one
+that makes a licence question answerable later rather than archaeological.
+
+Not a user-facing screen. This is a maintainer's tool over the build-time
+corpus, in the same family as `tools/report-facts.sh`.
 
 ### Recordings to go with them
 

@@ -67,10 +67,18 @@ describe('narrowing a pool to chosen tonics', () => {
 
   it('keeps the tonic and gives up the mode, rather than giving up the tonic', () => {
     /*
-      The case where the two settings cannot both be satisfied. `D#` is a
-      real chip, because D# minor is inside the accidental limit; there is
-      no D# major inside it. So `D#` with major only can give one or the
-      other and not both.
+      The case where the two settings cannot both be satisfied. Within four
+      accidentals the two modes do not offer the same tonics: A♭, E♭ and B♭
+      are major-only — A♭ minor is seven flats — and B, F♯ and C♯ are
+      minor-only. The chips are the union, so either kind is one click away,
+      and `A♭` with minor only can give the tonic or the mode and not both.
+
+      Not `D♯`, which is what the first version of this said and what the
+      comment on `keysIn` still says. D♯ minor is six sharps and outside the
+      limit, so `D♯` is not a chip at all — the old test reached the
+      *unrecognised tonic* path while claiming to test this one, and passed
+      for a reason it did not mean. That is why the asymmetry is asserted
+      below rather than described here.
 
       It gives the tonic. That is a decision and not an accident of the
       filter: the mode carries a default and the tonic list does not, so
@@ -83,11 +91,16 @@ describe('narrowing a pool to chosen tonics', () => {
       file, which had pinned the old behaviour as merely surprising.
     */
     const tonicsOf = (mode: Mode) => poolFor(mode).map((k) => pitchName(k.tonic, false));
-    // Within four accidentals the two modes do not offer the same tonics:
-    // A♭, E♭ and B♭ are major-only, B, F♯ and C♯ are minor-only. The chips
-    // are the union of the two, so either kind is one click away.
+    // The asymmetry this case is about, asserted rather than assumed, so it
+    // cannot quietly stop being the thing under test.
     expect(tonicsOf('minor')).not.toContain('Ab');
     expect(tonicsOf('major')).not.toContain('B');
+    expect(tonicsOf('major')).toContain('Ab');
+    expect(tonicsOf('minor')).toContain('B');
+    // And the example that was wrong twice: `D#` is offered by neither, so
+    // a case built on it tests the unrecognised-tonic path instead of this
+    // one. Pinned so the example cannot come back.
+    expect([...tonicsOf('major'), ...tonicsOf('minor')]).not.toContain('D#');
 
     expect(narrow('minor', ['tonic:Ab']).map(keyId)).toEqual(['Ab_major']);
     expect(narrow('major', ['tonic:B']).map(keyId)).toEqual(['B_minor']);

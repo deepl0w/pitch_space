@@ -36,6 +36,12 @@ export function Calibration({ measureWith = measureInputLatency }: {
    * handed its `audio` and `measureInputLatency` is handed its `getMedia`.
    */
   measureWith?: typeof measureInputLatency;
+  /**
+   * Accepted and unused, because every screen is handed it. This one is
+   * reached from settings and its back link goes to the home screen like
+   * every other, which is the behaviour that was already there.
+   */
+  go?(route: string): void;
 } = {}) {
   const audio = useSettings((s) => s.doc.audio);
   const [state, setState] = useState<'idle' | 'measuring'>('idle');

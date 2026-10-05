@@ -3,7 +3,7 @@ import {
 } from '../theory/meter';
 import { type Rng, weightedPick } from '../theory/rng';
 import {
-  COMPOUND_BEAT, SIMPLE_BEAT, type CellEvent, type RhythmCell,
+  CELLS, COMPOUND_BEAT, SIMPLE_BEAT, type CellEvent, type RhythmCell,
   cellsOfKind, scaleCell, valueForEvent,
 } from './cells';
 
@@ -282,6 +282,40 @@ export function generateRhythm(rng: Rng, options: RhythmOptions): RhythmBar[] {
     });
   }
   return bars;
+}
+
+/**
+ * Re-lay a known list of cells as a bar at a given position.
+ *
+ * The motif layer's one need from here, and the reason it is a function
+ * rather than the caller copying a bar: an event carries an absolute tick,
+ * a tuplet id and a beam group, all of which are properties of *where the
+ * bar is*. A restatement in bar 4 that cloned bar 1's events would carry
+ * bar 1's ticks, and the two would collide in the same score.
+ *
+ * Throws on a cell id the catalogue does not have, rather than skipping it
+ * and producing a bar that does not fill its meter.
+ */
+export function barFromCells(
+  cellIds: readonly string[], ts: TimeSignature, index: number,
+): RhythmBar {
+  const placements: Placement[] = [];
+  let beat = 0;
+  for (const id of cellIds) {
+    const found = CELLS.find((c) => c.id === id);
+    if (!found) throw new Error(`No rhythm cell called ${id}`);
+    placements.push({ cell: found, beat });
+    beat += found.beats;
+  }
+  const startTick = index * ts.barTicks;
+  let tupletCount = 0;
+  return {
+    index,
+    startTick,
+    ticks: ts.barTicks,
+    events: layOut(placements, ts, startTick, () => (tupletCount += 1)),
+    cellIds: [...cellIds],
+  };
 }
 
 /** Strong-beat positions a melody generator should target, for convenience. */

@@ -19,6 +19,9 @@ export const keyIdentification = defineExercise<KeySettings, KeyExercise, KeyRes
   // cadence with no reference pitch is absolute pitch, which most
   // musicians do not have and cannot train. See ADR 0028.
   presentations: ['read'],
+  // Exact, which corrects the prediction in docs/IN-FLIGHT.md: that was
+  // about the rejected focus(settings) seam. See ExerciseSpec.prefer.
+  aims: 'exact',
   settings: keySettingsSchema,
   generate: generateKey,
   items: keyItems,

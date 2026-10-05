@@ -80,6 +80,15 @@ export interface MelodyOptions {
    * a lookup table.
    */
   temperature?: number;
+  /**
+   * The interval the motif would like at each slot, in semitones.
+   *
+   * One entry per slot, null where the motif has nothing to say — the
+   * first note of an idea, whose pitch is the harmony's business. Absent
+   * entirely when there is no motif plan, which is every caller that
+   * existed before `motif.ts`.
+   */
+  shape?: readonly (number | null)[];
 }
 
 /** Widest interval the line may leap, in semitones. A ninth is not a leap. */
@@ -128,6 +137,35 @@ const PENALTY = {
    * forbidding either.
    */
   oscillation: 0.55,
+  /**
+   * Per semitone away from the interval the motif asked for.
+   *
+   * A preference and emphatically not a rule. A motif says how an idea
+   * *moves*, and the same movement from a different starting note lands
+   * on a different chord — so a restatement that insisted on its
+   * intervals would break the strong-beat rule the moment it was
+   * transposed, which is how a repetition stops sounding like one and
+   * starts sounding like a mistake.
+   *
+   * Chosen by measuring rather than by taste, since the thing it buys is
+   * measurable: how often two bars that restate the same motif come out
+   * with the same intervals. Over sixty seeds, four bars each —
+   *
+   *     no shape   12%        0.8   46%
+   *     0.18       19%        1.5   51%
+   *     0.4        34%        3.0   53%
+   *
+   * — so it is set at the knee. Past 0.8 it buys a few per cent and pays
+   * for them against harmony and range, which are better reasons to move
+   * than this one.
+   *
+   * The remaining half is not failure. A restatement sits over different
+   * chords, so the interval that was a third the first time has to be a
+   * fourth to stay a chord tone; a shape that always got its way would
+   * break the strong-beat rule on every transposed repeat. Half is what
+   * agreement looks like when harmony is allowed to win.
+   */
+  offShape: 0.8,
 } as const;
 
 /**
@@ -159,7 +197,7 @@ export function generateMelody(rng: Rng, options: MelodyOptions): MelodyNote[] {
     for (const state of states) {
       for (const pitch of candidates(ladder, state.pitch)) {
         const extended = extend(state, pitch, i, {
-          harmony, slots, chordAt, tones, ladder, climax,
+          harmony, slots, chordAt, tones, ladder, climax, shape: options.shape ?? [],
         });
         if (extended !== null) next.push(extended);
       }
@@ -169,7 +207,7 @@ export function generateMelody(rng: Rng, options: MelodyOptions): MelodyNote[] {
       // a seed stays reproducible: drop the strong-beat rule before the
       // classification rule, because a chord tone missing from a strong
       // beat is a weaker line and an unaccountable note is a wrong one.
-      states = relax(states, i, { harmony, slots, chordAt, tones, ladder, climax });
+      states = relax(states, i, { harmony, slots, chordAt, tones, ladder, climax, shape: options.shape ?? [] });
       if (states.length === 0) throw new Error(`No line fits slot ${i}`);
       continue;
     }
@@ -226,6 +264,8 @@ interface Context {
   tones: ReadonlyArray<ReadonlySet<number>>;
   ladder: readonly Pitch[];
   climax: Climax;
+  /** The motif's wish for each slot, or empty when there is no motif. */
+  shape: readonly (number | null)[];
 }
 
 function startingStates(
@@ -318,6 +358,14 @@ function extend(
   if (state.pitches.length >= 2
     && midi === midiOf(state.pitches[state.pitches.length - 2])) {
     score += PENALTY.oscillation;
+  }
+
+  // What the motif asked for, weighed against everything else rather than
+  // imposed. `wanted` is the interval, not the pitch, so a restatement can
+  // sit anywhere the harmony puts it and still be the same idea.
+  const wanted = ctx.shape[index];
+  if (wanted !== null && wanted !== undefined && state.pitch !== null) {
+    score += PENALTY.offShape * Math.abs(step - wanted);
   }
 
   const reachedClimax = state.reachedClimax || midi >= ctx.climax.midi;

@@ -12,6 +12,23 @@
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/*
+ * The dark palette, twice, and the duplication is deliberate.
+ *
+ * The first block is the system default: dark when the reader's device says
+ * dark, unless they have pinned light here. The second is the pin — a
+ * reader who chooses Dark on a light machine, which the first block cannot
+ * serve because it only exists inside the media query. Without it the theme
+ * control set an attribute and changed no colour: live-looking and inert,
+ * which is worse than not offering it.
+ *
+ * CSS has no way to give one declaration block two scopes, and
+ * `light-dark()` would mean betting on a function this project has not
+ * decided to require. So the values are written twice and
+ * `src/ui/theme.test.ts` asserts the two lists are identical — the
+ * duplication is checked rather than promised, because a comment saying
+ * "keep these in step" is the kind of constraint that cannot fail.
+ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #15140f;
@@ -24,6 +41,18 @@
     --wrong: #e4745c;
     --score-ink: #ece7df;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #15140f;
+  --surface: #1e1c17;
+  --ink: #ece7df;
+  --muted: #9a938a;
+  --line: #322e27;
+  --accent: #d8a26a;
+  --right: #5fbf86;
+  --wrong: #e4745c;
+  --score-ink: #ece7df;
 }
 
 * { box-sizing: border-box; }

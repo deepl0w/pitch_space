@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { APP_CSS, APP_RULES, rulesFor, rulesUnder } from '../testing/stylesheet';
 
 /**
  * Layout rules asked of the stylesheet, because jsdom has no layout and the
@@ -9,82 +9,10 @@ import { describe, expect, it } from 'vitest';
  * mistakes that have actually been made here, both of which produced a page
  * wider than the screen with nothing in the suite to say so.
  */
-const CSS = readFileSync(new URL('../index.css', import.meta.url).pathname, 'utf8');
-
-/** Declarations, with comments stripped so prose cannot match. */
+/** Every value given to a property anywhere in the sheet. */
 function declarations(property: string): string[] {
-  const code = CSS.replace(/\/\*[\s\S]*?\*\//g, '');
-  return [...code.matchAll(new RegExp(`${property}\\s*:([^;}]+)`, 'g'))].map((m) => m[1].trim());
-}
-
-/**
- * The stylesheet as rules, parsed once.
- *
- * Every lookup in this file used to index into the text — `indexOf` for a
- * selector, `slice` to the next brace, and in one case a flat six hundred
- * characters. All of it works until the stylesheet is edited somewhere else.
- * It already failed once: `indexOf('.score')` found
- * `main .practice-main > .prompt, main .practice-main > .score` first, so the
- * assertion read a block that was never meant to carry the declaration and
- * went red on a stylesheet that was correct.
- *
- * Comparing whole selectors fixes that one. It does not fix the other half,
- * which is **nesting**: a rule inside `@media` is returned by a flat regex
- * looking exactly like a rule at the top level. That matters here more than
- * it looks, because the thing these tests guard is a page wider than the
- * screen — a narrow-viewport failure. Moving `min-width: 0` into a
- * `min-width: 900px` block would make it apply only where the bug cannot
- * happen, and a flat scan would still call that a pass.
- *
- * So this walks braces instead of matching them, and keeps the at-rule a
- * declaration sits under. It is a few lines more than a regex and it fails
- * for the reason it says.
- */
-interface Rule {
-  selectors: readonly string[];
-  body: string;
-  /** The `@media`/`@supports` prelude this sits under, or null at the top. */
-  at: string | null;
-}
-
-function parse(css: string, at: string | null = null): Rule[] {
-  const out: Rule[] = [];
-  let i = 0;
-  while (i < css.length) {
-    const open = css.indexOf('{', i);
-    if (open === -1) break;
-    const prelude = css.slice(i, open).trim();
-    let depth = 1;
-    let j = open + 1;
-    while (j < css.length && depth > 0) {
-      if (css[j] === '{') depth += 1;
-      else if (css[j] === '}') depth -= 1;
-      j += 1;
-    }
-    const body = css.slice(open + 1, j - 1);
-    // A conditional group — `@media`, `@supports` — holds rules rather than
-    // declarations. `@font-face` holds declarations and is a rule like any
-    // other, which is why this asks the body and not the prelude.
-    if (prelude.startsWith('@') && body.includes('{')) {
-      out.push(...parse(body, prelude));
-    } else {
-      out.push({ selectors: prelude.split(',').map((x) => x.trim()), body, at });
-    }
-    i = j;
-  }
-  return out;
-}
-
-const RULES = parse(CSS.replace(/\/\*[\s\S]*?\*\//g, ''));
-
-/** Bodies of every unconditional rule whose whole selector is this one. */
-function rulesFor(selector: string): string[] {
-  return RULES.filter((r) => r.at === null && r.selectors.includes(selector)).map((r) => r.body);
-}
-
-/** Bodies of every rule under an at-rule matching this text. */
-function rulesUnder(at: string): string[] {
-  return RULES.filter((r) => r.at?.includes(at)).map((r) => r.body);
+  return [...APP_CSS.matchAll(new RegExp(`${property}\\s*:([^;}]+)`, 'g'))]
+    .map((m) => m[1].trim());
 }
 
 describe('the stylesheet', () => {
@@ -129,7 +57,7 @@ describe('the stylesheet', () => {
   it('gives every control a floor no pointer struggles with', () => {
     // Unconditionally, which is the point: a floor that waited on a media
     // query would be no floor on the pointers it did not name.
-    const unconditional = RULES.filter((r) => r.at === null);
+    const unconditional = APP_RULES.filter((r) => r.at === null);
     expect(
       unconditional.some((r) => /min-height:\s*24px/.test(r.body)),
       'a universal min-height for controls',

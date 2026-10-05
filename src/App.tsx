@@ -6,9 +6,11 @@ import { KeyChords } from './ui/screens/KeyChords';
 import { Rhythms } from './ui/screens/Rhythms';
 import { CircleOfFifths } from './ui/screens/CircleOfFifths';
 import { Calibration } from './ui/screens/Calibration';
+import { Settings } from './ui/screens/Settings';
 import { PracticeScreen } from './ui/screens/PracticeScreen';
 import { findFamily } from './exercises/registry';
-import { stopSound } from './ui/sound';
+import { appSynth, stopSound } from './ui/sound';
+import { useSettings } from './state/settingsStore';
 
 /**
  * Routing, such as it is.
@@ -30,18 +32,43 @@ function useRoute(): [string, (route: string) => void] {
   return [route, (next: string) => { window.location.hash = next ? `#/${next}` : ''; }];
 }
 
-const SCREENS: Partial<Record<string, () => React.ReactElement>> = {
+/**
+ * Every screen takes `go`, whether or not it uses it.
+ *
+ * One signature rather than two: a screen that wants to send the reader
+ * somewhere else — settings pointing at calibration — should not have to
+ * reach for `window.location` and keep a second copy of what a route is.
+ */
+const SCREENS: Partial<Record<string, (props: { go(route: string): void }) => React.ReactElement>> = {
   scales: Scales,
   chords: Chords,
   'key-chords': KeyChords,
   rhythms: Rhythms,
   circle: CircleOfFifths,
   calibration: Calibration,
+  settings: Settings,
 };
 
 export default function App() {
   const [route, go] = useRoute();
   const Screen = SCREENS[route];
+  const appearance = useSettings((state) => state.doc.appearance);
+
+  /*
+    The theme is an attribute on the document element, because that is what
+    the stylesheet reads: `system` sets none, so the media query decides,
+    and the other two pin it. Set here rather than in the settings screen
+    so it holds on a reload, when that screen is never rendered.
+  */
+  useEffect(() => {
+    const root = document.documentElement;
+    if (appearance.theme === 'system') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', appearance.theme);
+  }, [appearance.theme]);
+
+  // Pushed into the engine rather than read by it: `audio/output/` may not
+  // import state, which is what keeps the whole engine testable off-browser.
+  useEffect(() => { appSynth.setVolume(appearance.volume); }, [appearance.volume]);
   // A family id is what the menu links to; a member id is what links made
   // before the families existed still carry. Both land on the practice
   // screen rather than silently on the home one.
@@ -66,7 +93,7 @@ export default function App() {
       )}
       {exercise
         ? <PracticeScreen exerciseId={route} onSwitch={go} onBack={() => go('')} />
-        : Screen ? <Screen /> : <Home go={go} />}
+        : Screen ? <Screen go={go} /> : <Home go={go} />}
     </main>
   );
 }

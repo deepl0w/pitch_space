@@ -20,6 +20,9 @@ export const degreeIdentification = defineExercise<
   name: 'Scale degrees',
   description: 'Hear a key established, then name what a note is doing in it.',
   presentations: ['listen', 'read'],
+  // Exact, which corrects the prediction in docs/IN-FLIGHT.md: that was
+  // about the rejected focus(settings) seam. See ExerciseSpec.prefer.
+  aims: 'exact',
   settings: degreeSettingsSchema,
   generate: generateDegree,
   items: degreeItems,

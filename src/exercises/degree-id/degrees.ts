@@ -106,7 +106,21 @@ export function generateDegree(spec: ExerciseSpec<DegreeSettings>): DegreeExerci
   const rng = makeRng(spec.seed);
   const settings = spec.settings;
   const modes = settings.modes.length ? settings.modes : DEGREE_DEFAULTS.modes;
-  const mode = pick(rng, modes);
+  /*
+    The wish. An item here is a degree and a mode, both of which are
+    inputs, so this is exact — another correction to the prediction in
+    `docs/IN-FLIGHT.md`, which called it lossy because the exercise also
+    reports the key and no setting names one. It does not report the key:
+    `degreeItems` lists `degree:<n>:<mode>` and nothing else, so the key is
+    not in the schedule's denominator and there is nothing lossy about
+    aiming at what is.
+  */
+  const wishedPair = modes.flatMap(
+    (m) => (settings.degrees.length ? settings.degrees : DEGREE_DEFAULTS.degrees)
+      .map((d) => ({ m, d })),
+  ).find(({ m, d }) => `degree:${d}:${m}` === spec.prefer);
+
+  const mode = wishedPair?.m ?? pick(rng, modes);
 
   // Any key, so the exercise trains the function rather than the pitch. A
   // learner who only ever hears C major learns "that was E", which is the
@@ -119,7 +133,7 @@ export function generateDegree(spec: ExerciseSpec<DegreeSettings>): DegreeExerci
   const key = pick(rng, keys);
 
   const allowed = settings.degrees.length ? settings.degrees : DEGREE_DEFAULTS.degrees;
-  const degree = pick(rng, allowed);
+  const degree = wishedPair?.d ?? pick(rng, allowed);
   const scale = keyPitches({ ...key, tonic: { ...key.tonic, octave: 4 } });
   const pitch = scale[degree - 1];
 

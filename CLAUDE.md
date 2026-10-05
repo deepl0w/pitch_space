@@ -137,11 +137,44 @@ truth, and a test that pins them makes tuning impossible.
 
 **Telling each other is a delivery, not a printout.** `fleet.sh announce`
 lists who has not heard that main moved; it cannot send anything. The
-delivery is `SendMessage` addressed to the worktree by name — `ListAgents`
+delivery is `SendMessage` addressed to the session by name — `ListAgents`
 prints the names — or, where that fails, the user relaying it. An
 announcement nobody sends reads exactly like one nobody needed, which is why
 `announce` now records the commit it announced and `status` shows who is
 still owed the news.
+
+**The role sessions are permanent, and main does not start them.** They run
+in the user's desktop app, they are part of this project's standing
+configuration, and they outlive any one main session. Main has told the user
+three times to launch sessions that were already running; this paragraph is
+here because saying it twice was not enough.
+
+**A session's name expires; the worktree's does not.** `ListAgents` names a
+session as the worktree directory plus a two-character suffix —
+`hardcore-rosalind-8055fa-bf` — and **the suffix changes every time that
+session resumes.** The same tester has been `-8055fa`, then `-65`, then
+`-bf` in one day, on an unmoved worktree and an unmoved branch. So an
+address is good for one delivery: **run `ListAgents` immediately before each
+send and copy a row verbatim.** A name remembered from earlier in your own
+session is stale, and a name you assembled from the directory was never an
+address at all. Main sent to a bare directory name, got "No agent named … is
+reachable", and recorded that the sessions could not be reached — a
+constructed name standing in for the one the mechanism gives you, which is
+the proxy pattern arriving inside the measurement taken to settle it.
+
+**An absent row means suspended, not gone.** A suspended session drops off
+the listing and returns under a new suffix. What settles whether a role is
+alive is not the roster but **the branches**: a working role moves
+`claude/<role>` and syncs it onto main with no help from main, so
+`fleet.sh status` showing a role at zero behind is positive evidence that
+something in there is working. The branch is the mechanism; the roster is
+the correlate, and it is only ever current at the instant you read it.
+
+So when a role genuinely will not take a message, the fallback is not to
+start anything. Run **`tools/relay.sh`**, which prints a paste-ready block
+per owed role — what landed, in subject lines, and the instruction to sync
+first — and give it to the user to paste in. Then `fleet.sh announce --done`
+as usual: delivered by hand is still delivered.
 
 A worktree that was never told is not stuck, though: `fleet.sh brief` runs at
 every session start and now prints the subject lines of whatever landed while

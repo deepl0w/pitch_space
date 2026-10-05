@@ -98,6 +98,87 @@ that come out of the measurement already done:
   aim, it hit", with a guard that at least one exercise claims it or
   the whole thing passes vacuously.
 
+### Owed to `process` — announcing is not holding, and the guard is not catching it
+
+**This is the user's instruction, not main's suggestion.** Their words after
+the second time it happened today: "too many slips, something wrong. the
+process agent should fix this."
+
+**What keeps happening.** Main commits five to eight times, the fleet is not
+told, and the thing that notices is the user rather than any mechanism. Twice
+today. The second time the gap ran from `63ec50a` to `8d92eca` — six commits
+including two exercises losing a mode — and the user asked before anything
+else did.
+
+**Why the existing guard does not catch it, which is the part worth fixing
+rather than my promising to try harder.** The Stop hook checks announce state
+at the *end of a turn*. Main's turns are long and hold many commits, and when
+the user sends a message mid-turn the turn does not end — so the hook does
+not fire. The two mechanisms are keyed to different things: commits accrue
+per edit, the check runs per turn, and a turn can hold any number of commits.
+The longer and more productive the turn, the longer the fleet stays
+uninformed, which is exactly backwards.
+
+Note that `fleet.sh announce` itself is not at fault. It reports the state
+correctly every time it is run. What is missing is anything that makes it run
+near the commit.
+
+**Three shapes a fix could take, for process to choose between rather than a
+request for a particular one.** A `post-commit` hook in the main checkout
+that records the owed state, or prints it, so the prompt lands when the
+commit does. Or `fleet.sh commit` as the committing path for main, with the
+announce check inside it — the same move as `adr-claim`, which exists because
+reserving a number by message did not work either. Or leaving the Stop hook
+where it is and making it *block* rather than advise, which is the cheapest
+and is probably wrong, because the delivery it asks for is a `SendMessage` a
+hook cannot make.
+
+**The constraint that makes this awkward, and which process should weigh:**
+the delivery is not scriptable. `announce` can tell you who is owed; only the
+agent can send. So the fix cannot be "automate it" — it can only be "put the
+prompt where the agent cannot miss it", and the current prompt is in the one
+place a long turn never reaches.
+
+**Worth recording alongside:** this is the same shape as the three instances
+already in `docs/process/2026-10-04-a-proxy-is-not-the-mechanism.md`. A check
+that runs at the wrong moment is a reading standing in for a fact that moves,
+and "the hook did not complain" became the proxy for "the fleet knows".
+
+**A second, worse half, which the user has now had to say three times.**
+Main has repeatedly told them to launch sessions that already exist. They do
+not need launching: they are persistent sessions in the user's desktop app
+and are part of this project's standing configuration.
+
+What main did wrong is a familiar shape. `ListAgents` lists the sessions
+*this session can address*. Main read an absence from that list as the
+session not existing, which is a different claim, and then acted on it —
+printing `cd … && claude` lines for agents that were already running. That
+is the fourth instance of the pattern the proxy note describes, and the
+second time this exact reading has caused it.
+
+Tested rather than assumed, which is how it should have been settled the
+first time: `SendMessage` to `hardcore-rosalind-8055fa` returns **"No agent
+named 'hardcore-rosalind-8055fa' is reachable."** So the sessions exist and
+main cannot reach them. Both halves are true at once, and the protocol as
+written only admits one of them.
+
+`CLAUDE.md` already has the correct fallback — "or, where that fails, the
+user relaying it" — and main did not use it, because it had concluded there
+was nobody to relay to.
+
+**The thing process should actually decide.** Delivery by message is not
+reliable here, and the fleet's only reliable channel is the repository
+itself: `fleet.sh sync` carries committed files to every worktree whether or
+not anyone was reachable. `docs/IN-FLIGHT.md` already exploits that for what
+is coming. The same move is available for what came — an announcements file,
+committed to main, that every session reads on sync, with `SendMessage` as
+the fast path rather than the only one. That would make "the fleet was told"
+a property of the repository rather than of who happened to be addressable,
+which is the difference between a mechanism and a correlate.
+
+Until that exists, main's correct behaviour when a send fails is to ask the
+user to relay — not to tell them to start what is already running.
+
 ### Owed to `process` — a third instance of the stale-reading pattern
 
 No process session is running, so this is parked here rather than sent.

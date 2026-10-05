@@ -49,17 +49,30 @@ The unit the schedule tracks. These are not exercises — an exercise is a
 | --- | --- |
 | Interval | `interval:m3:up`, `interval:tritone:down` |
 | Chord quality | `chord:m7b5`, `chord:dom7:inv2` |
-| Key signature | `key:Eb_major`, `key:C#_minor` |
+| Key | `key:Eb_major`, `key:C#_minor` |
+| Key signature | `signature:-2`, `signature:3` |
+| Scale degree | `degree:1:major`, `degree:5:minor` |
 | Scale | `scale:harmonic_minor` |
 | Rhythmic cell | `cell:dotted_e_s`, `cell:e_q_e` |
 | Progression | `progression:major:V`, `progression:minor:iv` |
 | Note reading | not yet written; sight reading is unbuilt |
 
-**The ids above are read off the code, not invented here**, because history
-is already accruing against them and the code is what it accrues against.
-An earlier version of this table named `rhythm:`, `harmony:` and `read:`
-prefixes that no exercise writes, which is how a migration gets planned
-against a vocabulary that does not exist.
+**The ids above are enumerated from the code, not invented here**, because
+history is already accruing against them and the code is what it accrues
+against.
+
+This table has now been wrong twice, in two different ways, and the second
+is the instructive one. It first named `rhythm:`, `harmony:` and `read:`
+prefixes that no exercise writes — which is how a migration gets planned
+against a vocabulary that does not exist. Those were corrected by reading
+the code. But *reading* found the wrong entries and could not find the
+**missing** ones: `signature:` and `degree:` were absent entirely, and an
+absent row looks exactly like a kind that does not exist.
+
+They were found by running `items()` over every exercise at its widest
+settings and printing what came back, which is the only method that can
+answer "what is the whole vocabulary" rather than "is this entry right".
+Correct this table that way or not at all.
 
 Ids must be stable across releases, because they key a user's history. That
 makes them the same kind of commitment as the preset ids in the sibling tuner,

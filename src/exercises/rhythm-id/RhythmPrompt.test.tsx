@@ -391,7 +391,19 @@ describe('placing the cursor', () => {
     // and a cursor parked on note one for the whole of it says the music has
     // started when it has not.
     expect(cursorAt(-1, times, layout)).toBe(layout.stave.notesStartX);
-    expect(cursorAt(0, times, layout)).toBe(layout.stave.notesStartX);
+    expect(cursorAt(-0.001, times, layout)).toBe(layout.stave.notesStartX);
+  });
+
+  it('is on the first note at the instant it sounds, not still in front of it', () => {
+    /*
+      The boundary, which the case above does not cover and which this test
+      originally got the wrong way round — it asserted zero still waiting,
+      against its own stated reason. "Before the first one sounds" is
+      strictly before. At zero the note is sounding, and the one moment the
+      exercise exists to teach is the join between that sound and that
+      notehead; a line still parked in front of it has missed it.
+    */
+    expect(cursorAt(0, times, layout)).toBe(layout.notes[0].x);
   });
 
   it('lands between two notes for a time between their onsets', () => {

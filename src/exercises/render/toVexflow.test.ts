@@ -169,28 +169,32 @@ describe('drawing a score', () => {
   });
 
   /**
-   * The heaviest test in the suite, and the only one that asks what happens
-   * when a key signature and a page of accidentals meet: VexFlow decides per
-   * note whether the signature already covers it, and that decision is made
-   * thirty different ways. Thirty staves of twenty-four chords is a few
-   * seconds under jsdom, which is why the budget is stated rather than left
-   * to the five-second default and discovered as a flake.
+   * The only test that asks what happens when a key signature and a page of
+   * accidentals meet: VexFlow decides per note whether the signature already
+   * covers it, and that decision is made thirty different ways.
+   *
+   * One case per key rather than one case for all thirty. It was a single
+   * test with a 30_000 budget, and at seven seconds alone and twenty-three
+   * in a loaded run that was a 1.3x margin — tighter than the 1.9x that made
+   * the progression sweep pass here and fail on CI. Raising the budget again
+   * would have been the second time of treating the symptom, and a test that
+   * takes a third of a minute hides creep inside itself: `./test.sh`'s slow
+   * listing exists to show creep, and cannot show it below the granularity
+   * of a test. Split, each case runs in a fraction of a second, every key is
+   * still drawn, and a failure now names the key in the test rather than in
+   * an accumulated list.
    */
-  it('engraves a whole key signature with a chord of every type', () => {
-    const failures: string[] = [];
+  describe('engraving a whole key signature with a chord of every type', () => {
     for (const key of ALL_KEYS) {
-      const notes = CHORD_TYPES.map((type) => ({
-        pitches: spellChord(chord({ ...key.tonic, octave: 4 }, type)),
-        value: QUARTER,
-      }));
-      try {
-        draw({ clef: 'treble', key, notes });
-      } catch (cause) {
-        failures.push(`${keyName(key)}: ${(cause as Error).message}`);
-      }
+      it(`does not throw in ${keyName(key)}`, () => {
+        const notes = CHORD_TYPES.map((type) => ({
+          pitches: spellChord(chord({ ...key.tonic, octave: 4 }, type)),
+          value: QUARTER,
+        }));
+        expect(() => draw({ clef: 'treble', key, notes })).not.toThrow();
+      });
     }
-    expect(failures).toEqual([]);
-  }, 30_000);
+  });
 });
 
 /**

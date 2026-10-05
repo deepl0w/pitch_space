@@ -31,9 +31,20 @@ export function cursorAt(
   if (seconds < times[0]) return layout.stave.notesStartX;
   for (let i = 1; i < Math.min(times.length, xs.length); i += 1) {
     if (seconds < times[i]) {
-      const span = times[i] - times[i - 1];
-      // Two events at the same tick cannot both be reached; land on the later.
-      const through = span > 0 ? (seconds - times[i - 1]) / span : 1;
+      /*
+        The span cannot be zero here, so there is no guard against it.
+
+        Reaching index `i` means every earlier index failed `seconds <
+        times[j]`, so `seconds >= times[i - 1]`; entering this branch means
+        `seconds < times[i]`. If the two times were equal those would
+        contradict each other, for any input — the array does not even have
+        to be sorted. There used to be a `span > 0 ? … : 1` here with a
+        comment about two events sharing a tick, which read as handling a
+        case nothing can produce. Two events at one tick still work: the
+        first is skipped by the same reasoning and the cursor lands on the
+        later, by the ordinary path.
+      */
+      const through = (seconds - times[i - 1]) / (times[i] - times[i - 1]);
       return xs[i - 1].x + (xs[i].x - xs[i - 1].x) * through;
     }
   }

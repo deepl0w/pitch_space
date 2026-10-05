@@ -112,8 +112,9 @@ export function generateDegree(spec: ExerciseSpec<DegreeSettings>): DegreeExerci
   // learner who only ever hears C major learns "that was E", which is the
   // thing this exercise exists not to teach.
   const keys = keysIn(
-    ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4),
+    ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= 4),
     settings.keys,
+    [mode],
   );
   const key = pick(rng, keys);
 

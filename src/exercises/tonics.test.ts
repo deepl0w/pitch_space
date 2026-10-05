@@ -22,8 +22,10 @@ import { pitchName } from '../theory/pitch';
  */
 
 /** The pool each exercise draws from: anything within four accidentals. */
-const poolFor = (mode: Mode) =>
-  ALL_KEYS.filter((k) => k.mode === mode && Math.abs(k.accidentals) <= 4);
+const POOL = ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= 4);
+const poolFor = (mode: Mode) => POOL.filter((k) => k.mode === mode);
+/** `keysIn` takes the unfiltered pool and the modes, and orders them itself. */
+const narrow = (mode: Mode, tonics: readonly string[]) => keysIn(POOL, tonics, [mode]);
 
 describe('narrowing a pool to chosen tonics', () => {
   it('leaves the pool alone when nothing is chosen', () => {
@@ -31,7 +33,7 @@ describe('narrowing a pool to chosen tonics', () => {
     // the default, so reading it as an empty pool would make the exercise
     // ungeneratable out of the box.
     for (const mode of ['major', 'minor'] as const) {
-      expect(keysIn(poolFor(mode), [])).toEqual(poolFor(mode));
+      expect(narrow(mode, [])).toEqual(poolFor(mode));
     }
   });
 
@@ -39,18 +41,18 @@ describe('narrowing a pool to chosen tonics', () => {
     const minor = poolFor('minor');
     expect(minor.length, 'a pool of one narrows to itself and proves nothing')
       .toBeGreaterThan(1);
-    expect(keysIn(minor, ['tonic:F']).map(keyId)).toEqual(['F_minor']);
+    expect(narrow('minor', ['tonic:F']).map(keyId)).toEqual(['F_minor']);
   });
 
   it('means a different key under a different mode, which is the point', () => {
     // Composition rather than duplication. If the control named keys instead
     // of tonics, one of these two would have to be wrong.
-    expect(keysIn(poolFor('minor'), ['tonic:F']).map(keyId)).toEqual(['F_minor']);
-    expect(keysIn(poolFor('major'), ['tonic:F']).map(keyId)).toEqual(['F_major']);
+    expect(narrow('minor', ['tonic:F']).map(keyId)).toEqual(['F_minor']);
+    expect(narrow('major', ['tonic:F']).map(keyId)).toEqual(['F_major']);
   });
 
   it('takes several tonics, and only those', () => {
-    const chosen = keysIn(poolFor('major'), ['tonic:F', 'tonic:D']).map(keyId);
+    const chosen = narrow('major', ['tonic:F', 'tonic:D']).map(keyId);
     expect([...chosen].sort()).toEqual(['D_major', 'F_major']);
   });
 
@@ -58,30 +60,46 @@ describe('narrowing a pool to chosen tonics', () => {
     // Settings live in localStorage, so a blob written by an earlier release
     // is a real thing a browser hands back. Bare and prefixed have to agree.
     for (const mode of ['major', 'minor'] as const) {
-      expect(keysIn(poolFor(mode), ['F']).map(keyId))
-        .toEqual(keysIn(poolFor(mode), ['tonic:F']).map(keyId));
+      expect(narrow(mode, ['F']).map(keyId))
+        .toEqual(narrow(mode, ['tonic:F']).map(keyId));
     }
   });
 
-  it('falls back to the whole pool for a tonic the mode cannot build on', () => {
+  it('keeps the tonic and gives up the mode, rather than giving up the tonic', () => {
     /*
-      The trap, and it is deliberate rather than an accident of the filter.
-      `D#` is a tonic chip somewhere — the minor pool has D# minor — and the
-      major pool within four accidentals has no D# major. Narrowing to
-      nothing would leave the generator with an empty pool and an exercise
-      that cannot be asked; handing back everything at least asks something.
+      The case where the two settings cannot both be satisfied. `D#` is a
+      real chip, because D# minor is inside the accidental limit; there is
+      no D# major inside it. So `D#` with major only can give one or the
+      other and not both.
 
-      Worth knowing because it is surprising from the outside: ticking one
-      impossible tonic gives you *all* of them rather than none, so a user
-      who sees every key after choosing one has not hit a bug in the
-      narrowing, they have chosen a key that mode cannot spell.
+      It gives the tonic. That is a decision and not an accident of the
+      filter: the mode carries a default and the tonic list does not, so
+      the tonic is the more specific and more recent choice.
+
+      This used to hand back the whole pool — ticking one tonic gave you
+      *every* key, which is not a weaker version of what was asked but the
+      opposite of it, and ADR 0017 already decided a setting excludes
+      rather than declines to act. Caught in review rather than by this
+      file, which had pinned the old behaviour as merely surprising.
     */
-    const major = poolFor('major');
-    expect(major.map((k) => pitchName(k.tonic, false))).not.toContain('D#');
-    expect(keysIn(major, ['tonic:D#'])).toEqual(major);
-    // And a chosen tonic that exists alongside an impossible one still wins,
-    // because the fallback is for an empty result rather than a partial one.
-    expect(keysIn(major, ['tonic:D#', 'tonic:F']).map(keyId)).toEqual(['F_major']);
+    const tonicsOf = (mode: Mode) => poolFor(mode).map((k) => pitchName(k.tonic, false));
+    // Within four accidentals the two modes do not offer the same tonics:
+    // A♭, E♭ and B♭ are major-only, B, F♯ and C♯ are minor-only. The chips
+    // are the union of the two, so either kind is one click away.
+    expect(tonicsOf('minor')).not.toContain('Ab');
+    expect(tonicsOf('major')).not.toContain('B');
+
+    expect(narrow('minor', ['tonic:Ab']).map(keyId)).toEqual(['Ab_major']);
+    expect(narrow('major', ['tonic:B']).map(keyId)).toEqual(['B_minor']);
+
+    // And a tonic that the mode *can* build on still wins outright: the
+    // relaxation is for an empty result, never for a partial one.
+    expect(narrow('minor', ['tonic:Ab', 'tonic:F']).map(keyId)).toEqual(['F_minor']);
+  });
+
+  it('falls back to the mode for a tonic that is not a tonic at all', () => {
+    // Unreachable from the panel and reachable from a hand-edited blob.
+    expect(narrow('major', ['tonic:H'])).toEqual(poolFor('major'));
   });
 });
 

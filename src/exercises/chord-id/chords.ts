@@ -284,7 +284,12 @@ export const chordSettingsSchema: SettingsSchema<ChordSettings> = {
       // guard asks that an option be labelled for a reader rather than
       // reusing the parser's string, and the sounding root is what the
       // setting actually names.
-      options: ROOTS.map((r) => ({ id: pitchName(r, true), label: pitchName(r, false) })),
+      options: ROOTS.map((r) => ({
+        id: pitchName(r, true),
+        // Engraved, like the tonic chips elsewhere: a musician reads `D♭`,
+        // and `Db` is the parser's spelling showing through.
+        label: pitchName(r, false).replace('b', '♭').replace('#', '♯'),
+      })),
       selected: (s) => (s.roots.length ? s.roots : ROOTS.map((r) => pitchName(r, true))),
       // Refused when empty, like every other multi-select here: a row with
       // none lit cannot say whether it means all or nothing.

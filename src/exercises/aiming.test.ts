@@ -115,6 +115,83 @@ describe('asking for a particular item', () => {
     }
   });
 
+  it('ignores a wish the current settings exclude, rather than widening to it', () => {
+    /*
+      Reachable, and the schedule cannot avoid it: it ranks items by what
+      the user has *answered*, not by what their settings currently allow,
+      so it will ask for things that were turned off since. A generator
+      that honoured the wish by reaching past the settings would hand the
+      user a question they had excluded — the same shape as ADR 0017's
+      setting that declines to act, pointed the other way.
+
+      The settings win. Narrow a multi-select to one option, wish for one
+      of the others, and what comes back must still be from the narrowed
+      set.
+    */
+    for (const type of aimable()) {
+      if (type.aims !== 'exact') continue;
+      const field = type.settings.fields.find(
+        (f): f is Extract<typeof f, { kind: 'multi' }> =>
+          f.kind === 'multi' && f.options.length > 2,
+      );
+      if (field === undefined) continue;
+
+      const [kept, excluded] = field.options;
+      const narrow = type.settings.coerce({
+        ...(type.settings.defaults as object), [field.id]: [kept.id],
+      });
+      const allowed = new Set(type.items(narrow));
+      expect(allowed.size, `${type.id} narrowed to nothing`).toBeGreaterThan(0);
+      // Only the askable namespace. `exercise.items` also carries what the
+      // question *contained* — a degree exercise names the key it was built
+      // in — and those were never in `items(settings)` to be narrowed
+      // (ADR 0007).
+      const askable = new Set(type.items(widestSettings(type)));
+
+      for (const wish of askable) {
+        if (allowed.has(wish)) continue;
+        for (let seed = 0; seed < 20; seed += 1) {
+          const asked = type.generate({ seed, settings: narrow, prefer: wish }).items
+            .filter((i: string) => askable.has(i));
+          expect(asked.length, `${type.id} asked nothing askable`).toBeGreaterThan(0);
+          for (const item of asked) {
+            expect(
+              allowed.has(item),
+              `${type.id} wished ${wish} with only ${kept.id} on, and asked ${item}`,
+            ).toBe(true);
+          }
+        }
+        break;
+      }
+      expect(excluded, `${type.id} has a second option to exclude`).toBeDefined();
+    }
+  });
+
+  it('keeps asking varied questions while it honours a wish', () => {
+    /*
+      The contract above says the wished item must be asked. It does not say
+      anything else may move, so a generator that satisfied every wish by
+      always picking the same root, clef and octave would pass it and be a
+      worse exercise than one that ignored the wish entirely.
+
+      Weak on purpose — "not frozen" rather than any distribution, because
+      distributions are the tuning this repository does not pin. Measured at
+      80 seeds all five vary completely; one distinct shape would mean
+      aiming had collapsed the rest of the question.
+    */
+    for (const type of aimable()) {
+      if (type.aims !== 'exact') continue;
+      const settings = widestSettings(type);
+      const wish = type.items(settings)[0];
+      const shapes = new Set<string>();
+      for (let seed = 0; seed < 20; seed += 1) {
+        shapes.add(JSON.stringify(type.generate({ seed, settings, prefer: wish })));
+      }
+      expect(shapes.size, `${type.id} asks one frozen question when aimed at ${wish}`)
+        .toBeGreaterThan(1);
+    }
+  });
+
   it('reaches what was asked for, where it claims lossy', () => {
     // Weaker on purpose: lossy means the field narrows, not that it closes.
     // The budget is the unaided ceiling, so an aim that made an item harder

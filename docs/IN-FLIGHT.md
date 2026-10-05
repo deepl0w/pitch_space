@@ -16,6 +16,38 @@ integrates everything else this file would need to stay correct about.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
+### `main` — the score reports where it drew things, so a cursor can follow
+
+**Branch:** `main`, starting now. Written here first because it adds to
+`toVexflow`'s exported interface, which is the file the tester has the most
+tests against.
+
+**Why now.** Rhythm lost its listening mode, so the staff is the whole
+question — and the exercise whose answer is a performance had no way to
+show you your performance against it. A text verdict saying "you were
+behind the beat" is not something you can learn from. The cursor and
+per-note colouring were in the original plan as "live feedback on the
+staff is the real payoff" and were never built; rhythm is the exercise
+that cannot do without them.
+
+**What changes.** `drawScore` returns a `ScoreLayout` instead of `void` —
+where each note was laid out on the x axis, and the stave's own geometry.
+Additive: nothing that ignores the return value behaves differently.
+
+Per-note colour needs nothing new. `ScoreNote.colour` has existed since
+the renderer was written and no exercise has ever set it, which is worth
+saying plainly because it means the marking half of this was already
+paid for and simply unused.
+
+**For tester.** The claim worth pinning is a relation, not a pixel:
+**note placements come back in the same order and count as the notes
+handed in, strictly increasing in x, and inside the stave.** A golden x
+value is a VexFlow-version snapshot and will break on upgrade; the
+ordering will not. The second claim worth having is that a cursor
+driven by a time between two onsets lands between their two x positions
+— that is the whole correctness of following the music, and it is
+checkable without a browser.
+
 ### `main` — `prefer`: the schedule asks, the generator answers honestly
 
 **Branch:** `main`, not started. Written here first because the tester

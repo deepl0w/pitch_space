@@ -31,9 +31,20 @@ export function cursorAt(
   if (seconds < times[0]) return layout.stave.notesStartX;
   for (let i = 1; i < Math.min(times.length, xs.length); i += 1) {
     if (seconds < times[i]) {
-      const span = times[i] - times[i - 1];
-      // Two events at the same tick cannot both be reached; land on the later.
-      const through = span > 0 ? (seconds - times[i - 1]) / span : 1;
+      /*
+        The span cannot be zero here, so there is no guard against it.
+
+        Reaching index `i` means every earlier index failed `seconds <
+        times[j]`, so `seconds >= times[i - 1]`; entering this branch means
+        `seconds < times[i]`. If the two times were equal those would
+        contradict each other, for any input — the array does not even have
+        to be sorted. There used to be a `span > 0 ? … : 1` here with a
+        comment about two events sharing a tick, which read as handling a
+        case nothing can produce. Two events at one tick still work: the
+        first is skipped by the same reasoning and the cursor lands on the
+        later, by the ordinary path.
+      */
+      const through = (seconds - times[i - 1]) / (times[i] - times[i - 1]);
       return xs[i - 1].x + (xs[i].x - xs[i - 1].x) * through;
     }
   }
@@ -108,6 +119,13 @@ export function RhythmPrompt({
   const times = useMemo(
     () => exercise.bars.flatMap((b) => b.events)
       .map((e) => secondsAt(e.startTick, exercise.tempo)),
+    [exercise],
+  );
+
+  /** When each written event stops, so a note is lit for its own length. */
+  const ends = useMemo(
+    () => exercise.bars.flatMap((b) => b.events)
+      .map((e) => secondsAt(e.startTick + e.durationTicks, exercise.tempo)),
     [exercise],
   );
 
@@ -218,13 +236,23 @@ export function RhythmPrompt({
     if (!markedScore || result || phase !== 'hearing' || elapsed === null) return markedScore;
     if (elapsed < 0) return markedScore;
     const events = exercise.bars.flatMap((b) => b.events);
-    let lit = -1;
-    for (let i = 0; i < times.length; i += 1) {
-      // A rest is a real event with a real position, and lighting it would
-      // say the silence was a note. The cursor is still over it, which is
-      // the honest way to show time passing through a rest.
-      if (times[i] <= elapsed && !events[i]?.isRest) lit = i;
-    }
+    /*
+      Lit for its own written length and no longer.
+
+      This used to light the last note that had started, which meant a note
+      followed by a rest stayed lit through the silence — the user role saw
+      one burn for 2.3 seconds across a barline and reasonably read it as
+      the playback having stalled. A quarter note that looks like a dotted
+      half is the exercise teaching the wrong thing with its own feedback.
+
+      A rest lights nothing, because lighting it would say the silence was
+      a note. During one, nothing is lit and the cursor alone carries the
+      time, which is what a rest looks like: the music moving on with
+      nothing sounding.
+    */
+    const lit = events.findIndex(
+      (e, i) => !e.isRest && times[i] <= elapsed && elapsed < ends[i],
+    );
     if (lit < 0) return markedScore;
     return {
       ...markedScore,
@@ -232,7 +260,7 @@ export function RhythmPrompt({
         (note, i) => (i === lit ? { ...note, colour: 'var(--accent)' } : note),
       ),
     };
-  }, [markedScore, result, phase, elapsed, times, exercise]);
+  }, [markedScore, result, phase, elapsed, times, ends, exercise]);
 
   const tap = useCallback(() => {
     if (startedAt.current === null) return;

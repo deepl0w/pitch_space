@@ -237,6 +237,12 @@ back.** `fleet.sh save "<message>" [tokens]` — the token count is optional
 and self-reported, since a hook has no way to see it without an extra call
 that would spend tokens measuring tokens.
 
+**Run `fleet.sh check` before committing, not `./test.sh --all` read by
+eye.** Same `SUITE`/`CHECKS`, but the last line is `VERDICT: GREEN` or
+`VERDICT: NOT GREEN` — reported after main and the tester each committed
+with a failing check having read the tail of the same output and missed it
+above.
+
 The hazard worth repeating from the skill, because it has bitten here:
 `node_modules` is git-ignored, so a fresh worktree cannot run a single npm
 script until `sync` has installed it, and after a merge that moved

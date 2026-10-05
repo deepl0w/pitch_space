@@ -42,9 +42,10 @@ describe('makeRng', () => {
     const outside: Array<{ draw: number; value: number }> = [];
     for (let i = 0; i < 200_000; i++) {
       const value = rng.next();
-      // Written as a rejected range rather than two comparisons so that a
-      // NaN — which satisfies neither — is caught rather than slipping
-      // between them.
+      // A rejected range rather than two comparisons, which reads as the
+      // one question being asked. It is not a NaN fix: `expect(NaN)
+      // .toBeGreaterThanOrEqual(0)` fails too, checked rather than
+      // reasoned about, so the old pair caught NaN as well.
       if (!(value >= 0 && value < 1)) outside.push({ draw: i, value });
     }
     expect(outside).toEqual([]);

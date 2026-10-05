@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   BAR_CHOICES, METER_CHOICES, RHYTHM_DEFAULTS, TEMPO_CHOICES, beatSeconds,
   coerceRhythmSettings, generateRhythmExercise, gradeRhythm, leadInSeconds,
-  rhythmItems, rhythmScoreSpec, rhythmVoices, secondsAt, type RhythmSettings,
+  RHYTHM_PITCH, rhythmItems, rhythmScoreSpec, rhythmVoices, secondsAt,
+  type RhythmSettings,
 } from './rhythms';
+import { midiOf } from '../../theory/pitch';
 import { toleranceFor } from '../../audio/dsp/rhythmAlign';
 import { timeSignature } from '../../theory/meter';
 
@@ -87,6 +89,59 @@ describe('the rhythm a question is built from', () => {
     const e = generateRhythmExercise({ seed: 5, settings: settings({ presentation: 'read' }) });
     expect(rhythmVoices(e, { silent: true })).toHaveLength(e.countInBeats);
     expect(rhythmVoices(e).length).toBe(e.countInBeats + e.onsets.length);
+  });
+
+  it('sounds the clicks and the rhythm independently of each other', () => {
+    /*
+      Two options, and the exercise uses one corner of each: listening asks
+      for the rhythm with no count-in, and answering asks for the count-in
+      with no rhythm. They are a pair that drifts back together — one call
+      site copied from the other is all it takes — so the four corners are
+      asserted here rather than the two in use, and by **pitch** rather than
+      by count.
+
+      Count was what this file pinned before, and a count is a proxy: four
+      clicks and four rhythm notes are the same length, and a path that
+      sounded the wrong one of them would pass. The clicks are a different
+      pitch from the rhythm, which is the thing actually being asked.
+    */
+    const e = generateRhythmExercise({ seed: 5, settings: settings({}) });
+    const rhythm = midiOf(RHYTHM_PITCH);
+    const sounds = (over: { silent?: boolean; countIn?: boolean }) => {
+      const voices = rhythmVoices(e, over);
+      return {
+        rhythm: voices.filter((v) => v.midi === rhythm).length,
+        clicks: voices.filter((v) => v.midi !== rhythm).length,
+      };
+    };
+
+    expect(e.onsets.length, 'nothing to hear, so this proves nothing').toBeGreaterThan(0);
+    expect(e.countInBeats, 'nothing to count, so this proves nothing').toBeGreaterThan(0);
+
+    // Both, which is nothing the exercise asks for and is the baseline the
+    // other three are read against.
+    expect(sounds({})).toEqual({ rhythm: e.onsets.length, clicks: e.countInBeats });
+    // Listening: the rhythm, and no three seconds of clicks in front of a
+    // thing the user asked to hear.
+    expect(sounds({ countIn: false })).toEqual({ rhythm: e.onsets.length, clicks: 0 });
+    // Answering: the count-in alone, because sounding the rhythm would be
+    // playing the answer.
+    expect(sounds({ silent: true })).toEqual({ rhythm: 0, clicks: e.countInBeats });
+    expect(sounds({ silent: true, countIn: false })).toEqual({ rhythm: 0, clicks: 0 });
+  });
+
+  it('starts the rhythm at zero when nothing is counted in front of it', () => {
+    // The offset half of the same option. With a count-in the first onset
+    // waits out the lead; without one it has nothing to wait for, and a
+    // playback that still waited would be three seconds of silence.
+    const e = generateRhythmExercise({ seed: 5, settings: settings({}) });
+    const rhythm = midiOf(RHYTHM_PITCH);
+    const firstAt = (over: { countIn?: boolean }) =>
+      rhythmVoices(e, over).filter((v) => v.midi === rhythm)[0].start;
+
+    expect(leadInSeconds(e)).toBeGreaterThan(0);
+    expect(firstAt({ countIn: false })).toBeCloseTo(e.onsets[0], 6);
+    expect(firstAt({})).toBeCloseTo(leadInSeconds(e) + e.onsets[0], 6);
   });
 
   it('draws every event, and carries tuplets so the bar adds up', () => {

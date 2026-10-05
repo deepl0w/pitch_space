@@ -3,8 +3,9 @@ import { StrictMode, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RhythmPrompt, cursorAt } from './RhythmPrompt';
+import { midiOf } from '../../theory/pitch';
 import {
-  RHYTHM_DEFAULTS, beatSeconds, generateRhythmExercise, leadInSeconds,
+  RHYTHM_DEFAULTS, RHYTHM_PITCH, beatSeconds, generateRhythmExercise, leadInSeconds,
   type RhythmExercise, type RhythmResponse, type RhythmSettings,
 } from './rhythms';
 import type { AudioOut, Result } from '../types';
@@ -150,6 +151,52 @@ describe('putting the question', () => {
     expect(audio.plays[0]).toHaveLength(ex.onsets.length);
     expect(ex.countInBeats, 'nothing to be dropped, so this proves nothing')
       .toBeGreaterThan(0);
+  });
+});
+
+describe('which of the two sounds each control makes', () => {
+  /*
+    The two call sites ask one function for opposite things: hearing sounds
+    the rhythm with no clicks, answering sounds the clicks with no rhythm.
+    They are a copy-paste apart, and either edited to match the other reads
+    as a tidy-up while silently making the question play the count-in or the
+    answer play the rhythm.
+
+    The cases above and below already pin each path's *length*. This pins
+    the pair, and by **pitch** — a length is a proxy that holds only while
+    the bar has a different number of onsets than beats, which is a property
+    of the seed rather than of the design. `rhythms.test.ts` pins the four
+    corners of the options; this pins that the prompt passes the right one.
+  */
+  const rhythmNote = midiOf(RHYTHM_PITCH);
+  const split = (voices: readonly Voice[]) => ({
+    rhythm: voices.filter((v) => v.midi === rhythmNote).length,
+    clicks: voices.filter((v) => v.midi !== rhythmNote).length,
+  });
+
+  it('never lets one press sound both the rhythm and the counting', () => {
+    const ex = exercise();
+    expect(ex.onsets.length, 'no rhythm to confuse, so this proves nothing')
+      .toBeGreaterThan(0);
+    expect(ex.countInBeats, 'no counting to confuse, so this proves nothing')
+      .toBeGreaterThan(0);
+
+    render(ex);
+    click(hear());
+    const heard = split(audio.plays.at(-1)!);
+    expect(heard).toEqual({ rhythm: ex.onsets.length, clicks: 0 });
+
+    arrive(ex);
+    click(answer());
+    const counted = split(audio.plays.at(-1)!);
+    expect(counted).toEqual({ rhythm: 0, clicks: ex.countInBeats });
+
+    // Said as the pair rather than as two facts, because the thing that
+    // goes wrong is the two becoming one.
+    for (const play of audio.plays) {
+      const { rhythm, clicks } = split(play);
+      expect(rhythm === 0 || clicks === 0, 'a single press sounded both').toBe(true);
+    }
   });
 });
 

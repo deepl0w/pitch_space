@@ -68,9 +68,22 @@ reports. Both were true *of the seam that was rejected*. `focus(settings,
 item)` could only express a wish by tightening a setting, and no setting
 names one key — so under that design the middle was real. `prefer` does not
 go through the settings: generation picks a key from a pool, so it can pick
-the one it was asked for. And degree identification does not report the key
-at all; `degreeItems` lists `degree:<n>:<mode>` and nothing else, so the key
-was never in the schedule's denominator.
+the one it was asked for.
+
+Degree identification needs a sharper statement than the one this entry
+first gave, which said it "does not report the key at all". **It does.**
+`generateDegree` puts `key:<id>` in the exercise's `items`, so an attempt
+is credited against it. What is true is narrower: `degreeItems(settings)`
+lists `degree:<n>:<mode>` and nothing else, so the key is in what gets
+*recorded* and not in what the schedule can *ask for*. Aiming is exact
+with respect to the denominator, which is what `aims` promises.
+
+That gap is a real finding rather than a wrinkle, and the tester hit it by
+asserting every produced item was askable: an item accrues history that
+nothing will ever schedule against. It is ADR 0007's contained-versus-
+tested with the sides reversed — usually the worry is a denominator
+listing what cannot be asked, and here it is a numerator recording what
+was never counted.
 
 The lesson is narrower than "we were wrong". **The limitation was a
 property of a design, and it was recorded as a property of the exercises.**

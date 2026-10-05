@@ -104,6 +104,50 @@ unasserted. And nothing yet checks that aiming does not distort *what else*
 is asked: a generator that honoured every wish by always picking the same
 root would pass the contract and be a worse exercise.
 
+### `main` — capture, fed by recordings rather than by a microphone
+
+**Branch:** `main`, starting now. Here first because it adds the seam every
+later answer-by-playing feature goes through, and because the tester can
+write against it before a microphone exists.
+
+**What the user asked for.** Implement capture, but drive it with real
+recorded sound — "free online resources like sound files of piano playing"
+— instead of a live microphone. That is not a compromise: ADR 0008's
+argument is that a browser's fake device is a 440 Hz beep and proves
+nothing about accuracy, so a recording is the *better* input for everything
+except the plumbing.
+
+**The seam.** `CaptureSource` yields frames of mono `Float32Array` at a
+stated sample rate, and nothing downstream knows where they came from.
+Two implementations: a microphone one, which needs a browser and cannot be
+unit tested, and a file one, which reads a WAV and emits it frame by frame
+at the same rate a device would. The analysis path takes a source and is
+the same code either way.
+
+That is the whole point of writing it this way round. The thing that is
+hard to get right — onsets, pitch, deciding a note has started — is then
+testable off-device, and the part that is untestable is reduced to
+`getUserMedia` plus a worklet.
+
+**Where the sound comes from.** CC0 piano notes, so nothing is owed and
+nothing need be attributed in the bundle; `docs/ROADMAP.md` records which
+sources were checked and why most are unusable. Fetched by a script rather
+than committed, with the tests skipping and naming the command when the
+files are absent — the pattern the original plan specified for exactly
+this. A recording corpus in git is a repository nobody can clone cheaply.
+
+**For tester.** The claim worth pinning is not "it detects the right
+pitch", which is the detector's own test and already exists. It is that
+**the frames a source emits reconstruct the signal it was given** — same
+samples, same order, no gap and no overlap at the frame boundaries — and
+that a note's onset is reported once rather than per frame it spans.
+Boundary behaviour is where a frame-based pipeline goes wrong, and it is
+invisible in a detector test that is handed one tidy buffer.
+
+The second is that the file source and a microphone source are
+interchangeable: anything asserted about one should be asserted through
+the interface, not through the file one's conveniences.
+
 ### Owed to `process` — main cannot establish that the fleet was told
 
 **Written here because process is not reachable to be told, which is the

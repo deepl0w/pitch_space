@@ -149,26 +149,13 @@ configuration, and they outlive any one main session. Main has told the user
 three times to launch sessions that were already running; this paragraph is
 here because saying it twice was not enough.
 
-**A session's name expires; the worktree's does not.** `ListAgents` names a
-session as the worktree directory plus a two-character suffix —
-`hardcore-rosalind-8055fa-bf` — and **the suffix changes every time that
-session resumes.** The same tester has been `-8055fa`, then `-65`, then
-`-bf` in one day, on an unmoved worktree and an unmoved branch. So an
-address is good for one delivery: **run `ListAgents` immediately before each
-send and copy a row verbatim.** A name remembered from earlier in your own
-session is stale, and a name you assembled from the directory was never an
-address at all. Main sent to a bare directory name, got "No agent named … is
-reachable", and recorded that the sessions could not be reached — a
-constructed name standing in for the one the mechanism gives you, which is
-the proxy pattern arriving inside the measurement taken to settle it.
-
-**An absent row means suspended, not gone.** A suspended session drops off
-the listing and returns under a new suffix. What settles whether a role is
-alive is not the roster but **the branches**: a working role moves
-`claude/<role>` and syncs it onto main with no help from main, so
-`fleet.sh status` showing a role at zero behind is positive evidence that
-something in there is working. The branch is the mechanism; the roster is
-the correlate, and it is only ever current at the instant you read it.
+**An agent's listed name is only good for the instant it was read.** The
+fleet skill explains why — the suffix `ListAgents` adds changes every time a
+session resumes, so a name kept from earlier in the conversation, or
+assembled from the worktree directory, is already stale — and what settles
+whether a role is alive when the roster says otherwise (its branch, not the
+roster). Here it is enough to say it bit main three times in one day and the
+skill's version is the one to read before it bites again.
 
 So when a role genuinely will not take a message, the fallback is not to
 start anything. Run **`tools/relay.sh`**, which prints a paste-ready block

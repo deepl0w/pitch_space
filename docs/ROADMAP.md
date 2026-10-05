@@ -18,6 +18,7 @@ it ships or is dropped.
   - [What a score is for, once it is in](#what-a-score-is-for-once-it-is-in)
   - [The parts that will actually be hard](#the-parts-that-will-actually-be-hard)
 - [Learning the catalogues from real music](#learning-the-catalogues-from-real-music)
+  - [Practising on a song you chose](#practising-on-a-song-you-chose)
   - [A workbench for the corpus, once there is one](#a-workbench-for-the-corpus-once-there-is-one)
   - [Recordings to go with them](#recordings-to-go-with-them)
 - [A settings screen](#a-settings-screen)
@@ -337,6 +338,43 @@ rhythm cells are the exception where counting genuinely produces the right
 object, because a beat-sized figure *is* a frequent short pattern — Groove
 MIDI is the source, and the caveat is that it is overwhelmingly 4/4, so it
 does nothing for the additive metres this file already names as thin.
+
+### Practising on a song you chose
+
+The corpus above is material someone else picked. The thing a learner
+actually asks for is "build me exercises from *this* song" — the one they
+are learning, or the one stuck in their head. Two routes, and they are not
+equally available.
+
+**A file the user already has** is the one that can work. It stays on the
+device, is decoded with the Web Audio API the app already owns, and never
+uploads — which makes the licensing question disappear, because nothing is
+copied or distributed. It needs the polyphonic side of the analysis chain
+that is designed and not built: chroma, a chord recogniser over it, beat
+tracking. `docs/ARCHITECTURE.md` says plainly that the chord exercise needs
+chroma written first, and this needs the same thing plus a beat grid.
+
+Expect it to be worse than the generator for a while, and say so in the UI
+rather than discovering it in a review: chord recognition on a dense mix is
+materially harder than on the clean synthesised triads the detector will
+first be tested against, and a wrong chord presented as the answer teaches
+the wrong thing with the app's authority behind it.
+
+**A streaming service is probably not available at all**, and this is worth
+recording before someone spends a week on it. The major services do not hand
+an application decodable audio: playback SDKs are DRM-protected by design,
+so the samples never reach code that could analyse them, and the terms
+generally forbid it even where a path exists. Spotify also withdrew the
+audio-features and audio-analysis endpoints from new applications, which
+were the obvious way to get a tempo and a key without touching the audio —
+**that should be checked rather than taken from this file**, since it is the
+kind of fact that changes. What a service realistically offers is
+*identification and metadata*: which song, its tempo, maybe its key. That is
+enough to look a song up in a corpus or to set a metronome, and not enough
+to derive a progression from.
+
+So the honest shape is: import a file, analyse locally, and treat any
+service connection as a way of *finding* a song rather than of hearing one.
 
 ### A workbench for the corpus, once there is one
 

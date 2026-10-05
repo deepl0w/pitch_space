@@ -198,6 +198,11 @@ brief, and this is neither.
 Exercise types are the natural unit of feature work — one worktree per
 exercise keeps two agents out of the same file.
 
+**`fleet.sh save` records timing automatically; `fleet.sh stats` reads it
+back.** `fleet.sh save "<message>" [tokens]` — the token count is optional
+and self-reported, since a hook has no way to see it without an extra call
+that would spend tokens measuring tokens.
+
 The hazard worth repeating from the skill, because it has bitten here:
 `node_modules` is git-ignored, so a fresh worktree cannot run a single npm
 script until `sync` has installed it, and after a merge that moved

@@ -386,22 +386,26 @@ export function keysIn(
     Nothing can be built from the chosen tonics in the chosen modes. One of
     the two has to give, and **it is the mode**.
 
-    The case is real and reachable from the panel: `D♯` is offered because
-    D♯ minor exists within the accidental limit, and there is no D♯ major
-    inside it, so `D♯` with major only selects nothing. This used to return
-    the unnarrowed pool — so ticking one tonic handed you *every* key, which
-    is not a weaker version of what was asked but the opposite of it, and
-    ADR 0017 already decided that a setting excludes rather than declining
-    to act. The architect caught it; it is the diminished-triads bug again
-    with the subject changed.
+    The case is real and reachable from the panel, and the asymmetry is
+    the accidental limit rather than anything about tonics. Within four
+    accidentals **A♭, E♭ and B♭ are major-only** and **B, F♯ and C♯ are
+    minor-only**; the chips are the union, so either kind is one click
+    away. Asking for A♭ with minor only selects nothing.
 
-    The tonic wins because it is the more specific choice and the one just
-    made — the mode has a default and the tonic list does not. So `D♯` with
-    major only gives D♯ minor: not what was asked for, but recognisably
-    adjacent to it, and never twelve keys when one was chosen.
+    It gives the tonic. That is a decision and not an accident of the
+    filter: the mode carries a default and the tonic list does not, so the
+    tonic is the more specific and more recent choice. A♭ with minor only
+    gives A♭ major — not what was asked for, but recognisably adjacent,
+    and never nine keys when one was chosen.
 
-    Only an unrecognisable tonic falls through to the mode alone, which the
-    panel cannot produce and a hand-edited settings blob can.
+    That last part is what this replaced. It used to hand back the whole
+    pool, so ticking one tonic gave you *every* key, which is not a weaker
+    version of the request but the opposite of it, and ADR 0017 already
+    decided a setting excludes rather than declines to act.
+
+    A tonic in neither pool — D♯, say, whose minor is six sharps — still
+    falls through to the mode alone, because there is no key to honour.
+    The panel cannot produce that; a hand-edited settings blob can.
   */
   if (byTonic.length > 0) return byTonic;
   const modeOnly = byMode(all);

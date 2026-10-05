@@ -67,20 +67,26 @@ describe('narrowing a pool to chosen tonics', () => {
 
   it('keeps the tonic and gives up the mode, rather than giving up the tonic', () => {
     /*
-      The case where the two settings cannot both be satisfied. `D#` is a
-      real chip, because D# minor is inside the accidental limit; there is
-      no D# major inside it. So `D#` with major only can give one or the
-      other and not both.
+      The case where the two settings cannot both be satisfied, which is
+      the accidental limit rather than anything about tonics: within four
+      accidentals A♭, E♭ and B♭ are major-only and B, F♯ and C♯ are
+      minor-only, and the chips are the union of the two.
 
-      It gives the tonic. That is a decision and not an accident of the
-      filter: the mode carries a default and the tonic list does not, so
-      the tonic is the more specific and more recent choice.
+      It gives the tonic. The mode carries a default and the tonic list
+      does not, so the tonic is the more specific and more recent choice.
 
       This used to hand back the whole pool — ticking one tonic gave you
       *every* key, which is not a weaker version of what was asked but the
       opposite of it, and ADR 0017 already decided a setting excludes
       rather than declines to act. Caught in review rather than by this
       file, which had pinned the old behaviour as merely surprising.
+
+      Asserted through A♭ and B rather than D♯. D♯ was the first example
+      written here and it tested the wrong branch under this name: D♯
+      minor is six sharps, so D♯ is in neither pool, and the call fell
+      through to the *unrecognised tonic* path instead. The asymmetry is
+      asserted first below, so this cannot quietly stop testing what it is
+      named for.
     */
     const tonicsOf = (mode: Mode) => poolFor(mode).map((k) => pitchName(k.tonic, false));
     // Within four accidentals the two modes do not offer the same tonics:

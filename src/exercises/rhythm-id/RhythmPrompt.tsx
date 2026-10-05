@@ -89,7 +89,17 @@ export function RhythmPrompt({
   const answered = result !== null;
 
   const lead = leadInSeconds(exercise);
-  const total = lead + (exercise.onsets[exercise.onsets.length - 1] ?? 0);
+  /** The written rhythm's own length, from its first attack to its last. */
+  const written = exercise.onsets[exercise.onsets.length - 1] ?? 0;
+  const total = lead + written;
+
+  /*
+    What the clock's zero means, which differs by phase and is the one thing
+    that would put the cursor and the sound in different places. Hearing
+    starts on the first written note; tapping starts a count-in earlier,
+    because that is when its sound starts.
+  */
+  const offset = phase === 'hearing' ? 0 : lead;
 
   const [layout, setLayout] = useState<ScoreLayout | null>(null);
   const [elapsed, setElapsed] = useState<number | null>(null);
@@ -128,9 +138,9 @@ export function RhythmPrompt({
   */
   function hear() {
     setPhase('hearing');
-    audio.play(rhythmVoices(exercise));
+    audio.play(rhythmVoices(exercise, { countIn: false }));
     startedAt.current = performance.now();
-    window.setTimeout(() => setPhase('ready'), (total + SETTLE) * 1000);
+    window.setTimeout(() => setPhase('ready'), (written + SETTLE) * 1000);
   }
 
   /** Count in, then take taps. The count-in is what gives the answer a tempo. */
@@ -154,12 +164,12 @@ export function RhythmPrompt({
     let frame = 0;
     const step = () => {
       if (startedAt.current === null) return;
-      setElapsed((performance.now() - startedAt.current) / 1000 - lead);
+      setElapsed((performance.now() - startedAt.current) / 1000 - offset);
       frame = requestAnimationFrame(step);
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [running, lead]);
+  }, [running, offset]);
 
   /*
     The written notes, marked by how they were played, once there is a

@@ -128,18 +128,27 @@ describe('putting the question', () => {
     expect(audio.plays).toEqual([]);
   });
 
-  it('sounds the count-in and the rhythm when asked, with the staff showing', () => {
+  it('sounds the rhythm when asked, and does not count it in first', () => {
     /*
       The staff is up, so sounding the rhythm does not answer the question
       — the question is whether you can play it. What this buys is the
       join: the note you hear, the note on the page and the cursor over it
       are the same note at the same instant.
+
+      And no count-in. It is there so that an answer has a tempo to be
+      measured against; nothing is being measured here, the tempo is in the
+      playback, and four clicks in front of a two-bar figure is three
+      seconds of waiting to hear the thing you asked for. Asserted as an
+      exact count rather than "more than the onsets", because the failure
+      this guards against is clicks creeping back in.
     */
     const ex = exercise();
     render(ex);
     click(hear());
     expect(audio.plays).toHaveLength(1);
-    expect(audio.plays[0].length).toBe(ex.countInBeats + ex.onsets.length);
+    expect(audio.plays[0]).toHaveLength(ex.onsets.length);
+    expect(ex.countInBeats, 'nothing to be dropped, so this proves nothing')
+      .toBeGreaterThan(0);
   });
 });
 
@@ -157,8 +166,8 @@ describe('what the controls say while they wait', () => {
     const ex = exercise();
     render(ex);
     click(hear());
-    const lead = leadInSeconds(ex);
-    for (let elapsed = 0; elapsed < lead; elapsed += 0.25) {
+    const sounding = ex.onsets[ex.onsets.length - 1];
+    for (let elapsed = 0; elapsed < sounding; elapsed += 0.25) {
       const speaks = buttons().some((b) => !IDLE.includes(b.textContent?.trim() ?? ''));
       expect(speaks, `nothing said what was happening at ${elapsed.toFixed(2)}s`).toBe(true);
       advance(0.25);
@@ -180,19 +189,18 @@ describe('what the controls say while they wait', () => {
       rhythm sounds; released after it.
     */
     const ex = exercise();
-    const lead = leadInSeconds(ex);
-    const whole = lead + ex.onsets[ex.onsets.length - 1];
-    expect(whole, 'the two spans are too close for this to prove anything')
-      .toBeGreaterThan(lead * 2);
+    const written = ex.onsets[ex.onsets.length - 1];
+    expect(written, 'too short for the two halves of this to be distinguishable')
+      .toBeGreaterThan(2);
 
     render(ex);
     click(hear());
     expect(hear().disabled).toBe(true);
 
-    advance(lead + 1);
+    advance(written / 2);
     expect(hear().disabled, 'released while the rhythm was still sounding').toBe(true);
 
-    advance(whole - lead);
+    advance(written / 2 + 1);
     expect(hear().disabled, 'still held after everything had sounded').toBe(false);
     expect(labelled('Hear it')).toBeDefined();
   });
@@ -205,7 +213,7 @@ describe('what the controls say while they wait', () => {
     expect(hear().disabled).toBe(true);
     expect(answer().disabled).toBe(true);
 
-    advance(leadInSeconds(ex) + ex.onsets[ex.onsets.length - 1] + 1);
+    advance(ex.onsets[ex.onsets.length - 1] + 1);
     expect(labelled('Hear it')).toBeDefined();
     expect(hear().disabled).toBe(false);
     expect(answer().disabled).toBe(false);

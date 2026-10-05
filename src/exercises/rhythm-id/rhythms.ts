@@ -249,21 +249,35 @@ function spanOf(bar: RhythmBar, index: number): number {
  * be in — the first tap would define the tempo and every error after it
  * would be measured against the user's own guess.
  */
-export function rhythmVoices(exercise: RhythmExercise, options: { silent?: boolean } = {}): Voice[] {
+export function rhythmVoices(
+  exercise: RhythmExercise,
+  options: { silent?: boolean; countIn?: boolean } = {},
+): Voice[] {
   const beat = beatSeconds(exercise.tempo);
-  const lead = exercise.countInBeats * beat;
+  /*
+    The count-in belongs to answering, not to listening.
+
+    It exists so that "play it back in time" has a time to be in — without a
+    shared downbeat the first tap sets the tempo and every error after it is
+    measured against the user's own guess. None of that applies to hearing
+    the rhythm: there is nothing to measure, the tempo is in the playback
+    itself, and four clicks in front of a two-bar figure is three seconds of
+    waiting to hear a thing you asked to hear.
+  */
+  const countIn = options.countIn ?? true;
+  const lead = countIn ? exercise.countInBeats * beat : 0;
   const voices: Voice[] = [];
-  for (let i = 0; i < exercise.countInBeats; i += 1) {
-    voices.push({
-      midi: midiOf(CLICK_PITCH),
-      start: i * beat,
-      duration: 0.06,
-      // The downbeat louder, so a count-in says where "one" is.
-      gain: i === 0 ? 1 : 0.55,
-    });
+  if (countIn) {
+    for (let i = 0; i < exercise.countInBeats; i += 1) {
+      voices.push({
+        midi: midiOf(CLICK_PITCH),
+        start: i * beat,
+        duration: 0.06,
+        // The downbeat louder, so a count-in says where "one" is.
+        gain: i === 0 ? 1 : 0.55,
+      });
+    }
   }
-  // Listening plays the rhythm; reading plays only the count-in, because
-  // the staff is the question and sounding it would answer it.
   if (!options.silent) {
     for (const at of exercise.onsets) {
       voices.push({ midi: midiOf(RHYTHM_PITCH), start: lead + at, duration: 0.12 });

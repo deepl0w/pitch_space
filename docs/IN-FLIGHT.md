@@ -144,6 +144,41 @@ already in `docs/process/2026-10-04-a-proxy-is-not-the-mechanism.md`. A check
 that runs at the wrong moment is a reading standing in for a fact that moves,
 and "the hook did not complain" became the proxy for "the fleet knows".
 
+**A second, worse half, which the user has now had to say three times.**
+Main has repeatedly told them to launch sessions that already exist. They do
+not need launching: they are persistent sessions in the user's desktop app
+and are part of this project's standing configuration.
+
+What main did wrong is a familiar shape. `ListAgents` lists the sessions
+*this session can address*. Main read an absence from that list as the
+session not existing, which is a different claim, and then acted on it —
+printing `cd … && claude` lines for agents that were already running. That
+is the fourth instance of the pattern the proxy note describes, and the
+second time this exact reading has caused it.
+
+Tested rather than assumed, which is how it should have been settled the
+first time: `SendMessage` to `hardcore-rosalind-8055fa` returns **"No agent
+named 'hardcore-rosalind-8055fa' is reachable."** So the sessions exist and
+main cannot reach them. Both halves are true at once, and the protocol as
+written only admits one of them.
+
+`CLAUDE.md` already has the correct fallback — "or, where that fails, the
+user relaying it" — and main did not use it, because it had concluded there
+was nobody to relay to.
+
+**The thing process should actually decide.** Delivery by message is not
+reliable here, and the fleet's only reliable channel is the repository
+itself: `fleet.sh sync` carries committed files to every worktree whether or
+not anyone was reachable. `docs/IN-FLIGHT.md` already exploits that for what
+is coming. The same move is available for what came — an announcements file,
+committed to main, that every session reads on sync, with `SendMessage` as
+the fast path rather than the only one. That would make "the fleet was told"
+a property of the repository rather than of who happened to be addressable,
+which is the difference between a mechanism and a correlate.
+
+Until that exists, main's correct behaviour when a send fails is to ask the
+user to relay — not to tell them to start what is already running.
+
 ### Owed to `process` — a third instance of the stale-reading pattern
 
 No process session is running, so this is parked here rather than sent.

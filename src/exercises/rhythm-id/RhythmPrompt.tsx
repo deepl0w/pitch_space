@@ -122,6 +122,13 @@ export function RhythmPrompt({
     [exercise],
   );
 
+  /** When each written event stops, so a note is lit for its own length. */
+  const ends = useMemo(
+    () => exercise.bars.flatMap((b) => b.events)
+      .map((e) => secondsAt(e.startTick + e.durationTicks, exercise.tempo)),
+    [exercise],
+  );
+
   /*
     `onLayout` goes into the Score's effect dependencies, so an inline
     function would redraw the stave on every render — and every tick of the
@@ -229,13 +236,23 @@ export function RhythmPrompt({
     if (!markedScore || result || phase !== 'hearing' || elapsed === null) return markedScore;
     if (elapsed < 0) return markedScore;
     const events = exercise.bars.flatMap((b) => b.events);
-    let lit = -1;
-    for (let i = 0; i < times.length; i += 1) {
-      // A rest is a real event with a real position, and lighting it would
-      // say the silence was a note. The cursor is still over it, which is
-      // the honest way to show time passing through a rest.
-      if (times[i] <= elapsed && !events[i]?.isRest) lit = i;
-    }
+    /*
+      Lit for its own written length and no longer.
+
+      This used to light the last note that had started, which meant a note
+      followed by a rest stayed lit through the silence — the user role saw
+      one burn for 2.3 seconds across a barline and reasonably read it as
+      the playback having stalled. A quarter note that looks like a dotted
+      half is the exercise teaching the wrong thing with its own feedback.
+
+      A rest lights nothing, because lighting it would say the silence was
+      a note. During one, nothing is lit and the cursor alone carries the
+      time, which is what a rest looks like: the music moving on with
+      nothing sounding.
+    */
+    const lit = events.findIndex(
+      (e, i) => !e.isRest && times[i] <= elapsed && elapsed < ends[i],
+    );
     if (lit < 0) return markedScore;
     return {
       ...markedScore,
@@ -243,7 +260,7 @@ export function RhythmPrompt({
         (note, i) => (i === lit ? { ...note, colour: 'var(--accent)' } : note),
       ),
     };
-  }, [markedScore, result, phase, elapsed, times, exercise]);
+  }, [markedScore, result, phase, elapsed, times, ends, exercise]);
 
   const tap = useCallback(() => {
     if (startedAt.current === null) return;

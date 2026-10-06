@@ -256,6 +256,14 @@ which used `git commit` directly. This does, regardless of shape, at the
 cost of the full suite's time on every commit — `fleet.sh check` by hand is
 still worth running first, to see the detail rather than just the verdict.
 
+**`git merge` gets the same gate, separately, because `pre-commit` does not
+fire for it at all.** Found within the hour: main's traffic is almost
+entirely merges, one direct commit to roughly twenty merges in a day, so
+the commit-only gate caught the rare case and missed the common one. A
+`pre-merge-commit` hook — a real, documented git hook for exactly this,
+confirmed rather than assumed — now covers `fleet.sh integrate` and any
+plain `git merge` the same way.
+
 The hazard worth repeating from the skill, because it has bitten here:
 `node_modules` is git-ignored, so a fresh worktree cannot run a single npm
 script until `sync` has installed it, and after a merge that moved

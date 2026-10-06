@@ -422,6 +422,10 @@ describe('changing a setting while a question is on screen', () => {
           clicked Bass mid-question   chip=Bass     drawn=treble
           clicked Alto mid-question   chip=Alto     drawn=treble
     */
+    // Checked to fail by assertion rather than by throwing — `it.fails`
+    // accepts any failure, and `clefDrawn` throws when nothing was drawn,
+    // which would have looked exactly the same. Run as a plain `it` it
+    // reports "the stave is still in the old clef".
     const inBass = clefDrawn(roundIn('Bass').container);
 
     const screen = roundIn('Treble');

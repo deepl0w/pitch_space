@@ -390,6 +390,68 @@ describe('every exercise type’s generator', () => {
  * holding them all at their defaults checks one configuration out of
  * however many exist.
  */
+describe('the verdict a grading reports', () => {
+  /**
+   * `Result.correct` and `Result.outcomes` are two statements about one
+   * answer, and nothing has ever asked whether they agree.
+   *
+   * It matters because of what became of them. `attempt.correct` is
+   * persisted and validated — `schema.ts` refuses an attempt without a
+   * boolean there — and then **nothing reads it**: `tallyItems` folds the
+   * outcomes and the screen counts from the fold. So a verdict that
+   * contradicted its own detail would be stored, would pass validation,
+   * and would be invisible to every consumer. Hard-coding it `true` in
+   * `attemptFrom` survived four of five mutants for exactly that reason.
+   *
+   * Measured first over forty seeds and every response shape the seven
+   * accept — junk, perfect, wrong, short and empty — 1,240 gradings with
+   * `correct` equal to "every outcome correct" in all of them. Asserted
+   * here over twenty, which is 380 of them; the floor below is read from
+   * that rather than carried over from the wider sweep, which is a
+   * mistake this took on its first run.
+   */
+  it('agrees with the outcomes underneath it', () => {
+    let compared = 0;
+    for (const definition of EXERCISE_TYPES) {
+      const settings = definition.settings.coerce(definition.settings.defaults);
+      for (let seed = 0; seed < 20; seed += 1) {
+        const exercise = definition.generate({ seed, settings });
+        const shaped: unknown[] = [undefined, null, 'nonsense', [], {}];
+        const asAny = exercise as unknown as {
+          numerals?: readonly unknown[]; onsets?: readonly number[];
+        };
+        if (asAny.numerals) {
+          shaped.push({ numerals: [...asAny.numerals] });
+          shaped.push({ numerals: asAny.numerals.map(() => 'I') });
+        }
+        if (asAny.onsets) {
+          shaped.push({ taps: [...asAny.onsets] }, { taps: [] });
+        }
+        for (const response of shaped) {
+          let result;
+          try { result = definition.grade(exercise, response); } catch { continue; }
+          compared += 1;
+          const everyOutcomeRight = result.outcomes.length > 0
+            && result.outcomes.every((o) => o.correct);
+          /*
+            If this ever fails legitimately — a grader awarding the round
+            to someone who got part of it right — then the two fields have
+            stopped being one statement and the attempt log needs to say
+            which one a consumer should believe. That is a decision rather
+            than a bug, and this is where it would be noticed, since
+            nothing downstream reads `correct` at all.
+          */
+          expect(result.correct, `${definition.id} seed ${seed}: verdict and outcomes disagree`)
+            .toBe(everyOutcomeRight);
+        }
+      }
+    }
+    // The responses have to have been gradeable, or this compared nothing:
+    // two exercises take structured answers and throw on everything else.
+    expect(compared, 'no response was gradeable anywhere').toBeGreaterThan(300);
+  });
+});
+
 describe('every exercise type’s askable items', () => {
   const WIDE: Record<string, unknown> = {
     maxAccidentals: 7, window: 24, bars: 16,

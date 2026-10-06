@@ -146,6 +146,26 @@ a comment is worth a test, and the comment should point at the test.** Where
 that is not possible, say what is unenforced rather than stating the rule as
 though it holds.
 
+**A fourth instance is the strongest, and it is a different and worse case than
+a stale comment.** `Round`'s own doc comment in `PracticeScreen.tsx` reads:
+
+> Frozen at generation. Changing the settings mid-exercise must not change the
+> exercise or the answers on offer — **narrowing the interval list could
+> otherwise take the correct answer off the screen** — and it is also what the
+> attempt records, so it has to be what was actually used.
+
+That is not a constraint that went stale. It is the exact defect that then
+shipped, **named in advance with its precise consequence**, in the type the
+screen was using — while the prompt two hundred lines away rendered its choice
+list from live settings. A learner narrowed the pool to two intervals, unticked
+the answer, clicked the only button left, and was marked wrong.
+
+The rule was not forgotten, which is what makes it worth recording separately.
+It was written down, **honoured in one of the two places it governed** — the
+attempt path takes `presentation` from the exercise and says in its own comment
+why — and the other was never checked against it. Two comments in one file,
+one of them describing the failure the other was about to permit.
+
 **State what you measured *through*, not only what you measured.** A
 reachability finding is a statement about a catalogue and an instrument
 together, and the instrument has a range of its own. Where that range is not

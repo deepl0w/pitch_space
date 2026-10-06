@@ -245,3 +245,55 @@ describe('an attempt that counts towards nothing', () => {
     expect(before.streak).toBe(3);
   });
 });
+
+/**
+ * History written before a line existed.
+ *
+ * The user's ruling, 6 October: history is highly changeable while the
+ * project is young and need not survive a release; when settings settle,
+ * a porting and versioning system is owed. So a v2 attempt gets no
+ * askable set, joins no line, and is **kept** — a step that dropped rows
+ * would leave that owed system nothing to port.
+ */
+describe('an attempt from before the askable set existed', () => {
+  const v2 = {
+    id: 'old-1',
+    exerciseType: 'interval-id',
+    seed: 7,
+    settings: { semitones: [1, 2] },
+    presentation: 'read' as const,
+    startedAt: 1_000,
+    answeredAt: 2_000,
+    items: ['interval:m2:up'],
+    outcomes: [{ item: 'interval:m2:up', correct: true }],
+    correct: true,
+  };
+
+  it('is read rather than rejected, and keeps everything it had', () => {
+    const read = coerceAttempt(v2);
+    expect(read.askable, 'a set was invented for a row that has none').toBeUndefined();
+    expect(read.outcomes, 'the history itself was dropped').toEqual(v2.outcomes);
+  });
+
+  it('does not acquire an empty set, which would be a line of its own', () => {
+    /*
+      The failure this guards is quiet: `askable: []` keys to a real line
+      — the one whose answer space is empty — so every pre-line attempt
+      in a user's history would fold into one shared bucket and appear as
+      progress against nothing.
+    */
+    expect('askable' in coerceAttempt(v2)).toBe(false);
+  });
+
+  it('refuses a row whose set is there but unreadable', () => {
+    // Absent is a fact about when it was written; malformed is a row that
+    // cannot be trusted, and this file skips those rather than repairing.
+    expect(() => coerceAttempt({ ...v2, askable: 'interval:m2:up' })).toThrow(/askable/);
+    expect(() => coerceAttempt({ ...v2, askable: [1, 2] })).toThrow(/askable/);
+  });
+
+  it('keeps a set that is there', () => {
+    const read = coerceAttempt({ ...v2, askable: ['interval:m2:up', 'interval:M2:up'] });
+    expect(read.askable).toEqual(['interval:m2:up', 'interval:M2:up']);
+  });
+});

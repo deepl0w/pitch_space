@@ -73,8 +73,34 @@ export function createSettingsStore(
     return {
       doc,
       persisting,
+      /**
+       * Merged into what was stored, rather than replacing it.
+       *
+       * **The spread looks redundant and is not.** `settings` arrives from
+       * the exercise's own `coerce`, which drops every key it does not
+       * recognise — correctly, because a closed valid shape is what it is
+       * for. The stored blob is the only place a key from a *newer* release
+       * still exists at this point: it survives hydration, because
+       * `coerceSettings` keeps the exercises map whole, and then dies here
+       * if the coerced value simply replaces it.
+       *
+       * So an older build opening a settings panel used to delete fields a
+       * newer build had written, permanently, while an unknown *exercise*
+       * beside them was kept — the same promise honoured at one level and
+       * broken at the next. Validating into a closed shape and remembering
+       * what was rejected are opposite jobs, and this store is the only
+       * layer holding both forms at once. See ADR 0038.
+       *
+       * `a settings document with history in it` in the test file fails if
+       * this becomes a replacement again.
+       */
       setExerciseSettings(exerciseId, settings) {
-        commit({ ...get().doc, exercises: { ...get().doc.exercises, [exerciseId]: settings } });
+        const stored = get().doc.exercises[exerciseId];
+        const kept = typeof stored === 'object' && stored !== null && !Array.isArray(stored)
+          && typeof settings === 'object' && settings !== null && !Array.isArray(settings)
+          ? { ...stored, ...settings }
+          : settings;
+        commit({ ...get().doc, exercises: { ...get().doc.exercises, [exerciseId]: kept } });
       },
       setLastExercise(exerciseId) {
         commit({ ...get().doc, lastExercise: exerciseId });

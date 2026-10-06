@@ -7,8 +7,10 @@ import { cursorAt } from './cursor';
 import { midiOf } from '../../theory/pitch';
 import {
   RHYTHM_DEFAULTS, RHYTHM_PITCH, beatSeconds, generateRhythmExercise, leadInSeconds,
+  rhythmScoreSpec, secondsAt,
   type RhythmExercise, type RhythmResponse, type RhythmSettings,
 } from './rhythms';
+import { drawScore } from '../render/toVexflow';
 import type { AudioOut, Result } from '../types';
 import type { Voice } from '../../audio/output/synth';
 import type { ScoreLayout } from '../render/toVexflow';
@@ -525,5 +527,89 @@ describe('placing the cursor', () => {
     const x = cursorAt(2.5, times, short);
     expect(Number.isFinite(x)).toBe(true);
     expect(x).toBe(200);
+  });
+});
+
+/**
+ * The cursor's two axes, over a real exercise rather than a chosen stave.
+ *
+ * The case above hands `cursorAt` a layout whose geometry was picked to
+ * make the arithmetic legible, and `toVexflow.test.ts` pins the layout a
+ * real draw produces. **Neither has been checked against the other**, and
+ * between them sits the thing `cursorAt`'s own comment asserts in prose:
+ * the times and the placements "are the same list in the same order —
+ * `rhythmScoreSpec` emits one note per event".
+ *
+ * Nothing enforces that. The prompt builds its time axis from every event
+ * including rests; the spec emits a note for every event including rests;
+ * and if either stopped — skipping rests is the obvious edit, since a rest
+ * is not a note — the two arrays would desynchronise and `cursorAt` would
+ * interpolate between mismatched pairs. It would not throw: the loop runs
+ * to `Math.min(times.length, xs.length)`, so the extra entries are dropped
+ * in silence and the line points at the wrong notehead.
+ */
+describe('the cursor over an exercise the generator wrote', () => {
+  /** The time axis `RhythmPrompt` builds, by the same route. */
+  const timesOf = (exercise: RhythmExercise) => exercise.bars
+    .flatMap((bar) => bar.events)
+    .map((event) => secondsAt(event.startTick, exercise.tempo));
+
+  const drawn = (exercise: RhythmExercise) => {
+    const div = document.createElement('div');
+    document.body.append(div);
+    return drawScore(div, rhythmScoreSpec(exercise), { width: 760 });
+  };
+
+  it('has one placement for every written event, in the same order', () => {
+    /*
+      The parallelism `cursorAt` depends on, asserted where it is produced
+      rather than assumed where it is consumed. Several seeds because the
+      shapes differ — rests, beams and tuplets all add marks of their own
+      without adding events.
+    */
+    for (let seed = 0; seed < 8; seed += 1) {
+      const exercise = generateRhythmExercise({ seed, settings: RHYTHM_DEFAULTS });
+      const times = timesOf(exercise);
+      const layout = drawn(exercise);
+
+      expect(layout.notes, `seed ${seed}: the axes are different lengths`)
+        .toHaveLength(times.length);
+      expect(layout.notes.map((n) => n.index)).toEqual([...times.keys()]);
+
+      // Both axes strictly increasing, which is what makes interpolating
+      // between neighbours meaningful in either of them.
+      for (let i = 1; i < times.length; i += 1) {
+        expect(times[i], `seed ${seed}: event ${i} does not start after ${i - 1}`)
+          .toBeGreaterThan(times[i - 1]);
+        expect(layout.notes[i].x, `seed ${seed}: note ${i} is not right of ${i - 1}`)
+          .toBeGreaterThan(layout.notes[i - 1].x);
+      }
+    }
+  });
+
+  it('lands between the two notes either side of the moment it is given', () => {
+    /*
+      The claim the whole cursor exists for, over a drawn stave: halfway
+      between two written events, the line is strictly between the two
+      noteheads the engraver chose. Every adjacent pair of every seed,
+      rather than one midpoint, because the gaps differ — a half note and a
+      sixteenth are spaced differently on the page and in time.
+    */
+    let spans = 0;
+    for (let seed = 0; seed < 6; seed += 1) {
+      const exercise = generateRhythmExercise({ seed, settings: RHYTHM_DEFAULTS });
+      const times = timesOf(exercise);
+      const layout = drawn(exercise);
+
+      for (let i = 1; i < times.length; i += 1) {
+        const midway = (times[i - 1] + times[i]) / 2;
+        const x = cursorAt(midway, times, layout)!;
+        expect(x, `seed ${seed} between events ${i - 1} and ${i}`)
+          .toBeGreaterThan(layout.notes[i - 1].x);
+        expect(x).toBeLessThan(layout.notes[i].x);
+        spans += 1;
+      }
+    }
+    expect(spans, 'no pair of events was compared').toBeGreaterThan(40);
   });
 });

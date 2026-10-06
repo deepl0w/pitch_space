@@ -438,3 +438,108 @@ describe('changing a setting while a question is on screen', () => {
       .toBe(inBass);
   });
 });
+
+/**
+ * A question with no right answer on screen, marked wrong.
+ *
+ * Narrow the pool to two intervals, start a question, untick the one that
+ * happens to be the answer, and the only button left is the wrong one.
+ * Pressing it records an attempt — scored against the learner, written to
+ * the log, and therefore into whatever the schedule makes of it.
+ *
+ * **This is a different defect from the stale clef above and the difference
+ * is the whole of why it is worse.** Clef and range are *stale*: the
+ * question holds its generated value, the panel runs ahead, and the display
+ * disagrees. The choice list is **live** — it re-renders from the current
+ * settings while the generated answer stays fixed — so the two are views of
+ * different vintages rather than one frozen view, and only that can produce
+ * a question nobody could have answered.
+ *
+ * Found by the user role, reproduced independently by main, and pinned here
+ * on the claim that costs a learner something: **an attempt is never
+ * recorded against an item whose correct answer was not offered.** That
+ * holds whichever way the stale-display question is resolved, because it is
+ * about what reaches storage rather than about what is on screen.
+ */
+describe('narrowing the pool while a question is on screen', () => {
+  const INTERVALS = [
+    'Unison', 'Minor 2nd', 'Major 2nd', 'Minor 3rd', 'Major 3rd', 'Perfect 4th',
+    'Tritone', 'Perfect 5th', 'Minor 6th', 'Major 6th', 'Minor 7th', 'Major 7th',
+    'Octave',
+  ];
+
+  /** Intervals narrowed to a pair, so one untick leaves exactly one button. */
+  function twoIntervalRound() {
+    const screen = mount('interval-id');
+    const panel = () =>
+      [...screen.container.querySelectorAll('.practice-settings button')] as HTMLButtonElement[];
+    const chip = (label: string) => panel().find((b) => b.textContent?.trim() === label);
+    const toggle = (label: string) => act(() => { chip(label)?.click(); });
+
+    if (!chip('Unison')?.className.includes('on')) toggle('Unison');
+    for (const name of INTERVALS) {
+      if (name === 'Unison' || name === 'Octave') continue;
+      if (chip(name)?.className.includes('on')) toggle(name);
+    }
+    return {
+      ...screen,
+      toggle,
+      choices: () =>
+        ([...screen.container.querySelectorAll('.choice')] as HTMLButtonElement[])
+          .map((b) => b.textContent?.trim() ?? ''),
+      press: (label: string) => act(() => {
+        ([...screen.container.querySelectorAll('.choice')] as HTMLButtonElement[])
+          .find((b) => b.textContent?.trim() === label)?.click();
+      }),
+      /** What the verdict says the answer was, and how many attempts stand. */
+      verdict: () => {
+        const text = screen.container.textContent ?? '';
+        return {
+          answer: text.match(/(?:Yes — |No: that was )([A-Za-z0-9 ]+?)[,(]/)?.[1]?.trim(),
+          recorded: Number(text.match(/\d+ of (\d+) right/)?.[1] ?? 0),
+        };
+      },
+    };
+  }
+
+  it.fails('records no attempt when the answer is no longer among the choices', () => {
+    /*
+      Reproduced on the first round: offered `Unison | Octave`, unticked
+      Unison, pressed the only button left, and got
+
+          No: that was Unison — 0 of 1 right
+
+      Rounds are generated from a fresh seed, so this walks a few and
+      asserts on the ones that actually went unanswerable, with a control
+      below that at least one did. The assertion is on the count the
+      session reports, which is the attempt log's own reading.
+
+      Checked to fail by assertion rather than by throwing: run as a plain
+      `it` it reports "an attempt was recorded for a question whose answer
+      was not offered".
+    */
+    const screen = twoIntervalRound();
+    let unanswerable = 0;
+
+    for (let round = 0; round < 8; round += 1) {
+      act(() => { screen.button(round === 0 ? 'Start' : 'Next')?.click(); });
+      screen.toggle('Unison');
+      const offered = screen.choices();
+      if (offered.length !== 1) { screen.toggle('Unison'); continue; }
+
+      const before = screen.verdict().recorded;
+      screen.press(offered[0]);
+      const after = screen.verdict();
+      if (after.answer && !offered.includes(after.answer)) {
+        unanswerable += 1;
+        expect(after.recorded,
+          'an attempt was recorded for a question whose answer was not offered')
+          .toBe(before);
+      }
+      screen.toggle('Unison');
+    }
+
+    expect(unanswerable, 'no round went unanswerable, so nothing above was asserted')
+      .toBeGreaterThan(0);
+  });
+});

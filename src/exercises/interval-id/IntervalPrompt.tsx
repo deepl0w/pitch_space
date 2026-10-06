@@ -19,7 +19,7 @@ import {
  * three pieces of state that have to be cleared in step.
  */
 export function IntervalPrompt({
-  exercise, settings, result, onRespond, audio,
+  exercise, result, onRespond, audio,
 }: PromptProps<IntervalSettings, IntervalExercise, IntervalResponse>) {
   const [chosen, setChosen] = useState<number | null>(null);
   const firstHeardAt = useRef<number | null>(null);
@@ -70,7 +70,7 @@ export function IntervalPrompt({
       </div>
 
       <div className="choices" role="group" aria-label="Which interval was that?">
-        {settings.semitones.map((semitones) => (
+        {exercise.choices.map((semitones) => (
           <button
             key={semitones}
             type="button"

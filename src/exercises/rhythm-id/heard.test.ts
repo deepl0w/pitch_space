@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { rhythmIdentification } from './index';
-import { TEMPO_CHOICES } from './rhythms';
+import {
+  TEMPO_CHOICES, beatSeconds, gradeRhythm, leadInSeconds, rhythmVoices,
+  type RhythmExercise,
+} from './rhythms';
 import { detectOnsets, MIN_SEPARATION_SECONDS } from '../../audio/dsp/onsetDetector';
 import { separationForOnsets } from '../../audio/capture/listen';
 import { alignRhythm, toleranceFor } from '../../audio/dsp/rhythmAlign';
-import { beatSeconds } from './rhythms';
 import { pluckSequence, seeded } from '../../audio/testing/signals';
 import { applyValue, widestSettings, type AnyField } from '../../testing/settingsSpace';
 
@@ -136,8 +138,15 @@ describe('a generated rhythm played back exactly', () => {
   const audible = (take: readonly number[]) => take.filter((t) => t > 0.02);
 
   it('keeps every note at the tempos a reader can follow', () => {
+    /*
+      Three seeds a tempo rather than more, because the grading case at the
+      bottom of this file now sweeps the same signals and asserts something
+      stronger about them. What this is for is attribution: when that one
+      goes red, this says whether the notes were lost on the way in or the
+      grade was wrong about notes that arrived.
+    */
     for (const tempo of TEMPO_CHOICES.filter((t) => t <= 132)) {
-      for (const take of takes(tempo, 6)) {
+      for (const take of takes(tempo, 3)) {
         const want = audible(take);
         const got = heard(take);
         const lost = want.filter((w) => !got.some((g) => Math.abs(g - w) < 0.03));
@@ -421,5 +430,104 @@ describe('the grading window against the shortest value written', () => {
     expect(alignment.extra, 'nothing was reported extra').toEqual([]);
     expect(moved!.score, 'a note a whole subdivision out still scores')
       .toBeGreaterThan(0.4);
+  });
+});
+
+/**
+ * From what the app writes to what it marks — **and no further either way**.
+ *
+ * Everything above stops at the detector, and `rhythms.test.ts` grades taps
+ * built arithmetically from the written times. So each half was checked
+ * against the music and **neither against the other's output**: the
+ * detector's onsets had never reached `gradeRhythm`, which is a join a
+ * user does travel. That is what these cases close.
+ *
+ * **What they do not touch is capture.** The signal comes from
+ * `pluckSequence` and goes straight to `detectOnsets`; there is no
+ * `CaptureSource`, no `listen`, no microphone and no recording. This is
+ * 0034's synthetic tier throughout, which 0008 spent a record
+ * distinguishing from a real instrument — a Karplus–Strong pluck has one
+ * clean attack and a struck string does not. So the claim is "the rhythm
+ * the app wrote survives being detected and graded", not "a learner can
+ * play this and be marked", and the distance between those two is the
+ * whole of `audio/capture`.
+ *
+ * Said at this length because the shorter version of it was wrong in a
+ * message this afternoon, and a test's header is where that gets settled.
+ */
+describe('a perfect performance, played and heard', () => {
+  /** The exercise's own voices, struck, detected, and offered as taps. */
+  function gradeOf(exercise: RhythmExercise, options: { countIn: boolean }) {
+    const voices = rhythmVoices(exercise, { countIn: options.countIn });
+    const lead = options.countIn ? leadInSeconds(exercise) : 0;
+    const signal = pluckSequence({
+      atSeconds: voices.map((v) => v.start), frequencyHz: 220, seed: 7,
+      seconds: Math.max(...voices.map((v) => v.start)) + 1,
+      sampleRate: RATE, decaySeconds: 0.4,
+    });
+    const taps = detectOnsets(signal, { sampleRate: RATE }).onsets
+      .map((onset) => onset.timeSeconds - lead)
+      // The count-in's own clicks are attacks too, and they are not taps.
+      .filter((t) => t > -0.05);
+    return gradeRhythm(exercise, { taps });
+  }
+
+  const exercises = (tempo: number, seeds: number) => Array.from(
+    { length: seeds },
+    (_, seed) => rhythmIdentification.generate({ seed, settings: at(tempo) }) as RhythmExercise,
+  );
+
+  it('is marked correct at the tempos a reader can follow', () => {
+    for (const tempo of [60, 96, 132]) {
+      for (const [seed, exercise] of exercises(tempo, 5).entries()) {
+        expect(gradeOf(exercise, { countIn: true }).correct,
+          `${tempo} bpm seed ${seed}: played exactly and marked wrong`).toBe(true);
+      }
+    }
+  });
+
+  it.fails('is marked correct at the fastest tempo it offers — known defect', () => {
+    /*
+      The same merge recorded above, arriving as the thing a learner would
+      report. Two bars in ten at 160 bpm are played exactly as written,
+      heard with notes missing, and **marked wrong** — seed 1 writes 18
+      attacks and is heard with 17, seed 6 writes 7 and is heard with 5.
+
+      This is why the window is worth fixing rather than noting: the cost
+      is not an internal count, it is a learner told they played it wrong
+      when they did not.
+    */
+    for (const [seed, exercise] of exercises(160, 8).entries()) {
+      expect(gradeOf(exercise, { countIn: true }).correct,
+        `160 bpm seed ${seed}`).toBe(true);
+    }
+  });
+
+  it('needs the count-in to be findable at all, not only to be in time', () => {
+    /*
+      `rhythmVoices` calls the count-in "the whole of what makes this
+      answerable" and gives one reason: without a shared downbeat the first
+      tap sets the tempo. There is a second reason it does not mention, and
+      it is mechanical rather than musical.
+
+      **A bar starts at tick zero and spectral flux is a rise between two
+      frames**, so an attack at t = 0 has nothing before it to rise from and
+      is not findable by this detector at all. The count-in moves the music
+      off zero, which is what makes the first note exist for the analysis.
+
+      Measured at 96 bpm: every seed graded correct with the count-in, four
+      of ten without it. Worth pinning because the count-in
+      is already optional — `rhythmVoices` takes `countIn` — and the reason
+      given for it would not stop anyone turning it off for answering.
+    */
+    const sample = exercises(96, 6);
+    const without = sample
+      .filter((exercise) => gradeOf(exercise, { countIn: false }).correct).length;
+    const with_ = sample
+      .filter((exercise) => gradeOf(exercise, { countIn: true }).correct).length;
+    expect(with_, 'the count-in did not help, so this is measuring something else')
+      .toBe(sample.length);
+    expect(without, 'every bar graded without a count-in, so the first attack was found')
+      .toBeLessThan(with_);
   });
 });

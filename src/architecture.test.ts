@@ -23,7 +23,11 @@ function filesUnder(dir: string): string[] {
   try {
     entries = readdirSync(dir);
   } catch {
-    return []; // generate/ and audio/dsp/ do not exist yet; the rule still stands.
+    // Written when generate/ and audio/dsp/ were still planned. All four
+    // core directories exist now, which turns this from robustness into a
+    // way for the scan to shrink in silence — so it stays, and the test
+    // below is what refuses to let it pass for nothing.
+    return [];
   }
   const out: string[] = [];
   for (const entry of entries) {
@@ -116,9 +120,18 @@ describe('ADR 0001 — a pure core', () => {
   ].map((r) => r.source).join('|'));
 
   it('finds the core directories it is meant to be guarding', () => {
-    // A rule that silently guards nothing is worse than no rule, so fail loudly
-    // if theory/ moves rather than reporting a vacuous pass.
-    expect(filesUnder(join(SRC, 'theory')).length).toBeGreaterThan(0);
+    /*
+      A rule that silently guards nothing is worse than no rule.
+
+      Every rule in this describe and the next reads `coreFiles()` and
+      asserts the result is empty, so a directory that moves takes five
+      assertions quiet with it — `filesUnder` answers a missing path with
+      `[]` rather than complaining. This checked `theory/` alone, which left
+      three of the four able to disappear unnoticed, including `audio/dsp/`:
+      the one the comment below calls the directory most at risk.
+    */
+    const empty = CORE_DIRS.filter((dir) => filesUnder(join(SRC, ...dir.split('/'))).length === 0);
+    expect(empty, 'core directories the scan found nothing in').toEqual([]);
   });
 
   it('reaches for no platform API', () => {
@@ -233,10 +246,16 @@ describe('ADR 0003 — one importer for the notation library', () => {
         .filter((f) => importsOf(f).some((s) => s === 'vexflow' || s.startsWith('vexflow/')))
         .map(show),
     )].sort();
-    // Zero is the state before the renderer lands; more than one is how the
-    // containment quietly dies.
-    expect(importers.length).toBeLessThanOrEqual(1);
-    for (const path of importers) expect(path).toBe(ALLOWED);
+    /*
+      Exactly one, where this used to allow zero.
+
+      Zero was right while the renderer was unwritten, and reading it as
+      "fewer importers is better" outlived that: the adapter exists and has
+      imported the library since. Allowing zero now means the rule also
+      passes if the import is spelled in a way `importsOf` does not match,
+      which is the failure it is supposed to catch arriving as a silence.
+    */
+    expect(importers).toEqual([ALLOWED]);
   });
 
   /**
@@ -251,14 +270,20 @@ describe('ADR 0003 — one importer for the notation library', () => {
    */
   it('simplifies every spelling before it becomes a vexflow key', () => {
     const raw: string[] = [];
+    let calls = 0;
     for (const file of filesUnder(join(SRC, 'exercises'))) {
       readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
         for (const match of line.matchAll(/vexKey\s*\(\s*([A-Za-z_$][\w$]*)/g)) {
+          calls += 1;
           if (match[1] !== 'simplifySpelling') raw.push(`${show(file)}:${i + 1}  ${line.trim()}`);
         }
       });
     }
     expect(raw).toEqual([]);
+    // The funnel itself, counted: this scan reports call sites that are
+    // wrong, so renaming the helper leaves it reporting nothing and saying
+    // the spellings are safe.
+    expect(calls, 'no call to vexKey under exercises/ at all').toBeGreaterThan(0);
   });
 });
 

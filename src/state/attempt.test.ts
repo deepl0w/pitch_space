@@ -180,3 +180,68 @@ describe('several attempts on one item', () => {
     expect(tally.size, 'the two presentations folded into one entry').toBe(2);
   });
 });
+
+/**
+ * Practice that counts towards nothing, which is a recorded attempt with
+ * no outcomes.
+ *
+ * [ADR 0041](../../docs/adr/0041-practice-that-counts-towards-nothing.md)
+ * makes untracked practice a mode an exercise declares rather than an
+ * absence of recording: the attempt is written, `items` says what the
+ * rendering contained, and nothing is credited. That is 0007's machinery
+ * reused rather than a new field — an outcome is a claim the user was
+ * asked *and that the answer counts*.
+ *
+ * The mechanism already works, because `tallyItems` folds outcomes and an
+ * empty list contributes nothing. **Nothing asserted it**, and the half
+ * that matters is not that an untracked attempt adds nothing — it is that
+ * it does not *disturb* what a tracked one built. A fold that stamped
+ * `lastSeenAt` from every attempt it saw, say, would leave the streak
+ * intact and still move the due date, and twenty minutes of untracked
+ * practice would quietly reschedule a line the learner never advanced.
+ */
+describe('an attempt that counts towards nothing', () => {
+  const KEY = tallyKey('interval:P5:up' as never, 'read');
+
+  /** What 0041 describes: what it contained, crediting nothing. */
+  const untracked = (answeredAt: number) => ({
+    ...attemptFrom({ ...round(), id: `untracked-${answeredAt}` }, 'interval-id',
+      { correct: false, feedback: '', outcomes: [] }, answeredAt),
+  });
+
+  it('still records what the rendering contained', () => {
+    // Not an absence of recording: "you practised for twenty minutes and
+    // the app has no idea" is the answer 0041 rejected, and an attempt is
+    // also how a defect gets reported by its seed.
+    const attempt = untracked(5_000);
+    expect(attempt.items).toEqual(['interval:P5:up']);
+    expect(attempt.outcomes).toEqual([]);
+    expect(coerceAttempt(attempt), 'the log would not carry it').toEqual(attempt);
+  });
+
+  it('folds into no tally at all', () => {
+    expect(tallyItems([untracked(5_000)]).size).toBe(0);
+  });
+
+  it('leaves a tracked line exactly where it was', () => {
+    /*
+      The half that matters. Three tracked answers build a streak and a due
+      date; an untracked attempt on the same item afterwards must change
+      neither — not the streak, not the count, and not `lastSeenAt`, which
+      is what `dueAt` adds its interval to.
+    */
+    const tracked = [10_000, 70_000, 130_000].map((at, i) => attemptFrom(
+      { ...round(), id: `tracked-${i}` }, 'interval-id', result(true), at,
+    ));
+
+    const before = tallyItems(tracked).get(KEY)!;
+    const after = tallyItems([...tracked, untracked(200_000)]).get(KEY)!;
+
+    expect(after).toEqual(before);
+    expect(dueAt(after), 'untracked practice moved when the item is next due')
+      .toBe(dueAt(before));
+    // And the control: the tracked attempts did build something, or
+    // "unchanged" is a statement about nothing.
+    expect(before.streak).toBe(3);
+  });
+});

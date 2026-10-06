@@ -347,15 +347,33 @@ function ExerciseRound({ definition, audio, tally, settings }: {
           <h2>How this has gone</h2>
           <ol className="items">
             {/*
-              Distinct items, because a progression names the same chord
-              twice as often as not: ii–V–V–I exercises `progression:major:V`
-              in two of its four slots. Both belong in `exercise.items` —
-              the schedule is counting chords, not kinds — but the readout
-              is a list of what was practised, and the same card printed
-              twice says nothing the first one did not, under a React key
-              that is no longer unique.
+              **The outcomes, not `exercise.items`.** ADR 0024, decided on
+              4 October and built now — the gap is itself the point, since
+              the comment that used to sit here already said "the readout
+              is a list of what was practised" while the code listed what
+              was *shown*.
+
+              The difference is a row that can never fill. An item in
+              `items` and not in `outcomes` is contained-and-not-tested,
+              which ADR 0007 keeps two lists to express: degree
+              identification shows `key:Ab_major` and grades only the
+              degree, so a learner read "Ab major — not recorded yet"
+              after every attempt and reasonably concluded they were
+              failing to practise something. Nothing they could do would
+              clear it.
+
+              `items` is for the scheduler and `outcomes` is for the
+              learner. The scheduler wants to know what was exercised; the
+              reader wants to know what was judged.
+
+              Distinct, still, for the reason the old comment gave: a
+              progression names the same chord twice as often as not —
+              ii–V–V–I grades `progression:major:V` in two of its four
+              slots — and the same card printed twice says nothing the
+              first one did not, under a React key that is no longer
+              unique.
             */}
-            {[...new Set(round.exercise.items)].map((item) => {
+            {[...new Set(round.result.outcomes.map((o) => o.item))].map((item) => {
               // Counted per sense (ADR 0010), so the figure shown is for the
               // way this exercise was actually asked.
               const counts = tally.get(tallyKey(item, round.exercise.presentation));

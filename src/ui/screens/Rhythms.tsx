@@ -183,7 +183,28 @@ function Card({ title, meta, ts, events, play }: {
       <div className="figure-head">
         <span className="figure-name">{title}</span>
         <span className="figure-meta">{meta}</span>
-        <button className="figure-play" onClick={() => play(sounded)}>Play</button>
+        {/*
+          Named for the figure it plays, not just "Play".
+
+          There are thirty-one of these on the page and the visible label
+          was identical on every one — fine with a mouse, because the
+          figure's name sits directly above it, and useless to anyone
+          tabbing through or listening: the accessible name was "Play"
+          thirty-one times with nothing to tell them apart. Found by the
+          user role, which checked the accessible name rather than the
+          rendered one.
+
+          `aria-label` rather than visible text, because the name is
+          already on screen an inch away and printing it twice is noise
+          for the reader who can see it.
+        */}
+        <button
+          className="figure-play"
+          aria-label={`Play ${title}`}
+          onClick={() => play(sounded)}
+        >
+          Play
+        </button>
       </div>
       <Score spec={spec} height={120} />
     </li>

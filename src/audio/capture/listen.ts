@@ -149,7 +149,30 @@ function pitchOver(
   const ATTACK_FRACTION = 0.25;
   const length = span.to - span.from;
   const from = Math.floor((span.from + length * ATTACK_FRACTION) * sampleRate);
-  const to = Math.min(samples.length, Math.floor(span.to * sampleRate));
+  /*
+    At least one analysis frame, even when the segment is shorter than one.
+
+    `frameSizeFor` is 8192 samples at 44.1 kHz — 186 ms — because the
+    detector has to resolve a 30 Hz fundamental. A segment shorter than
+    that fits no frame at all, so the loop below never ran and the note
+    came back with no pitch: silently, and indistinguishably from a note
+    nobody played.
+
+    Measured on recorded piano, where it is the difference between
+    hearing nothing and hearing the note: a struck string's attack
+    produces several flux peaks, so `detectOnsets` cuts one note into
+    several short segments and every one of them was unpitchable.
+
+    **Reading on past `span.to` is deliberate and is a statement about
+    the segmentation, not about the pitch.** If the segment is shorter
+    than a frame then the boundary after it is not a note boundary — a
+    note that short cannot be played — so the audio beyond it belongs to
+    the same sound. Where the segments are real and merely fast, this
+    reads the beginning of the next note, which is the honest cost and
+    is why it is a floor rather than a window.
+  */
+  const minimum = from + frameSize;
+  const to = Math.min(samples.length, Math.max(Math.floor(span.to * sampleRate), minimum));
 
   const readings: number[] = [];
   let best = 0;

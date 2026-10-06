@@ -309,4 +309,52 @@ describe('the readout under an answered question', () => {
         .toBe(labels.length);
     }
   });
+
+  it('lists what was judged, not what was shown', () => {
+    /*
+      ADR 0024, which was accepted on 4 October and not built until the
+      sixth — so this is the guard that would have caught the gap, written
+      after it rather than with it.
+
+      The two lists differ, and ADR 0007 keeps them both on purpose. An
+      item in `exercise.items` and not in the result's outcomes is
+      contained-and-not-tested: degree identification *shows* a key and
+      grades only the degree, so a learner read "A♭ major — not recorded
+      yet" after every single attempt and could do nothing about it. The
+      readout is the one place the app tells someone what they know, and a
+      row that can never fill tells them something false.
+
+      Asserted as the relation rather than by naming degree-id, because
+      the symptom moved once already: 0024 was written about key
+      identification by ear, 0028 deleted that mode, and the decision
+      stayed unbuilt until the same shape surfaced somewhere else.
+    */
+    for (const type of EXERCISE_TYPES) {
+      const s = screen(type.id);
+      s.start();
+      expect(answerFully(s.container), `${type.id} could not be answered`).toBe(true);
+
+      /*
+        Asserted through "not recorded yet" rather than by comparing two
+        lists, because that phrase is the symptom a learner actually
+        reads and it needs nothing from inside the component.
+
+        The reasoning: the readout now lists the attempt's outcomes, and
+        an outcome is by definition something that was just graded — so
+        the tally has a figure for every row. A row with no figure is
+        therefore a row listing something that was *not* judged, which is
+        exactly the state ADR 0024 removed. Under the old code degree
+        identification printed one every single time.
+      */
+      const rows = [...s.container.querySelectorAll('.readout .items li')];
+      expect(rows.length, `${type.id} listed nothing`).toBeGreaterThan(0);
+      for (const row of rows) {
+        expect(
+          row.textContent,
+          `${type.id} listed "${row.querySelector('.primary')?.textContent}", `
+          + 'which nothing in this attempt judged',
+        ).not.toContain('not recorded yet');
+      }
+    }
+  });
 });

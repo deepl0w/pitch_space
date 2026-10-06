@@ -29,13 +29,19 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DEST="fixtures/audio"
-BASE="https://media.githubusercontent.com/media/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Knight/Sustains"
+BASE="https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/Zithers/Upright%20Piano%2C%20Knight/Sustains"
 
 # A spread rather than a chromatic run: the detector's hard cases are the
 # extremes of the range, where the fundamental is weak or the partials
-# crowd together, and six notes an octave or so apart cover that in about
-# the same bytes as one octave would.
-NOTES=(A1 A2 C3 E3 A3 C5)
+# crowd together, and six notes spaced out cover that in about the same
+# bytes as one octave would.
+#
+# These particular names are not free to choose. **The library samples
+# every third semitone or so** — A, B, C#, D#, F, G and nothing between —
+# so C3 and E3 do not exist and asking for them returns 404. Checked
+# against the directory listing rather than assumed, after a first attempt
+# that guessed C and E and fetched half of what it asked for.
+NOTES=(A1 F2 C#3 A3 D#4 A5)
 
 mkdir -p "$DEST"
 printf 'Fetching %s notes into %s\n' "${#NOTES[@]}" "$DEST"
@@ -49,7 +55,11 @@ for note in "${NOTES[@]}"; do
         continue
     fi
     printf '  fetch   %s ... ' "$(basename "$out")"
-    if curl -fsSL --max-time 180 "$BASE/Player_vl1_rr1_$note.wav" -o "$out.part"; then
+    # A sharp has to be percent-encoded or curl reads it as the start of a
+    # fragment and asks the server for the natural — which 404s, and looks
+    # exactly like the note not existing.
+    encoded=${note//\#/%23}
+    if curl -fsSL --max-time 180 "$BASE/Player_vl1_rr1_$encoded.wav" -o "$out.part"; then
         mv "$out.part" "$out"
         printf 'ok (%s)\n' "$(du -h "$out" | cut -f1)"
     else

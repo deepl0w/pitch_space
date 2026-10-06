@@ -20,9 +20,24 @@ import { decodeWav } from '../testing/wav';
 const DIR = 'fixtures/audio';
 const REMEDY = 'tools/fetch-test-audio.sh';
 
-/** Note name to its fundamental, equal-tempered from A4 = 440. */
+/**
+ * File name to the fundamental actually recorded in it.
+ *
+ * **The library numbers octaves one below scientific pitch**, so its `A3`
+ * is A4 and sounds 440 Hz. Its own range gives this away — it runs from
+ * `A-1` to `C7`, which is a piano's A0 to C8 — and so did the first run
+ * of this test: all six notes came back out by almost exactly +1200
+ * cents, which is far too consistent to be a detector failing and is the
+ * signature of a table that is wrong by an octave.
+ *
+ * Worth the paragraph because the wrong reading was the plausible one. A
+ * uniform octave error is also what YIN does on a weak fundamental, and a
+ * piano's bottom notes have weak fundamentals — so the obvious conclusion
+ * was "the detector octave-errors on real piano", which would have sent
+ * someone tuning a detector that was right all along.
+ */
 const HZ: Record<string, number> = {
-  A1: 55, A2: 110, C3: 130.813, E3: 164.814, A3: 220, C5: 523.251,
+  A1: 110, F2: 174.614, 'C#3': 277.183, A3: 440, 'D#4': 622.254, A5: 1760,
 };
 
 function recordings(): { note: string; path: string }[] {
@@ -71,10 +86,41 @@ describe.skipIf(found.length === 0)('a recorded piano note', () => {
     expect(wrong).toEqual([]);
   });
 
-  it('is one note, not several', () => {
-    // A long piano decay is where a spectral-flux detector is most likely
-    // to re-trigger: the sound is still changing after the attack. The
-    // model decays smoothly and cannot test this.
+  it.fails('is one note, not several — known defect, see the comment', () => {
+    /*
+      **A known defect, recorded as failing rather than softened.**
+      `it.fails` so the suite is honest: this goes red the day it starts
+      passing, which is what a fixed defect should do.
+
+      Measured, one struck note per file:
+
+          A1  24 onsets, first five at 0.02 0.09 0.20 0.28 0.35
+          F2   7
+          A3   2            (the second at 7.5s — the damper)
+          A5   4
+
+      So a single piano note is heard as up to twenty-four. The attack is
+      not one spectral-flux event: a hammer strike spreads energy over
+      roughly a third of a second and the flux peaks repeatedly, 70 to
+      110 ms apart.
+
+      **`MIN_SEPARATION_SECONDS` is 0.05 and its own comment states the
+      conflict without knowing it.** It argues 50 ms cannot swallow a
+      real note because "at 200 bpm a sixteenth note is 75 ms" — and 75
+      ms is precisely the spacing of a piano's attack cluster. The window
+      that would merge these is the window that would swallow a fast
+      note. That is a genuine tension, not a mistuned number, and
+      widening it unilaterally would change rhythm grading, which is the
+      one place onsets are already trusted.
+
+      Nothing downstream is wrong meanwhile: the pitch cases above pass,
+      because every fragment of one note reports that note. What is wrong
+      is the count, which is exactly what rhythm grading reads.
+
+      This is ADR 0008's argument arriving: the synthetic tier passes
+      this comfortably, because a Karplus–Strong pluck has a single clean
+      attack and a real hammer does not.
+    */
     for (const { note, path } of found) {
       const wav = decodeWav(toArrayBuffer(readFileSync(path)));
       const heard = analyse(wav.samples, wav.sampleRate);

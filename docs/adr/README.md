@@ -206,7 +206,27 @@ so this error does not sit still and get noticed — it propagates at the speed
 of the most interesting thing you have to say. Which inverts the comfortable
 intuition: **the more interesting a wrong conclusion is, the further it
 travels**, so the errors that get furthest are selected for being worth
-repeating rather than for being true. Three corrections followed, each
+repeating rather than for being true.
+
+A third account, from the role that made the same mistake twice in one day and
+asked to be quoted in these terms rather than the kinder ones first offered:
+
+> An instrument read as the world produces a finding rather than an error, and
+> a finding is the kind of thing you pass on. It travels fastest towards
+> whoever it flatters — I took a claim about my own work on trust within
+> minutes of receiving it, and hours later produced one of my own by going
+> looking for a trap and letting the harness hand me one.
+
+**Flattery is the second selector and it compounds the first**: a finding is
+passed on for being interesting, and checked least by whoever it suits. The
+three routes into it differ in what was misread — a record's silence filled in,
+a guard's trip over-read, a harness's output taken at face value — and the
+last is the most dangerous of the three, because **a harness answers in
+numbers and a number reads as a measurement whatever produced it.**
+[0025](0025-agreement-among-trials-that-share-an-error-is-not-confidence.md) is
+that in its purest form: a ±1 ms error bar, wrong by 120, persuasive precisely
+because it was precise. That is not a fourth kind of fault but a property of
+the instrument that predicts how far the fault will get. Three corrections followed, each
 one layer beneath the last: the claim, then the guard's condition, then its
 scope. **Every version passed its own tests and read as careful.**
 

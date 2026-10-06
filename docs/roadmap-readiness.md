@@ -86,13 +86,27 @@ is the prerequisite for "following the music on the staff" and already ships.
 grep -n "latency" src/state/schedule.ts src/state/progressStore.ts   # nothing
 ```
 
-So the attempt log holds the signal and the scheduler cannot see it. That is a
-cheap fix today — a rolling latency summary on the tally — and an expensive one
-after a history has accrued without it, because the summary cannot be
-backfilled from tallies that never kept it. The raw outcomes are in the log, so
-a migration is *possible*; it is a whole-log read, which
-[0006](adr/0006-settings-in-localstorage-progress-in-indexeddb.md) names as the
-operation its record-at-a-time granularity is wrong for.
+So the attempt log holds the signal and the scheduler cannot see it. **Adding a
+latency summary to the fold costs the same whenever it is done**, and needs no
+migration.
+
+> **Corrected, 6 October.** This paragraph said the fix was cheap now and
+> expensive later, "because the summary cannot be backfilled from tallies that
+> never kept it", and went on about whole-log migrations. **`ItemTally` is
+> never persisted.** It is a pure fold — `tallyItems(attempts)` builds a fresh
+> map, `PracticeScreen` recomputes it with `useMemo`, and the app has exactly
+> one object store, `attempts`. The raw `latencyMs` is already on every
+> outcome and already validated, so there is nothing to backfill, now or in a
+> year.
+>
+> The error is the index's first convention and it was mine about my own
+> document: [0006](adr/0006-settings-in-localstorage-progress-in-indexeddb.md)
+> says progress lives in IndexedDB under a versioned migration, and I read
+> that as "tallies are stored" rather than checking that they are derived. A
+> claim taken from a record instead of from the code.
+>
+> It matters beyond tidiness — this gap had been picked up as the next piece
+> of work on the strength of the ordering below, which was wrong.
 
 **And the signal's source is unreliable, which the roadmap does not know.**
 [0018](adr/0018-uncalibrated-is-not-zero.md) withholds `latencyMs` when no
@@ -213,22 +227,21 @@ written against the wrong vocabulary.
 ## The order I would take them in
 
 Cheapest-now-and-dearest-later first, which is not the same as most important.
+**G1's storage half is not on this list**: it has no later penalty, so it is
+simply cheap and belongs with whatever scheduler work it serves.
 
 1. **G6**, minutes. Correct the roadmap's id table against the code before
    anyone plans a migration from it.
-2. **G1's storage half**, small now. Put a latency summary on the tally before
-   histories accrue without one. The scheduler need not use it yet; what is
-   expensive is the backfill, not the read.
-3. **G3**, while `items` has one caller. Decide whether the schedule can see
+2. **G3**, while `items` has one caller. Decide whether the schedule can see
    past the settings, because G4's second and third failures depend on the
    answer and the contract is cheapest to widen now.
-4. **G4**, before the due count ships a second time. The tri-state is the
+3. **G4**, before the due count ships a second time. The tri-state is the
    decision; the count is the easy part, and it has already been removed once
    for getting this wrong.
-5. **G2**, whenever the scheduler is next opened. A record either way; no
+4. **G2**, whenever the scheduler is next opened. A record either way; no
    urgency, but the divergence should not be discovered by someone reading the
    roadmap.
-6. **G5**, not yet. Flag it in `IN-FLIGHT.md` when `ExerciseSpec` or `items`
+5. **G5**, not yet. Flag it in `IN-FLIGHT.md` when `ExerciseSpec` or `items`
    is next touched, so the person widening them knows what is coming.
 
 The one I would not defer is G1's absent-latency constraint, which is not a

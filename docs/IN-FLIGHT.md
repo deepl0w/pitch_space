@@ -24,6 +24,13 @@ whether it is safe to begin. If a piece cannot start until something else
 is settled, say that plainly rather than trusting "is the architect's to
 propose" to carry it.
 
+**A stated block has to be stated as removed, not just quietly stop
+applying.** Found on the first real use: once the open question was
+settled, the entry had to be edited a second time to say so — without
+that edit it would read exactly as it did while still blocking, and a
+role that had agreed not to start would have no signal the reason expired.
+The block and the unblock are two edits, not one.
+
 **The user role does not read this file.** See `CLAUDE.md`.
 
 ### `main` — the score reports where it drew things, so a cursor can follow

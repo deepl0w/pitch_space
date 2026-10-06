@@ -63,6 +63,59 @@ export interface ListenOptions {
   minClarity?: number;
   /** Frames quieter than this are silence rather than a quiet note. */
   silenceDbfs?: number;
+  /**
+   * Two attacks closer than this are one attack.
+   *
+   * Passed through to the detector, which **cannot work it out for
+   * itself**: it sees a spectrum and not a tempo. Its default is 50 ms,
+   * chosen to refuse the double-trigger of one physical event, and the
+   * rhythm generator writes tuplets 47 ms apart — so a perfectly played
+   * bar at 160 bpm loses notes with the default, measured in
+   * `exercises/rhythm-id/heard.test.ts`.
+   *
+   * Lowering the default is the wrong fix, because the same number is
+   * what merges a piano's attack cluster, which wants a *wider* window.
+   * One constant, two jobs, different right answers — so the caller
+   * decides, and {@link separationForOnsets} derives it from the music
+   * rather than from a guess.
+   */
+  minSeparationSeconds?: number;
+}
+
+/**
+ * The widest window that cannot merge two notes the piece actually
+ * contains: half the shortest gap written into it.
+ *
+ * Half rather than all of it, so a performance that is slightly early or
+ * late on one of a close pair still reads as two attacks. Derived from
+ * the written onsets rather than from the tempo, because a tuplet's gap
+ * is not a simple fraction of the beat and the tempo alone would get it
+ * wrong in exactly the case that exposed this.
+ *
+ * Returns undefined for a piece with fewer than two notes, where there
+ * is nothing to merge and the detector's own default is as good as any.
+ *
+ * **This is the mechanism, and it is not yet shown to fix the defect it
+ * was written for.** `exercises/rhythm-id/heard.test.ts` measures notes
+ * lost at 160 bpm with the default window; nothing yet measures them
+ * recovered with this. A first attempt to show it used overlapping
+ * plucked strings whose decays produced spurious attacks of their own,
+ * so the count moved for reasons unrelated to the window — a harness
+ * that cannot see the thing it is measuring, which is worth saying
+ * rather than reporting the number it produced.
+ *
+ * What is settled is the structure: the detector sees a spectrum and
+ * cannot know a tempo, the caller does, and one constant was serving two
+ * jobs with different right answers. What is not settled is whether
+ * halving the shortest gap is the right derivation.
+ */
+export function separationForOnsets(onsets: readonly number[]): number | undefined {
+  if (onsets.length < 2) return undefined;
+  let shortest = Infinity;
+  for (let i = 1; i < onsets.length; i += 1) {
+    shortest = Math.min(shortest, onsets[i] - onsets[i - 1]);
+  }
+  return Number.isFinite(shortest) && shortest > 0 ? shortest / 2 : undefined;
 }
 
 const DEFAULT_MIN_CLARITY = 0.7;
@@ -96,7 +149,9 @@ export function analyse(
   const silenceDbfs = options.silenceDbfs ?? DEFAULT_SILENCE_DBFS;
   const durationSeconds = samples.length / sampleRate;
 
-  const { onsets } = detectOnsets(samples, { sampleRate });
+  const { onsets } = detectOnsets(samples, {
+    sampleRate, minSeparationSeconds: options.minSeparationSeconds,
+  });
 
   const frameSize = frameSizeFor(sampleRate);
   const detector = new PitchDetector({ sampleRate, frameSize });

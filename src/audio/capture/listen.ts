@@ -116,7 +116,102 @@ export function analyse(
     };
   });
 
-  return { notes, onsets, durationSeconds, sampleRate };
+  return {
+    notes: assemble(notes, samples, sampleRate), onsets, durationSeconds, sampleRate,
+  };
+}
+
+/**
+ * Two attacks are the same note when they agree about pitch and the
+ * second one did not actually get louder.
+ *
+ * ADR 0035 puts this in note assembly rather than in the detector, and
+ * names the risk it has to survive: a merge rule can swallow a real
+ * repeated note, because the same pitch struck twice looks exactly like
+ * a cluster. A trill is music a learner will play.
+ *
+ * **Pitch alone cannot tell those apart.** Twenty-four flux peaks inside
+ * one struck A1 all report A1, and so do two deliberate A1s. What
+ * separates them is that a new note is an *attack*: the sound gets
+ * louder. A flux peak inside a decaying tail does not — the spectrum
+ * shifts as partials die at different rates, which is what the detector
+ * sees, but the level is flat or falling.
+ *
+ * So the test is a rise: the peak just after the attack against the peak
+ * just before it. Measured, as that ratio:
+ *
+ *     inside one struck piano note    0.47 … 1.52   (median ~0.95)
+ *     a genuinely repeated note       unbounded — the 80 ms before it
+ *                                     had decayed to silence
+ *
+ * including a decrescendo where the repeat is a tenth the volume of the
+ * first, which is the case that defeats any rule comparing a note to its
+ * predecessor's loudness. A ratio of before-to-after is scale-free, so a
+ * quiet note after a loud one still rises.
+ *
+ * **What this cannot do**, and ADR 0035 says so too: an instrument that
+ * does not decay between repeats defeats it. Two slurred notes of the
+ * same pitch on a bowed string have neither a pitch change nor a rise,
+ * and nothing available at this layer separates them.
+ */
+const MERGE_CENTS = 60;
+
+/**
+ * Below this, the attack did not rise and is part of the sound before it.
+ *
+ * Sits in a gap between 1.52 and unbounded, so it is a measurement
+ * rather than a weight — but it is one library's piano, which is the
+ * fifth convention applied to the evidence this rests on.
+ */
+const NEW_NOTE_RISE = 2;
+
+/** How long before and after an attack the rise is measured over. */
+const RISE_BEFORE_SECONDS = 0.08;
+const RISE_AFTER_SECONDS = 0.03;
+
+function assemble(
+  notes: readonly HeardNote[], samples: Float32Array, sampleRate: number,
+): HeardNote[] {
+  const out: HeardNote[] = [];
+  for (const note of notes) {
+    const previous = out[out.length - 1];
+    if (previous && sameSound(previous, note, samples, sampleRate)) {
+      // The attack is the first one's; the sound runs to the end of this.
+      previous.durationSeconds = note.startSeconds + note.durationSeconds
+        - previous.startSeconds;
+      previous.clarity = Math.max(previous.clarity, note.clarity);
+      continue;
+    }
+    out.push({ ...note });
+  }
+  return out;
+}
+
+function sameSound(
+  a: HeardNote, b: HeardNote, samples: Float32Array, sampleRate: number,
+): boolean {
+  if (a.frequencyHz === null || b.frequencyHz === null) return false;
+  if (Math.abs(1200 * Math.log2(b.frequencyHz / a.frequencyHz)) > MERGE_CENTS) return false;
+
+  const before = peakOver(
+    samples, b.startSeconds - RISE_BEFORE_SECONDS, b.startSeconds - 0.005, sampleRate,
+  );
+  // Nothing before it at all is a first attack, not a continuation.
+  if (before <= 0) return false;
+  const after = peakOver(
+    samples, b.startSeconds, b.startSeconds + RISE_AFTER_SECONDS, sampleRate,
+  );
+  return after / before < NEW_NOTE_RISE;
+}
+
+function peakOver(
+  samples: Float32Array, fromSeconds: number, toSeconds: number, sampleRate: number,
+): number {
+  const from = Math.max(0, Math.floor(fromSeconds * sampleRate));
+  const to = Math.min(samples.length, Math.floor(toSeconds * sampleRate));
+  let peak = 0;
+  for (let i = from; i < to; i += 1) peak = Math.max(peak, Math.abs(samples[i]));
+  return peak;
 }
 
 /**

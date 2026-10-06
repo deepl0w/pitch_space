@@ -86,45 +86,64 @@ describe.skipIf(found.length === 0)('a recorded piano note', () => {
     expect(wrong).toEqual([]);
   });
 
-  it.fails('is one note, not several — known defect, see the comment', () => {
+  it('is one note, not a cluster of them', () => {
     /*
-      **A known defect, recorded as failing rather than softened.**
-      `it.fails` so the suite is honest: this goes red the day it starts
-      passing, which is what a fixed defect should do.
+      **This was the defect that justified the whole tier**, and it is
+      fixed. Before note assembly existed, one struck note was heard as:
 
-      Measured, one struck note per file:
+          A1  24 notes    F2  7    C#3  8    A5  4
 
-          A1  24 onsets, first five at 0.02 0.09 0.20 0.28 0.35
-          F2   7
-          A3   2            (the second at 7.5s — the damper)
-          A5   4
+      A hammer strike is not one spectral-flux event. It spreads energy
+      over roughly a third of a second and the flux peaks repeatedly,
+      70 to 110 ms apart — which `MIN_SEPARATION_SECONDS` cannot merge,
+      because the 50 ms window that would is the window that swallows a
+      sixteenth at 200 bpm. ADR 0035 moved the decision to note assembly
+      for that reason, and ADR 0012's distinction is the same one: an
+      onset is a measurement, a note is a conclusion.
 
-      So a single piano note is heard as up to twenty-four. The attack is
-      not one spectral-flux event: a hammer strike spreads energy over
-      roughly a third of a second and the flux peaks repeatedly, 70 to
-      110 ms apart.
+      Asserted as *the attack cluster*, not as "one note per file",
+      because those are different claims and only the first is settled.
+      Nothing may begin in the first second except the first thing —
+      which is precisely what twenty-four peaks across 350 ms violated,
+      and what no amount of tuning a separation window could have fixed.
+    */
+    const wrong: string[] = [];
+    for (const { note, path } of found) {
+      const wav = decodeWav(toArrayBuffer(readFileSync(path)));
+      const heard = analyse(wav.samples, wav.sampleRate);
+      const early = heard.notes.filter((n) => n.startSeconds < 1);
+      if (early.length !== 1) {
+        wrong.push(`${note}: ${early.length} notes began in the first second`
+          + ` (${heard.onsets.length} onsets)`);
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
 
-      **`MIN_SEPARATION_SECONDS` is 0.05 and its own comment states the
-      conflict without knowing it.** It argues 50 ms cannot swallow a
-      real note because "at 200 bpm a sixteenth note is 75 ms" — and 75
-      ms is precisely the spacing of a piano's attack cluster. The window
-      that would merge these is the window that would swallow a fast
-      note. That is a genuine tension, not a mistuned number, and
-      widening it unilaterally would change rhythm grading, which is the
-      one place onsets are already trusted.
+  it.fails('is one note for its whole length — A3 is not, and why is unresolved', () => {
+    /*
+      The part that is *not* settled, kept failing rather than dropped.
 
-      Nothing downstream is wrong meanwhile: the pitch cases above pass,
-      because every fragment of one note reports that note. What is wrong
-      is the count, which is exactly what rhythm grading reads.
+      Five of six recordings are now heard as exactly one note. A3 is
+      heard as two: the second begins at 7.51 s in a 12.1 s file, is
+      pitched at 439.4 Hz against the first's 440.1, and runs for the
+      remaining 4.6 s. So it is the same string — but something there
+      raises the level enough to read as a new attack, and the rise test
+      is what separates a real repeat from a decaying tail.
 
-      This is ADR 0008's argument arriving: the synthetic tier passes
-      this comfortably, because a Karplus–Strong pluck has a single clean
-      attack and a real hammer does not.
+      **I do not know what that event is, and have not claimed to.** It
+      could be a second articulation in the recording, a pedal, or an
+      edit; it cannot be told apart from a genuine repeat without
+      listening, which is not a thing a test does. Deciding it is noise
+      and widening the rule until A3 passes would be fitting the rule to
+      six files, which is the fifth convention's warning.
+
+      So it stays here, named, with the numbers, owned by nobody.
     */
     for (const { note, path } of found) {
       const wav = decodeWav(toArrayBuffer(readFileSync(path)));
       const heard = analyse(wav.samples, wav.sampleRate);
-      expect(heard.notes.length, `${note} heard as ${heard.notes.length} notes`).toBe(1);
+      expect(heard.notes.length, `${note} heard as ${heard.notes.length}`).toBe(1);
     }
   });
 });

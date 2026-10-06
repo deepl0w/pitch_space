@@ -85,3 +85,41 @@ intervals rather than about counts.
   was a scheduling adjustment becomes a visible re-grading of everybody.
 - **A learner asks what their score is.** If the answer has to be a count after
   all, this decision was wrong and should be superseded rather than softened.
+
+## Addendum, 7 October 2026 — there is no done
+
+The Decision above says what a line's grade is read from and leaves "done"
+open, as the user's. They have answered it, and the answer removes the question
+rather than settling it:
+
+> There is no done, exercises will always come — but if there are no wrong
+> answers consistently then there is a high cap. Maybe some colouring from red
+> to green.
+
+**A line has no terminal state.** It is not a progress bar with an end, and
+nothing is ever finished. An item answered correctly for long enough earns a
+long interval, not an exit — which the schedule already has as
+`MAX_INTERVAL_MS`, the top of the `INTERVALS_MS` ladder, reached rather than
+passed.
+
+**So the figure is a state, not a fraction**, and that is why a colour is the
+right form for it. A percentage implies a denominator and an end; a hue from
+red to green says how well a thing is currently known and says nothing about
+arriving anywhere. It is also the form least able to be mistaken for a score,
+which is the whole of this record's subject.
+
+**This firms up what the colour should be a function of.** The research note
+for today identifies *retrievability* — the continuous probability of recall
+now, decaying between reviews — as the quantity FSRS uses and the one this
+record was reaching for. It maps onto a red-to-green scale directly, with no
+threshold to choose and no definition of done required, which is what the
+user's ruling asks for. A line's own colour is then the aggregate of its
+items', with the same property: it drifts back towards red while nobody
+practises, because that is true.
+
+**What this costs is that nothing is ever achieved.** A learner who wants to
+finish something will not find anything to finish, and "it goes green and stays
+green while you keep turning up" is a harder thing to feel good about than a
+bar reaching the end. That is the honest model of memory and it is a worse
+motivational design, which the user has chosen deliberately and should be
+reminded they chose if it ever feels like a defect.

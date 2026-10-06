@@ -140,10 +140,12 @@ describe('simplifySpelling', () => {
    */
   it('makes every chord the catalogs can build engravable', () => {
     const offenders: string[] = [];
+    let examined = 0;
     for (const key of ALL_KEYS) {
       for (const type of CHORD_TYPES) {
         const root = { ...key.tonic, octave: 4 };
         for (const pitch of spellChord(chord(root, type))) {
+          examined += 1;
           const engraved = simplifySpelling(pitch);
           if (Math.abs(engraved.alter) > 2) {
             offenders.push(`${keyName(key)} ${type.id}: ${pitchName(pitch)}`);
@@ -152,13 +154,22 @@ describe('simplifySpelling', () => {
       }
     }
     expect(offenders).toEqual([]);
+    // What the sweep looked at, because an empty verdict is what both a clean
+    // catalogue and a `spellChord` that stopped spelling anything return.
+    // Thirty keys and twenty-four chord types reach 2970 pitches today; the
+    // floor is low enough to allow the catalogues to be trimmed and high
+    // enough to notice a loop that stopped running.
+    expect(examined, 'the sweep examined no chord pitches at all')
+      .toBeGreaterThan(1000);
   });
 
   it('makes every scale the catalogs can build engravable', () => {
     const offenders: string[] = [];
+    let examined = 0;
     for (const key of ALL_KEYS) {
       for (const type of SCALE_TYPES) {
         for (const pitch of spellScale({ ...key.tonic, octave: 4 }, type)) {
+          examined += 1;
           if (Math.abs(simplifySpelling(pitch).alter) > 2) {
             offenders.push(`${keyName(key)} ${type.id}: ${pitchName(pitch)}`);
           }
@@ -166,5 +177,8 @@ describe('simplifySpelling', () => {
       }
     }
     expect(offenders).toEqual([]);
+    // 4080 today, across thirty keys and twenty scale types.
+    expect(examined, 'the sweep examined no scale pitches at all')
+      .toBeGreaterThan(1000);
   });
 });

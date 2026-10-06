@@ -118,3 +118,76 @@ evidence this record rests on.
 - **Anything reads `onsets.length` as a note count.** That is the assumption
   this record exists to forbid, and it is the kind that reappears in a new
   caller rather than being reintroduced where it was removed.
+
+## Addendum, 6 October 2026 — the premise was false, and the conflict is wider
+
+Two corrections and one confirmation, after the merge rule landed.
+
+### The justification this record quoted approvingly does not hold
+
+The Context above quotes `MIN_SEPARATION_SECONDS`' comment — "at 200 bpm a
+sixteenth note is 75 ms" — and calls it "a correct argument for an *upper*
+bound of 75 ms". **The app cannot produce 200 bpm.** `TEMPO_CHOICES` is
+`[50, 60, 72, 84, 96, 112, 132, 160]`, so the bound the comment derives is
+never reached and 75 ms was never the operative number.
+
+The real bound is tighter and it is measured rather than argued. The tightest
+gap the cell library itself writes, over every cell at every offered tempo:
+
+| Tempo | Tightest gap | Cell |
+| --- | --- | --- |
+| 160 bpm | **46.9 ms** | `s_tt` |
+| 132 bpm | 56.8 ms | `s_tt` |
+| 112 bpm | 67.0 ms | `s_tt` |
+
+So the window must sit **below about 47 ms**, and it is 50. **A perfectly
+played bar at 160 bpm loses notes the generator wrote**, which makes this a
+defect in the exercise that ships rather than a hypothesis about recordings.
+At 132 the margin is 6.8 ms.
+
+This record inherited a wrong number from a comment instead of checking it,
+which is the index's first convention and this is the second time it has
+caught its own author. The *form* of the argument was right — rhythm grading
+does set an upper bound — and the figure was somebody else's arithmetic about
+a tempo that does not exist.
+
+### The conflict is wider than "two requirements", and directional
+
+The Decision says the two jobs cannot share a knob. They are further apart
+than it implies, and they pull opposite ways:
+
+- merging a hammer's attack cluster needs the window **above ~110 ms**;
+- not losing `s_tt` at 160 bpm needs it **below ~47 ms**.
+
+More than a factor of two, with no overlap, and one side of it is a live
+defect rather than a future one. That strengthens the Decision rather than
+changing it: a single constant was never going to be set correctly, and the
+only question was which job it should fail at.
+
+The mechanism now exists — the window is per call, because the detector sees a
+spectrum and cannot know a tempo, so the caller sets it. Whoever derives the
+value from the tempo owes the derivation a check; it was added without one and
+the file says so.
+
+### The repeated-note risk is answered with evidence
+
+The costs above name the real danger: a merge rule can swallow a repeated
+note, because the same pitch struck twice looks exactly like a cluster. It
+does — **to pitch**. It does not to level. A new note is an attack, so the
+sound gets louder; a flux peak inside a decaying tail does not. As the ratio
+of the peak just after an attack to the peak just before it:
+
+| | Ratio |
+| --- | --- |
+| inside one struck note | 0.47 – 1.52, median ~0.95 |
+| a genuinely repeated note | unbounded |
+
+Including a decrescendo repeat at a tenth the volume, which is the case that
+defeats any rule comparing a note to its predecessor's loudness. A1 went from
+24 notes to 1, F2 from 7 to 1, C♯3 from 8 to 1.
+
+So the rule is pitch agreement **and** the attack not having risen, and the
+risk this record raised is closed by measurement rather than by argument. One
+recording still splits and was left failing rather than widening the rule to
+fit six files — which is the index's fifth convention declining to be
+measured through a sample of one library.

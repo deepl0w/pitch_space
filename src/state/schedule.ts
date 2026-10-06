@@ -86,6 +86,21 @@ export interface ScheduledItem {
   /** Null when the item has never been tested in this presentation. */
   tally: ItemTally | null;
   due: boolean;
+  /**
+   * Whether the current settings can actually ask this.
+   *
+   * A due item the settings exclude has to be representable, or the
+   * schedule silently never shows it and nothing anywhere says why — the
+   * roadmap's `m7b5` that comes due while triads only are allowed. The
+   * caller may pass an `askable` wider than the settings precisely so
+   * this can be said; without the field a wider set arrives
+   * indistinguishable from a narrower one, which is why the caller
+   * cannot answer it alone. See ADR 0037.
+   *
+   * True when `reachable` is not given, because a caller that passes one
+   * set is making no claim about a second.
+   */
+  reachable: boolean;
 }
 
 /**
@@ -132,10 +147,26 @@ export function schedule(
   tallies: ReadonlyMap<TallyKey, ItemTally>,
   presentation: Presentation,
   now: number,
+  /**
+   * The subset of `askable` the settings can currently ask, when the
+   * caller passed a wider `askable` in order to see past them.
+   *
+   * Omitted means every askable item is reachable — not that nothing is.
+   * A caller that passes one set is making no claim about a second, and
+   * defaulting the other way would mark every item of every existing
+   * caller unreachable.
+   */
+  reachable?: ReadonlySet<ItemId>,
 ): ScheduledItem[] {
   const rows = askable.map((item, index): ScheduledItem & { index: number } => {
     const tally = tallies.get(tallyKey(item, presentation)) ?? null;
-    return { item, tally, due: tally === null || dueAt(tally) <= now, index };
+    return {
+      item,
+      tally,
+      due: tally === null || dueAt(tally) <= now,
+      reachable: reachable === undefined || reachable.has(item),
+      index,
+    };
   });
 
   return rows.sort((a, b) => {
@@ -145,7 +176,9 @@ export function schedule(
       if (byOverdue !== 0) return byOverdue;
     }
     return a.index - b.index;
-  }).map(({ item, tally, due }) => ({ item, tally, due }));
+  }).map(({ item, tally, due, reachable: itemReachable }) => ({
+    item, tally, due, reachable: itemReachable,
+  }));
 }
 
 /**
@@ -158,6 +191,14 @@ export function schedule(
  * number a brand-new user sees, and a count that is right for the wrong
  * reason is worse than no count. The caller shows nothing until the log
  * has loaded; `ProgressState.status` is what it checks.
+ *
+ * **This counts what it is given, and takes no `reachable` set.** A caller
+ * that widened `askable` to see past the settings — see
+ * {@link ScheduledItem.reachable} — must pass the narrow set here, or it
+ * gets a count including items the settings cannot ask. The two functions
+ * differ on purpose: a list can carry a flag per row and say *due but not
+ * reachable*, and a single number cannot, which is 0037's argument for
+ * why a figure that cannot name what it covers should not be shown.
  */
 export function dueCount(
   askable: readonly ItemId[],

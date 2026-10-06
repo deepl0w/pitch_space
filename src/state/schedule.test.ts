@@ -230,3 +230,49 @@ describe('the streak the schedule reads', () => {
       .not.toBe(0);
   });
 });
+
+/**
+ * Whether the settings can ask a thing, kept apart from whether it is due.
+ *
+ * ADR 0037: a due item the settings exclude has to be representable, or
+ * the schedule silently never shows it and nothing says why. The caller
+ * passes a wider `askable` so this can be said at all, which means the
+ * two sets have to be distinguishable once they arrive.
+ */
+describe('an item the settings cannot currently ask', () => {
+  const NOW = 1_000_000;
+
+  it('is still scheduled, and marked unreachable rather than dropped', () => {
+    const rows = schedule(['a', 'b', 'c'], new Map(), 'read', NOW, new Set(['a', 'c']));
+
+    expect(rows.map((r) => r.item).sort()).toEqual(['a', 'b', 'c']);
+    expect(rows.find((r) => r.item === 'b')?.reachable).toBe(false);
+    expect(rows.filter((r) => r.reachable).map((r) => r.item).sort()).toEqual(['a', 'c']);
+  });
+
+  it('is due on its own merits, because reachability is not a kind of dueness', () => {
+    /*
+      The pair that makes the field worth having. An unreachable item that
+      is due is the case the roadmap names — a chord quality that comes
+      due while the settings allow triads only — and if `due` quietly
+      folded in reachability there would be no way to say it.
+    */
+    const seen = new Map([[tallyKey('b', 'read'), { seen: 3, correct: 3, lastSeenAt: 0, streak: 1 }]]);
+    const [unreachable] = schedule(['b'], seen, 'read', NOW, new Set<string>());
+
+    expect(unreachable.reachable).toBe(false);
+    expect(unreachable.tally, 'the history must actually attach').not.toBeNull();
+    expect(unreachable.due, 'dueness is about history, not about settings').toBe(true);
+  });
+
+  it('treats an absent set as a caller making no claim, not as nothing reachable', () => {
+    /*
+      The default has to be true. A caller that passes one set is saying
+      nothing about a second, and defaulting the other way would mark
+      every item of every existing caller unreachable — which reads as a
+      working flag and is the opposite of the truth.
+    */
+    const rows = schedule(['a', 'b'], new Map(), 'read', NOW);
+    expect(rows.every((r) => r.reachable)).toBe(true);
+  });
+});

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PracticeScreen } from './PracticeScreen';
 import { EXERCISE_TYPES } from '../../exercises/registry';
 import type { AudioOut } from '../../exercises/types';
+import { resizeTo } from '../../testing/resizeObserver';
 
 /**
  * Changing which exercise is running, while one is on screen.
@@ -356,5 +357,80 @@ describe('the readout under an answered question', () => {
         ).not.toContain('not recorded yet');
       }
     }
+  });
+});
+
+/**
+ * The question on screen and the controls beside it, disagreeing.
+ *
+ * `RoundView` is keyed on `definition.id`, so a settings change does not
+ * invalidate the generated exercise: the chip moves and the stave does not.
+ * Found by the user role on a clef and reproduced here deterministically —
+ * it is not clef-specific, because every field in that panel has the same
+ * shape and none of them reaches the question already drawn.
+ *
+ * **The resolution is a product decision and this does not take it.**
+ * Regenerating on change and applying at the next question are both
+ * defensible; what is not defensible is the state on screen now, where the
+ * sidebar says Tenor and the staff is in bass and nothing says which is
+ * true. So the case below pins the contradiction rather than either answer,
+ * and `it.fails` records that it is known. **If "apply next question" wins,
+ * this case has to be rewritten rather than deleted** — the claim becomes
+ * that the panel marks the change as pending, because a control that
+ * silently describes a question other than the one in front of the user is
+ * the same defect with a different cause.
+ */
+describe('changing a setting while a question is on screen', () => {
+  /** The clef the stave is actually drawn with, as markup. */
+  function clefDrawn(container: HTMLElement): string {
+    const host = container.querySelector('.score-host');
+    if (!host) throw new Error('no score was rendered');
+    act(() => { resizeTo(host, 760); });
+    const clef = container.querySelector('.vf-clef');
+    if (!clef) throw new Error('no clef was drawn');
+    // VexFlow numbers its groups from a counter that never resets, so the
+    // ids differ between any two renders and have to come out before two
+    // drawings can be compared at all.
+    return clef.outerHTML.replace(/vf-auto\d+/g, 'vf-auto');
+  }
+
+  /** A reading round of intervals, started with one clef chosen. */
+  function roundIn(clef: string) {
+    const screen = mount('interval-id');
+    screen.button('Reading')?.click();
+    act(() => { screen.button(clef)?.click(); });
+    screen.start();
+    return screen;
+  }
+
+  it('is drawing in a clef at all, or the case below compares nothing', () => {
+    // The control. If the stave ignored the clef setting entirely, "the
+    // drawing did not follow the chip" would be true and would mean
+    // something else — a renderer fault rather than a stale question.
+    const treble = roundIn('Treble');
+    const bass = roundIn('Bass');
+    expect(clefDrawn(treble.container), 'two clefs draw the same stave')
+      .not.toBe(clefDrawn(bass.container));
+  });
+
+  it.fails('draws the question in the clef the panel says is chosen', () => {
+    /*
+      Measured: the chip follows every click and the stave follows none of
+      them, until the next question is generated.
+
+          after Start with Treble     chip=Treble   drawn=treble
+          clicked Bass mid-question   chip=Bass     drawn=treble
+          clicked Alto mid-question   chip=Alto     drawn=treble
+    */
+    const inBass = clefDrawn(roundIn('Bass').container);
+
+    const screen = roundIn('Treble');
+    act(() => { screen.button('Bass')?.click(); });
+
+    // The chip moved, so the click was received and the panel agrees it is
+    // now set to bass.
+    expect(screen.container.querySelector('.chip.on')).toBeTruthy();
+    expect(clefDrawn(screen.container), 'the stave is still in the old clef')
+      .toBe(inBass);
   });
 });

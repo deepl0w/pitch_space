@@ -148,7 +148,12 @@ item the settings exclude is not in the set the scheduler reasons over at all.
 `schedule.ts` has no notion of reachability and no place to put one.
 
 Saying so needs a second set: everything the exercise could ever ask against
-everything these settings can ask. That is a change to the contract, which is
+everything these settings can ask. To be exact about where the gap is —
+`schedule(askable, …)` takes the askable set as a parameter, so the *caller*
+chooses it and nothing stops a wider one being passed. What is missing is
+downstream: `ScheduledItem` is `{ item, tally, due }` with no way to say
+*reachable*, so a wider set would arrive indistinguishable from a narrower
+one. That is a change to the contract, which is
 why it belongs on this list rather than in a backlog — it is cheap while
 `items` has one caller and expensive once the home screen, the practice count
 and the scheduler all read it.
@@ -167,9 +172,22 @@ That is not a copy problem. Settings are synchronous in `localStorage` and
 progress is asynchronous in IndexedDB
 ([0006](adr/0006-settings-in-localstorage-progress-in-indexeddb.md)), so the
 first paint has three states — *known*, *nothing practised yet*, *cannot read
-your history* — and the type the screen reads has two. 0006's first revisit
-trigger is this exact moment, and it pre-wrote the wrong answer so it could be
-recognised: "the answer is not to move the log into `localStorage`; it is to
+your history*.
+
+> **Corrected, 6 October.** This said "the type the screen reads has two". It
+> has three: `ProgressStatus` is `'loading' | 'ready' | 'unavailable'`, it
+> landed on 4 October — two days before this review claimed it did not
+> exist — and `PracticeScreen` already branches on `'unavailable'`.
+> `dueCount`'s own comment names it as the thing a caller must check before
+> showing a figure.
+>
+> **So G4's architectural half is built.** What is unbuilt is the count
+> itself, and the two remaining failures below, which are G3's. The same
+> fault as G1 in this document and in the same week: a claim about the code
+> I did not check, in a review of the code.
+
+0006's first revisit trigger is this moment, and it pre-wrote the wrong answer
+so it could be recognised: "the answer is not to move the log into `localStorage`; it is to
 decide deliberately what the first frame shows while the log loads, and the
 temptation at that moment will be the other one."
 

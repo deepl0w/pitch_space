@@ -265,12 +265,26 @@ everything is per line including due dates; the score becomes a completion
 grade; rhythm's pool becomes curated with generation surviving as untracked
 practice; export is defined by this shape.
 
-**Blocking, do not build against it yet:** *which* settings compose a
-combination's identity. Until the architect has recorded that and the user
-has ruled on it, **nothing should write storage keyed by a combination and
-no test should pin the key's shape.** It is a compatibility commitment the
-moment a history exists ([0011](adr/0011-what-a-catalogue-owes.md)), so a
-guess costs a migration rather than an edit.
+**No longer blocking — settled by
+[0039](adr/0039-a-progression-line-is-the-item-set-its-settings-make-askable.md):**
+a line is `(exercise, the item set its settings make askable, presentation)`,
+and a setting is part of the identity **if and only if it changes
+`items(settings)`**. `tallyKey` is open to work on. Clef, range, tonic and
+tempo do not change the set and so do not split a line; the interval pool
+does, which is the case the user argued from.
+
+**Still open, and named rather than assumed:** what "done" means for a
+completion grade ([0040](adr/0040-completion-replaces-the-score.md)), where
+the rhythm library's entries come from, and whether untracked attempts
+([0041](adr/0041-practice-that-counts-towards-nothing.md)) travel in an
+export. None of these block the key.
+
+**Two things sent to the user for comment rather than decided:** narrowing a
+pool also lands on a different line, which follows by symmetry but was not
+what they were asked; and widening loses *visible* progress while the old
+line keeps its data, so a screen showing only the new line reads as a reset.
+The second is a presentational obligation 0039 creates and does not
+discharge.
 
 The user has ruled on what progress means, and it replaces the model the
 code currently has. Recorded here before anything is built, because it

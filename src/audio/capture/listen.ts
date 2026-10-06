@@ -141,25 +141,52 @@ export function analyse(
  * notes land, the test is the same measurement against those: if the skip
  * still changes nothing, it should go.
  */
+const ATTACK_FRACTION = 0.25;
+/** A struck string's inharmonic opening, from the paragraph above. */
+const ATTACK_SECONDS = 0.05;
+
 function pitchOver(
   samples: Float32Array, sampleRate: number, detector: PitchDetector,
   frameSize: number, hop: number,
   span: { from: number; to: number; minClarity: number; silenceDbfs: number },
 ): { frequencyHz: number | null; clarity: number } {
-  const ATTACK_FRACTION = 0.25;
   const length = span.to - span.from;
-  const from = Math.floor((span.from + length * ATTACK_FRACTION) * sampleRate);
+  // A fraction of the note, but never more than the attack itself lasts.
+  // The last note of a take has no next onset to end it, so its span runs
+  // to wherever the player stopped recording — and a quarter of *that* is
+  // not a property of the note. At a second of run-on the skip landed past
+  // the decay and every frame after it was gated as silence, so the same
+  // note read correctly or not at all depending on how long the take went
+  // on afterwards. The reason the skip exists is a physical duration —
+  // "inharmonic for the first few tens of milliseconds" — so the cap is
+  // that duration and the fraction only keeps a sixteenth from being
+  // skipped whole.
+  const skipSeconds = Math.min(length * ATTACK_FRACTION, ATTACK_SECONDS);
   const to = Math.min(samples.length, Math.floor(span.to * sampleRate));
 
-  const readings: number[] = [];
-  let best = 0;
-  for (let at = from; at + frameSize <= to; at += hop) {
-    const estimate: PitchEstimate = detector.analyse(samples.subarray(at, at + frameSize));
-    if (estimate.levelDbfs < span.silenceDbfs) continue;
-    if (estimate.clarity > best) best = estimate.clarity;
-    if (estimate.frequencyHz !== null && estimate.clarity >= span.minClarity) {
-      readings.push(estimate.frequencyHz);
+  const read = (fromSeconds: number) => {
+    const readings: number[] = [];
+    let best = 0;
+    for (let at = Math.floor(fromSeconds * sampleRate); at + frameSize <= to; at += hop) {
+      const estimate: PitchEstimate = detector.analyse(samples.subarray(at, at + frameSize));
+      if (estimate.levelDbfs < span.silenceDbfs) continue;
+      if (estimate.clarity > best) best = estimate.clarity;
+      if (estimate.frequencyHz !== null && estimate.clarity >= span.minClarity) {
+        readings.push(estimate.frequencyHz);
+      }
     }
+    return { readings, best };
+  };
+
+  let { readings, best } = read(span.from + skipSeconds);
+  if (readings.length === 0) {
+    // Nothing fit after the skip, which happens when the note is barely
+    // longer than one analysis frame — 93 ms at 44.1 kHz, so a note at the
+    // end of a take that stops promptly has no room to give any away. A
+    // reading taken across the attack is worse than one taken after it and
+    // better than none, and the clarity goes up with it so a caller can
+    // still tell the difference.
+    ({ readings, best } = read(span.from));
   }
   if (readings.length === 0) return { frequencyHz: null, clarity: best };
   readings.sort((a, b) => a - b);

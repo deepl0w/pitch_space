@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { analyse, listen } from './listen';
 import { RecordedSource } from './recorded';
 import { framesOf } from './source';
-import { mix, pluckedString, silence, startingAt } from '../testing/signals';
+import { mix, pluckSequence, pluckedString, silence, startingAt } from '../testing/signals';
+import { frameSizeFor } from '../dsp/pitchDetector';
 
 /**
  * What the capture path owes, off-device.
@@ -114,15 +115,17 @@ describe('hearing a take', () => {
       The seam's whole promise: what the analysis concludes must not
       depend on whether the audio arrived in one buffer or in frames.
 
-      Compared on a frame-aligned signal, because a source pads its last
-      frame to the full size and that genuinely makes the take longer —
-      which moves the final note's end and so the window its pitch is
-      read over. That is the source behaving correctly, not a difference
-      in the analysis, so aligning the length is what isolates the claim
-      this case is making rather than papering over one it is not.
+      Compared on the unaligned signal, which it could not be when this
+      was written. A source pads its last frame to the full size and so
+      genuinely makes the take longer, and the final note's pitch window
+      used to be a quarter of the way into "onset to end of take" — so
+      padding moved it, and this case had to align the length to say
+      anything at all. The window is bounded by the attack now rather
+      than by the take, which makes the padding stop mattering and lets
+      the claim be made about the signal a device would actually hand
+      over. See the run-on case below for the measurement.
     */
-    const unaligned = threeNotes();
-    const signal = unaligned.subarray(0, Math.floor(unaligned.length / FRAME) * FRAME);
+    const signal = threeNotes();
     const direct = analyse(signal, RATE);
     return listen(new RecordedSource({ samples: signal, sampleRate: RATE, frameSize: FRAME }))
       .then((streamed) => {
@@ -146,5 +149,85 @@ describe('hearing a take', () => {
     let seen = 0;
     return source.start(() => { seen += 1; if (seen === 5) source.stop(); })
       .then(() => expect(seen).toBe(5));
+  });
+});
+
+/**
+ * What the player did, as against how long they left the tape running.
+ *
+ * A note's pitch is read over a window, and that window used to start a
+ * quarter of the way through the note's span — which for the last note of a
+ * take is "from its onset to wherever recording stopped". So the same three
+ * notes, identical samples, read correctly with half a second of run-on and
+ * not at all with a second of it: the skip landed past the decay and every
+ * frame after it was gated as silence.
+ *
+ * It is the last note of every attempt, which makes it the worst one to get
+ * wrong. A learner hears nothing about it; they stop playing, the take ends
+ * when it ends, and the grade changes.
+ */
+describe('a note at the end of a take', () => {
+  /** One pitch struck three times, with the take running on afterwards. */
+  const withRunOn = (trailing: number, decaySeconds: number) => pluckSequence({
+    atSeconds: [0.2, 0.6, 1.0], frequencyHz: 220, seed: 1301,
+    seconds: 1.0 + trailing, sampleRate: RATE, decaySeconds,
+  });
+
+  it('is read the same however long the recording runs on', () => {
+    /*
+      The property, and it is about a quantity the player does not control.
+      Before the window was bounded, a second of run-on read NULL at every
+      decay while half a second read 220 Hz.
+    */
+    for (const decaySeconds of [0.3, 1.5, 3]) {
+      const readings = [0.3, 0.5, 0.8, 1.2, 2].map((trailing) => {
+        const heard = analyse(withRunOn(trailing, decaySeconds), RATE);
+        return heard.notes[heard.notes.length - 1].frequencyHz;
+      });
+      for (const reading of readings) {
+        expect(reading, `decay ${decaySeconds}: run-on changed the reading`)
+          .toBeCloseTo(220, 0);
+      }
+    }
+  });
+
+  it('is read at all when the take stops promptly, while the note still sounds', () => {
+    /*
+      The band just above one analysis frame, which exists because the skip
+      is capped rather than proportional — and which is recovered by reading
+      across the attack when nothing fits after it.
+
+      A reading taken over the attack is worse than one taken after it and
+      better than none. Measured: at 0.19 s of run-on this is 220 Hz with
+      that fallback and nothing without it, for a note still ringing.
+    */
+    const heard = analyse(withRunOn(0.19, 1.5), RATE);
+    const last = heard.notes[heard.notes.length - 1];
+    expect(last.frequencyHz, 'a note that is still sounding went unread').not.toBeNull();
+    expect(last.frequencyHz!).toBeCloseTo(220, 0);
+  });
+
+  it('has no pitch when the take leaves less audio than one analysis frame', () => {
+    /*
+      Not a defect, and pinned so that it is not mistaken for one.
+
+      YIN needs four periods of the lowest note it is asked to find, which is
+      `frameSizeFor` — 8192 samples, 186 ms at 44.1 kHz. A note with less
+      audio after it than that cannot be pitched by any window over it, and
+      the honest answer is `null` rather than a guess. The temptation on
+      seeing the case above is to shrink the frame, which would buy this note
+      a reading and cost every low one its accuracy.
+
+      Derived from `frameSizeFor` rather than written as a number, so the
+      claim stays about the relationship if the lowest note moves.
+    */
+    const frameSeconds = frameSizeFor(RATE) / RATE;
+    const heard = analyse(withRunOn(frameSeconds * 0.8, 3), RATE);
+    const last = heard.notes[heard.notes.length - 1];
+    expect(last.durationSeconds).toBeLessThan(frameSeconds);
+    expect(last.frequencyHz).toBeNull();
+    // And the clarity says which of the two silences this is: no frame was
+    // examined, rather than frames examined and found unconvincing.
+    expect(last.clarity).toBe(0);
   });
 });

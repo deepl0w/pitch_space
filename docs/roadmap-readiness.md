@@ -222,6 +222,15 @@ so nothing contradicts itself the way the clef did. Deflating, not alarming —
 which is what decides its order against the other open questions rather than
 its size.
 
+### Answered: the three sites are one decision, and the user has taken it
+
+[0040](adr/0040-completion-replaces-the-score.md) settles what the figure is —
+a completion rather than a count — which retires session-versus-lifetime rather
+than relabelling it, and makes the home screen's number a function of how far
+each line has advanced. [0039](adr/0039-a-line-is-an-exercise-and-the-items-its-settings-make-askable.md)
+settles what it is a figure *of*. The section below stands as the reasoning
+that got there.
+
 ### The three sites are one decision
 
 Session-versus-lifetime counts with no scope word, the empty history panel,

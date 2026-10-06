@@ -60,6 +60,19 @@ repeated it. No single step looked like an invention, and the claim — that the
 DSP layer computes chroma, which it does not — was load-bearing for an exercise
 about to be built on it. Both records now carry dated corrections.
 
+**A description of work is not the work, and that holds when the description is
+the author's own and offered in good faith.** On 6 October four claims about
+shipped code arrived by message from the person who had just written it, each
+accurate as far as its author could see, and checking all four against the tree
+changed the answer four times: a test said to exercise capture imported one
+pure helper, a guard said to be fixed matched a directory rather than a
+mechanism, a scope said to be tighter was aimed away from the only place the
+wiring can appear, and a chain said to be proven end to end was proven on
+synthesised input. **Nobody was careless and the rate was four in four**, which
+is the rate to expect rather than a bad afternoon — an author's reading of
+their own work is the one reading taken from inside it. Run the grep, or the
+mutant, before repeating the claim onward.
+
 **Scope a guard to what can actually change the thing it guards.** A check that
 fires on changes it should ignore is not merely annoying: the noise is how it
 comes to be ignored, and an ignored check is worse than none, because everyone
@@ -183,7 +196,10 @@ words, with the part that explains why it travelled:
 That last clause is the mechanism rather than the moral. An instrument read as
 the world produces a *finding*, and a finding is the kind of thing you pass on,
 so this error does not sit still and get noticed — it propagates at the speed
-of the most interesting thing you have to say. Three corrections followed, each
+of the most interesting thing you have to say. Which inverts the comfortable
+intuition: **the more interesting a wrong conclusion is, the further it
+travels**, so the errors that get furthest are selected for being worth
+repeating rather than for being true. Three corrections followed, each
 one layer beneath the last: the claim, then the guard's condition, then its
 scope. **Every version passed its own tests and read as careful.**
 

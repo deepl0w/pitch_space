@@ -260,6 +260,19 @@ its own suite, and nothing has yet run it over a log a person made.
 
 ### `architect`, then everyone — progress is per settings combination
 
+**Built and merged, 6 October — nothing below is waiting on it.**
+`src/state/line.ts` carries the identity; `Attempt` carries the askable
+set it was drawn from, frozen on the round at generation; `tallyKey` is
+`${lineKey}::${item}`; `schedule` and `dueCount` take the line whole; an
+attempt with no set folds to nothing at all. Reviewed by tester, who
+found the case that mattered — pre-line history folding into the empty
+line and reading as progress against nothing.
+
+**What is left of this entry** is the completion grade
+([0040](adr/0040-completion-replaces-the-score.md)), the curated rhythm
+library, the untracked-practice declaration no exercise makes yet
+([0041](adr/0041-practice-that-counts-towards-nothing.md)), and export.
+
 **Settled, build against it:** a line is (exercise, settings combination);
 everything is per line including due dates; the score becomes a completion
 grade; rhythm's pool becomes curated with generation surviving as untracked
@@ -278,6 +291,12 @@ completion grade ([0040](adr/0040-completion-replaces-the-score.md)), where
 the rhythm library's entries come from, and whether untracked attempts
 ([0041](adr/0041-practice-that-counts-towards-nothing.md)) travel in an
 export. None of these block the key.
+
+**Open with the user**, none blocking: what "a high cap" bounds — the
+review interval, which `MAX_INTERVAL_MS` already is, or a ceiling on the
+reading itself; whether 200 ms covers a real device opening
+(`DEVICE_OPEN_SECONDS`, which nothing off-device can settle); and the two
+below.
 
 **Two things sent to the user for comment rather than decided:** narrowing a
 pool also lands on a different line, which follows by symmetry but was not

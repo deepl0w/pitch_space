@@ -375,9 +375,18 @@ function ExerciseRound({ definition, audio, tally, settings }: {
               unique.
             */}
             {[...new Set(round.result.outcomes.map((o) => o.item))].map((item) => {
-              // Counted per sense (ADR 0010), so the figure shown is for the
-              // way this exercise was actually asked.
-              const counts = tally.get(tallyKey(item, round.exercise.presentation));
+              /*
+                Counted per line (ADR 0039), so the figure is for the pool
+                the learner was actually practising — not for this item
+                across every pool they have ever had it in. The line comes
+                off the round rather than the panel for the same reason
+                the attempt's does: the settings may have moved since.
+              */
+              const counts = tally.get(tallyKey({
+                exercise: definition.id,
+                askable: round.askable,
+                presentation: round.exercise.presentation,
+              }, item));
               return (
                 <li key={item}>
                   <span className="primary">{itemLabel(item)}</span>

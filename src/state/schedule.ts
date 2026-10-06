@@ -1,5 +1,6 @@
 import { tallyKey, type ItemTally, type TallyKey } from './progressStore';
-import type { ItemId, Presentation } from '../exercises/types';
+import type { ProgressLine } from './line';
+import type { ItemId } from '../exercises/types';
 
 /**
  * When each thing is worth asking again.
@@ -143,9 +144,18 @@ export interface ScheduledItem {
  * is for: the same history always produces the same queue.
  */
 export function schedule(
-  askable: readonly ItemId[],
+  /**
+   * The line being practised, which carries its own askable set.
+   *
+   * Three arguments became one when ADR 0039 named the line: the
+   * exercise, the answer space and the presentation are not independent
+   * inputs a caller chooses between, they are the thing progress belongs
+   * to. A caller that could pass an `askable` disagreeing with the
+   * presentation's tallies was a caller that could ask the wrong
+   * question of the right data.
+   */
+  line: ProgressLine,
   tallies: ReadonlyMap<TallyKey, ItemTally>,
-  presentation: Presentation,
   now: number,
   /**
    * The subset of `askable` the settings can currently ask, when the
@@ -158,8 +168,8 @@ export function schedule(
    */
   reachable?: ReadonlySet<ItemId>,
 ): ScheduledItem[] {
-  const rows = askable.map((item, index): ScheduledItem & { index: number } => {
-    const tally = tallies.get(tallyKey(item, presentation)) ?? null;
+  const rows = line.askable.map((item, index): ScheduledItem & { index: number } => {
+    const tally = tallies.get(tallyKey(line, item)) ?? null;
     return {
       item,
       tally,
@@ -201,14 +211,13 @@ export function schedule(
  * why a figure that cannot name what it covers should not be shown.
  */
 export function dueCount(
-  askable: readonly ItemId[],
+  line: ProgressLine,
   tallies: ReadonlyMap<TallyKey, ItemTally>,
-  presentation: Presentation,
   now: number,
 ): number {
   let due = 0;
-  for (const item of askable) {
-    const tally = tallies.get(tallyKey(item, presentation));
+  for (const item of line.askable) {
+    const tally = tallies.get(tallyKey(line, item));
     if (tally === undefined || dueAt(tally) <= now) due += 1;
   }
   return due;

@@ -124,3 +124,34 @@ progress to violate, only an out-of-date estimate of what a learner remembers.
 is checkable rather than felt: pin each exercise's askable set at its defaults
 in a test, and the release where none of them move is the release where this
 licence expires and the porting system is owed.
+
+## Correction, 7 October 2026 — two things about the quotation, and one inherited claim
+
+The seventh convention in [the index](README.md) was written out of
+[0040](0040-completion-replaces-the-score.md)'s addendum on the day this record
+was published. Applying it here finds the same fault twice.
+
+**The ruling quoted above reached this record second-hand.** The user sent it
+to the main session; main relayed it; this record quotes it as the user's
+words, which they are, but transcribed by a third party and never checked
+against the original. That should be visible to a reader rather than implied,
+because a relayed quotation and a direct one are different kinds of evidence
+and this record does not look like the former.
+
+**And it was silently edited in transcription.** The relay read "settings have
+less change to change"; this record prints "less chance to change". That is
+almost certainly what was meant and it is still an edit made without saying so
+— the same move as 0040's addendum promoting a parenthetical to a sentence, in
+the opposite direction and equally invisible. Where a quotation looks like a
+slip, the fix belongs in a note beside it, not inside the quotation marks.
+
+Neither affects the decision. The licence and its term are what main reported
+and what this record implements, and the trigger — settings schemas settling —
+does not turn on the disputed word.
+
+**One claim is inherited and is weaker than it reads.** The Consequences say "a
+reset line reads red", taking the red-to-green scale as settled. It is not: the
+user offered it with "maybe", as 0040's own correction now records. The
+argument in that paragraph holds without it — there is no finished state to be
+robbed of, so a reset line climbs back at the speed of someone who already
+knows the answers — and only the colour is borrowed.

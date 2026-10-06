@@ -399,6 +399,29 @@ describe('the choices a question was asked against', () => {
     }
   });
 
+  it('is the question\'s own record, not the settings\' array', () => {
+    /*
+      `choices` exists so a question carries what it was asked against,
+      which it does not do if it *is* the array the panel is editing.
+
+      Measured before this was a copy: `exercise.choices === settings.semitones`
+      was true, two exercises drawn from one settings object shared a single
+      array, and reversing one moved the other and the settings with it.
+      Nothing mutates it today and `readonly number[]` stops anything in
+      this repository starting, so the risk was never live — but "frozen at
+      generation" was true by convention rather than by the code, and the
+      fix this is part of was made because a convention was not enough.
+    */
+    const settings = intervalSettingsSchema.coerce({ presentation: 'read', semitones: [0, 12] });
+    const first = generateInterval({ seed: 5, settings });
+    const second = generateInterval({ seed: 6, settings });
+
+    expect(first.choices).not.toBe((settings as { semitones: readonly number[] }).semitones);
+    expect(first.choices).not.toBe(second.choices);
+    // And still the same pool, so independence was not bought by narrowing.
+    expect(first.choices).toEqual([0, 12]);
+  });
+
   it('is the pool the settings gave, not a wider or narrower one', () => {
     /*
       The control. "The answer is among the choices" is satisfied by a

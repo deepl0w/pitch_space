@@ -297,3 +297,46 @@ describe('an attempt from before the askable set existed', () => {
     expect(read.askable).toEqual(['interval:m2:up', 'interval:M2:up']);
   });
 });
+
+/**
+ * The answer space an attempt belongs to.
+ *
+ * ADR 0039: a line is identified by what the settings could have asked,
+ * so the attempt has to carry that set — settings get migrated and the
+ * identity must not move when they do. ADR 0041: an attempt with no set
+ * joins no line, which is how practice that counts towards nothing is
+ * expressed rather than by a flag.
+ */
+describe('the askable set an attempt carries', () => {
+  const pool = ['interval:m2:up', 'interval:M2:up'];
+
+  it('is kept, so a line can be identified without reading settings', () => {
+    const a = attemptFrom(round(), 'interval-id', result(true), 2_000, pool);
+    expect(a.askable).toEqual(pool);
+  });
+
+  it('is copied, so the caller cannot edit a stored record', () => {
+    // The same aliasing the exercise's own `choices` was fixed for: a
+    // record that *is* the array someone else holds is not a record.
+    const live = [...pool];
+    const a = attemptFrom(round(), 'interval-id', result(true), 2_000, live);
+    live.push('interval:m3:up');
+    expect(a.askable).toEqual(pool);
+  });
+
+  it('is absent rather than empty when there is none', () => {
+    /*
+      The distinction with teeth. `[]` is a real answer space — the empty
+      one — and keys to a real line, so defaulting to it would fold every
+      untracked attempt into a single bucket reading as progress against
+      nothing. Absent is the only encoding of "no line".
+    */
+    const a = attemptFrom(round(), 'interval-id', result(true), 2_000);
+    expect('askable' in a).toBe(false);
+  });
+
+  it('survives the coercion the log puts it through', () => {
+    const a = attemptFrom(round(), 'interval-id', result(true), 2_000, pool);
+    expect(coerceAttempt(a)).toEqual(a);
+  });
+});

@@ -269,6 +269,14 @@ exit status regardless of which filter. Three hooks, each named for the
 one git operation it watches, rather than one check trusted to sit
 upstream of all three.
 
+**`fleet.sh brief` also checks the shared engine's own health, every
+session start.** `~/.claude/scripts/fleet.sh` is unversioned and actively
+executed by whoever is running at the time — editing it non-atomically can
+produce a torn read, or strip its executable bit, silently, hours before
+anyone notices a hook stopped firing. Caught twice in one day, by the
+people it happened *to* rather than the edit that caused it. A loud warning
+now, not a quiet failure later.
+
 The hazard worth repeating from the skill, because it has bitten here:
 `node_modules` is git-ignored, so a fresh worktree cannot run a single npm
 script until `sync` has installed it, and after a merge that moved

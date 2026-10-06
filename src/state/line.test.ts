@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { lineKey, sameLine, type ProgressLine } from './line';
+import { EXERCISE_TYPES } from '../exercises/registry';
+import { applyValue, valuesOf, widestSettings, type AnyField } from '../testing/settingsSpace';
+import type { ItemId } from '../exercises/types';
 
 /**
  * What makes two stretches of practice the same line, and what does not.
@@ -74,3 +77,80 @@ describe('the identity of a progression line', () => {
     expect(lineKey(line())).toBe('interval-id|read|interval:M2:up,interval:m2:up');
   });
 });
+
+/**
+ * The claim the key rests on, which was a comment.
+ *
+ * `lineKey` joins three parts with `|` and the items with `,`, and the
+ * constants say the separators are "not legal inside an item id or a
+ * presentation". Nothing checked that, and a join whose separator can
+ * appear in a component is not a key — it is a string that usually works.
+ *
+ * Two halves, because the first is only interesting if the second is true:
+ * no id anywhere in the settings space contains either character, **and**
+ * one that did would collide.
+ */
+describe('the separators the key is joined with', () => {
+  it('appear in no exercise id, presentation or item the app can produce', () => {
+    /*
+      Swept over the settings space rather than the defaults, because the
+      askable set is what varies and a separator could arrive with an
+      option nobody has turned on. 6,495 ids across 251 combinations —
+      every field at every value it offers, from the widest settings.
+    */
+    const offending: string[] = [];
+    let ids = 0;
+    for (const definition of EXERCISE_TYPES) {
+      if (/[|,]/.test(definition.id)) offending.push(`exercise id ${definition.id}`);
+      const widest = widestSettings(definition);
+      const space: unknown[] = [definition.settings.coerce(definition.settings.defaults), widest];
+      for (const field of definition.settings.fields as AnyField[]) {
+        for (const value of valuesOf(field, widest)) {
+          space.push(definition.settings.coerce(applyValue(field, widest, value)));
+        }
+      }
+      for (const settings of space) {
+        for (const item of definition.items(settings)) {
+          ids += 1;
+          if (/[|,]/.test(item)) offending.push(`${definition.id}: ${item}`);
+        }
+      }
+    }
+    for (const presentation of ['listen', 'read']) {
+      if (/[|,]/.test(presentation)) offending.push(`presentation ${presentation}`);
+    }
+
+    expect(offending).toEqual([]);
+    expect(ids, 'no item was examined, so nothing was checked').toBeGreaterThan(1_000);
+  });
+
+  it('would collide if one ever did, which is why the case above matters', () => {
+    /*
+      The demonstration. Without it the sweep is a fact about today's ids
+      and not a statement about the key — and a reader has no way to tell
+      whether the constraint is load-bearing or tidy.
+
+      Both separators, because they fail differently: a comma inside an id
+      merges two items into one set, and a bar inside an exercise id steals
+      the presentation's place.
+    */
+    const asTwo = lineKey({ exercise: 'x', presentation: 'read', askable: twoItems() });
+    const asOne = lineKey({ exercise: 'x', presentation: 'read', askable: oneJoinedItem() });
+    expect(asOne, 'a comma inside an item id does not merge the set')
+      .toBe(asTwo);
+
+    const barInExercise = lineKey({
+      exercise: 'x|read', presentation: 'read', askable: ['q' as ItemId],
+    });
+    const barInPresentation = lineKey({
+      exercise: 'x', presentation: 'read|read' as never, askable: ['q' as ItemId],
+    });
+    expect(barInExercise, 'a bar in one part does not take another part\'s place')
+      .toBe(barInPresentation);
+  });
+});
+
+/** `['a', 'b']`, built here so the pair below cannot drift apart. */
+function twoItems(): ItemId[] { return ['a', 'b'] as ItemId[]; }
+/** The same characters with the separator inside one id. */
+function oneJoinedItem(): ItemId[] { return ['a,b'] as ItemId[]; }

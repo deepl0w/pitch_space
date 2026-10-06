@@ -292,11 +292,20 @@ the rhythm library's entries come from, and whether untracked attempts
 ([0041](adr/0041-practice-that-counts-towards-nothing.md)) travel in an
 export. None of these block the key.
 
-**Open with the user**, none blocking: what "a high cap" bounds — the
-review interval, which `MAX_INTERVAL_MS` already is, or a ceiling on the
-reading itself; whether 200 ms covers a real device opening
-(`DEVICE_OPEN_SECONDS`, which nothing off-device can settle); and the two
-below.
+**Ruled 7 October — "a high cap" is the colour ceiling.** Asked which of
+two things it bounded, the user answered: *"high cap is colour ceiling"*.
+So it is not the review interval — `MAX_INTERVAL_MS` is a separate
+mechanism and stays what it is — but a ceiling on the reading itself,
+approached and never reached. That is consistent with 0040's "there is no
+done": a hue that can arrive at full green is an end by another name.
+Architect to fold into [0040](adr/0040-completion-replaces-the-score.md);
+their session had ended when this was given, so it is recorded here first
+rather than lost.
+
+**Still open with the user**, not blocking: whether 200 ms covers a real
+device opening (`DEVICE_OPEN_SECONDS`), which nothing off-device can
+settle and which only shows as the first note of a page going missing;
+and the two below.
 
 **Two things sent to the user for comment rather than decided:** narrowing a
 pool also lands on a different line, which follows by symmetry but was not

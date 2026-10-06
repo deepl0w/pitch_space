@@ -69,6 +69,30 @@ printf 'families        %s\n' \
     "$(grep -cE "^    id: '" src/exercises/registry.ts 2>/dev/null || echo '?')"
 printf 'screens         %s\n' "$(ls src/ui/screens/*.tsx 2>/dev/null | grep -vc test || echo 0)"
 
+# Whether the thing the app says it is for is connected to anything.
+#
+# An architecture review reported the scheduler's tri-state missing two days
+# after it shipped, and reported a module "wired to nothing" that was still
+# wired to nothing a day later — the first wrong, the second right, neither
+# checkable without reading the tree. An inventory that says it was measured
+# is only true on the day it was measured, so it is generated here instead.
+# Counting importers rather than mentions: three comments in PracticeScreen
+# describe what the scheduler wants and are not callers.
+# `grep -c` exits 1 on a count of zero, which is the answer we most expect
+# here, so the count is taken without letting that become a fallback that
+# appends a second value.
+sched_importers=$(grep -rlE "from '[^']*state/schedule'" src --include='*.ts' --include='*.tsx' 2>/dev/null |
+    grep -v '\.test\.' | wc -l | tr -d ' ')
+printf 'scheduler       %s production importer(s)\n' "$sched_importers"
+printf 'aiming          %s exact, %s lossy, %s none\n' \
+    "$(grep -rh "aims: 'exact'" src/exercises/*/index.ts 2>/dev/null | wc -l | tr -d ' ')" \
+    "$(grep -rh "aims: 'lossy'" src/exercises/*/index.ts 2>/dev/null | wc -l | tr -d ' ')" \
+    "$(grep -rh "aims: 'none'" src/exercises/*/index.ts 2>/dev/null | wc -l | tr -d ' ')"
+# Type and presentation together, because a schedule is keyed on both (0037).
+printf 'schedules       %s (type x presentation) pair(s)\n' \
+    "$(grep -rho "presentations: \[[^]]*\]" src/exercises/*/index.ts 2>/dev/null |
+       grep -o "'" | wc -l | awk '{print $1/2}')"
+
 # A dist older than the last commit that could change it reports a previous
 # commit's bundle with no sign that it is doing so. It was caught doing exactly that: a 15-minute-old dist
 # printed 464 kB where HEAD builds 465. A figure that is quietly one commit

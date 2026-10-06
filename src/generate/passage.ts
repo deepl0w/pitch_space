@@ -53,17 +53,49 @@ export interface PassageOptions {
 }
 
 /**
+ * Split the caller's stream into one per layer.
+ *
+ * Separate and exported so the constraint above is checkable from
+ * outside: a test pins the three seeds this returns for a known parent
+ * seed, and a draw inserted anywhere before it moves all three. Without
+ * that the rule lives only in the comment, which is the shape of guard
+ * this project has twice found could not fail.
+ */
+export function deriveStreams(rng: Rng): {
+  harmonyRng: Rng;
+  motifRng: Rng;
+  melodyRng: Rng;
+} {
+  return {
+    harmonyRng: makeRng(rngInt(rng, 1, 2_147_483_646)),
+    motifRng: makeRng(rngInt(rng, 1, 2_147_483_646)),
+    melodyRng: makeRng(rngInt(rng, 1, 2_147_483_646)),
+  };
+}
+
+/**
  * Generate one, deterministically.
  *
  * Each layer draws from its own stream, seeded from the caller's. Without
  * that, adding a draw in harmony silently re-rolls every rhythm in the
  * app — the hazard `deriveRng` was invented for in the original plan and
  * which this does by hand, there being no such helper.
+ *
+ * **The three derivations are the first three statements, and nothing may
+ * draw from `rng` before them.** A draw inserted above — an option that
+ * wants a number, a shuffle, anything — shifts all three derived seeds at
+ * once and replaces every passage the app has ever produced from every
+ * seed. That is the one break no determinism guard here catches: the
+ * import test looks for `Math.random`, clock reads and `Set` iteration,
+ * and the seed tests check that a seed reproduces within a run and that
+ * the layers vary with it. All of those stay green while the mapping from
+ * seed to music is swapped wholesale, which breaks 0002's promise — an
+ * exercise reported by its seed stops reproducing — without touching its
+ * letter. Draw inside a layer's own stream instead; that is what they are
+ * for.
  */
 export function generatePassage(rng: Rng, options: PassageOptions): Passage {
-  const harmonyRng = makeRng(rngInt(rng, 1, 2_147_483_646));
-  const motifRng = makeRng(rngInt(rng, 1, 2_147_483_646));
-  const melodyRng = makeRng(rngInt(rng, 1, 2_147_483_646));
+  const { harmonyRng, motifRng, melodyRng } = deriveStreams(rng);
 
   const harmony = generateHarmony(harmonyRng, {
     ...options.harmony,
@@ -80,7 +112,7 @@ export function generatePassage(rng: Rng, options: PassageOptions): Passage {
 
   const melody = generateMelody(melodyRng, {
     harmony,
-    slots: slotsOf(motifs),
+    slots: slotsOf(motifs.bars),
     range: options.range,
     shape: motifs.shape,
   });
@@ -103,9 +135,13 @@ export function generatePassage(rng: Rng, options: PassageOptions): Passage {
  * note for each would have more notes than the rhythm has attacks. That
  * is the off-by-one this join exists to get right in one place rather
  * than in each caller.
+ *
+ * Takes the bars rather than the whole plan because that is all it reads,
+ * and a test with bars and no form should not have to invent a form to
+ * ask what the attacks are.
  */
-export function slotsOf(motifs: MotifPlan): MelodySlot[] {
-  return motifs.bars
+export function slotsOf(bars: readonly RhythmBar[]): MelodySlot[] {
+  return bars
     .flatMap((bar) => bar.events)
     .filter((event) => !event.isRest && !event.tiedFromPrevious)
     .map((event) => ({ startTick: event.startTick, durationTicks: event.durationTicks }));

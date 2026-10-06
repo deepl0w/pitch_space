@@ -247,3 +247,57 @@ habit, it is worth more than any single test here.
 
 The scheduler is also untested against a real session: `schedule.ts` has
 its own suite, and nothing has yet run it over a log a person made.
+
+### `architect`, then everyone — progress is per settings combination
+
+The user has ruled on what progress means, and it replaces the model the
+code currently has. Recorded here before anything is built, because it
+changes `tallyKey`, the shape of what is stored, and therefore what an
+export contains.
+
+**A progression line is a (exercise, settings combination) pair, and
+everything is per line.** Practising minor 2nds and major 2nds is one
+line; adding minor 3rds is a different one, and it inherits nothing — not
+the completion grade and **not the per-question due dates**. The user was
+asked directly and chose the strict reading: a correct answer out of two
+choices is not evidence about the same question out of three, so widening
+a pool starts again.
+
+This arrives at the same place as the hazard already recorded in
+[0037](adr/0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md)'s
+addendum — a streak that does not record how many alternatives it was
+built against — from the other direction, and settles it more firmly than
+weighting would have.
+
+**The score stops being a number.** What the user wants is a grade
+expressing how far a line has been completed, not a tally of right
+answers. "Score is not important; what is important is spaced
+repetition." Failed questions recur, correct ones get rarer. The
+session and lifetime counts that read as two unlabelled clocks are
+downstream of this, not a separate decision.
+
+**Rhythm's pool becomes a curated library.** The user does not trust
+generated rhythms as a body of knowledge to be measured against, and
+wants a large hand-built library of common and less common patterns
+instead. **Generation stays as a standalone exercise that counts towards
+no progression** — which introduces a distinction the app does not
+currently have, between practice that is tracked and practice that is
+not. The rhythm generator keeps its other job unchanged: it supplies the
+rhythm of a generated line for melody and sight reading, which is not a
+thing anyone is tested on.
+
+**What this implies for whoever picks a piece up.**
+
+- The identity of a settings combination has to be canonical, stable
+  across releases, and decided deliberately — *which* settings are part
+  of it is the open question, not a detail. Presentation already is, by
+  [0010](adr/0010-presentation-is-part-of-what-an-attempt-means.md).
+  Whether clef or range are is not obvious and is the architect's to
+  propose.
+- It is a compatibility commitment the moment a history exists, the same
+  as item ids under [0011](adr/0011-what-a-catalogue-owes.md).
+- Export and import are defined by this shape rather than bolted to it
+  afterwards; the user named them together.
+- `ItemTally`, `tallyKey`, `schedule` and `dueAt` all read the old model.
+  Nothing in production calls `schedule`, so the cost of changing it is
+  tests and records rather than behaviour.

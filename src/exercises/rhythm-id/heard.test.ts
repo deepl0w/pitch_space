@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { rhythmIdentification } from './index';
 import { TEMPO_CHOICES } from './rhythms';
 import { detectOnsets, MIN_SEPARATION_SECONDS } from '../../audio/dsp/onsetDetector';
-import { pluckSequence } from '../../audio/testing/signals';
+import { separationForOnsets } from '../../audio/capture/listen';
+import { alignRhythm, toleranceFor } from '../../audio/dsp/rhythmAlign';
+import { beatSeconds } from './rhythms';
+import { pluckSequence, seeded } from '../../audio/testing/signals';
 import { applyValue, widestSettings, type AnyField } from '../../testing/settingsSpace';
 
 /**
@@ -146,5 +149,180 @@ describe('a generated rhythm played back exactly', () => {
       const lost = want.filter((w) => !got.some((g) => Math.abs(g - w) < 0.03));
       expect(lost, '160 bpm lost notes at').toEqual([]);
     }
+  });
+});
+
+/**
+ * How much of a player's error the derived window survives.
+ *
+ * `separationForOnsets` takes half the shortest written gap, and the
+ * question it was built under is whether half is the right fraction. It is
+ * answerable rather than a matter of taste, because the geometry is fixed:
+ * two notes written `g` apart, each displaced by up to `j·g`, can land
+ * `g(1 − 2j)` apart, and a window of `f·g` merges them exactly when
+ * `f ≥ 1 − 2j`. So the fraction is not "half" for any reason of its own —
+ * **it is one minus twice the timing error the chain intends to tolerate**,
+ * and choosing it is choosing that.
+ *
+ * Half therefore tolerates a quarter of a gap. A third tolerates a third,
+ * and a quarter tolerates three eighths. Measured below rather than argued,
+ * because the prediction is about a detector and not about arithmetic.
+ */
+describe('the window derived from the written music', () => {
+  /** The written times, played with each note displaced by up to `jitter·gap`. */
+  function played(take: readonly number[], jitter: number, seed: number): number[] {
+    const rng = seeded(seed);
+    const gap = shortestGap(take);
+    return take
+      .map((t, i) => (i === 0 ? t : t + (rng.next() * 2 - 1) * jitter * gap))
+      .map((t) => Math.max(0, t))
+      .sort((a, b) => a - b);
+  }
+
+  /**
+   * Notes lost, with the window the production code derives.
+   *
+   * Deliberately through `separationForOnsets` rather than through the
+   * fraction below: the fraction cases are about the geometry and would go
+   * on passing if the derivation changed under them, which is the whole
+   * failure mode this file exists to catch.
+   */
+  function lostWithDerivedWindow(tempo: number): number {
+    let lost = 0;
+    for (const take of takes(tempo, 8)) {
+      const signal = pluckSequence({
+        atSeconds: take, frequencyHz: 220, seed: 7,
+        seconds: take[take.length - 1] + 1, sampleRate: RATE, decaySeconds: 0.4,
+      });
+      const got = detectOnsets(signal, {
+        sampleRate: RATE, minSeparationSeconds: separationForOnsets(take),
+      }).onsets.map((o) => o.timeSeconds);
+      lost += take.filter((w) => w > 0.02)
+        .filter((w) => !got.some((g) => Math.abs(g - w) < 0.03)).length;
+    }
+    return lost;
+  }
+
+  function lostAt(tempo: number, fraction: number, jitter: number): number {
+    let lost = 0;
+    for (const [i, take] of takes(tempo, 8).entries()) {
+      const performance = played(take, jitter, 1000 + i);
+      const signal = pluckSequence({
+        atSeconds: performance, frequencyHz: 220, seed: 7,
+        seconds: performance[performance.length - 1] + 1, sampleRate: RATE, decaySeconds: 0.4,
+      });
+      const got = detectOnsets(signal, {
+        sampleRate: RATE, minSeparationSeconds: shortestGap(take) * fraction,
+      }).onsets.map((o) => o.timeSeconds);
+      lost += performance.filter((w) => w > 0.02)
+        .filter((w) => !got.some((g) => Math.abs(g - w) < 0.03)).length;
+    }
+    return lost;
+  }
+
+  it('recovers the notes the fixed window lost, at the tempo that lost them', () => {
+    // The point of the mechanism, asked at 160 bpm where the default merges.
+    // Through the production derivation, so a change to it is felt here.
+    expect(lostWithDerivedWindow(160)).toBe(0);
+  });
+
+  it('is what the written music says rather than a constant', () => {
+    const take = takes(160, 1)[0];
+    expect(separationForOnsets(take)).toBeCloseTo(shortestGap(take) / 2, 6);
+    // Fewer than two attacks is not a gap, and the caller must fall back
+    // rather than be handed a window of zero.
+    expect(separationForOnsets([1])).toBeUndefined();
+    expect(separationForOnsets([])).toBeUndefined();
+  });
+
+  it('survives a quarter of a gap of human error, which is what half buys', () => {
+    /*
+      The prediction, measured: `f = 1/2` holds to `j = 1/4` and starts
+      losing notes beyond it. At ±30% it loses one in seventy-one, at ±20%
+      none. A third holds through ±50%, the widest displacement worth
+      simulating, and so does a quarter.
+
+      Recorded because the number is a *choice about tolerance* and nothing
+      said so. If the chain should accept a note displaced by a third of a
+      gap — and the grading window currently accepts very much more than
+      that, see below — then the fraction has to come down to match, and
+      this is the case that would have to be rewritten to say it.
+    */
+    expect(lostAt(160, 0.5, 0.2), 'half, within the error half buys').toBe(0);
+    expect(lostAt(160, 1 / 3, 0.5), 'a third, at the widest error simulated').toBe(0);
+    // The control: a zero above has to be this harness finding nothing to
+    // lose rather than this harness unable to lose anything. A window at
+    // nine tenths of the gap is past `1 − 2j` for any of these, and does.
+    expect(lostAt(160, 0.9, 0.3), 'the harness cannot register a loss at all')
+      .toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The two windows in the chain, which have never been compared.
+ *
+ * `toleranceFor` decides how far a played attack may be from its written
+ * time and still be that note. `separationForOnsets` decides how close two
+ * attacks may be before they are one. They are both about the same distance
+ * between the same two notes, they are set in different files, and nothing
+ * relates them — so the chain can accept a note that it has already
+ * destroyed.
+ */
+describe('the grading window against the shortest value written', () => {
+  it('is wider than the gap it is grading, at the tempos that read fastest', () => {
+    /*
+      `TOLERANCE_BEATS`'s own comment predicts this and understates it. It
+      says the window is "as wide as a whole sixteenth" at a tempo fast
+      enough to read sixteenths, and proposes the repair — "a separate
+      window keyed to the shortest value the exercise actually contains…
+      it wants the exercise to say what that value is".
+
+      Measured, it reaches twice the shortest value rather than once,
+      because the cell library writes tuplets and the comment reasons about
+      sixteenths:
+
+          96 bpm   tolerance 100.0 ms   shortest gap 78.1 ms   ratio 1.28
+          132 bpm  tolerance 100.0 ms   shortest gap 56.8 ms   ratio 1.76
+          160 bpm  tolerance  93.8 ms   shortest gap 46.9 ms   ratio 2.00
+
+      The value the repair wants the exercise to say is now computed:
+      `separationForOnsets` reads it off the written onsets.
+    */
+    const ratios = [96, 132, 160].map((tempo) => {
+      const gap = Math.min(...takes(tempo, 200).map(shortestGap));
+      return toleranceFor(beatSeconds(tempo)) / gap;
+    });
+    for (const ratio of ratios) expect(ratio).toBeGreaterThan(1);
+    expect(ratios[2], '160 bpm').toBeGreaterThan(1.9);
+  });
+
+  it('scores a note played a whole subdivision late as half right', () => {
+    /*
+      What the ratio costs, as a grade rather than as a number. The note is
+      moved onto the written time of the one after it — as unambiguously
+      wrong as a rhythm can be without adding or dropping an attack — and
+      the alignment stays one-to-one, nothing is missed, nothing is extra,
+      and it scores 0.5.
+
+      The alignment is not at fault and the comment is right that no note is
+      double-counted. What the one-to-one match hides is that the score
+      underneath it has stopped meaning anything at this scale.
+    */
+    const take = takes(160, 200).reduce((a, b) => (shortestGap(b) < shortestGap(a) ? b : a));
+    const gap = shortestGap(take);
+    const at = take.findIndex((t, i) => i > 0 && Math.abs(t - take[i - 1] - gap) < 1e-9);
+    const performance = [...take];
+    performance[at - 1] += gap;
+
+    const alignment = alignRhythm(take, [...performance].sort((a, b) => a - b), {
+      beatSeconds: beatSeconds(160),
+    });
+    const moved = alignment.matched.find((m) => m.expectedIndex === at - 1);
+    expect(moved, 'the displaced note went unmatched, which would be the honest answer')
+      .toBeDefined();
+    expect(alignment.missed, 'nothing was reported missing').toEqual([]);
+    expect(alignment.extra, 'nothing was reported extra').toEqual([]);
+    expect(moved!.score, 'a note a whole subdivision out still scores')
+      .toBeGreaterThan(0.4);
   });
 });

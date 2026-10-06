@@ -721,4 +721,25 @@ select,
   /* Two rows of chips at 44px each is most of a phone screen, so give the
      list a little more room to breathe rather than cramming it. */
   .chips { gap: 0.45rem; }
+
+  /* The single-select group never got that treatment and needed it more.
+     Its 0.15rem is deliberate with a mouse — the border box is what says
+     "pick one of these", and a tight gap is what makes the chips read as
+     one control rather than several. Under a thumb the same gap is 2.4px.
+
+     Measured at 375px with touch emulation on, which `pointer: coarse`
+     needs both CDP calls for: every single-select group in the app sat
+     at 2.4px and now sits at 6.4px. The chips are 36-48px wide against
+     the 44px the rule above gives their height, so the horizontal
+     spacing is the short axis and the gap is what to widen — inflating
+     the chips would reflow a four-row group like "how far round the
+     circle" into five.
+
+     This does not reach chord identification's twelve root chips, which
+     are `.chips` and already take the 0.45rem above: 7.2px between 37px
+     chips, measured rather than assumed. Whether that is enough between
+     filled circles is a judgement about how they look, not a number, and
+     it is not this rule's to make.
+  */
+  .chips-single { gap: 0.4rem; padding: 0.35rem; }
 }

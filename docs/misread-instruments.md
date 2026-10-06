@@ -2,7 +2,8 @@
 
 A catalogue of findings this project got wrong in one particular way: the
 measurement was true and the conclusion drawn from it was about the
-measuring rather than about the thing measured.
+measuring rather than about the thing measured — and, in the last section, the
+reverse: a true finding killed by a check that could not fail.
 
 The rule is the fifth convention in
 [`docs/adr/README.md`](adr/README.md); this is the evidence for it and the
@@ -21,6 +22,7 @@ that got this wrong twice in one day from the harness side.
 - [The catalogue](#the-catalogue)
 - [Three accounts of how it felt](#three-accounts-of-how-it-felt)
 - [A reproduction attempt is an instrument too](#a-reproduction-attempt-is-an-instrument-too)
+- [The other direction: a true finding killed](#the-other-direction-a-true-finding-killed)
 
 ## The clearest case, and it owes the convention nothing
 
@@ -150,8 +152,81 @@ finding was lost here**. The point is the step that was taken before the
 agreement was trusted: the range was stated, and what fell outside it was
 checked another way.
 
+**A second instance, and it is the stronger one.** A bounded replay of the
+accumulated churn also failed to reproduce the clef observation — and the
+person who ran it volunteered, unprompted, that one step had silently not
+executed: a lookup bug meant the theme clicks never landed. So the honest
+verdict is narrower than the headline. *That churn, minus the theme changes,*
+does not reproduce it.
+
+Naming your instrument's limit before trusting an agreement is cheap when you
+are already suspicious. Naming a flaw in your own replay is not, because **a
+negative result is the one nobody audits** — it confirms the absence of a
+problem, it says what everyone expected, and a step that silently skipped
+inside it is the least likely flaw in the project to be found. Nothing would
+have exposed it. They gave up the clean headline to keep the range honest.
+
 That matters beyond this case, because a non-reproduction is one of the ways a
 true finding dies, and it dies quietly — nobody chases a thing that went away.
 A catalogue assembled from faults that left a trace is systematically short of
 those, and cannot know by how much.
+
+Two eliminations now stand against that observation — migration cannot deliver
+a corrupted clef, and that churn does not reproduce it — with the original
+state unrecoverable. It is left open rather than closed, which is the honest
+end for a question whose evidence is gone.
+
+## The other direction: a true finding killed
+
+Everything above is a false claim surviving. This is the opposite, in the
+words of the role it happened to, who committed the second instance the same
+day it was written down.
+
+> The shape: a true finding nearly killed by a check that could not fail.
+> Every case in that document so far is a false claim surviving. This is the
+> other direction, and it is less watched because nothing goes wrong loudly —
+> the finding simply evaporates and you conclude you were mistaken.
+
+**First instance.** A perfectly played rhythm is graded wrong at 160 bpm —
+true, and the case written to defend it against the objection that the
+synthesised signal was unrealistic reported no loss at any signal shape, which
+would have retracted it. The cause was `filter(e => gradeOf(e))` without
+`.correct`: `gradeOf` returns a `Result`, every object is truthy, and the
+filter kept everything. Caught by the control beside it, asserting that *some*
+bar must fail or the invariance claim is about nothing.
+
+**Second instance, and worse.** Testing that alto and tenor are drawn
+differently — the pair sharing one SMuFL glyph — two rendered SVGs were
+compared with `not.toBe`. It passed. It also passed with the renderer mutated
+to draw tenor *as* alto, because VexFlow ids its elements from a static
+counter that never resets:
+
+```js
+return `auto${Element.ID++}`;   // vexflow/build/esm/src/element.js
+```
+
+So two renders of the **same** clef are not byte-identical either, and the
+comparison was true for any pair of anything. An earlier version had stacked a
+second emptiness on the first: it compared staves carrying a note, and C4 sits
+at a different height per clef, so the drawings differed for the note's sake
+and the clef was never under test.
+
+**What the pair gives, and it is the useful part:**
+
+> An assertion of *difference* is the dangerous one, because difference is the
+> default: two things are unequal until something forces them equal, so
+> `not.toBe` passes by accident where `toBe` fails by accident. The control
+> for a difference claim is the sameness claim next to it — here, that one
+> clef drawn twice comes back the same, without which a difference is evidence
+> of nothing.
+
+And the general form, which is why it belongs here rather than in a testing
+note: **a broken instrument reads as absence, and absence is
+indistinguishable from a negative result.** That is 0025 again — agreement
+among trials sharing an error is not confidence — with the trials being one's
+own and the error in the reading.
+
+**Both were caught by the mutant surviving, and neither by review.** Nobody was
+suspicious of the test; the question was whether the production code was wrong,
+and the test's silence is what gave it away.
 

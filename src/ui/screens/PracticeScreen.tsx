@@ -13,7 +13,7 @@ import {
   progressStore, tallyItems, tallyKey, useProgress,
   type ItemTally, type TallyKey,
 } from '../../state/progressStore';
-import type { Attempt } from '../../state/schema';
+import { attemptFrom } from '../../state/attempt';
 
 /**
  * One screen for every exercise type.
@@ -280,21 +280,7 @@ function ExerciseRound({ definition, audio, tally, settings }: {
     setRound({ ...round, result });
     setSession((s) => ({ asked: s.asked + 1, right: s.right + (result.correct ? 1 : 0) }));
 
-    const attempt: Attempt = {
-      id: round.id,
-      exerciseType: definition.id,
-      seed: round.exercise.seed,
-      settings: round.settings,
-      // From the exercise, not from the live settings: the exercise carries
-      // how it was actually asked, and the setting may have been changed
-      // since it was generated.
-      presentation: round.exercise.presentation,
-      startedAt: round.startedAt,
-      answeredAt: Date.now(),
-      items: [...round.exercise.items],
-      outcomes: result.outcomes.map((o) => ({ ...o })),
-      correct: result.correct,
-    };
+    const attempt = attemptFrom(round, definition.id, result, Date.now());
     void progressStore.getState().record(attempt);
   }
 

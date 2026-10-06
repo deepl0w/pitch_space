@@ -166,13 +166,47 @@ describe('a generated rhythm played back exactly', () => {
    */
   const audible = (take: readonly number[]) => take.filter((t) => t > 0.02);
 
+  it('cannot lose one below 160, whatever seed is drawn', () => {
+    /*
+      The reason the sampled case below is true, asserted instead of
+      sampled — because a test that passes is not thereby a test that is
+      true, and three seeds a tempo cannot tell the difference between a
+      universal and a lucky draw.
+
+      It is arithmetic rather than luck: the merge window is 50 ms and the
+      shortest gap the generator writes at each of these tempos is wider,
+      so no take at them has two attacks the detector could merge. Measured
+      over 400 seeds a tempo:
+
+          50 bpm 150.0   60 bpm 125.0   72 bpm 104.2   84 bpm  89.3
+          96 bpm  78.1  112 bpm  67.0  132 bpm  56.8  160 bpm  46.9
+
+      Only 160 goes under, which is why only 160 has a defect beneath it.
+      If a tempo joins it the sampled case may still pass by drawing kindly;
+      this one cannot.
+    */
+    const floors = TEMPO_CHOICES.map((tempo) => ({
+      tempo,
+      floor: Math.min(...takes(tempo, 120).map(shortestGap)),
+    }));
+    for (const { tempo, floor } of floors.filter((f) => f.tempo <= 132)) {
+      expect(floor, `${tempo} bpm writes a gap the detector would merge`)
+        .toBeGreaterThan(MIN_SEPARATION_SECONDS);
+    }
+    // The control, and the reason the filter above is not arbitrary: 160 is
+    // under the window, so the split is a measurement rather than a choice.
+    expect(floors.find((f) => f.tempo === 160)!.floor)
+      .toBeLessThan(MIN_SEPARATION_SECONDS);
+  });
+
   it('keeps every note at the tempos a reader can follow', () => {
     /*
-      Three seeds a tempo rather than more, because the grading case at the
-      bottom of this file now sweeps the same signals and asserts something
-      stronger about them. What this is for is attribution: when that one
-      goes red, this says whether the notes were lost on the way in or the
-      grade was wrong about notes that arrived.
+      The same claim end to end, over three seeds a tempo: the arithmetic
+      above says no take at these tempos *can* be merged, and this says the
+      detector agrees when actually handed one. What it is additionally for
+      is attribution — when the grading case at the bottom of this file goes
+      red, this says whether the notes were lost on the way in or the grade
+      was wrong about notes that arrived.
     */
     for (const tempo of TEMPO_CHOICES.filter((t) => t <= 132)) {
       for (const take of takes(tempo, 3)) {

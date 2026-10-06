@@ -411,8 +411,8 @@ describe("the home screen's claim about how exercises are answered", () => {
    * The names that mean captured audio, rather than the directory that
    * holds them.
    *
-   * The first version of this asked whether an exercise imported anything
-   * from `audio/capture/`, which is directory membership wearing a
+   * The first version asked whether a file imported anything from
+   * `audio/capture/`, which is directory membership wearing a
    * measurement's clothes. `listen.ts` also exports `separationForOnsets`,
    * pure arithmetic over written onset times that any code may use — and
    * ADR 0036 says a rhythm exercise's tolerance derives from exactly that
@@ -426,11 +426,31 @@ describe("the home screen's claim about how exercises are answered", () => {
    */
   const CAPTURE_BEARING = ['listen', 'CaptureSource', 'MicrophoneSource', 'RecordedSource', 'framesOf'];
 
-  function exerciseIsWiredToCapture(): boolean {
-    // Shipped files only: capture reached from an exercise's own test says
-    // the chain can be driven, not that a learner's answer travels it.
-    return filesUnder(join(SRC, 'exercises'))
+  /**
+   * Calibration measures the round trip and is not an exercise answering.
+   *
+   * A named exception rather than a directory filter, because an exception
+   * can be read and argued with. The second version of this test scoped
+   * the scan to `exercises/`, which looks tighter and is in fact blind:
+   * the exercise layer deliberately never imports the platform. `AudioOut`
+   * is declared *in* `exercises/types.ts` and the composition root supplies
+   * something satisfying it, which ADR 0029 restated as the rule — so
+   * capture arrives as an `AudioIn` beside it, injected by the screen, and
+   * no file under `exercises/` imports anything from `audio/capture` on
+   * the day a learner can first answer by playing.
+   *
+   * A scope that happens to exclude the likely site is the proxy fault
+   * again. The claim is about the app, so the scan is the app.
+   */
+  const NOT_AN_ANSWER = ['ui/screens/Calibration.tsx'];
+
+  function appIsWiredToCapture(): boolean {
+    // Shipped files only: capture reached from a test shows the chain can
+    // be driven, not that a learner's answer travels it.
+    return filesUnder(SRC)
       .filter((file) => !/\.test\.tsx?$/.test(file))
+      .filter((file) => !relative(SRC, file).split(sep).join('/').startsWith('audio/capture/'))
+      .filter((file) => !NOT_AN_ANSWER.includes(relative(SRC, file).split(sep).join('/')))
       .some((file) => {
         const source = readFileSync(file, 'utf8');
         return [...source.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*'([^']+)'/g)].some(
@@ -480,7 +500,7 @@ describe("the home screen's claim about how exercises are answered", () => {
   it('does not claim playing as a current answer path while no exercise is wired to capture', () => {
     const lede = ledeText(readFileSync(HOME, 'utf8'));
     const claimsPlayingNow = claimsPlayingIsCurrent(lede);
-    const wiredToCapture = exerciseIsWiredToCapture();
+    const wiredToCapture = appIsWiredToCapture();
     expect(
       { claimsPlayingNow, wiredToCapture },
       'home screen claims an answer path no exercise has',
@@ -502,7 +522,7 @@ describe("the home screen's claim about how exercises are answered", () => {
     const lede = ledeText(readFileSync(HOME, 'utf8')).replace(/\s+/g, ' ');
     const disclaims = /\b(being built|not built|not yet|unbuilt|planned|is coming|will be)\b/i.test(lede);
     expect(
-      { disclaims, wiredToCapture: exerciseIsWiredToCapture() },
+      { disclaims, wiredToCapture: appIsWiredToCapture() },
       'an exercise now answers by playing, so the lede may no longer call it unbuilt',
     ).not.toEqual({ disclaims: true, wiredToCapture: true });
   });

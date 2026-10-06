@@ -368,3 +368,45 @@ describe('presenting an interval', () => {
     }
   });
 });
+
+/**
+ * The question carries the choices it was asked against.
+ *
+ * The prompt used to draw its buttons from the live settings while the
+ * answer was fixed at generation, so unticking the interval that happened
+ * to be the answer left a question with no correct choice on screen — and
+ * answering it recorded a wrong attempt against an item the learner was
+ * never asked. ADR 0007: an outcome is a claim that the user was asked.
+ *
+ * Asserted here rather than only in the component, because the invariant
+ * is the generator's: whatever a screen does with `choices`, the answer
+ * has to be in it.
+ */
+describe('the choices a question was asked against', () => {
+  it('always contain its own answer, across the settings space', () => {
+    const pools: number[][] = [
+      [0, 12], [7], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [3, 4, 7], [1, 11],
+    ];
+    for (const semitones of pools) {
+      for (let seed = 0; seed < 60; seed += 1) {
+        const settings = intervalSettingsSchema.coerce({ presentation: 'read', semitones });
+        const exercise = generateInterval({ seed, settings });
+        expect(
+          exercise.choices,
+          `seed ${seed}, pool ${semitones.join()}: the answer is not offered`,
+        ).toContain(exercise.semitones);
+      }
+    }
+  });
+
+  it('is the pool the settings gave, not a wider or narrower one', () => {
+    /*
+      The control. "The answer is among the choices" is satisfied by a
+      `choices` holding every interval there is, which would reopen the
+      defect from the other side — a button for something the settings
+      switched off. Both halves or neither.
+    */
+    const settings = intervalSettingsSchema.coerce({ presentation: 'read', semitones: [0, 12] });
+    expect(generateInterval({ seed: 5, settings }).choices).toEqual([0, 12]);
+  });
+});

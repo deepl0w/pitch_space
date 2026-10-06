@@ -150,10 +150,40 @@ describe('the answers on offer', () => {
   it('offers exactly the intervals the generator was allowed to draw from', () => {
     // Offering one the exercise could not have used is a free elimination;
     // omitting one it could have used takes the right answer off the screen.
+    //
+    // Read off the exercise rather than the live settings, which is the
+    // fix for the pool being narrowed mid-question: the buttons used to
+    // follow the panel while the answer stayed fixed at generation, so
+    // unticking the answer left nothing correct to click and recorded a
+    // wrong attempt for a question nobody was asked.
     const settings: IntervalSettings = { ...INTERVAL_DEFAULTS, semitones: [3, 4, 7] };
-    render(exercise(), { settings });
+    const asked = generateInterval({ seed: 7919, settings });
+    render(asked, { settings });
     expect(choices().map((b) => b.textContent))
       .toEqual([3, 4, 7].map((s) => SIMPLE_INTERVAL_NAMES[s]));
+  });
+
+  it('keeps offering them after the panel is narrowed under it', () => {
+    /*
+      The case the fix exists for. The exercise was generated when the
+      pool still held its answer; the settings handed to the prompt no
+      longer do. The buttons must be the ones the question was asked
+      with, or the learner is shown a question with no correct answer on
+      it — and the attempt that follows is recorded against an item ADR
+      0007 says they were never asked.
+    */
+    const asked = generateInterval({
+      seed: 7919,
+      settings: { ...INTERVAL_DEFAULTS, semitones: [0, 12] },
+    });
+    render(asked, { settings: { ...INTERVAL_DEFAULTS, semitones: [12] } });
+
+    expect(choices().map((b) => b.textContent))
+      .toEqual([0, 12].map((s) => SIMPLE_INTERVAL_NAMES[s]));
+    expect(
+      choices().map((b) => b.textContent),
+      'the answer to this question is not on the screen',
+    ).toContain(SIMPLE_INTERVAL_NAMES[asked.semitones]);
   });
 
   it('is unmarked and live before an answer is given', () => {

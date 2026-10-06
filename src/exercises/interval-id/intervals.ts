@@ -206,6 +206,23 @@ export interface IntervalExercise extends ExerciseBase {
   /** In the order they sound; for a harmonic interval, lower then upper. */
   readonly pitches: readonly [Pitch, Pitch];
   readonly clef: Clef;
+  /**
+   * The intervals this question was asked against, frozen when it was.
+   *
+   * The prompt drew its buttons from the live settings, while the answer
+   * is fixed at generation — so unticking the interval that happened to
+   * be the answer removed its button and left a question with no correct
+   * choice on screen. Answering it recorded a wrong attempt against an
+   * item the learner was never actually asked, which reaches the attempt
+   * log and therefore the schedule.
+   *
+   * This is the rule the attempt already applies to `presentation` —
+   * "the exercise carries how it was actually asked, and the setting may
+   * have been changed since it was generated" — which was true of the
+   * choice list too and had not been generalised. ADR 0007: an outcome is
+   * a claim that the user was asked.
+   */
+  readonly choices: readonly number[];
 }
 
 /**
@@ -304,6 +321,8 @@ export function generateInterval(spec: ExerciseSpec<IntervalSettings>): Interval
     direction,
     pitches: [first, second],
     clef: settings.clef,
+    // The pool the answer was drawn from, so the two cannot come apart.
+    choices: settings.semitones,
     items: [intervalItemId(semitones, direction)],
   };
 }

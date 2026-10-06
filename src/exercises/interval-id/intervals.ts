@@ -322,7 +322,14 @@ export function generateInterval(spec: ExerciseSpec<IntervalSettings>): Interval
     pitches: [first, second],
     clef: settings.clef,
     // The pool the answer was drawn from, so the two cannot come apart.
-    choices: settings.semitones,
+    // Copied, not referenced. The point of carrying the choices is that
+    // the question owns a record of what it was asked against; handing out
+    // the settings' own array makes that record the same object the panel
+    // is editing, and every exercise drawn from those settings shares it.
+    // Nothing mutates it today — `readonly number[]` sees to that inside
+    // this repository — so this is the guarantee being real rather than
+    // true by convention.
+    choices: [...settings.semitones],
     items: [intervalItemId(semitones, direction)],
   };
 }

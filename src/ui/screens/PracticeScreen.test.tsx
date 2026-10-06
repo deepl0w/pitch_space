@@ -496,50 +496,75 @@ describe('narrowing the pool while a question is on screen', () => {
         const text = screen.container.textContent ?? '';
         return {
           answer: text.match(/(?:Yes — |No: that was )([A-Za-z0-9 ]+?)[,(]/)?.[1]?.trim(),
-          recorded: Number(text.match(/\d+ of (\d+) right/)?.[1] ?? 0),
+          /*
+            The session line, not the per-item one. "N of M right" appears
+            once per item in the breakdown, so reading it gives whichever
+            item happens to be listed first — a count that went 1, 1, 2, 2,
+            3, 4, 5, 3 across eight rounds and would have made any
+            assertion about it nonsense.
+          */
+          recorded: Number(text.match(/(\d+) of (\d+) this session/)?.[2] ?? 0),
         };
       },
     };
   }
 
-  it.fails('records no attempt when the answer is no longer among the choices', () => {
+  it('cannot be left with no right answer on screen', () => {
     /*
-      Reproduced on the first round: offered `Unison | Octave`, unticked
-      Unison, pressed the only button left, and got
+      **Inverted rather than deleted**, now that `IntervalExercise` carries
+      the choices it was drawn against.
 
-          No: that was Unison — 0 of 1 right
+      It was written as `it.fails` on the claim that no attempt is recorded
+      for an unoffered answer, and the fix made it green-by-accident: no
+      round can go unanswerable any more, so the control — "at least one
+      round went unanswerable, or nothing above was asserted" — is what
+      fails, and `it.fails` accepts any failure. The case would have gone on
+      reporting as a known defect while testing nothing, and the recorded
+      message beside it is the only thing that would have said so.
 
-      Rounds are generated from a fresh seed, so this walks a few and
-      asserts on the ones that actually went unanswerable, with a control
-      below that at least one did. The assertion is on the count the
-      session reports, which is the attempt log's own reading.
-
-      Checked to fail by assertion rather than by throwing: run as a plain
-      `it` it reports "an attempt was recorded for a question whose answer
-      was not offered".
+      So the walk and the control stay and the claim turns over: unticking
+      the answer mid-question leaves it on screen, and the attempt that
+      follows is the one the learner was actually asked. The storage half is
+      still what is asserted — no attempt against an item that was not
+      offered — because that is what costs a learner something whichever way
+      the stale-display question resolves.
     */
     const screen = twoIntervalRound();
-    let unanswerable = 0;
+    let wouldHaveBeenUnanswerable = 0;
+    let answered = 0;
 
     for (let round = 0; round < 8; round += 1) {
       act(() => { screen.button(round === 0 ? 'Start' : 'Next')?.click(); });
       screen.toggle('Unison');
       const offered = screen.choices();
-      if (offered.length !== 1) { screen.toggle('Unison'); continue; }
 
-      const before = screen.verdict().recorded;
       screen.press(offered[0]);
       const after = screen.verdict();
-      if (after.answer && !offered.includes(after.answer)) {
-        unanswerable += 1;
-        expect(after.recorded,
-          'an attempt was recorded for a question whose answer was not offered')
-          .toBe(before);
-      }
+
+      expect(after.answer, `round ${round}: no verdict was reported`).toBeDefined();
+      expect(offered, `round ${round}: the answer was not among the choices`)
+        .toContain(after.answer);
+      answered += 1;
+      if (after.answer === 'Unison') wouldHaveBeenUnanswerable += 1;
+
       screen.toggle('Unison');
     }
 
-    expect(unanswerable, 'no round went unanswerable, so nothing above was asserted')
+    // Every round reached storage, counted once. Asserted over the whole
+    // walk rather than as an increment per round: the tally is cleared
+    // while a new question is up, so a per-round reading is of the gap
+    // rather than of the log.
+    expect(screen.verdict().recorded, 'the session counted a different number of attempts')
+      .toBe(answered);
+
+    /*
+      The control, and it is the whole case. Unticking an interval the
+      question was not about proves nothing — the rounds that matter are the
+      ones where the answer *is* the interval that was switched off, which
+      is the state that used to leave one wrong button on screen.
+    */
+    expect(wouldHaveBeenUnanswerable,
+      'no round had its own answer unticked, so none of them was the defect')
       .toBeGreaterThan(0);
   });
 });

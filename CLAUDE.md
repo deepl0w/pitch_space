@@ -110,6 +110,14 @@ about to improve the fleet skill from a tester worktree, that is the moment
 the rule is for. `docs/process/` carries the reasoning, because a decision
 recorded only in an unversioned file is not recorded.
 
+**This reaches the fleet's own coordination files, named above, and nothing
+else in `~/.claude/` by the same hazard alone.** `test-engineer` and every
+other skill there are unversioned too, and shared across every project on
+this machine, not just this one — which is exactly why this fleet has no
+standing to claim one. A project's protocol can own how its own agents
+coordinate; it cannot extend that to a skill other projects' sessions also
+write to, sight unseen. Asked and settled 6 October rather than guessed at.
+
 **`docs/findings/` and `docs/process/` are written but never committed.**
 The repository is public, and the user asked that the fleet's internal
 writing stay out of it; `.gitignore` enforces that, so an agent cannot

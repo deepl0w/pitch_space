@@ -29,9 +29,19 @@ export function Home({ go }: { go: (route: string) => void }) {
         >
           <CogIcon />
         </button>
+        {/*
+          The second sentence says what is not here yet, and it stays until
+          it is. This line claimed the app was answered by playing while
+          every built exercise was answered by clicking a button or tapping
+          a key — the brief's promise written as though delivered, in the
+          loudest copy on the home screen. The exercise cards were honest
+          throughout and only this was not, which is how it survived: the
+          claim lived one level above everything that could contradict it.
+        */}
         <p className="lede">
           Exercises generated on the spot, following real patterns rather than
-          random notes, and answered by playing them.
+          random notes. For now you answer by naming what you hear or tapping
+          what you read; answering by playing is being built.
         </p>
       </header>
 

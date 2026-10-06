@@ -14,7 +14,10 @@ import {
 export const keyIdentification = defineExercise<KeySettings, KeyExercise, KeyResponse>({
   id: KEY_EXERCISE_ID,
   name: 'Key identification',
-  description: 'Name the key — from its signature, or from the notes.',
+  // Signature only. The notes-without-signature mode went with the by-ear
+  // one; this line outlived both and was still offering a question the
+  // exercise cannot ask, which the user role confirmed over 19 starts.
+  description: 'Read a key signature and name the key it belongs to.',
   // Reading only. An ear mode was offered and removed: naming a key from a
   // cadence with no reference pitch is absolute pitch, which most
   // musicians do not have and cannot train. See ADR 0028.

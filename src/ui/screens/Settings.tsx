@@ -95,7 +95,7 @@ export function Settings({ go }: { go(route: string): void }) {
             two cards and read as belonging to neither. */}
         <div className="actions">
           <button type="button" onClick={() => go('calibration')}>
-            Measure the delay
+            Measure it
           </button>
         </div>
       </Panel>

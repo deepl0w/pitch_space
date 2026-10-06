@@ -60,3 +60,7 @@ docs/process/
 # for every role.
 .claude/stats.jsonl
 .claude/.stats_clock
+
+# Fetched recordings for the capture tests. See tools/fetch-test-audio.sh —
+# they are 4-6 MiB each and are a build-time input, never shipped.
+fixtures/

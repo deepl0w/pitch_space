@@ -544,10 +544,22 @@ describe('a perfect performance, played and heard', () => {
       the detector, and the count-in's own stated reason — a shared
       downbeat — is the whole of why it is there.
 
-      What is left is a property of the detector worth pinning on its own:
-      **it cannot find an attack at the very start of its buffer.** That
-      binds anyone who trims or aligns a take to its first note, which is a
-      natural thing to do and would silently cost that note.
+      **The property was already written down, and correctly.**
+      `onsetDetector.test.ts` has `cannot find an attack that fell before
+      the first frame, and says so by silence`, whose comment reaches the
+      conclusion this case had to be corrected into: "Real capture is
+      running before anyone plays, so the case the detector cannot do is
+      one the app does not produce." I went past it and built a finding
+      that contradicted it. The correction was in the repository before
+      the error was.
+
+      So this does not restate the property; that is asserted where it
+      belongs, on the detector, over a signal with nothing else in it.
+      What this adds is the consequence one layer up — a take trimmed to
+      its first note is graded short — because trimming is a natural thing
+      for whoever wires capture to do, and the cost lands on the grade
+      rather than on the onset list where the detector's own case leaves
+      it.
     */
     const sample = exercises(96, 6);
     const trimmed = sample

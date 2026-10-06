@@ -257,10 +257,11 @@ describe('an item the settings cannot currently ask', () => {
       due while the settings allow triads only — and if `due` quietly
       folded in reachability there would be no way to say it.
     */
-    const seen = new Map([['b|read', { seen: 3, correct: 3, lastSeenAt: 0, streak: 1 }]]);
+    const seen = new Map([[tallyKey('b', 'read'), { seen: 3, correct: 3, lastSeenAt: 0, streak: 1 }]]);
     const [unreachable] = schedule(['b'], seen, 'read', NOW, new Set<string>());
 
     expect(unreachable.reachable).toBe(false);
+    expect(unreachable.tally, 'the history must actually attach').not.toBeNull();
     expect(unreachable.due, 'dueness is about history, not about settings').toBe(true);
   });
 

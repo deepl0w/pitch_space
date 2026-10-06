@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { optionIds } from '../testing/settingsSpace';
+import { optionIds, widestSettings } from '../testing/settingsSpace';
 import { EXERCISE_FAMILIES, EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
 import { itemLabel } from './itemLabel';
 import { SCALE_TYPES } from '../theory/scale';
@@ -93,6 +93,79 @@ describe('every exercise type’s settings', () => {
         const once = d.settings.coerce(stored);
         expect(d.settings.coerce(JSON.parse(JSON.stringify(once)))).toEqual(once);
       }
+    });
+  });
+
+  /**
+   * A document with history in it, which is what a real user has.
+   *
+   * `RUBBISH` above asks whether nonsense survives and the idempotence case
+   * asks whether a round trip is stable. Neither asks the question a
+   * returning user poses: a document written by an older build, carrying
+   * settings they chose, beside keys this build has never heard of — the
+   * grade dial 0027 removed, a field a newer release added, a spelling that
+   * changed. Everything else here tests defaults or a document this build
+   * wrote, and a user's storage is neither.
+   */
+  describe('a stored document from another release', () => {
+    /** Every field moved off its default, so there is something to lose. */
+    const configured = (d: AnyExerciseDefinition) =>
+      widestSettings(d) as Record<string, unknown>;
+
+    it('is worth asking, because coerce does not simply return what it was given', () => {
+      // The control. If coerce were the identity function every case below
+      // would pass and none of them would mean anything.
+      each((d) => {
+        // A string, so nothing throws on the way to being rejected, and one
+        // no field could legitimately hold: not an option id, not a number,
+        // not a list, not a boolean.
+        const wrecked = Object.fromEntries(
+          Object.keys(configured(d)).map((key) => [key, 'not-a-value']),
+        );
+        expect(d.settings.coerce(wrecked), `${d.id} returned its input`).not.toEqual(wrecked);
+      });
+    });
+
+    it('keeps every setting the user chose, whatever else is in the file', () => {
+      each((d) => {
+        const chosen = configured(d);
+        const back = d.settings.coerce({
+          ...chosen,
+          // Three shapes of key this build does not have: one withdrawn
+          // (0027's grade dial), one renamed, one from a future release.
+          grade: 7,
+          presentationMode: 'listen',
+          somethingLater: { nested: true },
+        }) as Record<string, unknown>;
+        for (const key of Object.keys(chosen)) {
+          expect(back[key], `${d.id}.${key} did not survive the unknown keys`)
+            .toEqual(chosen[key]);
+        }
+      });
+    });
+
+    it('keeps the one field a document written before the others has', () => {
+      /*
+        The other half, and the commoner one: an old document is not a new
+        document plus junk, it is a new document minus most of it. Asked a
+        field at a time so a failure names the field rather than the
+        exercise.
+
+        Unknown keys *inside* an exercise's settings are dropped, where
+        `coerceSettings` keeps an unknown *exercise* whole — see
+        `schema.test.ts`. The asymmetry is deliberate on the document side
+        and worth knowing on this one: a field added by a newer build does
+        not survive an older build touching that exercise, which is the
+        thing the document-level comment's own reasoning argues against.
+      */
+      each((d) => {
+        const chosen = configured(d);
+        for (const key of Object.keys(chosen)) {
+          const back = d.settings.coerce({ [key]: chosen[key] }) as Record<string, unknown>;
+          expect(back[key], `${d.id}.${key} was dropped when it stood alone`)
+            .toEqual(chosen[key]);
+        }
+      });
     });
   });
 

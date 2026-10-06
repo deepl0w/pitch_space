@@ -2,8 +2,9 @@
 
 A catalogue of findings this project got wrong in one particular way: the
 measurement was true and the conclusion drawn from it was about the
-measuring rather than about the thing measured — and, in the last section, the
-reverse: a true finding killed by a check that could not fail.
+measuring rather than about the thing measured — and the reverse, a true
+finding nearly killed, which turns out to be the costlier direction and the one
+a catalogue of surviving errors is least likely to collect.
 
 The rule is the fifth convention in
 [`docs/adr/README.md`](adr/README.md); this is the evidence for it and the
@@ -136,23 +137,52 @@ reach, so two agreeing clean-profile readings are weaker evidence than their
 agreement feels, and both readers are looking from the only angle that cannot
 see it.
 
-**The entry here is a counter-example rather than a failure**, which this
-document is otherwise short of. A clef finding was reported from a profile with
-hours of accumulated settings and could not be reproduced on a fresh one, by
-two people independently. Rather than closing it, the second reader named what
-their instrument could not reach and eliminated it by a different route:
-settings are at v3, both migration steps only add a key — `audio` at 1→2,
-`appearance` at 2→3 — and `exercises` passes through untouched with unknown
-keys deliberately preserved, so no stored document can arrive carrying a
-corrupted clef. What remained was transient in-session state, the profile was
-gone, and the question was left open rather than closed.
+**The worst case in this document is here, and it is a true finding nearly
+killed by four people agreeing.** An earlier version of this section recorded
+the clef case as a counter-example — a question left open rather than closed,
+with no true finding lost. That was written while the finding was still
+believed false. **The defect is real:**
 
-The author withdrew the finding on their own re-measurement, so **no true
-finding was lost here**. The point is the step that was taken before the
-agreement was trusted: the range was stated, and what fell outside it was
-checked another way.
+```
+after Start with Bass          chip=Bass    drawn=bass
+clicked Treble mid-question    chip=Treble  drawn=bass
+clicked Tenor  mid-question    chip=Tenor   drawn=bass
+after Skip to the next         chip=Tenor   drawn=C clef
+```
 
-**A second instance, and it is the stronger one.** A bounded replay of the
+Changing a setting while a question is on screen updates the control and not
+the rendered exercise. **The disconfirming measurement was the faulty one.**
+The clean-room check clicked the clef and *then* Start, every time — the one
+ordering that always regenerates — so it was measuring "settings applied before
+generation" and the defect lives entirely outside that. Four correct clefs,
+reported as the control working.
+
+That is worse than an instrument whose range is known and unstated, which is
+what the rest of this document is about. **Here the range was not known to
+exist.** Nobody could have named this limit, because naming it requires
+suspecting the ordering that produced it.
+
+It nearly cost the finding twice. The author offered a retraction and it was
+nearly taken. Then an unrelated lapse in their report — a characterisation
+written where an attribute value belonged — was used to discount a *saved
+screenshot of a rendered glyph*. Different evidence, different reliability,
+collapsed into one judgement because the tidier conclusion required nothing
+further from anyone. The author declined to let it stand, and declined equally
+to let the lapse be redemption for the screenshot.
+
+**What saved it was the artefact.** The profile was gone and the account partly
+reconstructed; the PNG was still on disk and still showed a bass clef under a
+lit Treble chip. Everything inferential pointed at closure, and the one thing
+that could not be reasoned with was right. That is the whole argument for
+keeping a rendering rather than a description of one.
+
+The elimination done alongside it still stands and is still the right instinct:
+settings are at v3, both migration steps only add a key, and `exercises` passes
+through untouched, so no stored document can deliver a corrupted clef. It was
+sound, and it was not enough — eliminating what an instrument cannot reach does
+not help when you do not know which direction it cannot reach in.
+
+**A counter-example, from a different attempt on the same question.** A bounded replay of the
 accumulated churn also failed to reproduce the clef observation — and the
 person who ran it volunteered, unprompted, that one step had silently not
 executed: a lookup bug meant the theme clicks never landed. So the honest
@@ -211,14 +241,29 @@ second emptiness on the first: it compared staves carrying a note, and C4 sits
 at a different height per clef, so the drawings differed for the note's sake
 and the clef was never under test.
 
-**What the pair gives, and it is the useful part:**
+**What the pair gives, and it is the useful part.** The first statement of it
+was about assertions: an assertion of *difference* is the dangerous one,
+because difference is the default — two things are unequal until something
+forces them equal, so `not.toBe` passes by accident where `toBe` fails by
+accident. True, and it met its own inverse within a day, when the merge
+decided by [0038](adr/0038-preserve-unknown-settings-at-the-store-not-at-the-coercer.md)
+was pinned by asserting a clef was still `bass` after the write — and the
+stored blob said `bass` too, so both sides of the merge agreed, which one won
+was untestable, and reversing the spread passed. An assertion of *sameness*,
+true for the wrong reason.
 
-> An assertion of *difference* is the dangerous one, because difference is the
-> default: two things are unequal until something forces them equal, so
-> `not.toBe` passes by accident where `toBe` fails by accident. The control
-> for a difference claim is the sameness claim next to it — here, that one
-> clef drawn twice comes back the same, without which a difference is evidence
-> of nothing.
+So the rule is not about the assertion, and the author of both says it better
+as a rule about what you assert over:
+
+> A fixture whose two sides agree makes the operator under test invisible.
+
+That covers both: a difference claim over two things that differ for an
+unrelated reason, and a sameness claim over two inputs that were already the
+same. **The inputs have to differ in the dimension the operator acts on**, or
+the operator is not under test whatever the assertion says. Stale-wins is the
+live hazard it catches — the user changes a setting, the panel writes it, the
+old value comes straight back — and only a value that differs can show a merge
+has a direction.
 
 And the general form, which is why it belongs here rather than in a testing
 note: **a broken instrument reads as absence, and absence is

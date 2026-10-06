@@ -383,3 +383,58 @@ describe('the conventions the ADR index carries', () => {
     expect(index).toContain('against the code, not against the record that made it');
   });
 });
+
+/**
+ * The home screen's claim about what is not built yet, tied to the thing
+ * that makes it false.
+ *
+ * The lede said the app was "answered by playing them" for as long as every
+ * built exercise was answered by clicking a button. Each exercise card was
+ * checked against its own exercise and was honest; nothing checked the
+ * sentence summarising all six, which is the ADR index's sixth convention —
+ * a summary sits above every check that could contradict it.
+ *
+ * The correction replaced one unfalsifiable claim with another and a worse
+ * kind. "Answering by playing is being built" is a claim of *absence*, and
+ * building the thing does not prompt anyone to delete the sentence saying it
+ * is unbuilt: there is no reader who opens the file and sees it is wrong. The
+ * index names that asymmetry and says the remedy is a mechanism rather than
+ * vigilance, so this is the mechanism.
+ *
+ * The condition is mechanical rather than a judgement about what "answered by
+ * playing" means: an exercise is answered by playing when its code reads the
+ * capture layer. Nothing under `exercises/` does today. The day one does,
+ * this goes red and names the sentence to change — which is the only moment
+ * anyone would otherwise have had no reason to look.
+ */
+describe('what the home screen says is not built', () => {
+  const PLANNED = 'answering by playing is being built';
+
+  it('stops claiming playing is unbuilt once an exercise reads the mic', () => {
+    const wired = filesUnder(join(SRC, 'exercises'))
+      // A test may read the capture layer without the exercise doing so,
+      // and `rhythm-id/heard.test.ts` does — it asks whether the detector
+      // hears the rhythm the generator wrote, which is the groundwork for
+      // wiring and not the wiring. Counting it would have made this fire
+      // on the day someone proved the chain works rather than the day a
+      // user could use it.
+      .filter((file) => !/\.test\.tsx?$/.test(file))
+      .filter((file) => /from\s+'[^']*audio\/capture/.test(readFileSync(file, 'utf8')));
+    const home = readFileSync(join(SRC, 'ui', 'screens', 'Home.tsx'), 'utf8').replace(/\s+/g, ' ');
+    const claimsUnbuilt = home.includes(PLANNED);
+
+    if (wired.length === 0) {
+      expect(
+        claimsUnbuilt,
+        `No exercise reads the capture layer, so the home lede has to say so. Expected it to contain "${PLANNED}".`,
+      ).toBe(true);
+    } else {
+      expect(
+        claimsUnbuilt,
+        `These now read the capture layer, so the home lede may no longer say playing is unbuilt:\n  ${wired
+          .map((f) => relative(SRC, f))
+          .join('\n  ')}\nRemove "${PLANNED}" from src/ui/screens/Home.tsx and say what is true instead.`,
+      ).toBe(false);
+    }
+  });
+});

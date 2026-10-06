@@ -266,7 +266,7 @@ grade; rhythm's pool becomes curated with generation surviving as untracked
 practice; export is defined by this shape.
 
 **No longer blocking — settled by
-[0039](adr/0039-a-progression-line-is-the-item-set-its-settings-make-askable.md):**
+[0039](adr/0039-a-line-is-an-exercise-and-the-items-its-settings-make-askable.md):**
 a line is `(exercise, the item set its settings make askable, presentation)`,
 and a setting is part of the identity **if and only if it changes
 `items(settings)`**. `tallyKey` is open to work on. Clef, range, tonic and

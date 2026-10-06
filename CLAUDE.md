@@ -256,6 +256,27 @@ which used `git commit` directly. This does, regardless of shape, at the
 cost of the full suite's time on every commit — `fleet.sh check` by hand is
 still worth running first, to see the detail rather than just the verdict.
 
+**`git merge` gets the same gate, separately, because `pre-commit` does not
+fire for it at all.** Found within the hour: main's traffic is almost
+entirely merges, one direct commit to roughly twenty merges in a day, so
+the commit-only gate caught the rare case and missed the common one. A
+`pre-merge-commit` hook — a real, documented git hook for exactly this,
+confirmed rather than assumed — now covers `fleet.sh integrate` and any
+plain `git merge` the same way. `git push` has a third hook, `pre-push`,
+for the same reason — only main pushes, and the same agent demonstrated
+twice that a manual `check | <filter> && push` can discard the check's
+exit status regardless of which filter. Three hooks, each named for the
+one git operation it watches, rather than one check trusted to sit
+upstream of all three.
+
+**`fleet.sh brief` also checks the shared engine's own health, every
+session start.** `~/.claude/scripts/fleet.sh` is unversioned and actively
+executed by whoever is running at the time — editing it non-atomically can
+produce a torn read, or strip its executable bit, silently, hours before
+anyone notices a hook stopped firing. Caught twice in one day, by the
+people it happened *to* rather than the edit that caused it. A loud warning
+now, not a quiet failure later.
+
 The hazard worth repeating from the skill, because it has bitten here:
 `node_modules` is git-ignored, so a fresh worktree cannot run a single npm
 script until `sync` has installed it, and after a merge that moved

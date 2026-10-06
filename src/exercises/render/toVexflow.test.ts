@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { drawScore, type ScoreSpec } from './toVexflow';
+import { drawScore, type Clef, type ScoreSpec } from './toVexflow';
+import { EXERCISE_TYPES } from '../registry';
+import { optionIds, type AnyField } from '../../testing/settingsSpace';
 import { ALL_KEYS, type Key, findKey, keyName } from '../../theory/key';
 import { CHORD_TYPES, chord, spellChord } from '../../theory/chord';
 import { SCALE_TYPES, spellScale } from '../../theory/scale';
@@ -381,5 +383,97 @@ describe('where the engraver says it put the notes', () => {
     const layout = layoutOf(spec);
     expect(layout.notes).toHaveLength(spec.notes.length);
     expect(layout.notes.map((n) => n.index)).toEqual([0, 1, 2, 3]);
+  });
+});
+
+/**
+ * Every clef the app offers, drawn — two of which never had been.
+ *
+ * This file drew in treble and bass. The settings panel offers four, and
+ * `REST_KEY` carries a hand-written rest position for each, so `alto: 'c/4'`
+ * and `tenor: 'a/3'` were two values nothing had engraved.
+ *
+ * **Alto and tenor are the pair where that matters.** They are the same
+ * SMuFL glyph — the C clef, E05C — distinguished only by where it sits on
+ * the staff, so a renderer that confused them would draw something that
+ * looks like a clef, on a staff that looks right, and be wrong about every
+ * pitch under it. A test that identified a clef by its codepoint could not
+ * tell them apart at all; this compares what was drawn instead.
+ *
+ * The list comes from the exercises rather than from here, so a fifth clef
+ * offered tomorrow is drawn tomorrow.
+ */
+describe('every clef a user can choose', () => {
+  /** The clefs the settings panel actually offers, across every exercise. */
+  function offered(): string[] {
+    const found = new Set<string>();
+    for (const type of EXERCISE_TYPES) {
+      for (const field of type.settings.fields as AnyField[]) {
+        if (!/clef/i.test(field.id)) continue;
+        for (const id of field.kind === 'choice'
+          ? field.options.map((o) => o.id)
+          : optionIds(field, type.settings.defaults)) found.add(id);
+      }
+    }
+    return [...found].sort();
+  }
+
+  const svgFor = (clef: Clef, withRest: boolean) => draw({
+    clef,
+    key: findKey('C_major'),
+    notes: withRest
+      ? [{ pitches: [], value: QUARTER }, { pitches: [parsePitch('C4')], value: QUARTER }]
+      : [{ pitches: [parsePitch('C4')], value: QUARTER }],
+  }).outerHTML;
+
+  /**
+   * An empty stave, with VexFlow's own element ids taken out.
+   *
+   * Two things had to be fixed before a comparison of drawings meant
+   * anything, and the second is why the first was not enough.
+   *
+   * The stave is empty because otherwise the clef is not the only
+   * variable: C4 sits at a different height in each clef, so two drawings
+   * carrying a note differ for the note's sake whatever the clef does, and
+   * a tenor drawn as an alto survives the comparison.
+   *
+   * And **VexFlow numbers its groups `vf-autoNNNN` from a counter that
+   * never resets**, so two renders of the *same* clef are never byte
+   * identical either. Every `not.toBe` between two of these is otherwise
+   * true for any pair of anything, which is what the first version of this
+   * was: it passed with tenor drawn as alto, and it passed because it could
+   * not fail.
+   */
+  const stripIds = (svg: string) => svg.replace(/vf-auto\d+/g, 'vf-auto');
+  const emptyStave = (clef: Clef) =>
+    stripIds(draw({ clef, key: findKey('C_major'), notes: [] }).outerHTML);
+
+  it('is more than the two this file used to draw', () => {
+    // The guard on the sweep below: a clef list that shrank to treble and
+    // bass would make it pass by covering what was already covered.
+    expect(offered()).toEqual(['alto', 'bass', 'tenor', 'treble']);
+  });
+
+  it('engraves a note and a rest without refusing', () => {
+    // `REST_KEY` is per clef and two of its four entries had never been
+    // read. A missing one is `undefined` reaching VexFlow's key parser.
+    for (const clef of offered() as Clef[]) {
+      for (const withRest of [false, true]) {
+        expect(() => svgFor(clef, withRest), `${clef}, rest: ${withRest}`).not.toThrow();
+      }
+    }
+  });
+
+  it('draws the two C clefs differently, which is the whole of what tells them apart', () => {
+    // The control first, and it is the whole of why the rest means
+    // anything: the same clef drawn twice has to come back the same, or a
+    // difference is evidence of nothing.
+    expect(emptyStave('alto'), 'two drawings of one clef differ, so nothing below holds')
+      .toBe(emptyStave('alto'));
+
+    expect(emptyStave('alto'), 'alto and tenor are drawn identically')
+      .not.toBe(emptyStave('tenor'));
+    expect(emptyStave('treble'), 'treble and bass are drawn identically')
+      .not.toBe(emptyStave('bass'));
   });
 });

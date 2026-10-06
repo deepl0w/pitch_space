@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createSettingsStore } from './settingsStore';
 import { memorySlot, type Slot } from './persistence';
 import { versioned, type Versioned } from './migrate';
+import { EXERCISE_TYPES, findExerciseType } from '../exercises/registry';
 import {
   APPEARANCE_DEFAULTS, SETTINGS_DEFAULTS, SETTINGS_SCHEMA, UNCALIBRATED, type SettingsDoc,
 } from './schema';
@@ -164,5 +165,94 @@ describe('resetting', () => {
     store.getState().reset();
     store.getState().doc.exercises['interval-id'] = { difficulty: 1 };
     expect(SETTINGS_DEFAULTS.exercises).toEqual({});
+  });
+});
+
+/**
+ * A document with years on it, read the way the screen reads one.
+ *
+ * The migration cases in `schema.test.ts` stop at the document and the
+ * coercion cases in `registry.test.ts` start from a blob. Between them is
+ * the trip a returning user actually makes — storage, migration, the
+ * document, then each exercise's own `coerce` — and **neither half was ever
+ * checked against the other's output**, which is the same gap the rhythm
+ * chain had.
+ *
+ * The fixture is what a real profile looks like rather than what a test
+ * usually builds: written at version 1, carrying settings from builds that
+ * had a grade dial, an exercise this release does not ship, and a
+ * `lastExercise` pointing at it.
+ */
+describe('a settings document with history in it', () => {
+  /** The oldest schema this app has, with a user's accumulated choices in it. */
+  const aged = versioned(1, {
+    exercises: {
+      // 0027 removed the grade dial; a document written before that still
+      // has one, beside choices this build does understand.
+      'interval-id': { grade: 7, clef: 'bass', directions: ['up'] },
+      'rhythm-id': { difficulty: 4, tempo: 132, bars: 2 },
+      // An exercise this release does not have. `coerceSettings` promises
+      // to keep it, because dropping it wipes the settings of anyone who
+      // runs an older build afterwards.
+      'not-yet-written': { whatever: [1, 2, 3] },
+    },
+    lastExercise: 'not-yet-written',
+  });
+
+  it('is readable, and migrated once rather than on every load', () => {
+    const slot = countingSlot(aged);
+    const store = createSettingsStore(slot);
+    expect(store.getState().persisting).toBe(true);
+    expect(slot.writes).toHaveLength(1);
+    expect(slot.writes[0].v).toBe(SETTINGS_SCHEMA);
+  });
+
+  it('keeps the settings of an exercise this build does not have', () => {
+    const store = createSettingsStore(countingSlot(aged));
+    expect(store.getState().doc.exercises['not-yet-written'])
+      .toEqual({ whatever: [1, 2, 3] });
+  });
+
+  it('gives every exercise something it can generate from', () => {
+    /*
+      The join, travelled rather than assumed. `PracticeScreen` reads
+      `doc.exercises[id]` and hands it straight to the definition's
+      `coerce`; this does the same and then generates, because settings
+      that coerce and cannot generate are settings that break the screen
+      rather than the store.
+    */
+    const store = createSettingsStore(countingSlot(aged));
+    const stored = store.getState().doc.exercises;
+    for (const definition of EXERCISE_TYPES) {
+      const settings = definition.settings.coerce(stored[definition.id]);
+      expect(() => definition.generate({ seed: 7919, settings }), definition.id).not.toThrow();
+      expect(definition.items(settings).length, `${definition.id} can ask nothing`)
+        .toBeGreaterThan(0);
+    }
+  });
+
+  it('carries the choices that outlived the build that wrote them', () => {
+    /*
+      The half that matters to the user: the obsolete keys are dropped and
+      the choices beside them are not. A document that arrives readable and
+      silently reset is the failure this whole trip is about, and it looks
+      identical to a document that arrived fine.
+    */
+    const store = createSettingsStore(countingSlot(aged));
+    const stored = store.getState().doc.exercises;
+
+    const intervals = findExerciseType('interval-id')!;
+    expect((intervals.settings.coerce(stored['interval-id']) as { clef: string }).clef)
+      .toBe('bass');
+
+    const rhythm = findExerciseType('rhythm-id')!;
+    const settings = rhythm.settings.coerce(stored['rhythm-id']) as
+      { tempo: number; bars: number };
+    expect(settings.tempo).toBe(132);
+    expect(settings.bars).toBe(2);
+
+    // The control: these are not the defaults, so surviving is a claim.
+    expect((intervals.settings.defaults as { clef: string }).clef).not.toBe('bass');
+    expect((rhythm.settings.defaults as { tempo: number }).tempo).not.toBe(132);
   });
 });

@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { makeRng } from '../theory/rng';
-import { timeSignature } from '../theory/meter';
+import { noteValue, timeSignature } from '../theory/meter';
 import { ALL_KEYS, findKey } from '../theory/key';
 import { midiOf } from '../theory/pitch';
 import { baseOf } from './motif';
-import { generatePassage } from './passage';
+import { generatePassage, slotsOf } from './passage';
+import type { RhythmBar, RhythmEvent } from './rhythm';
+
 
 /**
  * What joining the three layers owes, beyond what each owes alone.
@@ -34,6 +36,7 @@ describe('a generated passage', () => {
       the rhythm is right, the melody is right, and they disagree about
       how many notes there are.
     */
+    let restsSeen = 0;
     for (let seed = 0; seed < 40; seed += 1) {
       const p = generatePassage(makeRng(seed), base);
       /*
@@ -50,11 +53,61 @@ describe('a generated passage', () => {
       for (const [i, note] of p.melody.entries()) {
         expect(note.startTick, `seed ${seed} note ${i}`).toBe(attacks[i].startTick);
       }
-      // And a rest is genuinely present to be excluded, or the filter
-      // above is asserting nothing over this seed's music.
-      const rests = p.bars.flatMap((bar) => bar.events).filter((e) => e.isRest).length;
-      if (seed === 0) expect(attacks.length).toBeLessThan(attacks.length + rests + 1);
+      restsSeen += p.bars.flatMap((bar) => bar.events).filter((e) => e.isRest).length;
     }
+    /*
+      Rests have to be there to be excluded, or the filter above is
+      agreeing with the melody about music that never tested it. 36 of
+      these 40 seeds write at least one; the one this replaces compared
+      `attacks.length` with `attacks.length + rests + 1`, which is true
+      whenever `rests` is not negative.
+    */
+    expect(restsSeen, 'no rest in forty passages, so nothing was excluded')
+      .toBeGreaterThan(0);
+  });
+
+  it('leaves out a note tied from the one before it, which nothing generates', () => {
+    /*
+      **The other half of the join, and the generator cannot currently
+      exercise it.** `tiedFromPrevious` is written `false` at the only place
+      a `RhythmEvent` is constructed and is set true nowhere in the
+      repository, so no passage at any seed contains a tie. Removing the
+      clause from `slotsOf` leaves the whole suite green.
+
+      That makes it the same situation as `Aiming`'s empty middle in ADR
+      0032 — a branch with no members, which is a line the generator has
+      not crossed rather than a thing that cannot happen, the field and
+      `tiedToNext` being there for the rhythm writer that will. So the
+      clause is held against a stand-in rather than left to be verified by
+      music that does not exist, and the comment on `slotsOf` can go on
+      describing it as the off-by-one this join exists to get right.
+
+      Built by hand on purpose. A plan assembled here cannot drift with the
+      generator, which is the point: what is under test is `slotsOf`'s rule,
+      not today's rhythms.
+    */
+    const event = (startTick: number, over: Partial<RhythmEvent> = {}): RhythmEvent => ({
+      startTick, durationTicks: 480, value: noteValue('q'), isRest: false,
+      tiedFromPrevious: false, tiedToNext: false, ...over,
+    });
+    const bar: RhythmBar = {
+      index: 0,
+      startTick: 0,
+      ticks: 1920,
+      events: [
+        event(0),
+        event(480, { isRest: true }),
+        event(960, { tiedToNext: true }),
+        event(1440, { tiedFromPrevious: true }),
+      ],
+      cellIds: [],
+    };
+    const slots = slotsOf({ form: ['A'], motifs: {}, bars: [bar], shape: [] });
+
+    // Two sounds in four written events: one plain note, and one held
+    // across the tie. The rest is not a slot and neither is the
+    // continuation.
+    expect(slots.map((slot) => slot.startTick)).toEqual([0, 960]);
   });
 
   it('keeps a restatement recognisable after the melody is fitted to it', () => {
@@ -68,16 +121,27 @@ describe('a generated passage', () => {
       of one idea need not share intervals — but they must share their
       attacks, or the idea is not restated at all.
     */
+    let restatements = 0;
     for (let seed = 0; seed < 40; seed += 1) {
       const p = generatePassage(makeRng(seed), base);
       const byLabel = new Map<string, number[]>();
       for (const [i, label] of p.motifs.form.entries()) {
         const ticks = p.bars[i].events.map((e) => e.startTick - p.bars[i].startTick);
         const first = byLabel.get(baseOf(label));
-        if (first) expect(ticks, `seed ${seed} bar ${i} (${label})`).toEqual(first);
-        else byLabel.set(baseOf(label), ticks);
+        if (first) {
+          expect(ticks, `seed ${seed} bar ${i} (${label})`).toEqual(first);
+          restatements += 1;
+        } else byLabel.set(baseOf(label), ticks);
       }
     }
+    /*
+      A form of four distinct labels would assert nothing here, and the
+      loop cannot tell the difference between "every restatement held" and
+      "there were none". Measured: these forty passages contain eighty
+      restated bars, every form being A A' B A''.
+    */
+    expect(restatements, 'no bar restated any other, so nothing was compared')
+      .toBeGreaterThan(0);
   });
 
   it('stays inside the range it was given', () => {

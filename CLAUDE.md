@@ -262,7 +262,12 @@ entirely merges, one direct commit to roughly twenty merges in a day, so
 the commit-only gate caught the rare case and missed the common one. A
 `pre-merge-commit` hook — a real, documented git hook for exactly this,
 confirmed rather than assumed — now covers `fleet.sh integrate` and any
-plain `git merge` the same way.
+plain `git merge` the same way. `git push` has a third hook, `pre-push`,
+for the same reason — only main pushes, and the same agent demonstrated
+twice that a manual `check | <filter> && push` can discard the check's
+exit status regardless of which filter. Three hooks, each named for the
+one git operation it watches, rather than one check trusted to sit
+upstream of all three.
 
 The hazard worth repeating from the skill, because it has bitten here:
 `node_modules` is git-ignored, so a fresh worktree cannot run a single npm

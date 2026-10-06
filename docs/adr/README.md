@@ -70,6 +70,24 @@ against `HEAD` rather than against the files that can change it, and once
 counting test files that are never bundled. Each was narrowed after it had
 already taught someone to skim past it.
 
+**The same scoping error also runs the other way, and that half is silent.** A
+guard scoped too narrowly does not become noisy; it becomes blind, and it still
+reads as a guard. `passage.ts` derives three rng streams from the caller's, and
+a draw inserted *above* the derivations silently re-seeds every layer — ADR
+[0002](0002-generation-is-reproducible-from-its-seed.md)'s promise broken while
+its letter holds, because every existing check passes. The first guard written
+for it pinned the seeds `deriveStreams` returns, **which is the callee when the
+hazard is in the caller**: the inserted draw survived it. The second rebuilt
+each layer from the stream it should have been handed, which catches that and
+survives the three streams being permuted, because the rebuild asks for them by
+name and permutes with them. Both are in, each documented as catching what the
+other cannot.
+
+So the question to ask of a guard is not only "does it fire on things it should
+ignore" but **"is the thing it watches the thing that can change"** — and the
+second has no symptom until the day it matters. Only running the mutant tells
+you, which is why a guard nobody has watched fail is a guard nobody knows works.
+
 **Before deleting a test as a tautology, ask: can this fail for some input in
 its domain, or only for inputs the present system cannot construct?** The first
 is a corner worth covering. The second is a tautology wearing a corner's

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Synth, type Voice } from './synth';
+import { DEVICE_OPEN_SECONDS, Synth, type Voice } from './synth';
 import {
   advanceAudioClock, audioClock, audioClosed, contextCount, gains, installAudioContext,
   attackTimes, masterGain, oscillators, resetAudio, soundingAfter, suspendUntilResumed,
@@ -421,5 +421,56 @@ describe('the first play, before the audio clock has started', () => {
     const second = oscillators()[0].startedAt!;
     expect(second - audioClock()).toBeLessThan(first);
     expect(second - audioClock()).toBeCloseTo(0.06, 5);
+  });
+});
+
+/**
+ * The figure the cold-start headroom is for, asserted as behaviour.
+ *
+ * The cases above pin a bound — the first attack must land past the 60 ms
+ * that was losing it — which is right, and which **nothing would fail if
+ * the headroom were too small for a real device.** 0.25 came from a comment
+ * claiming 200 ms to open a device is unremarkable, and that claim was
+ * prose in two places and a number in a third with nothing relating them.
+ *
+ * It is now `DEVICE_OPEN_SECONDS` with the headroom derived from it, so the
+ * quantity that a measurement on slower hardware would revise is the one
+ * that gets revised. These ask the question behaviourally rather than
+ * arithmetically: a device that takes the whole budget to open must still
+ * find the first note ahead of it.
+ */
+describe('a device that takes the full budget to open', () => {
+  it('has not missed the first attack by the time it is ready', () => {
+    /*
+      The clock at zero is the device still opening. Advancing it by the
+      budget is that device finishing — and the first attack has to be
+      still in the future at that moment, or the sample it needed was
+      never played.
+
+      Asserted against `DEVICE_OPEN_SECONDS` rather than against 0.25, so
+      raising the budget for slower hardware fails here unless the
+      headroom follows it. That is the coupling the three copies of this
+      figure did not have.
+    */
+    expect(audioClock()).toBe(0);
+    synth.play(notes(2));
+    const first = oscillators()[0].startedAt!;
+
+    advanceAudioClock(DEVICE_OPEN_SECONDS);
+    expect(first, 'the device finished opening after the first note was due')
+      .toBeGreaterThan(audioClock());
+  });
+
+  it('is not paying that budget on every sound afterwards', () => {
+    // The other side, and the reason the budget is not simply the headroom
+    // everywhere: a quarter second of lag on every note is a worse app than
+    // one missing note on the first play, and only the first play is cold.
+    advanceAudioClock(5);
+    const warm = new Synth();
+    warm.play(notes(1));
+
+    expect(oscillators()[0].startedAt! - audioClock(),
+      'a warm play is waiting out the device-opening budget')
+      .toBeLessThan(DEVICE_OPEN_SECONDS);
   });
 });

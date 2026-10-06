@@ -28,17 +28,34 @@ const MASTER_GAIN = 0.22;
 const PARTIALS = [1, 0.5, 0.28, 0.16, 0.09, 0.05, 0.03];
 
 /**
+ * How long a device may take to open before the first sample plays.
+ *
+ * The figure the cold-start headroom below is derived from, named because
+ * it was prose in two comments and a number in a third — three copies of
+ * one decision, and nothing relating them. 200 ms is unremarkable for a
+ * device opening, and it is the quantity that would be revised by a
+ * measurement on slower hardware; the headroom follows from it rather
+ * than being revised beside it.
+ */
+export const DEVICE_OPEN_SECONDS = 0.2;
+
+/**
  * How far ahead to schedule when the audio clock has not started.
  *
  * Measured rather than chosen: a context reports `running` with
  * `currentTime` at 0 and begins advancing a few milliseconds later, but
- * the *device* behind it can take far longer to open — 200 ms is
- * unremarkable — and every attack inside that window is behind the clock
- * before a sample is played. This is only ever paid once per page, on a
- * play that is already the first thing the user hears, where a quarter
- * second of delay is not noticeable and a missing first note is.
+ * the *device* behind it can take far longer to open, and every attack
+ * inside that window is behind the clock before a sample is played. This
+ * is only ever paid once per page, on a play that is already the first
+ * thing the user hears, where a quarter second of delay is not noticeable
+ * and a missing first note is.
+ *
+ * Wider than {@link DEVICE_OPEN_SECONDS} rather than equal to it: a note
+ * scheduled at the exact instant the device finishes opening is a note
+ * whose attack has no margin at all, and the margin is what the warm path
+ * spends 60 ms on for the same reason.
  */
-const CLOCKLESS_HEADROOM = 0.25;
+export const CLOCKLESS_HEADROOM = DEVICE_OPEN_SECONDS + 0.05;
 
 export class Synth {
   private context: AudioContext | null = null;
@@ -149,9 +166,10 @@ export class Synth {
   play(voices: readonly Voice[]): void {
     const { context, master, waking } = this.ensure();
     // On the very first play of a page the hardware is still opening, and the
-    // 60 ms below is not enough to cover it — 200 ms to open a device is
-    // unremarkable, and every attack inside that is behind the clock before a
-    // sample is played. So the cold case waits for the clock it is about to
+    // 60 ms below is not enough to cover it — see `DEVICE_OPEN_SECONDS` for
+    // how long that is and where the figure comes from. Every attack inside
+    // it is behind the clock before a sample is played, so the cold case
+    // waits for the clock it is about to
     // read rather than guessing at a larger headroom, which would only move
     // the question to how large. Warm plays, which is all of them after the
     // first, are unchanged and still schedule synchronously.

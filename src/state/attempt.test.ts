@@ -285,6 +285,35 @@ describe('an attempt from before the askable set existed', () => {
     expect('askable' in coerceAttempt(v2)).toBe(false);
   });
 
+  it('stays absent through the serialisations storage actually uses', () => {
+    /*
+      `coerceAttempt` spreads `askable` conditionally so an absent set does
+      not become a key holding `undefined`. The case above pins that for the
+      value it returns; this asks whether it survives being stored, which is
+      the half nobody could check because there is no export yet.
+
+      Both routes, because the app has two: attempts go to IndexedDB, which
+      serialises by structured clone and *does* keep a key whose value is
+      `undefined`, and anything JSON — an export, a bug report, a settings
+      blob — drops it. Only one of those two would have caught a stray key,
+      so neither is the one to rely on.
+    */
+    const read = coerceAttempt(v2);
+    expect('askable' in JSON.parse(JSON.stringify(read))).toBe(false);
+    expect('askable' in structuredClone(read)).toBe(false);
+
+    // And an explicit `undefined` on the way in does not become a key on
+    // the way out, which is the input a caller spreading an optional field
+    // produces without meaning to.
+    expect('askable' in coerceAttempt({ ...v2, askable: undefined })).toBe(false);
+
+    // The control: a set that is there survives both routes, so "absent"
+    // above is the coercer's doing rather than the serialiser's.
+    const withSet = coerceAttempt({ ...v2, askable: ['interval:m2:up'] });
+    expect(JSON.parse(JSON.stringify(withSet)).askable).toEqual(['interval:m2:up']);
+    expect(structuredClone(withSet).askable).toEqual(['interval:m2:up']);
+  });
+
   it('refuses a row whose set is there but unreadable', () => {
     // Absent is a fact about when it was written; malformed is a row that
     // cannot be trusted, and this file skips those rather than repairing.

@@ -56,6 +56,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0039](0039-a-line-is-an-exercise-and-the-items-its-settings-make-askable.md) | A line is an exercise and the items its settings make askable | Accepted |
 | [0040](0040-completion-replaces-the-score.md) | Completion replaces the score | Accepted |
 | [0041](0041-practice-that-counts-towards-nothing.md) | Practice that counts towards nothing | Accepted |
+| [0042](0042-history-is-disposable-until-settings-settle.md) | History is disposable until settings settle | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in

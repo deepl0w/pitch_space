@@ -84,8 +84,15 @@ four things that are not obvious:
   `fine`: measured at 375 px, `false` with metrics only and `true` with both.
 - **Glyphs read as empty text.** VexFlow draws SMuFL private-use codepoints,
   so `textContent` looks blank; decode with `codePointAt`. Treble `E050`,
-  bass `E062`, alto `E05C`, notehead `E0A4`, flat `E260`, natural `E261`,
-  sharp `E262`.
+  bass `E062`, **alto and tenor both `E05C`**, notehead `E0A4`, flat `E260`,
+  natural `E261`, sharp `E262`.
+- **The codepoint cannot tell alto from tenor**, and this app offers all four
+  clefs — `CLEFS` in `key-id/keys.ts`. `E05C` is SMuFL's C clef and the two
+  differ only in where it sits on the stave: measured in this app at `y=80`
+  for alto against `y=70` for tenor. An agent identifying a clef from the
+  codepoint alone has an instrument that cannot distinguish two of the four,
+  and will report alto for both. Read the `y` as well, or do not claim which
+  C clef it is.
 - **Screens are hash routes**, so deep-link rather than click your way in:
   `#/scales`, `#/interval-id`.
 

@@ -209,3 +209,38 @@ decisions about what a score means — which [0036](0036-one-question-two-window
 left with the user for the same reason. The constraint is only that **a
 scheduler reading `streak` alone can be driven to "mastered" by clicking**, and
 whoever writes the first caller should know that before they read it.
+
+## Addendum, 6 October 2026 — `attempt.correct` has no consumer and is not dead
+
+Noted after the tester found that `attempt.correct` is validated on write and
+read by nothing: the fold reads `outcomes`, the screen reads the fold, `dueAt`
+reads the tally. A write-only field cannot be wrong in a way anything notices,
+and it is the kind of field a tidy-up removes.
+
+It should not be removed, and [0007](0007-an-attempt-records-per-event-item-attribution.md)'s
+reason for keeping it has gone from anticipatory to live. 0007 said `correct`
+is "recorded rather than folded, because it is not derivable from the
+outcomes: a bar can be failed overall while most of its notes were right."
+
+That is true in exactly one exercise today, and the mechanism is specific.
+Rhythm's outcomes are per written cell, and a cell is credited when every
+onset in it was placed; the verdict additionally requires nothing **extra**.
+An added tap belongs to no written cell, so the outcomes structurally cannot
+see it:
+
+```
+expected [0, 0.5, 1.0]   played [0, 0.25, 0.5, 1.0]
+MATCHED 3   MISSED 0   EXTRA 1   VERDICT false
+every written note placed: true
+```
+
+So `correct` carries one fact the outcomes cannot: **the learner played
+something that was not written.** A first caller that folds only outcomes is
+blind to spurious playing, and only in rhythm — which is also the only
+exercise answered by performance rather than by choosing, so it is the one
+where the event is possible at all.
+
+That does not make the field urgent. It makes it the opposite of dead, and it
+means the question for the first caller is not "should this be removed" but
+"does the schedule want to know that a learner is adding notes" — which is a
+different question and has an answer.

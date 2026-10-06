@@ -474,3 +474,58 @@ describe('a device that takes the full budget to open', () => {
       .toBeLessThan(DEVICE_OPEN_SECONDS);
   });
 });
+
+/**
+ * Pressing play again, before the last press has finished sounding.
+ *
+ * A user reported that a few quick presses layer the passages over each
+ * other, and said what they expected: play again stops what is sounding
+ * and starts from the beginning. `stopAll` already did that and was
+ * wired only to leaving a screen.
+ */
+describe('playing again while something is still sounding', () => {
+  it('replaces the passage rather than joining it', () => {
+    advanceAudioClock(5);
+    synth.play(notes(4));
+    const first = oscillators().length;
+    expect(first, 'nothing was sounding, so nothing below is asserted')
+      .toBeGreaterThan(0);
+
+    synth.play(notes(4));
+
+    /*
+      Counted as "still due to sound", not as "ever created". The old
+      oscillators exist either way; what the user hears is whether they
+      are still going to play, which is what `soundingAfter` asks.
+    */
+    const stillDue = soundingAfter(audioClock() + 0.03).length;
+    expect(stillDue, 'the first passage is still queued behind the second')
+      .toBe(first);
+  });
+
+  it('does not silence the passage it just started', () => {
+    /*
+      The control, and the risk of the fix: `stopAll` ramps the master to
+      zero and back, so a restart that scheduled inside that ramp would
+      fade out its own opening note. The ramp restores the level at
+      +0.02 and the new attack lands at +0.06.
+    */
+    advanceAudioClock(5);
+    synth.play(notes(1));
+    synth.play(notes(1));
+
+    const events = masterGain()!.events;
+    expect(events.length, 'the ramp never ran, so nothing below is asserted')
+      .toBeGreaterThan(0);
+
+    const silenced = Math.max(...events.filter((e) => e.value === 0).map((e) => e.time));
+    const last = events.reduce((a, b) => (b.time >= a.time ? b : a));
+    expect(last.value, 'the master is left silent').toBeGreaterThan(0);
+    expect(last.time, 'the level is restored only after it is dropped')
+      .toBeGreaterThan(silenced);
+
+    const attack = Math.min(...soundingAfter(audioClock()).map((o) => o.startedAt!));
+    expect(attack, 'the new passage attacks while the master is still down')
+      .toBeGreaterThan(last.time);
+  });
+});

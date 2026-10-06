@@ -165,6 +165,27 @@ export class Synth {
   /** Play a set of voices, all timed from one `now` so a chord stays together. */
   play(voices: readonly Voice[]): void {
     const { context, master, waking } = this.ensure();
+    /*
+      A new passage replaces the one sounding; it does not join it.
+
+      A user reported that pressing "play it again" quickly a few times
+      layers the sounds over each other. Notes are scheduled into the
+      future against the audio clock, so a second press used to lay a
+      second passage beside the first rather than instead of it — and
+      the faster the presses, the more voices stacked. What they expect,
+      and said so, is that pressing play again stops what is sounding
+      and starts from the beginning.
+
+      `stopAll` already does exactly this and was only wired to leaving a
+      screen. Its ramp reaches silence at +0.012 and restores the level
+      at +0.02, both comfortably inside the 60 ms of headroom below, so
+      a restart does not fade out its own opening note.
+
+      It also bumps the generation, which cancels a passage still
+      waiting on a cold context — the same intention the ticket below
+      enforces, arriving from the other direction.
+    */
+    this.stopAll();
     // On the very first play of a page the hardware is still opening, and the
     // 60 ms below is not enough to cover it — see `DEVICE_OPEN_SECONDS` for
     // how long that is and where the figure comes from. Every attack inside

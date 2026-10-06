@@ -257,6 +257,59 @@ describe('a generated passage', () => {
     expect(passage.melody, 'the melody did not get the third stream').toEqual(melody);
   });
 
+  it('hands each layer the options it was given for it', () => {
+    /*
+      `PassageOptions` says of `harmony` and `rhythm`: "Passed through;
+      everything optional there stays optional here." Nothing checked it.
+      Deleting `...options.harmony` from the call below leaves the whole
+      suite green, and so does deleting `...options.rhythm` — no test in
+      the repository passes either, so the only knobs an exercise has over
+      the vocabulary and the rhythm could be ignored in silence.
+
+      That is the shape of "turning diminished triads off did not turn them
+      off", one layer up: the exercise asks, the join drops it, and every
+      exercise built on this gets the defaults whatever its settings say.
+
+      Asserted the way the stream guard above is — rebuilt directly from
+      the same stream with the same options, so dropping the spread and
+      mangling it both fail — and each half carries a control that the
+      option changes the music at all, or the equality would be two
+      functions agreeing to ignore the same thing.
+    */
+    const withOptions = {
+      ...base,
+      harmony: { sevenths: true },
+      rhythm: { allowRests: false, syncopationsPerBar: 3 },
+    };
+    const streams = deriveStreams(makeRng(11));
+    const passage = generatePassage(makeRng(11), withOptions);
+
+    expect(passage.harmony, 'the harmony options were not passed through').toEqual(
+      generateHarmony(streams.harmonyRng, {
+        sevenths: true,
+        key: base.key,
+        timeSignature: base.timeSignature,
+        bars: base.bars,
+      }),
+    );
+    expect(passage.bars, 'the rhythm options were not passed through').toEqual(
+      planMotifs(streams.motifRng, {
+        allowRests: false,
+        syncopationsPerBar: 3,
+        timeSignature: base.timeSignature,
+        bars: base.bars,
+      }).bars,
+    );
+
+    // The controls. Each option has to make a difference on this seed, or
+    // the equalities above are satisfied by both sides ignoring it.
+    const plain = generatePassage(makeRng(11), base);
+    expect(plain.harmony, 'sevenths changed nothing, so the first half proves nothing')
+      .not.toEqual(passage.harmony);
+    expect(plain.bars, 'the rhythm options changed nothing, so the second half proves nothing')
+      .not.toEqual(passage.bars);
+  });
+
   it('fills every bar, so the notation can be engraved at all', () => {
     for (let seed = 0; seed < 20; seed += 1) {
       const p = generatePassage(makeRng(seed), base);

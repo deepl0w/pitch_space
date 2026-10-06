@@ -383,3 +383,88 @@ describe('the conventions the ADR index carries', () => {
     expect(index).toContain('against the code, not against the record that made it');
   });
 });
+
+/**
+ * The claim that survived longest and cost the most: the home screen's lede
+ * said exercises were "answered by playing them" while every built exercise
+ * was answered by clicking a button or tapping a key. Every exercise card
+ * was honest about its own answer path; only the lede — which describes all
+ * six at once rather than any one screen — was not, and nothing caught it
+ * because nothing checked a claim about six exercises against any single one
+ * of them. Found from outside by the user role, fixed by main at 16e5cff.
+ *
+ * This does not snapshot the sentence. A reworded lede that still claims
+ * playing as a present capability should still fail here, and the sentence
+ * is free to change in every other way. What it is checked against is the
+ * fact the wording has to answer to: whether any exercise actually hands a
+ * response to the capture layer, rather than to a click or a keypress.
+ * `audio/capture/` exists and works (ADR 0035) — this asserts it is not yet
+ * wired to any exercise's grading, which is what makes the claim false today.
+ * The day an exercise does wire it, this goes green on its own and the lede
+ * is free to say so; it is the other direction — claiming it with nothing
+ * behind the claim — that this exists to catch.
+ */
+describe("the home screen's claim about how exercises are answered", () => {
+  const HOME = join(SRC, 'ui', 'screens', 'Home.tsx');
+
+  function exerciseIsWiredToCapture(): boolean {
+    // Shipped files only. `rhythm-id/heard.test.ts` already imports
+    // `audio/capture/listen` to test the alignment maths against recorded
+    // audio (ADR 0035) — which is exactly the tester's job, and says
+    // nothing about whether a learner's answer reaches it. Counting that
+    // import would have this test pass today for the wrong reason: capture
+    // used in a grading *test* is not an exercise wired to capture.
+    return filesUnder(join(SRC, 'exercises'))
+      .filter((file) => !/\.test\.tsx?$/.test(file))
+      .some((file) =>
+        importsOf(file).some((specifier) => resolveWithin(file, specifier)?.startsWith('audio/capture')));
+  }
+
+  /**
+   * Just the rendered paragraph, not the file.
+   *
+   * The file also carries the comment explaining this exact test, in prose
+   * that necessarily uses the words "answered", "playing" and "built" to
+   * describe the bug it is guarding against — and a whole-file scan matched
+   * that narration instead of the markup, passing or failing by accident of
+   * how the comment was worded rather than by what the page renders. Scoped
+   * to the `<p className="lede">` tag, which is also tighter than the
+   * surrounding rule needs to be: a disclaimer anywhere outside this one
+   * paragraph should not be able to launder a bare claim inside it.
+   */
+  function ledeText(source: string): string {
+    const match = source.match(/<p className="lede">([\s\S]*?)<\/p>/);
+    if (!match) throw new Error('could not find the lede paragraph in Home.tsx');
+    return match[1];
+  }
+
+  /**
+   * A sentence mentioning both "answer" and "playing" with nothing in it
+   * disclaiming that as future work. Sentence-scoped rather than
+   * paragraph-scoped so a disclaimer in one sentence cannot launder a bare
+   * claim sitting in another — which is close to how the original line
+   * read, in a paragraph that also disclaimed Sight reading correctly.
+   */
+  function claimsPlayingIsCurrent(lede: string): boolean {
+    const sentences = lede.replace(/\s+/g, ' ').match(/[^.]+\./g) ?? [];
+    return sentences.some((sentence) =>
+      /\bplaying\b/i.test(sentence)
+      && /\banswer(ed|ing)?\b/i.test(sentence)
+      && !/\b(being built|not built|not yet|unbuilt|planned|is coming|will be)\b/i.test(sentence));
+  }
+
+  it('does not claim playing as a current answer path while no exercise is wired to capture', () => {
+    const lede = ledeText(readFileSync(HOME, 'utf8'));
+    const claimsPlayingNow = claimsPlayingIsCurrent(lede);
+    const wiredToCapture = exerciseIsWiredToCapture();
+    expect(
+      { claimsPlayingNow, wiredToCapture },
+      'home screen claims an answer path no exercise has',
+    ).not.toEqual({ claimsPlayingNow: true, wiredToCapture: false });
+  });
+
+  it('still mentions playing, so the rule above is not defending a lede that dropped the word entirely', () => {
+    const lede = ledeText(readFileSync(HOME, 'utf8'));
+    expect(/\bplaying\b/i.test(lede)).toBe(true);
+  });
+});

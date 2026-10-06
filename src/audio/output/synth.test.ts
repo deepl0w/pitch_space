@@ -373,3 +373,53 @@ describe('a passage waiting on a cold context', () => {
     expect(attackTimes()).toHaveLength(8);
   });
 });
+
+
+/**
+ * The first sound a page makes.
+ *
+ * A user reported the first note of an interval missing, the second
+ * sounding, and "play it again" fixing it. The cold path existed and
+ * keyed on `state === 'suspended'`, which a context built inside a click
+ * never is: measured in Chrome, `state` is `running` and `currentTime` is
+ * exactly 0 at construction. The guard was written for the right hazard
+ * and watched the wrong signal.
+ */
+describe('the first play, before the audio clock has started', () => {
+  it('schedules clear of a device that is still opening', () => {
+    /*
+      Stated as the defect rather than as the fix: with the clock at 0,
+      the old 60 ms put the first attack at 0.06, which passes while the
+      hardware opens. Anything at or below that reproduces the missing
+      note. The bound is the behaviour; 0.25 is a measurement and may be
+      retuned without this failing.
+    */
+    expect(audioClock()).toBe(0);
+    synth.play(notes(2));
+
+    const attacks = [...new Set(oscillators().map((o) => o.startedAt))].sort((a, b) => a! - b!);
+    expect(attacks, 'nothing was scheduled, so nothing below is asserted').toHaveLength(2);
+    expect(attacks[0], 'the first attack lands where an opening device will miss it')
+      .toBeGreaterThan(0.06);
+  });
+
+  it('keeps the small headroom once the clock is running', () => {
+    /*
+      The control, and the reason the fix is keyed on the clock rather
+      than applied to everything. Widening the headroom for every play
+      would pass the case above and put a quarter second of lag on every
+      sound in the app, which no test would have noticed.
+    */
+    synth.play(notes(1));
+    const first = oscillators()[0].startedAt!;
+    resetAudio();
+    installAudioContext();
+    advanceAudioClock(5);
+    const warm = new Synth();
+
+    warm.play(notes(1));
+    const second = oscillators()[0].startedAt!;
+    expect(second - audioClock()).toBeLessThan(first);
+    expect(second - audioClock()).toBeCloseTo(0.06, 5);
+  });
+});

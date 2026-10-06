@@ -27,6 +27,19 @@ const MASTER_GAIN = 0.22;
 /** A few partials with a little inharmonicity reads as struck rather than buzzy. */
 const PARTIALS = [1, 0.5, 0.28, 0.16, 0.09, 0.05, 0.03];
 
+/**
+ * How far ahead to schedule when the audio clock has not started.
+ *
+ * Measured rather than chosen: a context reports `running` with
+ * `currentTime` at 0 and begins advancing a few milliseconds later, but
+ * the *device* behind it can take far longer to open — 200 ms is
+ * unremarkable — and every attack inside that window is behind the clock
+ * before a sample is played. This is only ever paid once per page, on a
+ * play that is already the first thing the user hears, where a quarter
+ * second of delay is not noticeable and a missing first note is.
+ */
+const CLOCKLESS_HEADROOM = 0.25;
+
 export class Synth {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -73,10 +86,19 @@ export class Synth {
       this.master.gain.value = this.level();
       this.master.connect(this.context.destination);
     }
-    // Handed back rather than dropped. `currentTime` does not move while a
-    // context is still starting and jumps when it does, so a caller that
-    // schedules across the gap times the passage against a clock reading
-    // that is about to be wrong.
+    /*
+      Handed back rather than dropped. `currentTime` does not move while a
+      context is still starting and jumps when it does, so a caller that
+      schedules across the gap times the passage against a clock reading
+      that is about to be wrong.
+
+      **`suspended` is not the whole of the cold case**, and the rest of it
+      is handled in `lay` rather than here, because it needs no waiting. A
+      context constructed inside a click reports `running` *immediately* —
+      measured in Chrome, `state` is `running` and `currentTime` is exactly
+      0 at the moment of construction — so this branch is not taken on the
+      one play that most needed protecting.
+    */
     const waking = this.context.state === 'suspended'
       ? this.context.resume().catch(() => {})
       : null;
@@ -150,7 +172,27 @@ export class Synth {
   }
 
   private lay(context: AudioContext, master: GainNode, voices: readonly Voice[]): void {
-    const now = context.currentTime + 0.06; // a beat of headroom to schedule into
+    /*
+      A beat of headroom to schedule into, and the whole device-opening
+      budget when the clock has not started.
+
+      **This is the first-note defect.** A user reported that the first
+      sound a page makes loses its first note — the second note of an
+      interval plays, the first does not, and pressing "play it again"
+      fixes it. The cause is that a context built inside a click reports
+      `running` with `currentTime` at exactly 0, so the suspended branch
+      above does not fire, and 60 ms ahead of a clock that has not
+      started is a moment that passes while the device is still opening.
+      Later attacks are far enough out to survive, which is why only the
+      first goes missing.
+
+      Keyed on the clock rather than on a "have we played yet" flag
+      because the clock is the thing that matters: a context whose clock
+      is at zero has not begun whatever the rest of the object believes.
+      Late is recoverable; missing is not.
+    */
+    const headroom = context.currentTime === 0 ? CLOCKLESS_HEADROOM : 0.06;
+    const now = context.currentTime + headroom;
     for (const voice of voices) {
       this.scheduleNote(context, master, voice, now + voice.start);
     }

@@ -40,13 +40,33 @@ for branch in $(git for-each-ref --format='%(refname:short)' 'refs/heads/claude/
     [ -n "$dir" ] || continue
     base=$(basename "$dir")
 
+    # Every process in the directory, not the first one found.
+    #
+    # A role can have more than one: a session that was orphaned and a
+    # live one started beside it, which is exactly what a user does after
+    # being told the first is broken. Taking the first match reported the
+    # role by whichever the process table happened to list first — and on
+    # 7 October that was a stale orphan, so this tool said a healthy
+    # session could not save while it was syncing and reporting findings.
+    # Main repeated that to the user as fact.
+    #
+    # A socket is the thing that decides, so a role with any socketed
+    # process is addressable and the rest are noted beside it rather than
+    # standing in for it.
     pid=""
+    stale=""
     for p in $(pgrep -f claude 2>/dev/null || true); do
         cwd=$(readlink "/proc/$p/cwd" 2>/dev/null || true)
-        [ "$cwd" = "$dir" ] && { pid=$p; break; }
+        [ "$cwd" = "$dir" ] || continue
+        if [ -S "$socks/$p.sock" ]; then pid=$p; else stale="$stale $p"; fi
     done
 
-    if [ -z "$pid" ]; then
+    if [ -n "$pid" ] && [ -n "$stale" ]; then
+        state="running, addressable (pid $pid) — ListAgents for its current name;"
+        state="$state also stale with no socket:$stale"
+    elif [ -n "$stale" ] && [ -z "$pid" ]; then
+        state="running, ORPHANED (pid${stale# }) — no socket; cannot save or be messaged"
+    elif [ -z "$pid" ]; then
         state='not running — brief will catch it up'
     elif [ -S "$socks/$pid.sock" ]; then
         state="running, addressable (pid $pid) — ListAgents for its current name"

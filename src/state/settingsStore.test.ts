@@ -231,6 +231,81 @@ describe('a settings document with history in it', () => {
     }
   });
 
+  it('does not delete a newer release\'s field when an older build writes', () => {
+    /*
+      The loss this trip was chased to find, and it does not happen where
+      it looks like it happens.
+
+      A field a newer release added survives hydration — `coerceSettings`
+      keeps the exercises map whole — and the exercise's own `coerce` then
+      drops it, correctly, because a closed valid shape is what `coerce` is
+      for. Nothing is lost yet: the raw blob is still in the document, and
+      `PracticeScreen` coerces on *read*.
+
+      It dies on the write. `setExerciseSettings` used to store the coerced
+      value in place of the stored one, so the first touch of a settings
+      panel in an older build deleted the field permanently — while an
+      unknown *exercise* beside it was kept, which is the same promise
+      honoured at one level and broken at the next. ADR 0038.
+
+      The fix is a merge and it is one line, which is the problem with it: a
+      spread whose left side looks already contained in its right is what a
+      tidy-up removes. This case is what makes that removal fail.
+    */
+    const slot = countingSlot(versioned(SETTINGS_SCHEMA, {
+      exercises: {
+        'interval-id': { clef: 'bass', octaveRange: [3, 6] },
+      },
+      lastExercise: null,
+    }));
+    const store = createSettingsStore(slot);
+    const intervals = findExerciseType('interval-id')!;
+
+    // Exactly what the screen does: coerce on read, write back a change.
+    const read = intervals.settings.coerce(store.getState().doc.exercises['interval-id']);
+    expect(read, 'coerce kept a key it does not know, so this tests nothing')
+      .not.toHaveProperty('octaveRange');
+    store.getState().setExerciseSettings('interval-id', read);
+
+    const after = store.getState().doc.exercises['interval-id'] as Record<string, unknown>;
+    expect(after.octaveRange, 'a field from a newer release was deleted by this build')
+      .toEqual([3, 6]);
+    expect(after).toMatchObject(read as Record<string, unknown>);
+  });
+
+  it('lets the change the user just made win over what was stored', () => {
+    /*
+      The other direction of the same merge, and the case the first version
+      of the one above could not make.
+
+      It asserted that `clef` was still `bass` after the write — but the
+      stored blob said `bass` too, so the two sides of the merge agreed and
+      which one won was untestable. Reversing the spread passed. A merge has
+      a direction and only a value that differs can show it.
+
+      This is the live hazard, not a theoretical one: stale-wins means a
+      user changes a setting, the panel writes it, and the old value comes
+      straight back.
+    */
+    const slot = countingSlot(versioned(SETTINGS_SCHEMA, {
+      exercises: { 'interval-id': { clef: 'bass', octaveRange: [3, 6] } },
+      lastExercise: null,
+    }));
+    const store = createSettingsStore(slot);
+    const intervals = findExerciseType('interval-id')!;
+
+    const read = intervals.settings.coerce(store.getState().doc.exercises['interval-id']);
+    const changed = { ...(read as Record<string, unknown>), clef: 'treble' };
+    expect(changed.clef, 'the change is not a change').not.toBe(
+      (store.getState().doc.exercises['interval-id'] as { clef: string }).clef,
+    );
+    store.getState().setExerciseSettings('interval-id', changed);
+
+    const after = store.getState().doc.exercises['interval-id'] as Record<string, unknown>;
+    expect(after.clef, 'the stored value overwrote the one the user chose').toBe('treble');
+    expect(after.octaveRange, 'and the unknown field still survived').toEqual([3, 6]);
+  });
+
   it('carries the choices that outlived the build that wrote them', () => {
     /*
       The half that matters to the user: the obsolete keys are dropped and

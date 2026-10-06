@@ -49,6 +49,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0032](0032-the-generator-is-a-draw-not-a-search.md) | The generator is a draw, not a search | Accepted |
 | [0033](0033-a-motif-is-a-preference-and-harmony-is-allowed-to-win.md) | A motif is a preference, and harmony is allowed to win | Accepted |
 | [0034](0034-test-data-that-cannot-be-committed-is-fetched-and-its-absence-is-announced.md) | Test data that cannot be committed is fetched, and its absence is announced | Accepted |
+| [0035](0035-an-onset-is-an-attack-a-note-is-a-decision-about-attacks.md) | An onset is an attack; a note is a decision about attacks | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in

@@ -111,3 +111,38 @@ appears in output nobody quotes.
   argument about which version was fetched.
 - **0008's constants are re-measured against real recordings.** The trigger
   that record is waiting on, now that the corpus it wanted is reachable.
+
+## Addendum, 6 October 2026 — the tier ran, and one cost was missed
+
+The recorded tier was fetched and run within the hour. Two notes from that,
+one confirming a cost above and one it does not contain.
+
+**The unpinned cost bit immediately, in a shape the record did not predict.**
+It anticipated a recording changing under a test. What happened first was a
+fetch that 404ed on four of six notes, because the note names were guessed and
+the library samples every third semitone. **Nothing distinguished "the URL is
+wrong" from "the data moved"** — which is the same ambiguity a checksum would
+resolve, arriving before any data had a chance to drift.
+
+**And a cost this record does not name: a fetched tier can be wrong about the
+data in a way a committed one cannot.** All six recordings read +1200 cents.
+That is also exactly what YIN does on a weak fundamental, so the plausible
+first reading was a detector fault. The data was right and the expectation was
+wrong by an octave, because the library numbers octaves one below scientific
+pitch.
+
+A committed fixture is checked in by whoever measured it and its labels are
+reviewed with the code. A fetched one arrives with somebody else's conventions
+attached — naming, octave numbering, sampling interval — and **a mismatch
+between their convention and ours presents as a defect in the analysis chain**,
+which is the most expensive place for it to present. The announcement case
+tells you the tier is missing; nothing tells you it is mislabelled.
+
+That strengthens the checksum argument beyond reproducibility: what the script
+needs is not only "these are the bytes I expect" but "this is the note I think
+it is", and the second is the one that cost an hour.
+
+The tier's first run also found three defects the synthesised tier passed
+clean, the largest of which is
+[0035](0035-an-onset-is-an-attack-a-note-is-a-decision-about-attacks.md) —
+which is 0008's argument for recordings arriving rather than being restated.

@@ -14,6 +14,16 @@ fleet skill have a single writer — two roles editing a shared forward plan
 in the same week is the merge conflict waiting to happen, and main already
 integrates everything else this file would need to stay correct about.
 
+**An entry spanning several roles says which parts are settled and which
+are not, separately.** Everything so far has been one role's independent
+change; "implies" was enough, because nobody downstream could start before
+the change existed to react to. A multi-role entry is different — a role
+can start building from the entry itself, before anything merges — so an
+open question left as an aside reads as a detail to the role deciding
+whether it is safe to begin. If a piece cannot start until something else
+is settled, say that plainly rather than trusting "is the architect's to
+propose" to carry it.
+
 **The user role does not read this file.** See `CLAUDE.md`.
 
 ### `main` — the score reports where it drew things, so a cursor can follow

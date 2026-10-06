@@ -310,3 +310,29 @@ own and the error in the reading.
 suspicious of the test; the question was whether the production code was wrong,
 and the test's silence is what gave it away.
 
+### And the instrument this document ends on has a range too
+
+Mutation is the check used throughout here, and it was never stated what it
+measures. **A failing mutant says an assertion is load-bearing. It says
+nothing about whether the assertion is true.**
+
+Measured, on this document's own closing recommendation. A sweep asserted that
+a grading's verdict always equals "every outcome correct", across 1,240
+gradings, and the `correct: true` mutant failed — which was read as confirming
+the claim. The claim was false: rhythm's outcomes are per written cell, an
+extra tap belongs to no written cell, and the two genuinely differ there. The
+sweep's response shapes — a perfect performance, a late one, silence — could
+not construct the disagreeing case, so **it reported the absence of a case it
+could not build as agreement**, and the mutant confirmed the wiring of a
+statement nobody had checked.
+
+So mutation tests the connection between a test and the code. Truth needs the
+disagreeing case, and constructing one needs to know what the thing under test
+is *for* — which is domain knowledge and not discipline, and is the one thing
+none of the day's machinery supplies.
+
+That is worth the last word. Every instrument this project built in a day —
+the commit gate, the push gate, the mutation habit — was green on a test
+asserting something false. The catalogue above is a list of instruments read
+too widely; **this is the instrument the catalogue itself was read through.**
+

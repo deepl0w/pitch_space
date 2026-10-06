@@ -20,6 +20,7 @@ that got this wrong twice in one day from the harness side.
 - [The clearest case, and it owes the convention nothing](#the-clearest-case-and-it-owes-the-convention-nothing)
 - [The catalogue](#the-catalogue)
 - [Three accounts of how it felt](#three-accounts-of-how-it-felt)
+- [A reproduction attempt is an instrument too](#a-reproduction-attempt-is-an-instrument-too)
 
 ## The clearest case, and it owes the convention nothing
 
@@ -118,3 +119,39 @@ The later cases here were all found while the project was looking at this
 convention, by people who had just read one another's accounts — which is the
 selection effect the accounts describe, operating on the evidence for
 themselves. 0025 is the one that owes it nothing.
+
+## A reproduction attempt is an instrument too
+
+Every case above is a finding *produced*. The same rule applies to failing to
+produce one, and that site is easier to miss because a non-reproduction does
+not feel like a measurement at all.
+
+**A clean-room reproduction has a range, and it is "bugs that do not depend on
+history".** Reporting "cannot reproduce" without that caveat claims "does not
+happen", which is wider than what was measured — the same shape as the ±1 ms
+above. Worse, the clean start is *guaranteed* to miss the one class it cannot
+reach, so two agreeing clean-profile readings are weaker evidence than their
+agreement feels, and both readers are looking from the only angle that cannot
+see it.
+
+**The entry here is a counter-example rather than a failure**, which this
+document is otherwise short of. A clef finding was reported from a profile with
+hours of accumulated settings and could not be reproduced on a fresh one, by
+two people independently. Rather than closing it, the second reader named what
+their instrument could not reach and eliminated it by a different route:
+settings are at v3, both migration steps only add a key — `audio` at 1→2,
+`appearance` at 2→3 — and `exercises` passes through untouched with unknown
+keys deliberately preserved, so no stored document can arrive carrying a
+corrupted clef. What remained was transient in-session state, the profile was
+gone, and the question was left open rather than closed.
+
+The author withdrew the finding on their own re-measurement, so **no true
+finding was lost here**. The point is the step that was taken before the
+agreement was trusted: the range was stated, and what fell outside it was
+checked another way.
+
+That matters beyond this case, because a non-reproduction is one of the ways a
+true finding dies, and it dies quietly — nobody chases a thing that went away.
+A catalogue assembled from faults that left a trace is systematically short of
+those, and cannot know by how much.
+

@@ -3,6 +3,7 @@ import { generateMelody, type MelodyNote, type MelodySlot } from './melody';
 import { generateHarmony, type Harmony } from './harmony';
 import { generateRhythm } from './rhythm';
 import { baseOf, planMotifs } from './motif';
+import { slotsOf } from './passage';
 import { ALL_KEYS, type Key } from '../theory/key';
 import { spellChord } from '../theory/chord';
 import { midiOf } from '../theory/pitch';
@@ -48,9 +49,11 @@ function caseAt(index: number, key: Key, bars = 4): Case {
   const rhythm = generateRhythm(makeRng(index + 1), {
     timeSignature: ts, bars, allowRests: true, syncopationsPerBar: index % 2,
   });
-  const slots = rhythm.flatMap((bar) => bar.events
-    .filter((e) => !e.isRest && !e.tiedFromPrevious)
-    .map((e) => ({ startTick: e.startTick, durationTicks: e.durationTicks })));
+  // Through `slotsOf`, not a copy of it. Which written events are sounds
+  // is one rule — a rest is not a slot, and neither is a note tied from
+  // the one before it — and a harness that restates it is a harness that
+  // agrees with whatever it was reading when it was written.
+  const slots = slotsOf(rhythm);
   const notes = generateMelody(makeRng(index + 2), { harmony, slots, range: RANGE });
   return { harmony, slots, notes, label: `seed ${index} ${key.tonic.letter} ${ts.id}` };
 }
@@ -347,15 +350,13 @@ describe('restating a motif', () => {
     const plan = planMotifs(makeRng(seed), { timeSignature: TS44, bars });
     const harmony = generateHarmony(makeRng(seed), { key, timeSignature: TS44, bars });
 
-    const slots: MelodySlot[] = [];
-    const barOf: number[] = [];
-    plan.bars.forEach((bar, index) => {
-      for (const event of bar.events) {
-        if (event.isRest || event.tiedFromPrevious) continue;
-        slots.push({ startTick: event.startTick, durationTicks: event.durationTicks });
-        barOf.push(index);
-      }
-    });
+    const slots = slotsOf(plan.bars);
+    // Which bar each slot fell in, read back from where it starts rather
+    // than accumulated while filtering — so this does not have to repeat
+    // the rule about what counts as a slot in order to count them.
+    const barOf = slots.map((slot) => plan.bars
+      .findIndex((bar) => slot.startTick >= bar.startTick
+        && slot.startTick < bar.startTick + bar.ticks));
 
     const notes = generateMelody(makeRng(seed), {
       harmony, slots, range: [60, 84], shape: plan.shape,

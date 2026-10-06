@@ -98,3 +98,85 @@ describe('an attempt built the way the screen builds one', () => {
     expect(tally).toMatchObject({ seen: 1, correct: 0, streak: 0 });
   });
 });
+
+/**
+ * A sequence rather than a single answer, which is where the streak lives.
+ *
+ * Every case above folds one attempt. `streak` is the only field in a tally
+ * whose value depends on more than one of them, and it is the only field
+ * `dueAt` reads — so the half of this join that decides when an item comes
+ * back had not been travelled at all.
+ *
+ * It is also the half where order matters. `tallyItems` sorts by
+ * `answeredAt` rather than trusting the array, and nothing had asked it to
+ * demonstrate that over attempts built the way the screen builds them.
+ */
+describe('several attempts on one item', () => {
+  const KEY = tallyKey('interval:P5:up' as never, 'read');
+
+  /** One attempt per verdict, a minute apart, in the order given. */
+  const sequence = (verdicts: readonly boolean[]) => verdicts.map((correct, i) =>
+    attemptFrom(
+      { ...round(), id: `round-${i}` },
+      'interval-id',
+      result(correct),
+      10_000 + i * 60_000,
+    ));
+
+  it('builds a streak the schedule spaces on', () => {
+    const tally = tallyItems(sequence([true, true, true]));
+    const entry = tally.get(KEY)!;
+    expect(entry.seen).toBe(3);
+    expect(entry.correct).toBe(3);
+    expect(entry.streak).toBe(3);
+
+    // And the spacing follows it rather than the count: three right in a row
+    // is further out than one, which is the whole point of a streak.
+    const one = tallyItems(sequence([true])).get(KEY)!;
+    expect(dueAt(entry)).toBeGreaterThan(dueAt(one));
+  });
+
+  it('brings the item straight back when the last answer is wrong', () => {
+    const tally = tallyItems(sequence([true, true, false])).get(KEY)!;
+    expect(tally.seen, 'a wrong answer is still a sighting').toBe(3);
+    expect(tally.correct, 'and still only two of them were right').toBe(2);
+    expect(tally.streak).toBe(0);
+    // `dueAt` on a zero streak is the item's own last-seen time, so it is
+    // due the moment it was answered rather than at some interval after.
+    expect(dueAt(tally)).toBeLessThanOrEqual(tally.lastSeenAt);
+  });
+
+  it('reads the order off the clock, not off the array', () => {
+    /*
+      `tallyItems` sorts by `answeredAt` because `streak` is the one field
+      whose value depends on the order. Asserted both ways round, because a
+      fold that ignored the sort would agree with one of them: a wrong
+      answer last in time must zero the streak however early it sits in the
+      array, and a wrong answer *first* in time must not.
+    */
+    const [first, second, third] = sequence([true, true, false]);
+    expect(tallyItems([third, first, second]).get(KEY)!.streak,
+      'a wrong answer last in time did not end the streak').toBe(0);
+
+    const [early, middle, late] = sequence([false, true, true]);
+    expect(tallyItems([late, early, middle]).get(KEY)!.streak,
+      'a wrong answer first in time ended a streak it precedes').toBe(2);
+  });
+
+  it('keeps the same item separate under each presentation', () => {
+    /*
+      Hearing an interval and reading one are different skills and ADR 0010
+      makes the presentation part of the attempt for that reason. The fold
+      composes it into the key, so the two should not share a streak — and
+      the failure would be silent: one tally twice the size, spaced as
+      though the learner had practised twice as much.
+    */
+    const byEar = sequence([true, true]).map((a) => ({ ...a, presentation: 'listen' as const }));
+    const onPaper = sequence([true]);
+    const tally = tallyItems([...byEar, ...onPaper]);
+
+    expect(tally.get(tallyKey('interval:P5:up' as never, 'listen'))!.streak).toBe(2);
+    expect(tally.get(KEY)!.streak).toBe(1);
+    expect(tally.size, 'the two presentations folded into one entry').toBe(2);
+  });
+});

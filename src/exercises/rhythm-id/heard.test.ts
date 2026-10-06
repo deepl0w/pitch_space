@@ -252,6 +252,62 @@ describe('the window derived from the written music', () => {
     expect(separationForOnsets([])).toBeUndefined();
   });
 
+  it('keeps a window the detector\'s own precision cannot defeat', () => {
+    /*
+      The guard on the derivation itself, and the one the relation above
+      cannot give.
+
+      Asserting that the window is narrower than the gap is right — the
+      fraction is tuning and should not be pinned — but "narrower" admits
+      nine tenths, and nine tenths loses notes to a player off by five
+      milliseconds. The whole suite passes with the derivation at `0.9`,
+      which is the hole this closes.
+
+      The figure is not invented for the occasion. `TOLERANCE_CEILING_SECONDS`
+      already reasons from "the 20 ms or so the detector itself places an
+      attack to", and a merge window defeated by less than the detector's
+      own precision is indefensible whatever the fraction: it would be
+      merging notes that are only together because the detector said so.
+
+      A tolerance rather than a fraction, so retuning between a quarter and
+      a half stays free. Measured at 160 bpm, where the gaps are shortest:
+
+          ±20 ms jitter   f=1/4  0 lost   f=1/3  0   f=1/2  0   f=0.9  3
+          ±5 ms  jitter   f=1/4  0 lost   f=1/3  0   f=1/2  0   f=0.9  1
+    */
+    const DETECTOR_PRECISION_SECONDS = 0.02;
+    const lost = (window: (take: readonly number[]) => number | undefined) => {
+      let total = 0;
+      for (const [i, take] of takes(160, 8).entries()) {
+        const rng = seeded(1000 + i);
+        const performance = take
+          .map((t, k) => (k === 0 ? t
+            : t + (rng.next() * 2 - 1) * DETECTOR_PRECISION_SECONDS))
+          .map((t) => Math.max(0, t))
+          .sort((a, b) => a - b);
+        const signal = pluckSequence({
+          atSeconds: performance, frequencyHz: 220, seed: 7,
+          seconds: performance[performance.length - 1] + 1,
+          sampleRate: RATE, decaySeconds: 0.4,
+        });
+        const got = detectOnsets(signal, {
+          sampleRate: RATE, minSeparationSeconds: window(take),
+        }).onsets.map((o) => o.timeSeconds);
+        total += performance.filter((w) => w > 0.02)
+          .filter((w) => !got.some((g) => Math.abs(g - w) < 0.03)).length;
+      }
+      return total;
+    };
+
+    expect(lost(separationForOnsets),
+      'the derived window merges notes the detector itself placed').toBe(0);
+    // The control: a window this harness cannot be defeated by proves
+    // nothing. Nine tenths of the gap is what the relation above permits
+    // and what this refuses.
+    expect(lost((take) => shortestGap(take) * 0.9),
+      'the harness cannot register a loss at all').toBeGreaterThan(0);
+  });
+
   it('survives a third of a gap of human error, which is what a third buys', () => {
     /*
       The prediction, measured: `f = 1/2` holds to `j = 1/4` and starts

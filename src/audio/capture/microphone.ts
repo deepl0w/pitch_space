@@ -81,9 +81,13 @@ export class MicrophoneSource implements CaptureSource {
       own settings said 44100, for the same stream. The worklet runs at
       the context's rate and times its frames from it, so that is the
       one every downstream second is counted in — reading
-      `applied.sampleRate` instead would put every onset out by nine per
-      cent, which is a tenth of a semitone on a pitch and a whole
-      sixteenth over a bar.
+      `applied.sampleRate` instead would count every downstream second in
+      a rate 8.8 per cent out, which reads every frequency 8.8 per cent
+      high — **147 cents, the difference between A and B**, not the tenth
+      of a semitone this once said. A tenth of a semitone would be a rate
+      error of half a per cent. Measured in `listen.test.ts`, which holds
+      the figure to within a semitone either way so the stakes of this
+      line cannot quietly shrink again.
     */
     this.sampleRate = context.sampleRate;
 

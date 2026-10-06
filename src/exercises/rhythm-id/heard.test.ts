@@ -227,15 +227,32 @@ describe('the window derived from the written music', () => {
   });
 
   it('is what the written music says rather than a constant', () => {
+    /*
+      The relation, not the fraction. This pinned `gap / 2` and went red
+      when the fraction moved to a third on the strength of the geometry
+      measured two cases below — which is the fraction being tuning and
+      the relation being the claim, so only the relation is asserted:
+      narrower than the gap it was derived from, and scaling with it.
+    */
     const take = takes(160, 1)[0];
-    expect(separationForOnsets(take)).toBeCloseTo(shortestGap(take) / 2, 6);
+    const window = separationForOnsets(take)!;
+    expect(window, 'wider than the gap would merge two written notes')
+      .toBeLessThan(shortestGap(take));
+    expect(window, 'a window of nothing merges nothing').toBeGreaterThan(0);
+
+    // Scales with the music rather than being a constant in disguise: a
+    // slower take has wider gaps and must get a wider window.
+    const slower = takes(96, 1)[0];
+    expect(shortestGap(slower)).toBeGreaterThan(shortestGap(take));
+    expect(separationForOnsets(slower)!).toBeGreaterThan(window);
+
     // Fewer than two attacks is not a gap, and the caller must fall back
     // rather than be handed a window of zero.
     expect(separationForOnsets([1])).toBeUndefined();
     expect(separationForOnsets([])).toBeUndefined();
   });
 
-  it('survives a quarter of a gap of human error, which is what half buys', () => {
+  it('survives a third of a gap of human error, which is what a third buys', () => {
     /*
       The prediction, measured: `f = 1/2` holds to `j = 1/4` and starts
       losing notes beyond it. At ±30% it loses one in seventy-one, at ±20%

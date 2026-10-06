@@ -86,11 +86,30 @@ export interface ListenOptions {
  * The widest window that cannot merge two notes the piece actually
  * contains: half the shortest gap written into it.
  *
- * Half rather than all of it, so a performance that is slightly early or
- * late on one of a close pair still reads as two attacks. Derived from
- * the written onsets rather than from the tempo, because a tuplet's gap
- * is not a simple fraction of the beat and the tempo alone would get it
- * wrong in exactly the case that exposed this.
+ * Derived from the written onsets rather than from the tempo, because a
+ * tuplet's gap is not a simple fraction of the beat and the tempo alone
+ * would get it wrong in exactly the case that exposed this.
+ *
+ * **A third, and the fraction is not arbitrary.** Two notes written `g`
+ * apart, each played up to `j·g` off its time, land `g(1 − 2j)` apart —
+ * so a window of `f·g` merges two real notes exactly when `f ≥ 1 − 2j`.
+ * The fraction is therefore *one minus twice the timing error the chain
+ * intends to tolerate*, which makes it answerable rather than a taste.
+ * Measured against the generator's own output, notes lost by jitter:
+ *
+ *     f = 1/8, 1/4, 1/3   none, out to ±50%
+ *     f = 1/2             none to ±20%, losing from ±30%
+ *     f = 2/3             losing from ±30%
+ *     f = 1               catastrophic
+ *
+ * Half was the first guess and buys a quarter of a gap of human error;
+ * a third buys a third and costs nothing measurable.
+ *
+ * **What this cannot price is going too narrow**, because the harness
+ * that measured it plays clean attacks with no double-trigger. That
+ * lower bound is what the detector's fixed 50 ms was for — and under
+ * ADR 0035 it is no longer this window's job, because a cluster is
+ * merged by note assembly on evidence this layer does not have.
  *
  * Returns undefined for a piece with fewer than two notes, where there
  * is nothing to merge and the detector's own default is as good as any.
@@ -115,7 +134,7 @@ export function separationForOnsets(onsets: readonly number[]): number | undefin
   for (let i = 1; i < onsets.length; i += 1) {
     shortest = Math.min(shortest, onsets[i] - onsets[i - 1]);
   }
-  return Number.isFinite(shortest) && shortest > 0 ? shortest / 2 : undefined;
+  return Number.isFinite(shortest) && shortest > 0 ? shortest / 3 : undefined;
 }
 
 const DEFAULT_MIN_CLARITY = 0.7;

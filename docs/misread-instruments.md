@@ -141,6 +141,23 @@ convention, by people who had just read one another's accounts — which is the
 selection effect the accounts describe, operating on the evidence for
 themselves. 0025 is the one that owes it nothing.
 
+**And the practice this document argues for predates the document, which only
+a null result could show.** Someone went looking for the general form of the
+three-chips error — sweeps whose population is derived at runtime and never
+counted — expecting a crop. Thirty-two candidates, the riskiest checked, and
+**twenty-three were already guarded**, usually by an explicitly named sibling:
+*"so the scan is not looking at nothing"*, *"or the sweep below is idle"*. One
+was guarded by a sibling rather than by itself; a control was added, three
+other cases were found to already catch the mutation, and it was reverted.
+
+Counted independently: thirty such guards across the suite, in files first
+written on 3 and 4 October, with the phrasing in commits well before today.
+
+So this is not a document teaching the project a practice. **It is naming one
+the suite already had, which four people lapsed from on a day of unusual
+load** — which is a smaller claim and a more useful one, because the remedy is
+not to learn something but to notice when you have stopped doing it.
+
 ## A reproduction attempt is an instrument too
 
 Every case above is a finding *produced*. The same rule applies to failing to

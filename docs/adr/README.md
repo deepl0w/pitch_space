@@ -52,6 +52,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0035](0035-an-onset-is-an-attack-a-note-is-a-decision-about-attacks.md) | An onset is an attack; a note is a decision about attacks | Accepted |
 | [0036](0036-one-question-two-windows.md) | One question, two windows | Accepted |
 | [0037](0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md) | A schedule is per presentation, and the home screen is not | Accepted |
+| [0038](0038-preserve-unknown-settings-at-the-store-not-at-the-coercer.md) | Preserve unknown settings at the store, not at the coercer | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in

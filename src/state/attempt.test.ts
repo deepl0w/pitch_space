@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { attemptFrom } from './attempt';
 import { tallyItems, tallyKey } from './progressStore';
 import { dueAt } from './schedule';
-import { coerceAttempt } from './schema';
-import type { ExerciseBase, Result } from '../exercises/types';
+import { coerceAttempt, type Attempt } from './schema';
+import type { ExerciseBase, ItemId, Result } from '../exercises/types';
+import type { ProgressLine } from './line';
 
 /**
  * The join between what the screen stamps and what the scheduler reads.
@@ -29,6 +30,17 @@ const round = (over: Partial<{ exercise: ExerciseBase; settings: unknown }> = {}
   ...over,
 });
 
+/**
+ * The askable set every tracked fixture here declares, and the line it
+ * makes. ADR 0039: the set is the line's identity, so a fixture that
+ * omits it is untracked practice rather than a shorthand — and
+ * `tallyItems` skips those, which would leave every fold below empty.
+ */
+const POOL = ['interval:P5:up', 'interval:M3:up'] as ItemId[];
+const LINE: ProgressLine = { exercise: 'interval-id', askable: POOL, presentation: 'read' };
+/** The same answer space heard rather than read: a different line. */
+const BY_EAR: ProgressLine = { ...LINE, presentation: 'listen' };
+
 const result = (correct: boolean): Result => ({
   correct,
   feedback: correct ? 'Yes' : 'No',
@@ -41,7 +53,7 @@ describe('an attempt built the way the screen builds one', () => {
     // through a validator on the way to storage, and a field the screen
     // stamps in a shape the validator repairs would be silently altered
     // between answering and reading back.
-    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000);
+    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000, POOL);
     expect(coerceAttempt(attempt)).toEqual(attempt);
   });
 
@@ -51,11 +63,11 @@ describe('an attempt built the way the screen builds one', () => {
       rather than an error, so the control below is what stops this
       passing on a tally that was never built.
     */
-    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000);
+    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000, POOL);
     const tallies = tallyItems([attempt]);
 
     expect(tallies.size, 'nothing was folded, so nothing below is asserted').toBe(1);
-    const tally = tallies.get(tallyKey('interval:P5:up', 'read'));
+    const tally = tallies.get(tallyKey(LINE, 'interval:P5:up' as ItemId));
     expect(tally, 'the key the screen stamps is not the key the fold builds').toBeDefined();
     expect(tally).toMatchObject({ seen: 1, correct: 1, streak: 1 });
     expect(dueAt(tally!)).toBeGreaterThan(attempt.answeredAt);
@@ -65,17 +77,17 @@ describe('an attempt built the way the screen builds one', () => {
     // The pair that makes the key composite rather than decorative: the
     // same item heard and read are two skills (ADR 0010), so a tally
     // found under the wrong presentation would credit the wrong one.
-    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000);
+    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000, POOL);
     const tallies = tallyItems([attempt]);
 
-    expect(tallies.get(tallyKey('interval:P5:up', 'listen'))).toBeUndefined();
-    expect(tallies.get(tallyKey('interval:P5:up', 'read'))).toBeDefined();
+    expect(tallies.get(tallyKey(BY_EAR, 'interval:P5:up' as ItemId))).toBeUndefined();
+    expect(tallies.get(tallyKey(LINE, 'interval:P5:up' as ItemId))).toBeDefined();
   });
 
   it('copies the items, so the record cannot be edited by the round', () => {
     const items = ['interval:P5:up'];
     const exercise = { ...round().exercise, items } as unknown as ExerciseBase;
-    const attempt = attemptFrom(round({ exercise }), 'interval-id', result(true), 2_000);
+    const attempt = attemptFrom(round({ exercise }), 'interval-id', result(true), 2_000, POOL);
 
     items.push('interval:m3:down');
     expect(attempt.items, 'the attempt shares the round’s array').toEqual(['interval:P5:up']);
@@ -88,13 +100,13 @@ describe('an attempt built the way the screen builds one', () => {
       reads it. So nothing else in the suite can catch it being wrong:
       hard-coding it to true left every other case here green.
     */
-    expect(attemptFrom(round(), 'interval-id', result(true), 2_000).correct).toBe(true);
-    expect(attemptFrom(round(), 'interval-id', result(false), 2_000).correct).toBe(false);
+    expect(attemptFrom(round(), 'interval-id', result(true), 2_000, POOL).correct).toBe(true);
+    expect(attemptFrom(round(), 'interval-id', result(false), 2_000, POOL).correct).toBe(false);
   });
 
   it('records a wrong answer as seen but not correct, and resets the streak', () => {
-    const wrong = attemptFrom(round(), 'interval-id', result(false), 2_000);
-    const tally = tallyItems([wrong]).get(tallyKey('interval:P5:up', 'read'));
+    const wrong = attemptFrom(round(), 'interval-id', result(false), 2_000, POOL);
+    const tally = tallyItems([wrong]).get(tallyKey(LINE, 'interval:P5:up' as ItemId));
     expect(tally).toMatchObject({ seen: 1, correct: 0, streak: 0 });
   });
 });
@@ -112,7 +124,7 @@ describe('an attempt built the way the screen builds one', () => {
  * demonstrate that over attempts built the way the screen builds them.
  */
 describe('several attempts on one item', () => {
-  const KEY = tallyKey('interval:P5:up' as never, 'read');
+  const KEY = tallyKey(LINE, 'interval:P5:up' as ItemId);
 
   /** One attempt per verdict, a minute apart, in the order given. */
   const sequence = (verdicts: readonly boolean[]) => verdicts.map((correct, i) =>
@@ -121,6 +133,7 @@ describe('several attempts on one item', () => {
       'interval-id',
       result(correct),
       10_000 + i * 60_000,
+      POOL,
     ));
 
   it('builds a streak the schedule spaces on', () => {
@@ -175,7 +188,7 @@ describe('several attempts on one item', () => {
     const onPaper = sequence([true]);
     const tally = tallyItems([...byEar, ...onPaper]);
 
-    expect(tally.get(tallyKey('interval:P5:up' as never, 'listen'))!.streak).toBe(2);
+    expect(tally.get(tallyKey(BY_EAR, 'interval:P5:up' as ItemId))!.streak).toBe(2);
     expect(tally.get(KEY)!.streak).toBe(1);
     expect(tally.size, 'the two presentations folded into one entry').toBe(2);
   });
@@ -201,7 +214,7 @@ describe('several attempts on one item', () => {
  * practice would quietly reschedule a line the learner never advanced.
  */
 describe('an attempt that counts towards nothing', () => {
-  const KEY = tallyKey('interval:P5:up' as never, 'read');
+  const KEY = tallyKey(LINE, 'interval:P5:up' as ItemId);
 
   /** What 0041 describes: what it contained, crediting nothing. */
   const untracked = (answeredAt: number) => ({
@@ -223,6 +236,40 @@ describe('an attempt that counts towards nothing', () => {
     expect(tallyItems([untracked(5_000)]).size).toBe(0);
   });
 
+  it('folds nothing from history written before lines existed', () => {
+    /*
+      **The case the untracked ones cannot make, and a mutant found it.**
+
+      Untracked practice carries no outcomes (0041), so the fold adds
+      nothing from it whether or not `tallyItems` skips the attempt — the
+      inner loop has nothing to walk. Replacing the skip with an invented
+      empty line passes every untracked case here.
+
+      Pre-line history is the other half and it is where the skip earns
+      its place: a v2 attempt has real outcomes and no askable set (0042),
+      so inventing a line for it files genuine practice under the line
+      whose answer space is empty. Every such attempt in a user's history
+      folds into that one bucket and reads as progress against nothing.
+    */
+    const preLine = {
+      ...attemptFrom({ ...round(), id: 'v2' }, 'interval-id', result(true), 9_000, POOL),
+    } as Partial<Attempt>;
+    delete preLine.askable;
+
+    expect(preLine.outcomes, 'the fixture has nothing to fold, so this proves nothing')
+      .toHaveLength(1);
+    expect(tallyItems([preLine as Attempt]).size).toBe(0);
+
+    // The control: the same attempt with its set is folded, so "nothing"
+    // above is the missing line rather than a fold that never works.
+    expect(tallyItems([preLine as Attempt, ...sequenceOne()]).size).toBe(1);
+  });
+
+  /** One ordinary tracked attempt, for the control above. */
+  function sequenceOne() {
+    return [attemptFrom({ ...round(), id: 'tracked' }, 'interval-id', result(true), 9_500, POOL)];
+  }
+
   it('leaves a tracked line exactly where it was', () => {
     /*
       The half that matters. Three tracked answers build a streak and a due
@@ -231,7 +278,7 @@ describe('an attempt that counts towards nothing', () => {
       is what `dueAt` adds its interval to.
     */
     const tracked = [10_000, 70_000, 130_000].map((at, i) => attemptFrom(
-      { ...round(), id: `tracked-${i}` }, 'interval-id', result(true), at,
+      { ...round(), id: `tracked-${i}` }, 'interval-id', result(true), at, POOL,
     ));
 
     const before = tallyItems(tracked).get(KEY)!;
@@ -360,6 +407,7 @@ describe('the askable set an attempt carries', () => {
       untracked attempt into a single bucket reading as progress against
       nothing. Absent is the only encoding of "no line".
     */
+    // No fifth argument, deliberately: this case is the omission itself.
     const a = attemptFrom(round(), 'interval-id', result(true), 2_000);
     expect('askable' in a).toBe(false);
   });

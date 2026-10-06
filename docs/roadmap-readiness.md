@@ -195,6 +195,54 @@ The other two failures the sweeps found — a count that moves when settings
 change, and a family card summing items no amount of practice on the chosen
 ones can clear — are the same shape as G3, and fall out of it.
 
+### The motivating case, measured from outside
+
+A returning-learner pass: ten questions across two exercises on a fresh
+profile, closed, reopened. **Home is pixel-identical to a stranger's first
+visit** — the same card text for the two exercises just drilled, no badge, no
+last-practised, no reordering. Settings' "Your history" panel is three
+sentences of privacy prose and, checked in the source, **not one figure and no
+reference to the store at all.**
+
+The user role's framing is better than this review's and replaces it:
+
+> Per-category stats exist and are tracked correctly, right now, today. But
+> they are invisible from the two places a returning learner would actually
+> look. You would have to already be inside the right exercise, looking at the
+> right interval, to ever learn the app remembers you at all.
+
+So the gap is not the absent scheduler, which `ROADMAP.md` states plainly and
+which misleads nobody. It is **working, accurate data with nowhere to
+surface** — a different problem, with a different cost, and the one G4 is
+about.
+
+Severity, as they judged it and worth recording in their terms: **a quiet
+absence rather than a defect.** Nothing on screen promises progress tracking,
+so nothing contradicts itself the way the clef did. Deflating, not alarming —
+which is what decides its order against the other open questions rather than
+its size.
+
+### The three sites are one decision
+
+Session-versus-lifetime counts with no scope word, the empty history panel,
+and the home screen are not three items. They are one question — **what
+progress the app shows, where, and what it says when it does not know** —
+asked in three places, and each answer has to satisfy constraints that are
+already recorded:
+
+- [0037](adr/0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md)'s
+  rule, that a figure names its scope or is not shown, with scope being time
+  as readily as presentation;
+- [0006](adr/0006-settings-in-localstorage-progress-in-indexeddb.md)'s
+  tri-state, which `ProgressStatus` already supplies, so a figure can say *I
+  cannot read your history* rather than showing a stranger's number;
+- the due count that shipped and was pulled within the hour, which is the
+  precedent for what happens when a figure is right and its sentence is not.
+
+Listing them separately is what makes the cheapest-looking one — a count in
+the Settings panel, five minutes of work — read as cosmetic. It is the same
+five minutes that were spent and reverted once already.
+
 ## G5 — imported scores break `generate(spec)` and `items(settings)`
 
 The furthest out and the one that stresses the most load-bearing decision.

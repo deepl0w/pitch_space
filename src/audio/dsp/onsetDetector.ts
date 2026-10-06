@@ -84,12 +84,26 @@ export const ONSET_HOP_FRACTION = 4;
 /**
  * Two attacks closer together than this are the same attack.
  *
- * Not arbitrary: at 200 bpm a sixteenth note is 75 ms, which is faster than
- * anybody sight-reads, so 50 ms cannot swallow a note the exercise asked for.
- * What it does swallow is the double-trigger a plectrum produces when the
- * pick noise and the string's first period land in different frames.
+ * What it is for is the double-trigger a plectrum produces when the pick
+ * noise and the string's first period land in different frames.
+ *
+ * **It does swallow notes this app asks for, and the argument that it could
+ * not was checked against music rather than against the generator.** It ran:
+ * at 200 bpm a sixteenth note is 75 ms, which is faster than anybody sight
+ * reads. The fastest tempo the app offers is 160, so that bound is never
+ * reached — but the cell library writes tuplets, and the shortest gap the
+ * rhythm generator produces is 47 ms. A perfectly played bar at 160 bpm
+ * loses notes here. `heard.test.ts` in `exercises/rhythm-id/` measures both
+ * halves and records the defect.
+ *
+ * **Lowering it is not the fix**, because the same number is also what
+ * refuses a hammer's attack cluster — a recorded piano note fragments into
+ * as many as twenty-four onsets, 70 to 110 ms apart, and that wants a wider
+ * window than this, not a narrower one. The two jobs have different right
+ * answers. `minSeparationSeconds` is already per call, and the caller is
+ * what knows the tempo.
  */
-const MIN_SEPARATION_SECONDS = 0.05;
+export const MIN_SEPARATION_SECONDS = 0.05;
 
 /**
  * Half-width of the median window, in seconds.

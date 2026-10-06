@@ -231,3 +231,60 @@ describe('a note at the end of a take', () => {
     expect(last.clarity).toBe(0);
   });
 });
+
+/**
+ * What the capture layer's choice of sample rate is actually worth.
+ *
+ * `MicrophoneSource` reports the *context's* rate rather than the track's,
+ * because the two disagree — 48000 against 44100 on Chrome, for one stream
+ * — and the worklet times its frames from the context. That is the right
+ * choice and it is argued where it is made; what was not available there is
+ * what the wrong choice costs, so it was estimated, and the estimate was
+ * out by a factor of fifteen.
+ *
+ * Every second downstream is counted in the rate the analysis is handed, so
+ * a rate 8.8% high reads every frequency 8.8% high. That is not a tenth of
+ * a semitone. It is 147 cents — the difference between A and B, and the
+ * difference between an exercise that works and one that is wrong about
+ * every note it hears.
+ */
+describe('the rate the analysis is told', () => {
+  const TRUE_RATE = 44_100;
+  /** What Chrome reported for the same stream, context against track. */
+  const CONTEXT_RATE = 48_000;
+
+  const played = () => pluckSequence({
+    atSeconds: [0.3, 0.9, 1.5], frequencyHz: 440, seed: 11,
+    seconds: 2.4, sampleRate: TRUE_RATE, decaySeconds: 1.2,
+  });
+
+  it('is what every reported frequency is measured against', () => {
+    const right = analyse(played(), TRUE_RATE).notes[0];
+    expect(right.frequencyHz!).toBeCloseTo(440, 0);
+
+    const wrong = analyse(played(), CONTEXT_RATE).notes[0];
+    const cents = 1200 * Math.log2(wrong.frequencyHz! / 440);
+    /*
+      Asserted as a range rather than a figure: the claim is the order of
+      magnitude of the mistake, and pinning 147 would make retuning the
+      detector a failure here for no reason. A semitone is the useful floor
+      — below it the error could be argued as tuning, above it the exercise
+      is naming a different note.
+    */
+    expect(Math.abs(cents), 'a rate error this size is more than a tuning quibble')
+      .toBeGreaterThan(100);
+    expect(Math.abs(cents)).toBeLessThan(200);
+  });
+
+  it('is what every reported time is counted in', () => {
+    // The same mistake seen as rhythm: a take read 8.8% fast is a take
+    // whose every attack arrives early, by more than a sixteenth by the
+    // end of a bar.
+    const right = analyse(played(), TRUE_RATE);
+    const wrong = analyse(played(), CONTEXT_RATE);
+    expect(wrong.durationSeconds / right.durationSeconds)
+      .toBeCloseTo(TRUE_RATE / CONTEXT_RATE, 3);
+    const drift = right.onsets[2].timeSeconds - wrong.onsets[2].timeSeconds;
+    expect(drift, 'the last attack of a bar barely moved').toBeGreaterThan(0.1);
+  });
+});

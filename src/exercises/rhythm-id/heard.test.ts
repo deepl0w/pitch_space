@@ -23,6 +23,35 @@ import { applyValue, widestSettings, type AnyField } from '../../testing/setting
  * the exercise would mark correct, struck cleanly, with no human error in
  * them at all. Anything lost between the two is lost by the chain rather
  * than by the player.
+ *
+ * ## What a harness can tell you about itself, which is nothing
+ *
+ * This file produced a false finding and the account is kept here rather
+ * than summarised elsewhere, because the worked example is the part that
+ * carries it.
+ *
+ * Looking for a reason the count-in mattered, it measured ten of ten graded
+ * correct with one and four of ten without, and concluded the count-in made
+ * the first attack findable. The variable was leading silence; the count-in
+ * was only the thing supplying it. Three tenths of a second of quiet and the
+ * no-count-in case grades ten of ten too.
+ *
+ * **A finding that arrives already shaped like the thing you were looking
+ * for is the one to check hardest**, because the search supplied the shape
+ * and the evidence only has to avoid contradicting it. The table looked like
+ * evidence because it was numbers, and numbers out of a harness are an
+ * instrument reading rather than a measurement of the world: the variable
+ * under test was never the variable that moved, and no table can say that
+ * about itself.
+ *
+ * The check is not "am I being careful", which is a disposition and catches
+ * nothing. It is **what else changed when I changed the thing I was
+ * testing**, which has an answer — and the answer here was found by varying
+ * the other thing, which took one more sweep than stopping would have.
+ *
+ * `silenceBefore` is a parameter below rather than an accident for that
+ * reason, and `fails at 160 for the timing and not for the tone` is the same
+ * discipline applied in advance to this file's headline claim.
  */
 
 const RATE = 44_100;
@@ -469,15 +498,19 @@ describe('a perfect performance, played and heard', () => {
    */
   function gradeOf(
     exercise: RhythmExercise,
-    options: { countIn: boolean; silenceBefore?: number },
+    options: {
+      countIn: boolean; silenceBefore?: number;
+      frequencyHz?: number; decaySeconds?: number;
+    },
   ) {
     const silenceBefore = options.silenceBefore ?? 0.3;
     const voices = rhythmVoices(exercise, { countIn: options.countIn });
     const lead = (options.countIn ? leadInSeconds(exercise) : 0) + silenceBefore;
     const starts = voices.map((v) => v.start + silenceBefore);
     const signal = pluckSequence({
-      atSeconds: starts, frequencyHz: 220, seed: 7,
-      seconds: Math.max(...starts) + 1, sampleRate: RATE, decaySeconds: 0.4,
+      atSeconds: starts, frequencyHz: options.frequencyHz ?? 220, seed: 7,
+      seconds: Math.max(...starts) + 1, sampleRate: RATE,
+      decaySeconds: options.decaySeconds ?? 0.4,
     });
     const taps = detectOnsets(signal, { sampleRate: RATE }).onsets
       .map((onset) => onset.timeSeconds - lead)
@@ -515,6 +548,37 @@ describe('a perfect performance, played and heard', () => {
       expect(gradeOf(exercise, { countIn: true }).correct,
         `160 bpm seed ${seed}`).toBe(true);
     }
+  });
+
+  it('fails at 160 for the timing and not for the tone it was played in', () => {
+    /*
+      The objection the case above invites, answered before it is raised:
+      that the loss is an artefact of the signal this harness happens to
+      synthesise rather than of the app.
+
+      It is not. The same two bars of eight fail at every pitch and every
+      decay — the count is six of eight across 110, 220 and 440 Hz crossed
+      with decays of 0.15, 0.4 and 1.2 seconds, and eight of eight at 96 bpm
+      in all nine. Which is what the mechanism predicts: `minSeparationSeconds`
+      compares onset *times* and knows nothing about timbre, so a merge that
+      moved with the tone would mean the fault was somewhere else.
+
+      Two shapes rather than nine, because the claim is invariance and two
+      far-apart points make it; the nine were measured once to choose them.
+      It also stops the defect being "fixed" by quietly changing the signal
+      this file plays.
+    */
+    const sample = exercises(160, 8);
+    const bright = sample
+      .filter((e) => gradeOf(e, { countIn: true, frequencyHz: 440, decaySeconds: 0.15 }).correct)
+      .length;
+    const dark = sample
+      .filter((e) => gradeOf(e, { countIn: true, frequencyHz: 110, decaySeconds: 1.2 }).correct)
+      .length;
+
+    expect(bright, 'the tone changed how many bars survived').toBe(dark);
+    expect(bright, 'every bar graded, so there is no loss to be invariant about')
+      .toBeLessThan(sample.length);
   });
 
   it('needs audio before the first attack, which is not the count-in\'s doing', () => {

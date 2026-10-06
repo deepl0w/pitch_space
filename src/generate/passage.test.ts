@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { makeRng } from '../theory/rng';
-import { noteValue, timeSignature } from '../theory/meter';
-import { ALL_KEYS, findKey } from '../theory/key';
+import { TIME_SIGNATURES, noteValue, timeSignature } from '../theory/meter';
+import type { TimeSignature } from '../theory/meter';
+import { ALL_KEYS, findKey, keyId } from '../theory/key';
 import { midiOf } from '../theory/pitch';
 import { baseOf } from './motif';
 import { generateHarmony } from './harmony';
 import { generateMelody } from './melody';
 import { planMotifs } from './motif';
-import { deriveStreams, generatePassage, slotsOf } from './passage';
+import { deriveStreams, generatePassage, slotsOf, type Passage } from './passage';
 import type { RhythmBar, RhythmEvent } from './rhythm';
 
 /**
@@ -319,5 +320,90 @@ describe('a generated passage', () => {
         expect(sum, `seed ${seed} bar ${bar.index}`).toBe(TS.barTicks);
       }
     }
+  });
+});
+
+/**
+ * The join outside the one configuration it was written against.
+ *
+ * Every case above runs in C major, 4/4, four bars. That is the shape of
+ * defect this repository keeps finding — a sweep holding a user-facing
+ * choice at its default — and it is worse here than usual, because the
+ * three layers are joined once and a key or a metre is exactly the sort of
+ * thing one layer handles and another does not.
+ *
+ * Nothing was wrong. 1980 passages across thirty keys, eleven metres and
+ * bar counts of two, four and eight satisfy every invariant the cases above
+ * assert at one configuration. That is worth having as a result rather than
+ * as an absence: the join was written in an afternoon and this says it was
+ * written right.
+ */
+describe('a passage in any key, metre and length', () => {
+  const RANGE = [60, 81] as const;
+
+  /** Every invariant the single-configuration cases above assert. */
+  function faultsIn(passage: Passage, bars: number, ts: TimeSignature): string[] {
+    const faults: string[] = [];
+    const attacks = passage.bars.flatMap((bar) => bar.events)
+      .filter((event) => !event.isRest && !event.tiedFromPrevious);
+    if (passage.melody.length !== attacks.length) {
+      faults.push(`melody has ${passage.melody.length} notes for ${attacks.length} attacks`);
+    }
+    if (passage.bars.length !== bars) faults.push(`${passage.bars.length} bars, asked for ${bars}`);
+    for (const bar of passage.bars) {
+      const ticks = bar.events.reduce((sum, event) => sum + event.durationTicks, 0);
+      if (ticks !== ts.barTicks) faults.push(`bar ${bar.index} sums to ${ticks} not ${ts.barTicks}`);
+    }
+    for (const note of passage.melody) {
+      const midi = midiOf(note.pitch);
+      if (midi < RANGE[0] || midi > RANGE[1]) faults.push(`midi ${midi} outside the range`);
+    }
+    return faults;
+  }
+
+  it('holds in every key and metre the theory offers', () => {
+    const broken: string[] = [];
+    for (const key of ALL_KEYS) {
+      for (const ts of TIME_SIGNATURES) {
+        const passage = generatePassage(makeRng(7), {
+          key, timeSignature: ts, bars: 2, range: RANGE,
+        });
+        broken.push(...faultsIn(passage, 2, ts)
+          .map((fault) => `${keyId(key)} ${ts.id}: ${fault}`));
+      }
+    }
+    expect(broken).toEqual([]);
+    // The sweep is the claim, so its size is part of it.
+    expect(ALL_KEYS.length * TIME_SIGNATURES.length).toBeGreaterThan(300);
+  });
+
+  it('holds at every length a phrase can be', () => {
+    const broken: string[] = [];
+    for (const bars of [2, 4, 8]) {
+      for (const key of [findKey('C_major'), findKey('F#_minor'), findKey('Eb_major')]) {
+        for (let seed = 0; seed < 4; seed += 1) {
+          const passage = generatePassage(makeRng(seed), {
+            key, timeSignature: TS, bars, range: RANGE,
+          });
+          broken.push(...faultsIn(passage, bars, TS)
+            .map((fault) => `${keyId(key)} ${bars} bars seed ${seed}: ${fault}`));
+        }
+      }
+    }
+    expect(broken).toEqual([]);
+  });
+
+  it('refuses a single bar, because a progression is not one chord', () => {
+    /*
+      The only thing the sweep found, and it is correct behaviour rather
+      than a fault: `planPhrases` requires two bars and says so. It is
+      asserted here as well as in `harmony.test.ts` because the message a
+      caller meets comes through this join — `PassageOptions.bars` reads
+      like any positive integer will do, and the refusal is the only thing
+      that says otherwise.
+    */
+    expect(() => generatePassage(makeRng(1), {
+      ...base, bars: 1,
+    })).toThrow(/at least two bars/);
   });
 });

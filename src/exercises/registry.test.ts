@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { optionIds, widestSettings } from '../testing/settingsSpace';
 import { EXERCISE_FAMILIES, EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
+import { RHYTHM_EXERCISE_ID as RHYTHM_ID } from './rhythm-id/rhythms';
 import { itemLabel } from './itemLabel';
 import { SCALE_TYPES } from '../theory/scale';
 import { CHORD_TYPES } from '../theory/chord';
@@ -393,62 +394,98 @@ describe('every exercise type’s generator', () => {
 describe('the verdict a grading reports', () => {
   /**
    * `Result.correct` and `Result.outcomes` are two statements about one
-   * answer, and nothing has ever asked whether they agree.
+   * answer, and they are not the same statement.
    *
-   * It matters because of what became of them. `attempt.correct` is
-   * persisted and validated — `schema.ts` refuses an attempt without a
-   * boolean there — and then **nothing reads it**: `tallyItems` folds the
-   * outcomes and the screen counts from the fold. So a verdict that
-   * contradicted its own detail would be stored, would pass validation,
-   * and would be invisible to every consumer. Hard-coding it `true` in
-   * `attemptFrom` survived four of five mutants for exactly that reason.
+   * **The first version of this asserted they always agree, and that was
+   * false.** It swept 1,240 gradings and found no disagreement — because
+   * the response shapes it used could not produce one. Rhythm was fed a
+   * perfect performance, a late one and silence; none of those is the case
+   * where they differ, and a sweep that cannot reach a case reports its
+   * absence as agreement. The claim covered the shapes I had thought of
+   * rather than the ones the graders take.
    *
-   * Measured first over forty seeds and every response shape the seven
-   * accept — junk, perfect, wrong, short and empty — 1,240 gradings with
-   * `correct` equal to "every outcome correct" in all of them. Asserted
-   * here over twenty, which is 380 of them; the floor below is read from
-   * that rather than carried over from the wider sweep, which is a
-   * mistake this took on its first run.
+   * What is true is a distinction. Six exercises are answered by
+   * *choosing*, and for those the verdict is exactly "every outcome
+   * correct". Rhythm is answered by *performing*, its outcomes are per
+   * written cell, and **an extra tap belongs to no written cell** — so the
+   * outcomes structurally cannot represent it and `correct` carries the one
+   * fact the fold cannot see: the learner played something that was not
+   * written. ADR 0007 kept the field for this.
+   *
+   * It matters downstream because nothing reads `attempt.correct` yet. A
+   * first consumer folding only outcomes would be blind to spurious
+   * playing, and these cases are what say which field carries what.
    */
-  it('agrees with the outcomes underneath it', () => {
+  /** Response shapes a grader will accept, including one it should refuse. */
+  function responsesFor(exercise: unknown): unknown[] {
+    const shaped: unknown[] = [undefined, null, 'nonsense', [], {}];
+    const asAny = exercise as { numerals?: readonly unknown[]; onsets?: readonly number[] };
+    if (asAny.numerals) {
+      shaped.push({ numerals: [...asAny.numerals] });
+      shaped.push({ numerals: asAny.numerals.map(() => 'I') });
+    }
+    if (asAny.onsets && asAny.onsets.length > 0) {
+      const written = [...asAny.onsets];
+      shaped.push({ taps: written }, { taps: [] });
+      // Every written note placed, plus one that was not. The case the
+      // first version of this never built.
+      shaped.push({ taps: [...written, written[written.length - 1] + 0.37] });
+    }
+    return shaped;
+  }
+
+  const everyOutcomeRight = (result: { outcomes: readonly { correct: boolean }[] }) =>
+    result.outcomes.length > 0 && result.outcomes.every((o) => o.correct);
+
+  it('is exactly "every outcome correct", where the answer is chosen', () => {
     let compared = 0;
     for (const definition of EXERCISE_TYPES) {
+      if (definition.id === RHYTHM_ID) continue;
       const settings = definition.settings.coerce(definition.settings.defaults);
       for (let seed = 0; seed < 20; seed += 1) {
         const exercise = definition.generate({ seed, settings });
-        const shaped: unknown[] = [undefined, null, 'nonsense', [], {}];
-        const asAny = exercise as unknown as {
-          numerals?: readonly unknown[]; onsets?: readonly number[];
-        };
-        if (asAny.numerals) {
-          shaped.push({ numerals: [...asAny.numerals] });
-          shaped.push({ numerals: asAny.numerals.map(() => 'I') });
-        }
-        if (asAny.onsets) {
-          shaped.push({ taps: [...asAny.onsets] }, { taps: [] });
-        }
-        for (const response of shaped) {
+        for (const response of responsesFor(exercise)) {
           let result;
           try { result = definition.grade(exercise, response); } catch { continue; }
           compared += 1;
-          const everyOutcomeRight = result.outcomes.length > 0
-            && result.outcomes.every((o) => o.correct);
-          /*
-            If this ever fails legitimately — a grader awarding the round
-            to someone who got part of it right — then the two fields have
-            stopped being one statement and the attempt log needs to say
-            which one a consumer should believe. That is a decision rather
-            than a bug, and this is where it would be noticed, since
-            nothing downstream reads `correct` at all.
-          */
           expect(result.correct, `${definition.id} seed ${seed}: verdict and outcomes disagree`)
-            .toBe(everyOutcomeRight);
+            .toBe(everyOutcomeRight(result));
         }
       }
     }
-    // The responses have to have been gradeable, or this compared nothing:
-    // two exercises take structured answers and throw on everything else.
     expect(compared, 'no response was gradeable anywhere').toBeGreaterThan(300);
+  });
+
+  it('carries what the outcomes cannot, where the answer is played', () => {
+    /*
+      The disagreement is designed, not a defect, and it only goes one way:
+      every written note placed and the round still failed. Asserted with
+      the control beside it — the same performance without the extra tap
+      must pass — so "false" is attributable to the spurious tap rather
+      than to the performance being wrong some other way.
+    */
+    const rhythm = findExerciseType(RHYTHM_ID)!;
+    const settings = rhythm.settings.coerce(rhythm.settings.defaults);
+    let disagreed = 0;
+    for (let seed = 0; seed < 6; seed += 1) {
+      const exercise = rhythm.generate({ seed, settings }) as unknown as {
+        onsets: readonly number[];
+      };
+      const written = [...exercise.onsets];
+
+      const clean = rhythm.grade(exercise as never, { taps: written } as never);
+      expect(clean.correct, `seed ${seed}: the performance was not clean to begin with`).toBe(true);
+
+      const spurious = rhythm.grade(
+        exercise as never,
+        { taps: [...written, written[written.length - 1] + 0.37] } as never,
+      );
+      expect(everyOutcomeRight(spurious),
+        `seed ${seed}: a written note went unplaced, so this is not the extra-tap case`).toBe(true);
+      expect(spurious.correct, `seed ${seed}: an unwritten tap did not fail the round`).toBe(false);
+      disagreed += 1;
+    }
+    expect(disagreed, 'no seed produced the case this is about').toBeGreaterThan(0);
   });
 });
 

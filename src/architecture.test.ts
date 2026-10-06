@@ -385,56 +385,130 @@ describe('the conventions the ADR index carries', () => {
 });
 
 /**
- * The home screen's claim about what is not built yet, tied to the thing
- * that makes it false.
+ * The claim that survived longest and cost the most: the home screen's lede
+ * said exercises were "answered by playing them" while every built exercise
+ * was answered by clicking a button or tapping a key. Every exercise card
+ * was honest about its own answer path; only the lede — which describes all
+ * six at once rather than any one screen — was not, and nothing caught it
+ * because nothing checked a claim about six exercises against any single one
+ * of them. Found from outside by the user role, fixed by main at 16e5cff.
  *
- * The lede said the app was "answered by playing them" for as long as every
- * built exercise was answered by clicking a button. Each exercise card was
- * checked against its own exercise and was honest; nothing checked the
- * sentence summarising all six, which is the ADR index's sixth convention —
- * a summary sits above every check that could contradict it.
- *
- * The correction replaced one unfalsifiable claim with another and a worse
- * kind. "Answering by playing is being built" is a claim of *absence*, and
- * building the thing does not prompt anyone to delete the sentence saying it
- * is unbuilt: there is no reader who opens the file and sees it is wrong. The
- * index names that asymmetry and says the remedy is a mechanism rather than
- * vigilance, so this is the mechanism.
- *
- * The condition is mechanical rather than a judgement about what "answered by
- * playing" means: an exercise is answered by playing when its code reads the
- * capture layer. Nothing under `exercises/` does today. The day one does,
- * this goes red and names the sentence to change — which is the only moment
- * anyone would otherwise have had no reason to look.
+ * This does not snapshot the sentence. A reworded lede that still claims
+ * playing as a present capability should still fail here, and the sentence
+ * is free to change in every other way. What it is checked against is the
+ * fact the wording has to answer to: whether any exercise actually hands a
+ * response to the capture layer, rather than to a click or a keypress.
+ * `audio/capture/` exists and works (ADR 0035) — this asserts it is not yet
+ * wired to any exercise's grading, which is what makes the claim false today.
+ * The day an exercise does wire it, this goes green on its own and the lede
+ * is free to say so; it is the other direction — claiming it with nothing
+ * behind the claim — that this exists to catch.
  */
-describe('what the home screen says is not built', () => {
-  const PLANNED = 'answering by playing is being built';
+describe("the home screen's claim about how exercises are answered", () => {
+  const HOME = join(SRC, 'ui', 'screens', 'Home.tsx');
 
-  it('stops claiming playing is unbuilt once an exercise reads the mic', () => {
-    const wired = filesUnder(join(SRC, 'exercises'))
-      // A test may read the capture layer without the exercise doing so,
-      // and `rhythm-id/heard.test.ts` does — it asks whether the detector
-      // hears the rhythm the generator wrote, which is the groundwork for
-      // wiring and not the wiring. Counting it would have made this fire
-      // on the day someone proved the chain works rather than the day a
-      // user could use it.
+  /**
+   * The names that mean captured audio, rather than the directory that
+   * holds them.
+   *
+   * The first version of this asked whether an exercise imported anything
+   * from `audio/capture/`, which is directory membership wearing a
+   * measurement's clothes. `listen.ts` also exports `separationForOnsets`,
+   * pure arithmetic over written onset times that any code may use — and
+   * ADR 0036 says a rhythm exercise's tolerance derives from exactly that
+   * quantity, so the natural implementation of it has `rhythm-id` import
+   * the helper. Under the old condition, the day 0036 landed this test
+   * would have declared the app answered by playing with nothing wired,
+   * and the lede would have lost its last true sentence to a rename.
+   *
+   * None of these can be satisfied by a pure helper: they are a source of
+   * frames, or the function that drives one.
+   */
+  const CAPTURE_BEARING = ['listen', 'CaptureSource', 'MicrophoneSource', 'RecordedSource', 'framesOf'];
+
+  function exerciseIsWiredToCapture(): boolean {
+    // Shipped files only: capture reached from an exercise's own test says
+    // the chain can be driven, not that a learner's answer travels it.
+    return filesUnder(join(SRC, 'exercises'))
       .filter((file) => !/\.test\.tsx?$/.test(file))
-      .filter((file) => /from\s+'[^']*audio\/capture/.test(readFileSync(file, 'utf8')));
-    const home = readFileSync(join(SRC, 'ui', 'screens', 'Home.tsx'), 'utf8').replace(/\s+/g, ' ');
-    const claimsUnbuilt = home.includes(PLANNED);
+      .some((file) => {
+        const source = readFileSync(file, 'utf8');
+        return [...source.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*'([^']+)'/g)].some(
+          ([, bindings, specifier]) =>
+            resolveWithin(file, specifier)?.startsWith('audio/capture')
+            && bindings
+              .split(',')
+              .map((binding) => binding.trim().split(/\s+as\s+/)[0].trim())
+              .some((name) => CAPTURE_BEARING.includes(name)),
+        );
+      });
+  }
 
-    if (wired.length === 0) {
-      expect(
-        claimsUnbuilt,
-        `No exercise reads the capture layer, so the home lede has to say so. Expected it to contain "${PLANNED}".`,
-      ).toBe(true);
-    } else {
-      expect(
-        claimsUnbuilt,
-        `These now read the capture layer, so the home lede may no longer say playing is unbuilt:\n  ${wired
-          .map((f) => relative(SRC, f))
-          .join('\n  ')}\nRemove "${PLANNED}" from src/ui/screens/Home.tsx and say what is true instead.`,
-      ).toBe(false);
-    }
+  /**
+   * Just the rendered paragraph, not the file.
+   *
+   * The file also carries the comment explaining this exact test, in prose
+   * that necessarily uses the words "answered", "playing" and "built" to
+   * describe the bug it is guarding against — and a whole-file scan matched
+   * that narration instead of the markup, passing or failing by accident of
+   * how the comment was worded rather than by what the page renders. Scoped
+   * to the `<p className="lede">` tag, which is also tighter than the
+   * surrounding rule needs to be: a disclaimer anywhere outside this one
+   * paragraph should not be able to launder a bare claim inside it.
+   */
+  function ledeText(source: string): string {
+    const match = source.match(/<p className="lede">([\s\S]*?)<\/p>/);
+    if (!match) throw new Error('could not find the lede paragraph in Home.tsx');
+    return match[1];
+  }
+
+  /**
+   * A sentence mentioning both "answer" and "playing" with nothing in it
+   * disclaiming that as future work. Sentence-scoped rather than
+   * paragraph-scoped so a disclaimer in one sentence cannot launder a bare
+   * claim sitting in another — which is close to how the original line
+   * read, in a paragraph that also disclaimed Sight reading correctly.
+   */
+  function claimsPlayingIsCurrent(lede: string): boolean {
+    const sentences = lede.replace(/\s+/g, ' ').match(/[^.]+\./g) ?? [];
+    return sentences.some((sentence) =>
+      /\bplaying\b/i.test(sentence)
+      && /\banswer(ed|ing)?\b/i.test(sentence)
+      && !/\b(being built|not built|not yet|unbuilt|planned|is coming|will be)\b/i.test(sentence));
+  }
+
+  it('does not claim playing as a current answer path while no exercise is wired to capture', () => {
+    const lede = ledeText(readFileSync(HOME, 'utf8'));
+    const claimsPlayingNow = claimsPlayingIsCurrent(lede);
+    const wiredToCapture = exerciseIsWiredToCapture();
+    expect(
+      { claimsPlayingNow, wiredToCapture },
+      'home screen claims an answer path no exercise has',
+    ).not.toEqual({ claimsPlayingNow: true, wiredToCapture: false });
+  });
+
+  /**
+   * The other direction, which has no reader to catch it.
+   *
+   * A claim that something exists is contradicted the moment someone opens
+   * the file and finds it absent. A claim that it is *not yet* built is
+   * contradicted by nobody, because building the thing does not prompt
+   * anyone to delete the sentence saying it is unbuilt. The ADR index's
+   * sixth convention names that asymmetry; this is the half of it that
+   * applies once the wiring lands, and the only moment anyone would
+   * otherwise have had no reason to look at the lede again.
+   */
+  it('stops disclaiming playing once an exercise is wired to capture', () => {
+    const lede = ledeText(readFileSync(HOME, 'utf8')).replace(/\s+/g, ' ');
+    const disclaims = /\b(being built|not built|not yet|unbuilt|planned|is coming|will be)\b/i.test(lede);
+    expect(
+      { disclaims, wiredToCapture: exerciseIsWiredToCapture() },
+      'an exercise now answers by playing, so the lede may no longer call it unbuilt',
+    ).not.toEqual({ disclaims: true, wiredToCapture: true });
+  });
+
+  it('still mentions playing, so the rule above is not defending a lede that dropped the word entirely', () => {
+    const lede = ledeText(readFileSync(HOME, 'utf8'));
+    expect(/\bplaying\b/i.test(lede)).toBe(true);
   });
 });

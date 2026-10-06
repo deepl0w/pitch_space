@@ -104,6 +104,34 @@ unasserted. And nothing yet checks that aiming does not distort *what else*
 is asked: a generator that honoured every wish by always picking the same
 root would pass the contract and be a worse exercise.
 
+### `main` — a passage: the generator's three layers joined
+
+**Branch:** `main`, starting now.
+
+**Why.** `harmony.ts`, `motif.ts` and `melody.ts` all work and **nothing
+calls two of them together.** The tester flagged it: `planMotifs` has no
+production caller, so its melody harness builds the plan-to-slots-to-melody
+path by hand, and that hand-built path is the only place the three have
+ever met. A layer nothing composes is a layer whose interface has not been
+tested by use.
+
+**What it is.** `generatePassage(rng, options)` in `src/generate/passage.ts`
+— a key, a metre, a phrase plan, bars of rhythm built from motifs, and a
+melody over them, as one value. Pure and seeded like everything else in
+`generate/`; it decides nothing an exercise should decide.
+
+**For tester.** Two claims worth having that none of the three can make
+alone. **Every melody note lands on a written attack** — the melody's
+times must be exactly the rhythm's onsets, in order, with none invented
+and none dropped, which is the join that hand-wiring gets right by
+accident. And **a restated bar is still a restatement after the melody
+has been fitted to it**: the motif plan promises the rhythm repeats, and
+nothing currently checks that survives the melody search, which is free
+to fail a bar and relax.
+
+When this lands, `melody.test.ts`'s hand-built path should probably call
+it instead, so there is one way the layers join rather than two.
+
 ### `main` — capture, fed by recordings rather than by a microphone
 
 **Branch:** `main`, starting now. Here first because it adds the seam every

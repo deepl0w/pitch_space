@@ -4,9 +4,11 @@ import { noteValue, timeSignature } from '../theory/meter';
 import { ALL_KEYS, findKey } from '../theory/key';
 import { midiOf } from '../theory/pitch';
 import { baseOf } from './motif';
-import { generatePassage, slotsOf } from './passage';
+import { generateHarmony } from './harmony';
+import { generateMelody } from './melody';
+import { planMotifs } from './motif';
+import { deriveStreams, generatePassage, slotsOf } from './passage';
 import type { RhythmBar, RhythmEvent } from './rhythm';
-
 
 /**
  * What joining the three layers owes, beyond what each owes alone.
@@ -102,7 +104,7 @@ describe('a generated passage', () => {
       ],
       cellIds: [],
     };
-    const slots = slotsOf({ form: ['A'], motifs: {}, bars: [bar], shape: [] });
+    const slots = slotsOf([bar]);
 
     // Two sounds in four written events: one plain note, and one held
     // across the tie. The rest is not a slot and neither is the
@@ -189,6 +191,70 @@ describe('a generated passage', () => {
     expect(melodies.size, 'the melody ignores the seed').toBe(20);
     expect(rhythms.size, 'the rhythm ignores the seed').toBeGreaterThan(10);
     expect(harmonies.size, 'the harmony ignores the seed').toBeGreaterThan(5);
+  });
+
+  it('derives its three streams before drawing anything else', () => {
+    /*
+      The one break the other determinism guards cannot see. They look
+      for `Math.random`, for clock reads, and for a seed reproducing
+      within a run — and all of them stay green if a draw is inserted
+      into the parent stream above the derivations, which shifts all
+      three derived seeds at once and silently replaces every passage
+      the app has ever produced from every seed.
+
+      So each layer is rebuilt here from the stream it is supposed to
+      have been given, and compared against what the passage actually
+      contains. That pins where in the parent stream the three draws
+      happen and nothing else: every weight in every layer is free to
+      move, because both sides move with it. Only the position of the
+      derivations, or which stream reaches which layer, breaks this.
+
+      The first version pinned the three seeds `deriveStreams` returns,
+      and a draw inserted into `generatePassage` above the call
+      survived it — the test was checking the helper and the hazard is
+      in the caller. Worth remembering before trusting that shape
+      again.
+    */
+    const streams = deriveStreams(makeRng(7));
+
+    /*
+      Half one: where in the parent stream the three draws sit, and
+      which layer each belongs to. The rebuild below cannot see either
+      — it asks for the streams by name, so it permutes and shifts
+      along with any change inside `deriveStreams`. Permuting the three
+      survived it in testing, which is why this half is here.
+    */
+    expect([streams.harmonyRng.seed, streams.motifRng.seed, streams.melodyRng.seed]).toEqual([
+      25135766, 133054345, 2097893166,
+    ]);
+
+    /*
+      Half two: that `generatePassage` hands those streams out without
+      having spent any of the parent first. This is the half the seeds
+      above cannot see, because they are read from the helper and the
+      hazard is in the caller.
+    */
+    const passage = generatePassage(makeRng(7), base);
+
+    const harmony = generateHarmony(streams.harmonyRng, {
+      key: base.key,
+      timeSignature: base.timeSignature,
+      bars: base.bars,
+    });
+    const motifs = planMotifs(streams.motifRng, {
+      timeSignature: base.timeSignature,
+      bars: base.bars,
+    });
+    const melody = generateMelody(streams.melodyRng, {
+      harmony,
+      slots: slotsOf(motifs.bars),
+      range: base.range,
+      shape: motifs.shape,
+    });
+
+    expect(passage.harmony, 'harmony did not get the first stream').toEqual(harmony);
+    expect(passage.bars, 'the motifs did not get the second stream').toEqual(motifs.bars);
+    expect(passage.melody, 'the melody did not get the third stream').toEqual(melody);
   });
 
   it('fills every bar, so the notation can be engraved at all', () => {

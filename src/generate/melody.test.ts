@@ -53,7 +53,7 @@ function caseAt(index: number, key: Key, bars = 4): Case {
   // is one rule — a rest is not a slot, and neither is a note tied from
   // the one before it — and a harness that restates it is a harness that
   // agrees with whatever it was reading when it was written.
-  const slots = slotsOf({ form: [], motifs: {}, bars: rhythm, shape: [] });
+  const slots = slotsOf(rhythm);
   const notes = generateMelody(makeRng(index + 2), { harmony, slots, range: RANGE });
   return { harmony, slots, notes, label: `seed ${index} ${key.tonic.letter} ${ts.id}` };
 }
@@ -350,7 +350,7 @@ describe('restating a motif', () => {
     const plan = planMotifs(makeRng(seed), { timeSignature: TS44, bars });
     const harmony = generateHarmony(makeRng(seed), { key, timeSignature: TS44, bars });
 
-    const slots = slotsOf(plan);
+    const slots = slotsOf(plan.bars);
     // Which bar each slot fell in, read back from where it starts rather
     // than accumulated while filtering — so this does not have to repeat
     // the rule about what counts as a slot in order to count them.

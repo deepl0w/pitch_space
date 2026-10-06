@@ -89,6 +89,21 @@ printf 'aiming          %s exact, %s lossy, %s none\n' \
     "$(grep -rh "aims: 'lossy'" src/exercises/*/index.ts 2>/dev/null | wc -l | tr -d ' ')" \
     "$(grep -rh "aims: 'none'" src/exercises/*/index.ts 2>/dev/null | wc -l | tr -d ' ')"
 # Type and presentation together, because a schedule is keyed on both (0037).
+# Prompts rendering a choice list from live settings rather than from the
+# frozen exercise.
+#
+# A question generated with one answer and re-rendered from settings that have
+# since changed can offer a choice list the answer is not in — measured once at
+# {Unison, Octave}, unticking Unison, and the only remaining button scoring
+# wrong. The fix freezes the pool on the exercise, and this counts how many
+# prompts have not had it.
+#
+# A proxy and not the mechanism: it matches `settings.x.map(` in a prompt,
+# which is how every instance has looked and is not what "live" means. A
+# prompt reaching live settings another way is not counted.
+printf 'live choice     %s prompt(s) mapping settings rather than exercise\n' \
+    "$(grep -rlE "\{\s*settings\.[A-Za-z]+\.map\(" src/exercises/*/[A-Z]*.tsx 2>/dev/null |
+       grep -v '\.test\.' | wc -l | tr -d ' ')"
 printf 'schedules       %s (type x presentation) pair(s)\n' \
     "$(grep -rho "presentations: \[[^]]*\]" src/exercises/*/index.ts 2>/dev/null |
        grep -o "'" | wc -l | awk '{print $1/2}')"

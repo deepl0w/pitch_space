@@ -205,6 +205,11 @@ describe('a generated rhythm played back exactly', () => {
       detector cannot; the fix belongs at the call site, and it changes
       rhythm grading, which is why it is recorded here rather than taken.
     */
+    // Verified to fail by assertion rather than by throwing: `it.fails`
+    // accepts any failure, so a case that errored for an unrelated reason
+    // would look identical to one documenting a defect. Running it as a
+    // plain `it` reports: "160 bpm lost notes at: expected [ 1.3125,
+    // 1.40625 ] to deeply equal []".
     for (const take of takes(160, 24)) {
       const want = audible(take);
       const got = heard(take);
@@ -544,6 +549,8 @@ describe('a perfect performance, played and heard', () => {
       is not an internal count, it is a learner told they played it wrong
       when they did not.
     */
+    // As above, checked to fail by assertion: "160 bpm seed 1: expected
+    // false to be true".
     for (const [seed, exercise] of exercises(160, 8).entries()) {
       expect(gradeOf(exercise, { countIn: true }).correct,
         `160 bpm seed ${seed}`).toBe(true);

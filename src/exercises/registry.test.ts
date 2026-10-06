@@ -391,6 +391,53 @@ describe('every exercise type’s generator', () => {
  * holding them all at their defaults checks one configuration out of
  * however many exist.
  */
+describe('the item namespace across exercises', () => {
+  /**
+   * No two exercises may be credited for the same item, because the tally
+   * they fold into has no room to tell them apart.
+   *
+   * `tallyKey` is `` `${presentation}:${item}` `` and nothing else. There is
+   * no exercise dimension in it, which is safe today for a reason rather
+   * than by design: the 237 items the seven exercises produce are disjoint,
+   * every prefix belonging to exactly one of them. Two exercises emitting
+   * one id would share a streak, a due date and a history, and the symptom
+   * would be a tally that moves when the learner practised something else.
+   *
+   * **It is about to be load-bearing.** The user's ruling makes rhythm's
+   * pool a curated library with generation surviving as untracked practice,
+   * and both would naturally be credited against `cell:<id>`. Whether they
+   * end up one exercise or two, this is the assertion that says so out loud
+   * on the day rather than letting two kinds of practice fold into one
+   * number — and if the answer is that they *should* share, then `tallyKey`
+   * needs the dimension before they do, which is the decision this would
+   * force into the open.
+   */
+  it('gives no item to two exercises', () => {
+    const owners = new Map<string, string[]>();
+    for (const definition of EXERCISE_TYPES) {
+      const everywhere = [
+        definition.settings.coerce(definition.settings.defaults),
+        widestSettings(definition),
+      ];
+      for (const settings of everywhere) {
+        for (const item of definition.items(settings)) {
+          const who = owners.get(item) ?? [];
+          if (!who.includes(definition.id)) who.push(definition.id);
+          owners.set(item, who);
+        }
+      }
+    }
+
+    const shared = [...owners.entries()]
+      .filter(([, who]) => who.length > 1)
+      .map(([item, who]) => `${item} is claimed by ${who.join(' and ')}`);
+    expect(shared).toEqual([]);
+
+    // The sweep has to have looked at a real namespace, not an empty one.
+    expect(owners.size, 'no exercise listed any item').toBeGreaterThan(100);
+  });
+});
+
 describe('the verdict a grading reports', () => {
   /**
    * `Result.correct` and `Result.outcomes` are two statements about one

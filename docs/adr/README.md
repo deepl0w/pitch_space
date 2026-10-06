@@ -70,8 +70,15 @@ mechanism, a scope said to be tighter was aimed away from the only place the
 wiring can appear, and a chain said to be proven end to end was proven on
 synthesised input. **Nobody was careless and the rate was four in four**, which
 is the rate to expect rather than a bad afternoon — an author's reading of
-their own work is the one reading taken from inside it. Run the grep, or the
-mutant, before repeating the claim onward.
+their own work is the one reading taken from inside it.
+
+The *working* rule that follows — read the code once it is synced rather than
+building on what a message said about it, because a merge gets independent
+review by construction and a message does not — belongs to the fleet protocol
+and lives in its skill, which is shared across projects and outside this
+repository. The instances stay here because they are this repository's, and
+the principle stays with them because a reader of the public tree cannot open
+the skill.
 
 **Scope a guard to what can actually change the thing it guards.** A check that
 fires on changes it should ignore is not merely annoying: the noise is how it

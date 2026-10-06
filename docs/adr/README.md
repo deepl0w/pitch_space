@@ -168,6 +168,25 @@ you. **This one is using a legitimate instrument and not stating its range**,
 so a true measurement supports a conclusion wider than itself. The first
 substitutes the wrong tool; the second over-reads the right one.
 
+**The one-line version, from the person it happened to: _you read the trip as
+evidence about the world rather than about the guard._** A guard on the home
+screen's claim fired, and the conclusion drawn was that an exercise had been
+wired to capture — when what had actually happened was that the guard matched
+an import of a pure arithmetic helper that lives in `audio/capture/`. In their
+words, with the part that explains why it travelled:
+
+> The trip was not a failure — the guard did exactly what it was built to do,
+> and the fault was entirely in what I concluded from it. A red test is
+> evidence about the instrument first and the world second, and I inverted
+> that in the direction that produced news worth sending.
+
+That last clause is the mechanism rather than the moral. An instrument read as
+the world produces a *finding*, and a finding is the kind of thing you pass on,
+so this error does not sit still and get noticed — it propagates at the speed
+of the most interesting thing you have to say. Three corrections followed, each
+one layer beneath the last: the claim, then the guard's condition, then its
+scope. **Every version passed its own tests and read as careful.**
+
 The fuller write-up of the first lives in `docs/process/`, which is deliberately
 not in the repository, so the distinction is stated here rather than cited —
 a reader of the public tree cannot open that file.

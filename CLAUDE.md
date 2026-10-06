@@ -110,6 +110,14 @@ about to improve the fleet skill from a tester worktree, that is the moment
 the rule is for. `docs/process/` carries the reasoning, because a decision
 recorded only in an unversioned file is not recorded.
 
+**This reaches the fleet's own coordination files, named above, and nothing
+else in `~/.claude/` by the same hazard alone.** `test-engineer` and every
+other skill there are unversioned too, and shared across every project on
+this machine, not just this one — which is exactly why this fleet has no
+standing to claim one. A project's protocol can own how its own agents
+coordinate; it cannot extend that to a skill other projects' sessions also
+write to, sight unseen. Asked and settled 6 October rather than guessed at.
+
 **`docs/findings/` and `docs/process/` are written but never committed.**
 The repository is public, and the user asked that the fleet's internal
 writing stay out of it; `.gitignore` enforces that, so an agent cannot
@@ -237,11 +245,16 @@ back.** `fleet.sh save "<message>" [tokens]` — the token count is optional
 and self-reported, since a hook has no way to see it without an extra call
 that would spend tokens measuring tokens.
 
-**Run `fleet.sh check` before committing, not `./test.sh --all` read by
-eye.** Same `SUITE`/`CHECKS`, but the last line is `VERDICT: GREEN` or
-`VERDICT: NOT GREEN` — reported after main and the tester each committed
-with a failing check having read the tail of the same output and missed it
-above.
+**`git commit` runs `fleet.sh check` itself now and refuses a NOT GREEN
+state, in every worktree.** A pre-commit hook, installed by `fleet.sh sync`
+into the shared `.git/hooks/`, after a failing check reached a commit three
+times by three different command shapes — reading a tail and missing the
+failure above it, then a pipeline (`check | grep ... && commit`) whose exit
+status was grep's rather than the check's. Neither reading more carefully
+nor a check only `fleet.sh save` enforced would have stopped the third one,
+which used `git commit` directly. This does, regardless of shape, at the
+cost of the full suite's time on every commit — `fleet.sh check` by hand is
+still worth running first, to see the detail rather than just the verdict.
 
 The hazard worth repeating from the skill, because it has bitten here:
 `node_modules` is git-ignored, so a fresh worktree cannot run a single npm

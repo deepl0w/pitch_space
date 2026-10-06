@@ -1,0 +1,120 @@
+# When a finding is a fact about the instrument
+
+A catalogue of findings this project got wrong in one particular way: the
+measurement was true and the conclusion drawn from it was about the
+measuring rather than about the thing measured.
+
+The rule is the fifth convention in
+[`docs/adr/README.md`](adr/README.md); this is the evidence for it and the
+accounts of how it felt from inside. It is kept here because the catalogue has
+grown four times in a day and the rule has not, and a reader wanting the rule
+should not have to read the cases to find it.
+
+**The question to ask, which is the useful form of all of this: _what else
+changed when I changed the thing I was testing?_** It is a question with an
+answer rather than a disposition to be more careful, and it came from the role
+that got this wrong twice in one day from the harness side.
+
+## Contents
+
+- [The clearest case, and it owes the convention nothing](#the-clearest-case-and-it-owes-the-convention-nothing)
+- [The catalogue](#the-catalogue)
+- [Three accounts of how it felt](#three-accounts-of-how-it-felt)
+
+## The clearest case, and it owes the convention nothing
+
+[0025](adr/0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)
+is the purest instance and the most useful, because **nobody constructed it to
+make this point**. It was found before the convention existed and predates
+every other case here.
+
+Calibration reported a latency with an error bar of **±1 ms**. The figure was
+wrong by about 120 ms. The error bar was not a bad estimate of the uncertainty;
+it was a measurement of something else entirely — the agreement among six
+trials that all shared the same systematic shift — and **it was persuasive
+precisely because it was precise.**
+
+A harness answers in numbers, and a number reads as a measurement whatever
+produced it. That is why the harness cases travel furthest, and why this one is
+at the top rather than at the end.
+
+## The catalogue
+
+Four instances, two of them in records on this list:
+
+- [0021](adr/0021-a-catalogues-top-grade-must-be-reachable.md) measured the cell
+  catalogue through `SHAPE_AT`, a progression exercise's difficulty table. The
+  table stopped at grade 9, so two grade-10 cells read as stranded. They were
+  not: the table never reached rhythm generation at all, and
+  [0027](adr/0027-configure-by-naming-what-an-exercise-contains.md) found that the
+  measurement had no referent until a rhythm exercise shipped.
+- [0017](adr/0017-a-setting-that-excludes-is-not-a-corpus-you-cannot-reach.md)
+  tabulated templates against "the difficulty that reaches that grade", which
+  is the same instrument and has since been removed from the app.
+- [0025](adr/0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)
+  measured calibration through one microphone, which turned out to be a
+  directional condenser, and wrote the microphone's behaviour into the
+  Consequences as the feature's — while its own Revisit list said one room
+  cannot tell the instrument from the room.
+- [0026](adr/0026-a-measurement-signal-does-not-inherit-a-listening-level.md) is
+  the same fault one layer down: the stimulus was measured through a gain
+  stage nobody had characterised, 24 dB below full scale, and the attenuation
+  read as the stimulus being wrong.
+
+[0011](adr/0011-what-a-catalogue-owes.md) is the counter-example and shows the
+cost of getting it right is one sentence. It named its instrument — "the
+phrase planner chooses the closing cadence before a template is picked, and
+its default vocabulary is two values" — and its finding has survived every
+change since, because a reader can see which half to re-check when the planner
+changes.
+
+
+## Three accounts of how it felt
+
+**The one-line version, from the person it happened to: _you read the trip as
+evidence about the world rather than about the guard._** A guard on the home
+screen's claim fired, and the conclusion drawn was that an exercise had been
+wired to capture — when what had actually happened was that the guard matched
+an import of a pure arithmetic helper that lives in `audio/capture/`. In their
+words, with the part that explains why it travelled:
+
+> The trip was not a failure — the guard did exactly what it was built to do,
+> and the fault was entirely in what I concluded from it. A red test is
+> evidence about the instrument first and the world second, and I inverted
+> that in the direction that produced news worth sending.
+
+That last clause is the mechanism rather than the moral. An instrument read as
+the world produces a *finding*, and a finding is the kind of thing you pass on,
+so this error does not sit still and get noticed — it propagates at the speed
+of the most interesting thing you have to say. Which inverts the comfortable
+intuition: **the more interesting a wrong conclusion is, the further it
+travels**, so the errors that get furthest are selected for being worth
+repeating rather than for being true.
+
+A third account, from the role that made the same mistake twice in one day and
+asked to be quoted in these terms rather than the kinder ones first offered:
+
+> An instrument read as the world produces a finding rather than an error, and
+> a finding is the kind of thing you pass on. It travels fastest towards
+> whoever it flatters — I took a claim about my own work on trust within
+> minutes of receiving it, and hours later produced one of my own by going
+> looking for a trap and letting the harness hand me one.
+
+**Flattery is the second selector and it compounds the first**: a finding is
+passed on for being interesting, and checked least by whoever it suits. The
+three routes into it differ in what was misread — a record's silence filled in,
+a guard's trip over-read, a harness's output taken at face value — and the
+last is the most dangerous of the three, because **a harness answers in
+numbers and a number reads as a measurement whatever produced it.**
+[0025](adr/0025-agreement-among-trials-that-share-an-error-is-not-confidence.md) is
+that in its purest form: a ±1 ms error bar, wrong by 120, persuasive precisely
+because it was precise. That is not a fourth kind of fault but a property of
+the instrument that predicts how far the fault will get. Three corrections followed, each
+one layer beneath the last: the claim, then the guard's condition, then its
+scope. **Every version passed its own tests and read as careful.**
+
+
+The later cases here were all found while the project was looking at this
+convention, by people who had just read one another's accounts — which is the
+selection effect the accounts describe, operating on the evidence for
+themselves. 0025 is the one that owes it nothing.

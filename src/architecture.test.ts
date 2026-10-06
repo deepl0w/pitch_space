@@ -444,23 +444,62 @@ describe("the home screen's claim about how exercises are answered", () => {
    */
   const NOT_AN_ANSWER = ['ui/screens/Calibration.tsx'];
 
+  /**
+   * Every capture-bearing name is really exported by `audio/capture`.
+   *
+   * Without it the list is five strings nothing holds to the code.
+   * Renaming `listen` leaves all five matching nothing, the scan reports
+   * "not wired" for ever after, and the lede below becomes true by a
+   * typo — a guard going blind rather than noisy, which is the failure
+   * this whole describe is a worked example of. Replacing all five with
+   * invented names left the describe entirely green, which is how it was
+   * found.
+   *
+   * The import rule above argues for an allowlist over a blocklist
+   * because "it is hard to tell when it has gone out of date". A list of
+   * names cannot be turned into an allowlist, but it can be made to
+   * prove its names exist.
+   *
+   * `function*` is in the pattern because `framesOf` is a generator, and
+   * the first version reported it missing — the check working on its
+   * first run, which is worth leaving written down.
+   */
+  it('names only symbols the capture layer actually exports', () => {
+    const exported = new Set(
+      filesUnder(join(SRC, 'audio', 'capture'))
+        .filter((file) => !/\.test\.tsx?$/.test(file))
+        .flatMap((file) => [...readFileSync(file, 'utf8')
+          .matchAll(/export\s+(?:async\s+)?(?:function\*?|class|const|interface|type)\s+(\w+)/g)]
+          .map((match) => match[1])),
+    );
+    const missing = CAPTURE_BEARING.filter((name) => !exported.has(name));
+    expect(missing, 'capture-bearing names that no longer exist').toEqual([]);
+  });
+
   function appIsWiredToCapture(): boolean {
-    // Shipped files only: capture reached from a test shows the chain can
-    // be driven, not that a learner's answer travels it.
+    /*
+      Shipped files only: capture reached from a test shows the chain can
+      be driven, not that a learner's answer travels it.
+
+      Asked as "reaches capture *and* names something capture-bearing"
+      rather than by reading names out of braces. A braces-only reading
+      sees nothing in `import * as capture from '.../listen'` followed by
+      `capture.listen(...)` — the same wiring in another spelling, and one
+      a bundler-minded refactor could arrive at without meaning anything by
+      it. `importsOf` above already knows the four forms a specifier
+      arrives in, so it answers the first half, and the names are looked
+      for in the file's code rather than in its comments.
+    */
     return filesUnder(SRC)
       .filter((file) => !/\.test\.tsx?$/.test(file))
       .filter((file) => !relative(SRC, file).split(sep).join('/').startsWith('audio/capture/'))
       .filter((file) => !NOT_AN_ANSWER.includes(relative(SRC, file).split(sep).join('/')))
       .some((file) => {
-        const source = readFileSync(file, 'utf8');
-        return [...source.matchAll(/import\s*(?:type\s*)?\{([^}]*)\}\s*from\s*'([^']+)'/g)].some(
-          ([, bindings, specifier]) =>
-            resolveWithin(file, specifier)?.startsWith('audio/capture')
-            && bindings
-              .split(',')
-              .map((binding) => binding.trim().split(/\s+as\s+/)[0].trim())
-              .some((name) => CAPTURE_BEARING.includes(name)),
-        );
+        const reachesCapture = importsOf(file)
+          .some((specifier) => resolveWithin(file, specifier)?.startsWith('audio/capture'));
+        if (!reachesCapture) return false;
+        const code = codeOf(file).join('\n');
+        return CAPTURE_BEARING.some((name) => new RegExp(`\\b${name}\\b`).test(code));
       });
   }
 

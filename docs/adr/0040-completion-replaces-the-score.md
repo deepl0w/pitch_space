@@ -1,0 +1,87 @@
+# ADR 0040 — Completion replaces the score
+
+- **Status:** Accepted
+- **Date:** 2026-10-07
+
+Records the user's ruling that a line reports how far it has been completed
+rather than how many answers were right, and what that retires.
+
+## Context
+
+> Score is not important; what is important is spaced repetition.
+
+The user wants a grade expressing how far a **line**
+([0039](0039-a-line-is-an-exercise-and-the-items-its-settings-make-askable.md))
+has been completed: failed questions recur, correct ones get rarer, and the
+figure says how much of the line is done rather than how much of it was right.
+
+The code has the other model. `ItemTally` carries `seen` and `correct`, the
+readout prints "2 of 4 right", and the practice screen shows a session count
+beside a lifetime count. Those are tallies of answers, and a tally of answers
+is exactly what the user says is not the point.
+
+## Decision
+
+**A line's grade is a function of how far its items have advanced, not of how
+many answers were right.** Completion is read from the schedule's own state —
+how long each item's interval has grown — because that is the thing spaced
+repetition is actually moving, and it already exists in `dueAt`'s ladder.
+
+**A right answer is not progress on its own.** It lengthens an interval; the
+interval is the progress. That is what makes a correct answer out of one choice
+worth nothing on its own — it advances an item in a line that contains one item,
+which is true and visibly small, rather than inflating a count that looks the
+same as any other.
+
+**`seen` and `correct` stop being what a learner is shown.** They stay in the
+tally, because the schedule needs to tell a lapse from a first attempt and
+`streak` is computed from the sequence. What changes is that no screen reports
+them as a score.
+
+**The session and lifetime counts are retired by this rather than relabelled.**
+They read as two unlabelled clocks and
+[0037](0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md)'s rule
+would have made them name their scopes. Under this decision they do not get a
+scope word; they get replaced, because a count of answers is not the quantity
+anyone was asking for. `roadmap-readiness.md`'s G4 consolidation was right that
+the three surfaces are one decision, and this is that decision rather than a
+fourth site.
+
+## Consequences
+
+The home screen's figure becomes a completion rather than a count, which is
+what the roadmap asked for when it said a due count should be honest with no
+streaks and no manufactured urgency. A completion cannot be inflated by
+answering easy things repeatedly, because the interval ladder is what moves.
+
+### What this costs
+
+**Completion is a number about a schedule, and the schedule is not wired.**
+Everything here describes a figure read from state that no production code
+produces yet. The decision is cheap now for that reason and is also, for the
+same reason, untested against any real session.
+
+**A learner loses the one number they currently get.** "7 of 9 this session" is
+legible and immediate, and a completion grade on a line is neither until the
+line has history. The first session shows nothing moving, which is the honest
+state and a worse opening than a tally.
+
+**It makes completion depend on the interval ladder**, which
+[0037](0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md)
+already notes is a fixed `INTERVALS_MS` rather than SM-2's ease. Tuning the
+ladder now changes everyone's displayed grade, not just their due dates — a
+coupling that did not exist when nothing read it.
+
+**"Done" needs a definition and this record does not give one.** Whether a line
+is complete at the top of the ladder, or at some interval short of it, or never,
+is a product question. The constraint is only that the answer is about
+intervals rather than about counts.
+
+## Revisit when
+
+- **The first completion figure is drawn.** The definition of done is owed then
+  and is the user's, not this record's.
+- **The ladder is tuned or replaced.** It now has two readers, and a change that
+  was a scheduling adjustment becomes a visible re-grading of everybody.
+- **A learner asks what their score is.** If the answer has to be a count after
+  all, this decision was wrong and should be superseded rather than softened.

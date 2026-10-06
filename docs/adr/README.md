@@ -172,6 +172,41 @@ The fuller write-up of the first lives in `docs/process/`, which is deliberately
 not in the repository, so the distinction is stated here rather than cited —
 a reader of the public tree cannot open that file.
 
+**A claim's altitude decides whether anything can falsify it, so a summary
+needs a mechanism its parts do not.** A statement about one thing sits beside
+that thing and gets checked against it. The sentence that generalises over many
+sits above every check that could contradict it, and rots without a symptom —
+not through carelessness, but because nothing is positioned to disagree with
+it.
+
+Four instances, each found separately and none by the check that should have
+caught it:
+
+- The home screen's lede said the app is "answered by playing them" while all
+  six built exercises were answered by clicking. **Every exercise card was
+  honest; only the banner was not**, because each card is checked against its
+  own exercise and nothing checks the sentence summarising all six.
+- `ARCHITECTURE.md`'s "What is not built" had three of four entries false, for
+  days. A claim that something *exists* is contradicted the moment a reader
+  opens the file; a claim that something is absent is contradicted by nobody,
+  because building it does not prompt anyone to delete its entry.
+- [0011](0011-what-a-catalogue-owes.md)'s prose said "three of thirty-three
+  templates" over a table, in the same record, summing to thirty-five. The
+  detail was right and the sentence above it was wrong.
+- `ROADMAP.md`'s item-id table named `rhythm:`, `harmony:` and `read:`
+  prefixes that no exercise writes, while every exercise emitted its ids
+  correctly.
+
+The remedy is not vigilance. **A summary should be generated from what it
+summarises, or carry the command that checks it, or not exist.**
+`tools/report-facts.sh` is the worked example of the first
+([0023](0023-a-document-cannot-cite-its-own-commit.md)), and "What is not
+built" now carries two commands as the second.
+
+That these four were fixed on four different days, in four different
+documents, without anyone noticing they were one fault is the convention
+demonstrating itself: each was checked locally and nothing summarised them.
+
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code
 rides on the record that made it. The second says check exactly — a guard fires
@@ -182,7 +217,9 @@ kind of thing you are holding before you apply either; the fourth is the first
 one again, pointed at prose, because a comment is a claim about the code and
 goes stale exactly the way a record does; and the fifth is the first one
 pointed at a finding, because a measurement is a claim too, and it carries its
-instrument whether or not anyone writes the instrument down.
+instrument whether or not anyone writes the instrument down. The sixth is the
+first one pointed upwards: a summary is a claim about every claim beneath it,
+and it is the one position from which nothing below can answer back.
 
 [`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
 0018 and 0020 as one argument, because five of them are the same rule meeting a

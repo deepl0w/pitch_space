@@ -70,8 +70,31 @@ describe('the gap between two notes the generator can write', () => {
       goes below the window. The comment reasons about music the app does
       not generate and concludes something false about music it does.
     */
-    const fastest = Math.min(...TEMPO_CHOICES.map((tempo) =>
-      Math.min(...takes(tempo, 200).map(shortestGap))));
+    /*
+      The bar that wrote it is named with it. A failure here means the
+      generator's floor moved, and "it no longer writes anything that
+      fast" is not diagnosable on its own — which cells were in play is.
+      The bar rather than the cell: the tightest pair can straddle two of
+      them, and attributing it to one would be a guess.
+    */
+    let fastest = Infinity;
+    let wrote = '';
+    for (const tempo of TEMPO_CHOICES) {
+      const settings = at(tempo);
+      for (let seed = 0; seed < 200; seed += 1) {
+        const exercise = rhythmIdentification.generate({ seed, settings }) as {
+          onsets?: readonly number[]; bars?: readonly { cellIds: readonly string[] }[];
+        };
+        const onsets = exercise.onsets ?? [];
+        if (onsets.length < 2) continue;
+        const gap = shortestGap(onsets);
+        if (gap < fastest) {
+          fastest = gap;
+          const cells = (exercise.bars ?? []).flatMap((bar) => [...bar.cellIds]);
+          wrote = `${tempo} bpm seed ${seed}, from a bar of [${cells.join(' ')}]`;
+        }
+      }
+    }
     /*
       Red in either direction, and the direction says which thing moved.
 
@@ -84,7 +107,8 @@ describe('the gap between two notes the generator can write', () => {
       site and leaves the default alone, so it leaves this green and turns
       the case below red, which is what a fix should do.
     */
-    expect(fastest, 'generator floor against the detector\'s default window')
+    expect(fastest, `generator floor ${(fastest * 1000).toFixed(1)} ms (${wrote})`
+      + ` against the detector's ${MIN_SEPARATION_SECONDS * 1000} ms default window`)
       .toBeLessThan(MIN_SEPARATION_SECONDS);
   });
 });

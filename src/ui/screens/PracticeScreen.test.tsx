@@ -364,103 +364,73 @@ describe('the readout under an answered question', () => {
  * The question on screen and the controls beside it, disagreeing.
  *
  * `RoundView` is keyed on `definition.id`, so a settings change does not
- * invalidate the generated exercise: the chip moves and the stave does not.
- * Found by the user role on a clef and reproduced here deterministically —
- * it is not clef-specific, because every field in that panel has the same
- * shape and none of them reaches the question already drawn.
+ * invalidate the generated exercise: the control moves and the question
+ * does not. It is a property rather than a list of fields — 104 of the 108
+ * controls across the seven exercises leave a question on screen untouched,
+ * the exception being a relabelling.
+ *
+ * **Pinned on Mode rather than on the clef it was found with**, because the
+ * contradiction is structural there and needs nothing read off a glyph. A
+ * listening question has no stave at all: that is the mode's defining
+ * property, not one of its settings. So a stave drawn while the panel says
+ * Listening is a disagreement no renderer behaviour could account for, and
+ * the cold start beside it is the control — absence has to be what
+ * Listening looks like, or the case is about something else.
+ *
+ * The clef version of this is gone rather than kept beside it: same
+ * mechanism, same ruling resolves both, and the renderer claim its control
+ * carried — that the four clefs draw differently — is asserted where it
+ * belongs, on the adapter, in `toVexflow.test.ts`.
  *
  * **The resolution is a product decision and this does not take it.**
  * Regenerating on change and applying at the next question are both
- * defensible; what is not defensible is the state on screen now, where the
- * sidebar says Tenor and the staff is in bass and nothing says which is
- * true. So the case below pins the contradiction rather than either answer,
- * and `it.fails` records that it is known. **If "apply next question" wins,
- * this case has to be rewritten rather than deleted** — the claim becomes
- * that the panel marks the change as pending, because a control that
- * silently describes a question other than the one in front of the user is
- * the same defect with a different cause.
+ * defensible; what is not is a sidebar describing a question other than the
+ * one in front of the learner. **If "apply next question" wins this is
+ * rewritten rather than deleted** — the claim becomes that the panel marks
+ * the change as pending.
  */
-describe('changing a setting while a question is on screen', () => {
-  /** The clef the stave is actually drawn with, as markup. */
-  function clefDrawn(container: HTMLElement): string {
-    const host = container.querySelector('.score-host');
-    if (!host) throw new Error('no score was rendered');
-    act(() => { resizeTo(host, 760); });
-    const clef = container.querySelector('.vf-clef');
-    if (!clef) throw new Error('no clef was drawn');
-    // VexFlow numbers its groups from a counter that never resets, so the
-    // ids differ between any two renders and have to come out before two
-    // drawings can be compared at all.
-    return clef.outerHTML.replace(/vf-auto\d+/g, 'vf-auto');
-  }
-
-  /** A reading round of intervals, started with one clef chosen. */
-  function roundIn(clef: string) {
+describe('changing the mode while a question is on screen', () => {
+  /** A started round of intervals in one mode, with the stave given a width. */
+  function roundIn(mode: string) {
     const screen = mount('interval-id');
-    screen.button('Reading')?.click();
-    act(() => { screen.button(clef)?.click(); });
+    act(() => { screen.button(mode)?.click(); });
     screen.start();
+    const host = screen.container.querySelector('.score-host');
+    if (host) act(() => { resizeTo(host, 760); });
     return screen;
   }
 
-  it('is drawing in a clef at all, or the case below compares nothing', () => {
-    // The control. If the stave ignored the clef setting entirely, "the
-    // drawing did not follow the chip" would be true and would mean
-    // something else — a renderer fault rather than a stale question.
-    const treble = roundIn('Treble');
-    const bass = roundIn('Bass');
-    expect(clefDrawn(treble.container), 'two clefs draw the same stave')
-      .not.toBe(clefDrawn(bass.container));
+  const staveShowing = (screen: { container: HTMLElement }) =>
+    screen.container.querySelector('.score-host svg') !== null;
+
+  it('is a mode that shows no stave, or the case below is about nothing', () => {
+    // The control, and it is the whole of what makes absence meaningful: a
+    // listening question withholds the notation until it is answered.
+    expect(staveShowing(roundIn('Listening')),
+      'a cold listening start drew a stave, so a stave proves nothing').toBe(false);
+    expect(staveShowing(roundIn('Reading')),
+      'a reading start drew none, so the comparison has no two sides').toBe(true);
   });
 
-  it.fails('draws the question in the clef the panel says is chosen', () => {
+  it.fails('shows no stave once the panel says the question is by ear', () => {
     /*
-      Measured: the chip follows every click and the stave follows none of
-      them, until the next question is generated.
+      Switch Reading to Listening with a question up and the stave stays
+      fully drawn — `.score-host svg` present while `presentation` reads
+      `listen`. Found by the user role; main's own probe had printed
+      `+stave` an hour earlier and read past what it meant in Listening.
 
-          after Start with Treble     chip=Treble   drawn=treble
-          clicked Bass mid-question   chip=Bass     drawn=treble
-          clicked Alto mid-question   chip=Alto     drawn=treble
+      Checked to fail by assertion rather than by throwing: run as a plain
+      `it` it reports "the stave outlived the mode that drew it".
     */
-    // Checked to fail by assertion rather than by throwing — `it.fails`
-    // accepts any failure, and `clefDrawn` throws when nothing was drawn,
-    // which would have looked exactly the same. Run as a plain `it` it
-    // reports "the stave is still in the old clef".
-    const inBass = clefDrawn(roundIn('Bass').container);
+    const screen = roundIn('Reading');
+    act(() => { screen.button('Listening')?.click(); });
+    const host = screen.container.querySelector('.score-host');
+    if (host) act(() => { resizeTo(host, 760); });
 
-    const screen = roundIn('Treble');
-    act(() => { screen.button('Bass')?.click(); });
-
-    // The chip moved, so the click was received and the panel agrees it is
-    // now set to bass.
-    expect(screen.container.querySelector('.chip.on')).toBeTruthy();
-    expect(clefDrawn(screen.container), 'the stave is still in the old clef')
-      .toBe(inBass);
+    expect(staveShowing(screen), 'the stave outlived the mode that drew it').toBe(false);
   });
 });
 
-/**
- * A question with no right answer on screen, marked wrong.
- *
- * Narrow the pool to two intervals, start a question, untick the one that
- * happens to be the answer, and the only button left is the wrong one.
- * Pressing it records an attempt — scored against the learner, written to
- * the log, and therefore into whatever the schedule makes of it.
- *
- * **This is a different defect from the stale clef above and the difference
- * is the whole of why it is worse.** Clef and range are *stale*: the
- * question holds its generated value, the panel runs ahead, and the display
- * disagrees. The choice list is **live** — it re-renders from the current
- * settings while the generated answer stays fixed — so the two are views of
- * different vintages rather than one frozen view, and only that can produce
- * a question nobody could have answered.
- *
- * Found by the user role, reproduced independently by main, and pinned here
- * on the claim that costs a learner something: **an attempt is never
- * recorded against an item whose correct answer was not offered.** That
- * holds whichever way the stale-display question is resolved, because it is
- * about what reaches storage rather than about what is on screen.
- */
 describe('narrowing the pool while a question is on screen', () => {
   const INTERVALS = [
     'Unison', 'Minor 2nd', 'Major 2nd', 'Minor 3rd', 'Major 3rd', 'Perfect 4th',

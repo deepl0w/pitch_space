@@ -312,7 +312,18 @@ function ExerciseRound({ definition, audio, tally, settings }: {
       </div>
 
       {round === null
-        ? <p className="lede">Nothing yet. Start, and two notes will sound.</p>
+        /*
+          Generic, because this screen serves six exercises and the line it
+          used to carry — "two notes will sound" — was true of exactly one
+          of them. Found by the user role sweeping the text rather than the
+          behaviour, which is the only way a sentence that is merely false
+          gets noticed: nothing about it fails.
+
+          A per-exercise line would be better still and belongs on the
+          definition beside `description`, not here. This at least does not
+          promise something the exercise will not do.
+        */
+        ? <p className="lede">Nothing yet — press Start for your first question.</p>
         : (
           /*
             Keyed by round as well as wrapped: a boundary that kept its error

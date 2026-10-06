@@ -19,7 +19,15 @@
 /** One block of mono samples, with the moment its first sample was captured. */
 export interface CaptureFrame {
   /**
-   * Mono samples in [-1, 1].
+   * Mono samples, nominally in [-1, 1] and **not guaranteed to be**.
+   *
+   * Web Audio is floating point and does not clamp: a loud source, or a
+   * device with gain applied before the browser sees it, delivers
+   * samples outside the range. Measured at 1.13 from Chrome's own fake
+   * capture device on the first run of a real microphone — so this is
+   * the ordinary case and not an abuse. Anything here that assumed full
+   * scale meant one would be wrong about level, which is how a silence
+   * gate comes to be set against a number that does not hold.
    *
    * Owned by the source and reused between frames, because allocating a
    * buffer per frame at 86 frames a second is how a capture path starts

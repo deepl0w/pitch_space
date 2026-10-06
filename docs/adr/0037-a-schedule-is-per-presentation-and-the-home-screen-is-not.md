@@ -164,3 +164,48 @@ The prompt for this was noticing that the error which made the table necessary
 — an architecture review reporting a tri-state missing two days after it
 shipped — is not prevented by a table that was accurate once. Both halves are
 now checkable by running one command.
+
+## Addendum, 6 October 2026 — a streak does not know how many answers it beat
+
+A constraint on the first caller, found while settling where the askable pool
+lives. Not a decision this record takes; a thing it would be expensive to meet
+for the first time during the wiring.
+
+**`ItemTally` is `{ seen, correct, lastSeenAt, streak }` and `dueAt` spaces on
+`streak` alone.** A correct answer out of thirteen alternatives and a correct
+answer out of two fold into it identically. So narrowing a pool makes a streak
+cheap, the schedule spaces the item out, and it does so on evidence that barely
+supports it — which from inside is indistinguishable from an app that has
+stopped teaching you.
+
+**It has a floor, and the floor is one.** A pool of one is accepted: the
+coercion only falls back to defaults at zero, and the settings panel refuses
+only the chip holding a pool open. Measured through the definition itself:
+
+```
+POOL            [6]
+CHOICES         [6]
+FORCED-CORRECT  5 of 5
+```
+
+The sole button is the answer. A learner can click it repeatedly, build an
+unbounded streak, and be scheduled at `MAX_INTERVAL_MS` on **no information at
+all**. That is not a gradual weakening of evidence; it is a state where the
+signal is zero and the mechanism cannot tell.
+
+**The information is not lost.** `exercise.choices` now carries what the
+learner actually saw, frozen at generation — which is the honest denominator
+here, because `Attempt.settings` gives the pool the *generator* was allowed and
+those two diverge the moment settings move under a live question. Every attempt
+already records enough to say how many alternatives its answer beat; the fold
+does not keep it. That is G1's shape again — captured in the log, dropped on
+the way to the scheduler — and cheap for the same reason, since nothing needs
+backfilling.
+
+**What this record does not do is decide the remedy.** Weighting a streak by
+pool size, refusing to schedule below some pool size, and treating a
+single-choice question as untested are all answerable, and all of them are
+decisions about what a score means — which [0036](0036-one-question-two-windows.md)
+left with the user for the same reason. The constraint is only that **a
+scheduler reading `streak` alone can be driven to "mastered" by clicking**, and
+whoever writes the first caller should know that before they read it.

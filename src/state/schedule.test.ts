@@ -3,8 +3,9 @@ import {
   INTERVALS_MS, dueAt, dueCount, overdueRatio, schedule,
 } from './schedule';
 import { tallyItems, tallyKey, type ItemTally, type TallyKey } from './progressStore';
+import type { ProgressLine } from './line';
 import type { Attempt } from './schema';
-import type { ItemId } from '../exercises/types';
+import type { ItemId, Presentation } from '../exercises/types';
 
 /**
  * What the schedule owes, which is less than an SRS paper and more than
@@ -26,8 +27,32 @@ function tally(over: Partial<ItemTally> = {}): ItemTally {
   return { seen: 1, correct: 1, lastSeenAt: 0, streak: 1, ...over };
 }
 
-const map = (entries: [ItemId, ItemTally][]): Map<TallyKey, ItemTally> =>
-  new Map(entries.map(([item, t]) => [tallyKey(item, 'listen'), t]));
+/**
+ * A line, which is what a tally now hangs from (ADR 0039).
+ *
+ * The askable set is the line's identity, so a case that schedules a
+ * different set is asking about a different line — which is the whole
+ * point of the rule and the reason the helpers below take the line rather
+ * than assembling one per call.
+ */
+const lineOver = (
+  askable: readonly ItemId[],
+  presentation: Presentation = 'listen',
+  exercise = 'interval-id',
+): ProgressLine => ({ exercise, askable, presentation });
+
+/**
+ * Tallies keyed for one line.
+ *
+ * Taking the line rather than defaulting it, because a map built for a
+ * line the caller does not then schedule is a map nothing looks in — every
+ * lookup misses, every item reads as never asked, and a case about
+ * ordering still passes. `finds a tally it was given` below is the guard
+ * against that, and it is new: under the old key a mismatch was far harder
+ * to write by accident.
+ */
+const map = (line: ProgressLine, entries: [ItemId, ItemTally][]): Map<TallyKey, ItemTally> =>
+  new Map(entries.map(([item, t]) => [tallyKey(line, item), t]));
 
 describe('when an item comes back', () => {
   it('rests longer after each consecutive correct answer', () => {
@@ -66,11 +91,12 @@ describe('ordering what is worth asking', () => {
       learner wants: the quickest route to knowing where you stand is to
       be asked each thing once.
     */
-    const tallies = map([
+    const line = lineOver(ITEMS);
+    const tallies = map(line, [
       // A year overdue, and still behind a question never asked.
       ['interval:M3:up' as ItemId, tally({ streak: 1, lastSeenAt: 0 })],
     ]);
-    const order = schedule(ITEMS, tallies, 'listen', 365 * DAY).map((r) => r.item);
+    const order = schedule(line, tallies, 365 * DAY).map((r) => r.item);
 
     expect(order[0]).not.toBe('interval:M3:up');
     expect(order[order.length - 1]).toBe('interval:M3:up');
@@ -92,10 +118,10 @@ describe('ordering what is worth asking', () => {
       .toBeGreaterThan(now - dueAt(shaky));
     expect(overdueRatio(shaky, now)).toBeGreaterThan(overdueRatio(solid, now));
 
+    const pair = lineOver(['solid', 'shaky'] as ItemId[]);
     const order = schedule(
-      ['solid', 'shaky'] as ItemId[],
-      map([['solid' as ItemId, solid], ['shaky' as ItemId, shaky]]),
-      'listen',
+      pair,
+      map(pair, [['solid' as ItemId, solid], ['shaky' as ItemId, shaky]]),
       now,
     ).map((r) => r.item);
     expect(order).toEqual(['shaky', 'solid']);
@@ -105,9 +131,10 @@ describe('ordering what is worth asking', () => {
     // Two items equally due is the common case at the start of a
     // session, not an edge one, so the tie-break has to be total rather
     // than whatever order the map happened to be built in.
-    const tallies = map(ITEMS.map((i) => [i, tally({ lastSeenAt: 0 })]));
-    const once = schedule(ITEMS, tallies, 'listen', DAY).map((r) => r.item);
-    const again = schedule(ITEMS, tallies, 'listen', DAY).map((r) => r.item);
+    const line = lineOver(ITEMS);
+    const tallies = map(line, ITEMS.map((i) => [i, tally({ lastSeenAt: 0 })]));
+    const once = schedule(line, tallies, DAY).map((r) => r.item);
+    const again = schedule(line, tallies, DAY).map((r) => r.item);
     expect(again).toEqual(once);
   });
 
@@ -130,7 +157,7 @@ describe('ordering what is worth asking', () => {
       alphabetical gets wrong.
     */
     const catalogue = ['chord:maj', 'chord:min', 'chord:dim', 'chord:aug'] as ItemId[];
-    expect(schedule(catalogue, new Map(), 'listen', DAY).map((r) => r.item))
+    expect(schedule(lineOver(catalogue), new Map(), DAY).map((r) => r.item))
       .toEqual(catalogue);
     expect([...catalogue].sort(), 'alphabetical would give a different answer')
       .not.toEqual(catalogue);
@@ -142,28 +169,54 @@ describe('ordering what is worth asking', () => {
     // comes before the tie-break, and both come after it for items that
     // have been seen.
     const catalogue = ['chord:maj', 'chord:min'] as ItemId[];
-    const seen = map([['chord:maj' as ItemId, tally({ streak: 1, lastSeenAt: 0 })]]);
-    expect(schedule(catalogue, seen, 'listen', 365 * DAY).map((r) => r.item))
+    const line = lineOver(catalogue, 'listen', 'chord-id');
+    const seen = map(line, [['chord:maj' as ItemId, tally({ streak: 1, lastSeenAt: 0 })]]);
+    expect(schedule(line, seen, 365 * DAY).map((r) => r.item))
       .toEqual(['chord:min', 'chord:maj']);
   });
 
-  it('proposes only what the settings allow', () => {
-    // A user who has unticked everything but one interval has one askable
-    // item, however much history sits behind the others. A schedule that
-    // ignored that would keep proposing questions the exercise cannot ask.
-    const tallies = map(ITEMS.map((i) => [i, tally({ lastSeenAt: 0 })]));
-    const narrowed = schedule(['interval:m2:up'] as ItemId[], tallies, 'listen', DAY);
-    expect(narrowed.map((r) => r.item)).toEqual(['interval:m2:up']);
+  it('proposes only what the settings allow, and reads no other line\'s history', () => {
+    /*
+      **The old claim became structural and a new one took its place.**
+      It used to be that a narrower askable list limited the proposals
+      while the same tallies were still read — the schedule was given the
+      pool and the history separately and could have ignored the pool.
+      It cannot now: 0039 makes the askable set the line's identity, so
+      the pool *is* what is proposed and nothing else can be.
+
+      What is worth asserting instead is the consequence that replaced
+      it. Unticking two of three intervals does not narrow a line, it
+      starts a different one — and that line has no history, however much
+      sits behind the pool it was cut from. The user chose this reading
+      knowing it loses visible progress, and it is the thing most likely
+      to be read as a bug, so it is asserted rather than assumed.
+    */
+    const wide = lineOver(ITEMS);
+    const tallies = map(wide, ITEMS.map((i) => [i, tally({ streak: 4, lastSeenAt: 0 })]));
+
+    const narrow = lineOver(['interval:m2:up'] as ItemId[]);
+    const proposed = schedule(narrow, tallies, DAY);
+
+    expect(proposed.map((r) => r.item)).toEqual(['interval:m2:up']);
+    expect(proposed[0].tally, 'the narrowed line inherited the wider line\'s history')
+      .toBeNull();
+    // The control: that history is real and findable under its own line,
+    // so "null" above is the line changing rather than the map being empty.
+    expect(schedule(wide, tallies, DAY)[0].tally).not.toBeNull();
   });
 
   it('keeps the two presentations apart', () => {
     // ADR 0010's distinction, carried through to the schedule: hearing a
     // third and reading one are different skills, so practising one must
     // not mark the other as rested.
-    const heard = map([['interval:M3:up' as ItemId, tally({ streak: 5, lastSeenAt: DAY })]]);
+    const only = ['interval:M3:up'] as ItemId[];
+    const byEar = lineOver(only, 'listen');
+    const onPaper = lineOver(only, 'read');
+    const heard = map(byEar, [['interval:M3:up' as ItemId, tally({ streak: 5, lastSeenAt: DAY })]]);
     const now = DAY + HOUR;
-    expect(dueCount(['interval:M3:up'] as ItemId[], heard, 'listen', now)).toBe(0);
-    expect(dueCount(['interval:M3:up'] as ItemId[], heard, 'read', now)).toBe(1);
+
+    expect(dueCount(byEar, heard, now)).toBe(0);
+    expect(dueCount(onPaper, heard, now)).toBe(1);
   });
 });
 
@@ -171,14 +224,30 @@ describe('counting what is due', () => {
   const ITEMS = ['a', 'b', 'c'] as ItemId[];
 
   it('counts everything unseen, because unseen is due', () => {
-    expect(dueCount(ITEMS, new Map(), 'listen', DAY)).toBe(3);
+    expect(dueCount(lineOver(ITEMS), new Map(), DAY)).toBe(3);
   });
 
   it('stops counting an item while it is resting, and resumes when it is not', () => {
-    const rested = map([['a' as ItemId, tally({ streak: 4, lastSeenAt: 0 })]]);
+    const line = lineOver(['a'] as ItemId[]);
+    const rested = map(line, [['a' as ItemId, tally({ streak: 4, lastSeenAt: 0 })]]);
     const interval = INTERVALS_MS[4];
-    expect(dueCount(['a'] as ItemId[], rested, 'listen', interval - 1)).toBe(0);
-    expect(dueCount(['a'] as ItemId[], rested, 'listen', interval)).toBe(1);
+    expect(dueCount(line, rested, interval - 1)).toBe(0);
+    expect(dueCount(line, rested, interval)).toBe(1);
+  });
+
+  it('finds a tally it was given, which everything above depends on', () => {
+    /*
+      The guard the new key needs and the old one did not. A tally map
+      built for one line and handed to another is a map nothing looks in:
+      every lookup misses, every item reads as never asked, and most cases
+      in this file still pass. Under `presentation:item` that mismatch was
+      hard to write by accident; under a key carrying the whole askable
+      set it is one wrong fixture away.
+    */
+    const line = lineOver(['a'] as ItemId[]);
+    const rested = map(line, [['a' as ItemId, tally({ streak: 4, lastSeenAt: 0 })]]);
+    expect(schedule(line, rested, 0)[0].tally, 'the map was built under a different line')
+      .not.toBeNull();
   });
 });
 
@@ -196,13 +265,21 @@ describe('the streak the schedule reads', () => {
     startedAt: answeredAt,
     answeredAt,
     items: ['interval:M3:up'] as ItemId[],
+    // Declared, because the fold skips an attempt with no askable set —
+    // practice that counts towards nothing (0041) and history written
+    // before lines existed (0042). A fixture that omitted it would make
+    // every case below assert over an empty map.
+    askable: ['interval:M3:up'] as ItemId[],
     outcomes: [{ item: 'interval:M3:up' as ItemId, correct }],
     correct,
   });
 
+  /** The line those attempts belong to, which is what their tally hangs from. */
+  const line = lineOver(['interval:M3:up'] as ItemId[], 'listen');
+
   it('counts only the run ending at the most recent attempt', () => {
     const history = [attempt(1, true), attempt(2, true), attempt(3, false), attempt(4, true)];
-    const got = tallyItems(history).get(tallyKey('interval:M3:up' as ItemId, 'listen'))!;
+    const got = tallyItems(history).get(tallyKey(line, 'interval:M3:up' as ItemId))!;
     expect({ seen: got.seen, correct: got.correct, streak: got.streak })
       .toEqual({ seen: 4, correct: 3, streak: 1 });
   });
@@ -224,7 +301,7 @@ describe('the streak the schedule reads', () => {
     // answer at t=4, so it asserted nothing. Here the unsorted fold
     // finishes on the wrong answer at t=3 and would read streak 0.
     const shuffled = [history[0], history[1], history[3], history[2]];
-    const key = tallyKey('interval:M3:up' as ItemId, 'listen');
+    const key = tallyKey(line, 'interval:M3:up' as ItemId);
     expect(tallyItems(shuffled).get(key)!.streak).toBe(tallyItems(history).get(key)!.streak);
     expect(tallyItems(history).get(key)!.streak, 'the two orders must differ to discriminate')
       .not.toBe(0);
@@ -243,7 +320,9 @@ describe('an item the settings cannot currently ask', () => {
   const NOW = 1_000_000;
 
   it('is still scheduled, and marked unreachable rather than dropped', () => {
-    const rows = schedule(['a', 'b', 'c'], new Map(), 'read', NOW, new Set(['a', 'c']));
+    const rows = schedule(
+      lineOver(['a', 'b', 'c'] as ItemId[], 'read'), new Map(), NOW, new Set(['a', 'c'] as ItemId[]),
+    );
 
     expect(rows.map((r) => r.item).sort()).toEqual(['a', 'b', 'c']);
     expect(rows.find((r) => r.item === 'b')?.reachable).toBe(false);
@@ -257,8 +336,9 @@ describe('an item the settings cannot currently ask', () => {
       due while the settings allow triads only — and if `due` quietly
       folded in reachability there would be no way to say it.
     */
-    const seen = new Map([[tallyKey('b', 'read'), { seen: 3, correct: 3, lastSeenAt: 0, streak: 1 }]]);
-    const [unreachable] = schedule(['b'], seen, 'read', NOW, new Set<string>());
+    const only = lineOver(['b'] as ItemId[], 'read');
+    const seen = new Map([[tallyKey(only, 'b' as ItemId), { seen: 3, correct: 3, lastSeenAt: 0, streak: 1 }]]);
+    const [unreachable] = schedule(only, seen, NOW, new Set<ItemId>());
 
     expect(unreachable.reachable).toBe(false);
     expect(unreachable.tally, 'the history must actually attach').not.toBeNull();
@@ -272,7 +352,7 @@ describe('an item the settings cannot currently ask', () => {
       every item of every existing caller unreachable — which reads as a
       working flag and is the opposite of the truth.
     */
-    const rows = schedule(['a', 'b'], new Map(), 'read', NOW);
+    const rows = schedule(lineOver(['a', 'b'] as ItemId[], 'read'), new Map(), NOW);
     expect(rows.every((r) => r.reachable)).toBe(true);
   });
 });

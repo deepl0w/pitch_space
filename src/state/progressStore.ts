@@ -1,6 +1,7 @@
 import { useStore } from 'zustand';
 import { createStore, type StoreApi } from 'zustand/vanilla';
-import type { ItemId, Presentation } from '../exercises/types';
+import type { ItemId } from '../exercises/types';
+import { lineKey, type ProgressLine } from './line';
 import { memoryLog, type Log } from './persistence';
 import { indexedDbAvailable, indexedDbLog } from './indexedDbLog';
 import { migrate } from './migrate';
@@ -164,17 +165,52 @@ export interface ItemTally {
  * decided here, so ADR 0002's rule about iteration order does not apply.
  */
 /**
- * The key a tally is kept under: an item, and the sense it was tested through.
+ * The key a tally is kept under: a progression line, and an item in it.
  *
- * Not an ItemId with the presentation baked into the string. An id is a
- * compatibility commitment — it keys a user's history across releases — and
- * one encoding two orthogonal things cannot be changed along either axis
- * without breaking the other. See ADR 0010.
+ * Not an ItemId with anything baked into the string. An id is a
+ * compatibility commitment — it keys a user's history across releases —
+ * and one encoding two orthogonal things cannot be changed along either
+ * axis without breaking the other. See ADR 0010.
+ *
+ * **The line is here rather than the presentation alone because of ADR
+ * 0039.** Getting an interval right out of two choices is not evidence
+ * about the same interval out of thirteen, so the answer space is part
+ * of what a tally is about. The presentation has not gone — it is inside
+ * the line, where `items(settings)` does not vary with it and 0010 says
+ * it must still separate.
  */
-export type TallyKey = `${Presentation}:${ItemId}`;
+export type TallyKey = `${string}::${ItemId}`;
 
-export function tallyKey(item: ItemId, presentation: Presentation): TallyKey {
-  return `${presentation}:${item}`;
+/**
+ * Two colons, because one is already inside both halves.
+ *
+ * `lineKey` joins on `|` and `,` and every item id contains `:`, so a
+ * single colon here would let a line ending in one and an item beginning
+ * with one produce the same key as a different pair. The tester measured
+ * the separators in `lineKey` across 6,495 ids; this is the same hazard
+ * one level up and the same answer.
+ */
+export function tallyKey(line: ProgressLine, item: ItemId): TallyKey {
+  return `${lineKey(line)}::${item}`;
+}
+
+/**
+ * The line an attempt belongs to, or nothing.
+ *
+ * Nothing when the attempt carries no askable set — practice that counts
+ * towards no progression (ADR 0041), and history written before lines
+ * existed (ADR 0042). Both are real and neither is an error, so this
+ * returns `undefined` rather than inventing an empty line: an empty
+ * answer space is itself a line, and folding every untracked attempt
+ * into it would read as progress against nothing.
+ */
+export function lineOf(attempt: Attempt): ProgressLine | undefined {
+  if (attempt.askable === undefined) return undefined;
+  return {
+    exercise: attempt.exerciseType,
+    askable: attempt.askable,
+    presentation: attempt.presentation,
+  };
 }
 
 /**
@@ -194,8 +230,16 @@ export function tallyItems(attempts: readonly Attempt[]): Map<TallyKey, ItemTall
   // "the caller happens to sort" is not a property of this function.
   const inOrder = [...attempts].sort((a, b) => a.answeredAt - b.answeredAt);
   for (const attempt of inOrder) {
+    /*
+      An attempt outside every line contributes nothing — not even a
+      sighting. ADR 0041: generated practice must not disturb what
+      tracked practice built, and stamping `lastSeenAt` from it would
+      move a due date the learner never advanced.
+    */
+    const line = lineOf(attempt);
+    if (line === undefined) continue;
     for (const outcome of attempt.outcomes) {
-      const key = tallyKey(outcome.item, attempt.presentation);
+      const key = tallyKey(line, outcome.item);
       const entry = tally.get(key) ?? { seen: 0, correct: 0, lastSeenAt: 0, streak: 0 };
       entry.seen++;
       if (outcome.correct) entry.correct++;

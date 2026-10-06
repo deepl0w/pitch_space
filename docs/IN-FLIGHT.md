@@ -260,6 +260,18 @@ its own suite, and nothing has yet run it over a log a person made.
 
 ### `architect`, then everyone — progress is per settings combination
 
+**Settled, build against it:** a line is (exercise, settings combination);
+everything is per line including due dates; the score becomes a completion
+grade; rhythm's pool becomes curated with generation surviving as untracked
+practice; export is defined by this shape.
+
+**Blocking, do not build against it yet:** *which* settings compose a
+combination's identity. Until the architect has recorded that and the user
+has ruled on it, **nothing should write storage keyed by a combination and
+no test should pin the key's shape.** It is a compatibility commitment the
+moment a history exists ([0011](adr/0011-what-a-catalogue-owes.md)), so a
+guess costs a migration rather than an edit.
+
 The user has ruled on what progress means, and it replaces the model the
 code currently has. Recorded here before anything is built, because it
 changes `tallyKey`, the shape of what is stored, and therefore what an
@@ -298,14 +310,13 @@ thing anyone is tested on.
 
 **What this implies for whoever picks a piece up.**
 
-- The identity of a settings combination has to be canonical, stable
-  across releases, and decided deliberately — *which* settings are part
-  of it is the open question, not a detail. Presentation already is, by
-  [0010](adr/0010-presentation-is-part-of-what-an-attempt-means.md).
-  Whether clef or range are is not obvious and is the architect's to
-  propose.
-- It is a compatibility commitment the moment a history exists, the same
-  as item ids under [0011](adr/0011-what-a-catalogue-owes.md).
+- The identity question above is the blocking one. Presentation is
+  already part of it by
+  [0010](adr/0010-presentation-is-part-of-what-an-attempt-means.md);
+  whether clef or range are is not obvious, and taken literally *every*
+  setting is, which makes the space enormous and orphans a line whenever
+  a learner changes something incidental. The architect proposes with the
+  consequences priced and the user rules.
 - Export and import are defined by this shape rather than bolted to it
   afterwards; the user named them together.
 - `ItemTally`, `tallyKey`, `schedule` and `dueAt` all read the old model.

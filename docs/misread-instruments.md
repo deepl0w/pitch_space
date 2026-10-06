@@ -106,16 +106,34 @@ asked to be quoted in these terms rather than the kinder ones first offered:
 
 **Flattery is the second selector and it compounds the first**: a finding is
 passed on for being interesting, and checked least by whoever it suits. The
-three routes into it differ in what was misread — a record's silence filled in,
-a guard's trip over-read, a harness's output taken at face value — and the
-last is the most dangerous of the three, because **a harness answers in
-numbers and a number reads as a measurement whatever produced it.**
-[0025](adr/0025-agreement-among-trials-that-share-an-error-is-not-confidence.md) is
-that in its purest form: a ±1 ms error bar, wrong by 120, persuasive precisely
-because it was precise. That is not a fourth kind of fault but a property of
-the instrument that predicts how far the fault will get. Three corrections followed, each
-one layer beneath the last: the claim, then the guard's condition, then its
-scope. **Every version passed its own tests and read as careful.**
+routes differ in what was misread — a record's silence filled in, a guard's
+trip over-read, a harness's output taken at face value — and the last travels
+furthest, for the reason the top of this file gives.
+
+**And there is a third selector, weaker-sounding than flattery and worse,
+because it needs nothing of you: the instrument agreed with what you already
+expected.** A settings sweep reported "every control is stale" across all
+seven exercises. It had examined **three chips out of a hundred and eight** —
+the first off-chip in each panel is a navigation link, clicking it switched
+the exercise, every later lookup found nothing, and the loop ran out silently.
+
+The conclusion was correct. It was plausible, it matched every piece of
+evidence from that day, and it was the answer the operator already held. A
+finding that flatters you at least requires you to want something; one that
+merely confirms you requires nothing at all, and **nothing in the output is
+ever going to look wrong, because the output is what you were going to write
+anyway.**
+
+What caught it is the most concrete thing in this document. Not doubt about
+the conclusion — that was never going to look wrong — but **one number
+disagreeing with another number**: an off-chip count of 2 against 13, measured
+an hour earlier for something else. That is the question at the top of this
+file arriving as a near-miss rather than as advice, and it is why the question
+is about what *else* changed rather than about being careful.
+
+Three corrections followed the guard case, each one layer beneath the last: the
+claim, then the guard's condition, then its scope. **Every version passed its
+own tests and read as careful.**
 
 
 The later cases here were all found while the project was looking at this

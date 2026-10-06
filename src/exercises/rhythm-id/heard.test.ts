@@ -457,13 +457,27 @@ describe('the grading window against the shortest value written', () => {
  */
 describe('a perfect performance, played and heard', () => {
   /** The exercise's own voices, struck, detected, and offered as taps. */
-  function gradeOf(exercise: RhythmExercise, options: { countIn: boolean }) {
+  /**
+   * The exercise's own voices, struck, detected, and offered as taps.
+   *
+   * `silenceBefore` is how much recorded quiet sits in front of the take.
+   * It is a parameter rather than a constant because the case at the
+   * bottom of this describe turns on it: a real capture begins before the
+   * learner plays, and a harness that synthesises the signal from the
+   * first attack onwards does not, which is a difference that looked like
+   * a finding about the count-in.
+   */
+  function gradeOf(
+    exercise: RhythmExercise,
+    options: { countIn: boolean; silenceBefore?: number },
+  ) {
+    const silenceBefore = options.silenceBefore ?? 0.3;
     const voices = rhythmVoices(exercise, { countIn: options.countIn });
-    const lead = options.countIn ? leadInSeconds(exercise) : 0;
+    const lead = (options.countIn ? leadInSeconds(exercise) : 0) + silenceBefore;
+    const starts = voices.map((v) => v.start + silenceBefore);
     const signal = pluckSequence({
-      atSeconds: voices.map((v) => v.start), frequencyHz: 220, seed: 7,
-      seconds: Math.max(...voices.map((v) => v.start)) + 1,
-      sampleRate: RATE, decaySeconds: 0.4,
+      atSeconds: starts, frequencyHz: 220, seed: 7,
+      seconds: Math.max(...starts) + 1, sampleRate: RATE, decaySeconds: 0.4,
     });
     const taps = detectOnsets(signal, { sampleRate: RATE }).onsets
       .map((onset) => onset.timeSeconds - lead)
@@ -503,31 +517,50 @@ describe('a perfect performance, played and heard', () => {
     }
   });
 
-  it('needs the count-in to be findable at all, not only to be in time', () => {
+  it('needs audio before the first attack, which is not the count-in\'s doing', () => {
     /*
-      `rhythmVoices` calls the count-in "the whole of what makes this
-      answerable" and gives one reason: without a shared downbeat the first
-      tap sets the tempo. There is a second reason it does not mention, and
-      it is mechanical rather than musical.
+      **A correction to what this case claimed when it was written**, kept
+      visible because the first version was wrong in the way this project
+      has a convention about.
 
-      **A bar starts at tick zero and spectral flux is a rise between two
-      frames**, so an attack at t = 0 has nothing before it to rise from and
-      is not findable by this detector at all. The count-in moves the music
-      off zero, which is what makes the first note exist for the analysis.
+      It measured ten of ten graded correct with the count-in and four of
+      ten without, and concluded that the count-in is what makes the first
+      note findable — a bar starts at tick zero, spectral flux is a rise
+      between two frames, and an attack at t = 0 has nothing to rise from.
+      The mechanism is real. The attribution was not.
 
-      Measured at 96 bpm: every seed graded correct with the count-in, four
-      of ten without it. Worth pinning because the count-in
-      is already optional — `rhythmVoices` takes `countIn` — and the reason
-      given for it would not stop anyone turning it off for answering.
+      What the detector needs is audio *before* the first attack, and in
+      that harness the count-in was the only thing supplying any. Give the
+      signal three tenths of a second of leading silence and the no-count-in
+      case grades ten of ten as well:
+
+          leading silence 0.0 s   with count-in 10/10   without 4/10
+          leading silence 0.3 s   with count-in 10/10   without 10/10
+          leading silence 1.0 s   with count-in 10/10   without 10/10
+
+      A real take has that silence, because capture starts before the
+      learner plays. So there was no trap: `RhythmPrompt` passes
+      `countIn: false` only for hearing the question, which never reaches
+      the detector, and the count-in's own stated reason — a shared
+      downbeat — is the whole of why it is there.
+
+      What is left is a property of the detector worth pinning on its own:
+      **it cannot find an attack at the very start of its buffer.** That
+      binds anyone who trims or aligns a take to its first note, which is a
+      natural thing to do and would silently cost that note.
     */
     const sample = exercises(96, 6);
-    const without = sample
-      .filter((exercise) => gradeOf(exercise, { countIn: false }).correct).length;
-    const with_ = sample
-      .filter((exercise) => gradeOf(exercise, { countIn: true }).correct).length;
-    expect(with_, 'the count-in did not help, so this is measuring something else')
+    const trimmed = sample
+      .filter((exercise) => gradeOf(exercise, { countIn: false, silenceBefore: 0 }).correct)
+      .length;
+    const padded = sample
+      .filter((exercise) => gradeOf(exercise, { countIn: false, silenceBefore: 0.3 }).correct)
+      .length;
+
+    expect(padded, 'leading silence did not help, so this measures something else')
       .toBe(sample.length);
-    expect(without, 'every bar graded without a count-in, so the first attack was found')
-      .toBeLessThan(with_);
+    expect(trimmed, 'a buffer starting on the attack found it anyway')
+      .toBeLessThan(padded);
   });
+
 });

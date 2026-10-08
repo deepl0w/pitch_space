@@ -65,11 +65,50 @@ describe('the instrument catalogue', () => {
     expect(new Set(shapes).size).toBe(INSTRUMENTS.length);
   });
 
-  it('includes both a struck voice and a held one', () => {
-    // The distinction a learner actually picks between, and the one the
-    // envelope was generalised to express. Without both, the sustain
-    // field is carrying no weight and could be deleted unnoticed.
-    expect(INSTRUMENTS.some((i) => i.sustain <= 0.35), 'nothing is struck').toBe(true);
-    expect(INSTRUMENTS.some((i) => i.sustain >= 0.8), 'nothing is held').toBe(true);
+  it('separates into a struck family and a held one, rather than a continuum', () => {
+    /*
+      The distinction a learner actually picks between, and the one the
+      envelope was generalised to express. Without both, the sustain field
+      carries no weight and could be deleted unnoticed.
+
+      **Asked as a shape rather than against two thresholds.** The first
+      version of this required a sustain at or below 0.35 and one at or
+      above 0.8 — numbers chosen rather than measured, which pass a
+      catalogue tuned until the two families are 0.45 apart and nothing is
+      audibly either.
+
+      So: sort the sustains, take the widest gap, and require it to be
+      wider than the spread inside either group it separates. That is the
+      difference between two families and a gradient, it needs no figure
+      anyone picked, and it survives ordinary retuning — today the gap is
+      0.55 against a widest within-group spread of 0.15, so there is room
+      to move an instrument without this complaining.
+
+      **It does not settle the worry that motivated it, and should not be
+      read as doing so.** The concern was a catalogue tuned until the two
+      families stop being audibly different; tightening every instrument
+      to 0.33–0.35 and 0.80–0.82 passes this, because 0.45 apart with
+      spreads of 0.02 genuinely *is* two families by any structural
+      measure. It also passed the thresholds it replaced.
+
+      Whether 0.45 of sustain is audible is a listening question and
+      nothing off a speaker answers it. What this rules out is the other
+      failure — a catalogue with no families at all, where the field has
+      quietly stopped meaning anything — and it does that without a figure
+      anyone picked.
+    */
+    const sustains = INSTRUMENTS.map((i) => i.sustain).sort((a, b) => a - b);
+    const gaps = sustains.slice(1).map((v, i) => v - sustains[i]);
+    const widest = Math.max(...gaps);
+    const at = gaps.indexOf(widest);
+
+    const struck = sustains.slice(0, at + 1);
+    const held = sustains.slice(at + 1);
+    expect(struck.length, 'nothing is struck').toBeGreaterThan(0);
+    expect(held.length, 'nothing is held').toBeGreaterThan(0);
+
+    const spread = (group: number[]) => group[group.length - 1] - group[0];
+    expect(widest, 'the sustains are a gradient rather than two families')
+      .toBeGreaterThan(Math.max(spread(struck), spread(held)));
   });
 });

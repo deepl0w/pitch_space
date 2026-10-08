@@ -317,6 +317,18 @@ function ExerciseRound({ definition, audio, tally, settings }: {
         )}
       </div>
 
+      {/*
+        Everything except the button that asks for a question.
+
+        The button stays where it is between states and the question
+        centres in the room below it. Centring the whole body instead
+        moved the button as content appeared under it — "Start" and
+        "Skip to the next" are the same control one press apart and
+        they landed in different places, which the user noticed before
+        any of us did.
+      */}
+      <div className="round-body">
+
       {round === null
         /*
           Generic, because this screen serves six exercises and the line it
@@ -401,6 +413,7 @@ function ExerciseRound({ definition, audio, tally, settings }: {
           <p className="secondary">Seed {round.exercise.seed}</p>
         </section>
       )}
+      </div>
     </>
   );
 }

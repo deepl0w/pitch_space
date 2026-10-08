@@ -128,9 +128,20 @@ export function Settings({ go }: { go(route: string): void }) {
             opens the site, and a reader there cannot follow a filename —
             the user role caught it. What they can use is the reason.
           */}
+          {/*
+            The reason has to be the true one. This said "so the app
+            keeps working offline", which is false: a recorded
+            instrument would be cached by the service worker and work
+            offline like everything else. What recordings actually cost
+            is size — a convincing library is tens of megabytes to
+            download and to keep on the device — and that is a real
+            constraint the reader can weigh. A plausible wrong reason
+            is worse than no reason, because nobody checks it.
+          */}
           <p className="secondary">
-            Synthesised rather than recorded, so the app keeps working
-            offline. Picking one plays a note.
+            Generated as they play, rather than recorded: a convincing set of
+            recordings would be tens of megabytes to download and keep. Picking
+            one plays a note.
           </p>
         </Field>
       </Panel>

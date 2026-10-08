@@ -6,7 +6,7 @@ import { optionIds, type AnyField } from '../../testing/settingsSpace';
 import { ALL_KEYS, type Key, findKey, keyName } from '../../theory/key';
 import { CHORD_TYPES, chord, spellChord } from '../../theory/chord';
 import { SCALE_TYPES, spellScale } from '../../theory/scale';
-import { noteValue, timeSignature } from '../../theory/meter';
+import { noteValue, ticksOf, timeSignature } from '../../theory/meter';
 import {
   DIATONIC_SEVENTHS, DIATONIC_TRIADS, type Degree, numeral, realizePitches,
 } from '../../theory/roman';
@@ -475,5 +475,79 @@ describe('every clef a user can choose', () => {
       .not.toBe(emptyStave('tenor'));
     expect(emptyStave('treble'), 'treble and bass are drawn identically')
       .not.toBe(emptyStave('bass'));
+  });
+});
+
+/**
+ * Barlines, where the caller says how long a bar is.
+ *
+ * A chord progression drew as an unbroken row of whole notes, so four
+ * bars of harmony read as four chords floating on a stave — and a bar
+ * holding two chords looked exactly like two bars holding one each. The
+ * user asked for the lines.
+ */
+describe('dividing a stave into bars', () => {
+  const chordAt = (value: 'w' | 'h') => ({
+    pitches: [parsePitch('C4'), parsePitch('E4'), parsePitch('G4')],
+    value: noteValue(value),
+  });
+
+  const verticals = (spec: ScoreSpec): number => {
+    const div = host();
+    drawScore(div, spec, { width: 600, height: 170 });
+    return [...div.querySelectorAll('rect')].filter((r) => {
+      const w = Number(r.getAttribute('width') ?? 0);
+      const h = Number(r.getAttribute('height') ?? 0);
+      return h > w;
+    }).length;
+  };
+
+  /**
+   * Barlines *between* bars, measured against the same stave drawn
+   * without them.
+   *
+   * A stave draws its own two ends as vertical rules whatever it
+   * contains, so counting verticals gives two before any bar is
+   * divided. Subtracting the undivided drawing of the same notes
+   * removes them without this having to know how many a stave has —
+   * which it would then be asserting about VexFlow rather than about
+   * the division.
+   */
+  const barlinesIn = (spec: ScoreSpec): number => {
+    const { barTicks, ...undivided } = spec;
+    return verticals(spec) - verticals(undivided);
+  };
+
+  it('draws none when the caller has not said where bars fall', () => {
+    // The control. Without it, "three barlines" is equally true of a
+    // renderer that draws them whatever it is told.
+    const plain: ScoreSpec = { notes: [chordAt('w'), chordAt('w')], clef: 'treble' };
+    expect(barlinesIn(plain)).toBe(0);
+    // And the measurement is not simply blind: the stave's own ends are
+    // there to be counted, so a zero above means "none added".
+    expect(verticals(plain), 'no verticals at all, so nothing is being measured')
+      .toBeGreaterThan(0);
+  });
+
+  it('divides whole-bar chords one per bar', () => {
+    // Three lines for four bars: the stave draws its own ends.
+    expect(barlinesIn({
+      notes: [chordAt('w'), chordAt('w'), chordAt('w'), chordAt('w')],
+      clef: 'treble',
+      barTicks: ticksOf(noteValue('w')),
+    })).toBe(3);
+  });
+
+  it('keeps two half-bar chords inside one bar', () => {
+    /*
+      The case the user's progression actually hit, and the one a
+      per-chord rule would get wrong: five chords, four bars, because
+      two of them share. A barline after every chord would draw four.
+    */
+    expect(barlinesIn({
+      notes: [chordAt('w'), chordAt('w'), chordAt('h'), chordAt('h'), chordAt('w')],
+      clef: 'treble',
+      barTicks: ticksOf(noteValue('w')),
+    })).toBe(3);
   });
 });

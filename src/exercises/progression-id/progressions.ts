@@ -1,7 +1,7 @@
 import { makeRng, pick } from '../../theory/rng';
 import { ALL_KEYS, type Key, type Mode, keyId, keyName } from '../../theory/key';
 import { type Pitch } from '../../theory/pitch';
-import { noteValue, timeSignature } from '../../theory/meter';
+import { noteValue, ticksOf, timeSignature } from '../../theory/meter';
 import {
   CADENCE_NAMES, type CadenceType, type RomanNumeral, numeralText, realizePitches,
 } from '../../theory/roman';
@@ -552,7 +552,19 @@ export function progressionScoreSpec(exercise: ProgressionExercise): ScoreSpec {
   const notes: ScoreNote[] = exercise.voicings.map((pitches, i) => ({
     pitches: [...pitches], value: noteValue(exercise.barsPer[i] < 1 ? 'h' : 'w'),
   }));
-  return { notes, clef: exercise.clef, key: keyFor(exercise) };
+  /*
+    One bar is one semibreve here, because that is how a whole-bar
+    chord is drawn — so the barline falls after every whole note, or
+    after a pair of halves sharing a bar. `barTicks` rather than a time
+    signature: the lines are wanted and a printed `4/4` above a chord
+    chart is not.
+  */
+  return {
+    notes,
+    clef: exercise.clef,
+    key: keyFor(exercise),
+    barTicks: ticksOf(noteValue('w')),
+  };
 }
 
 export function progressionQuestionSpec(exercise: ProgressionExercise): ScoreSpec | null {

@@ -1,5 +1,5 @@
 import {
-  Accidental, Beam, Dot, Formatter, Renderer, Stave, StaveNote, Tuplet, Voice,
+  Accidental, BarNote, Beam, Dot, Formatter, Renderer, Stave, StaveNote, Tuplet, Voice,
 } from 'vexflow/bravura';
 import { type Pitch, simplifySpelling, vexKey } from '../../theory/pitch';
 import { type Key, vexKeySignature } from '../../theory/key';
@@ -42,6 +42,17 @@ export interface ScoreSpec {
   clef: Clef;
   key?: Key;
   timeSignature?: TimeSignature;
+  /**
+   * Where barlines fall, in ticks. Supplied by `timeSignature` when there
+   * is one.
+   *
+   * Separate because printing a meter and grouping into bars are two
+   * statements and a caller may want the second without the first: a
+   * chord progression is barred like any other music and does not
+   * conventionally print `4/4` above itself. Giving it a time signature
+   * to get the lines would have put a meter on every chord chart.
+   */
+  barTicks?: number;
 }
 
 /** The one default. Score passes `height` through, so it must not have its own. */
@@ -195,7 +206,37 @@ export function drawScore(
     numBeats: totalTicks(spec.notes),
     beatValue: ticksOf({ base: 'q', dots: 0 }) * 4,
   }).setStrict(false);
-  voice.addTickables(staveNotes);
+  /*
+    Barlines, where the spec says how long a bar is.
+
+    A progression's chords were drawn as an unbroken row of whole
+    notes, so four bars of harmony read as four chords floating on one
+    stave with nothing to say where a bar ended — and a bar holding two
+    chords looked exactly like two bars holding one each. The user asked
+    for the lines; the information was already here in `timeSignature`
+    and nothing drew it.
+
+    Inserted as tickables between the notes rather than by splitting
+    into several staves: one stave is what every caller expects back,
+    and `NotePlacement` indices are read by the cursor and the per-note
+    marking, so the notes must stay a single countable sequence.
+    `BarNote` takes no time, which is why the voice's beat count below
+    is unaffected.
+
+    Only between bars, never before the first note or after the last:
+    the stave draws its own ends.
+  */
+  const tickables: Array<StaveNote | BarNote> = [];
+  const barTicks = spec.barTicks ?? spec.timeSignature?.barTicks;
+  let intoBar = 0;
+  spec.notes.forEach((note, i) => {
+    if (barTicks !== undefined && i > 0 && intoBar % barTicks === 0) {
+      tickables.push(new BarNote());
+    }
+    tickables.push(staveNotes[i]);
+    intoBar += ticksOf(note.value);
+  });
+  voice.addTickables(tickables);
 
   // Accidentals come from the key signature, so a note already carried by the
   // signature is not marked again and a departure from it is.

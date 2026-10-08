@@ -172,6 +172,20 @@ main {
     min-height: 0;
     display: flex;
     flex-direction: column;
+  }
+  /*
+    The question centres; the button that asks for one does not.
+
+    Centring the whole body moved that button as content appeared
+    beneath it, so "Start" and "Skip to the next" — the same control
+    one press apart — sat in different places. The row keeps the top
+    and the question takes the room below it.
+  */
+  .practice-body > .round-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
     justify-content: safe center;
   }
 }

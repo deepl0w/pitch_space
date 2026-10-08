@@ -145,16 +145,30 @@ pack is then built to cover the compass rather than to cover a sample, and the
 coverage check stops being a floor because it is no longer measuring — it is
 checking a bound that something else enforces.
 
-This is a decision rather than a measurement, and the measurement informs it:
-the observed reach today is MIDI 49 to 85 across sampled seeds, so the compass
-must be at least that and should have deliberate headroom. **A future exercise
-that genuinely needs more will fail that assertion**, which is the right
-failure — widening the app's compass is a decision with a cost in pack size,
-and it should be taken by someone who can see both.
+**Most of this already exists and the gap is narrower than the paragraph above
+implies.** `packCoverage.test.tsx` declares `COMPASS = { lowest: 21, highest:
+108 }` — A0 to C8, the 88 keys — and justifies it physically rather than by
+taste: it is the widest thing anybody is going to record, so a generator asking
+outside it cannot be sampled at all, only synthesised. That is the right bound
+and the right reason, and nothing here proposes changing it.
+
+What remains is where it lives and what it binds. The constant sits in a test,
+and the test checks the seeds it drew — so it is still a sample, and the
+builder has nothing to read. Two consequences:
+
+- **The compass needs one home that the builder and the test share.** A bound
+  the pack is built against and the app is checked against is a constant two
+  things must agree on, and a second copy is how they stop agreeing.
+- **The observed reach is not the compass.** Sampled seeds reach MIDI 49 to 85
+  today; the bound is 21 to 108. A pack built to the observation would be
+  built to an accident of which seeds ran.
 
 The builder's rule follows: **refuse a pack that does not cover the declared
-compass**, which is checkable at build time against a constant rather than
-against a sample of what some seeds happened to produce.
+compass** — checkable at build time against a constant, rather than against a
+sample of what some seeds happened to produce. **A future exercise that asks
+outside it fails the assertion**, which is the right failure: it means the
+exercise cannot be sampled at all, and someone should know that before a pack
+is blamed.
 
 ## What the builder refuses
 

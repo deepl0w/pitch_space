@@ -280,11 +280,19 @@ over a population that could not have contained the failure.
 
 Two instances, found by the tester a day apart and both now fixed:
 
-- **A population that is structurally empty.** `src/ui/labelling.test.tsx`
-  asks of every screen that no `<label>` wraps more than one interactive
-  control. Breaking the sweep deliberately — renaming the button it presses —
-  left the compass cases green, because a screen that rendered nothing has no
-  offending label. The sweep's own case failed; the claim's did not.
+- **A population that is structurally empty.** `src/packCoverage.test.tsx`
+  mounts the practice screen for each exercise, presses Start, collects what
+  the app hands to `audio.play`, and asserts those pitches lie inside the
+  compass an instrument can be recorded over. Renaming the button to *Begin*
+  as a mutant gave **"3 failed | 1 passed" — and the one that passed was the
+  compass claim**, because an exercise that never started asks for no pitches
+  and no pitch is outside the compass. The population cases failed; the claim
+  did not.
+
+  `src/ui/labelling.test.tsx` is the same fault by a different route: its
+  population is read off disk, so what breaks it is removing a screen from
+  the table rather than breaking a press, and its own vacuity guard asks
+  whether the screens it swept actually drew their controls.
 - **A case that is drawn at random and did not come up.**
   `PracticeScreen.test.tsx` narrowed a pool to two and walked eight rounds
   hoping to reach the one where the drawn answer was the unticked interval.

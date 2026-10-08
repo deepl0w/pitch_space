@@ -35,6 +35,7 @@ vanished entry teaches nobody.
 - [G4 — the home screen cannot say "I do not know"](#g4--the-home-screen-cannot-say-i-do-not-know)
 - [G5 — imported scores break `generate(spec)` and `items(settings)`](#g5--imported-scores-break-generatespec-and-itemssettings)
 - [G6 — the roadmap's item ids are not the ids being written](#g6--the-roadmaps-item-ids-are-not-the-ids-being-written)
+- [G7 — the visual claims have an instrument and no harness](#g7--the-visual-claims-have-an-instrument-and-no-harness)
 - [The order I would take them in](#the-order-i-would-take-them-in)
 
 ## What is already in place
@@ -348,6 +349,54 @@ is the document to correct, and it is worth correcting rather than leaving:
 a plan naming ids that differ from the shipped ones is how a migration gets
 written against the wrong vocabulary.
 
+## G7 — the visual claims have an instrument and no harness
+
+**Open** (found 9 October).
+
+```bash
+grep -nE 'playwright|puppeteer|chrome-remote|webdriver' package.json   # empty
+grep -nE 'chrome|headless|9333' test.sh                                 # empty
+```
+
+**A different kind of gap from the six above, and worth saying so rather than
+forcing the shape.** Those are seams that will not take the work. This is the
+absence of a way to check a whole class of claim the work keeps making.
+
+The project *has* the instrument. `docs/RUNNING-THE-APP.md` documents driving
+real Chrome over CDP, and it exists because the preview harness misreports this
+app in particular — two published findings had to be withdrawn over it. What
+does not exist is anything committed: no browser dependency, nothing in
+`test.sh`. **The instrument is a procedure someone follows, so a visual claim
+is checked exactly when a person remembers to check it.**
+
+Four live needs are already waiting on it, which is what moves this from a
+preference to a gap:
+
+- **The layout-shift threshold.** `--answer-reserve` is a measured length
+  holding the answer's room open. The checkable property is that the question
+  moves less than some tolerance when the answer appears, across six exercises
+  and two layouts — not the figure. Nowhere to put it.
+- **The colour rule.** `src/index.css` states that a verdict which is only a
+  hue is no verdict to a colour-blind reader. It is kept everywhere and
+  enforced nowhere, and the proposed red-to-green progress reading is the first
+  case that would strain it.
+- **Touch targets.** The reason the preview harness is distrusted at all.
+- **Notation rendering.** `Score` redraws at the measured width; whether the
+  result is legible at phone widths is not a thing jsdom can answer.
+
+**The cost is why this has not happened and should be stated with the gap.** A
+browser harness is slow, flaky and a maintenance burden, and this project has
+deliberately bought a fast pure-core suite by keeping the platform at the
+edges. Adding a full end-to-end framework would trade that away for four
+assertions.
+
+So the proportionate version is not Playwright. It is **one CDP script behind
+`test.sh --visual`, asserting a handful of properties against a built app** —
+the same procedure `RUNNING-THE-APP.md` already describes, committed instead of
+recalled, and kept out of the default run so the fast suite stays fast. That is
+also the honest scope: it is a harness for claims nothing else can reach, not a
+second test suite.
+
 ## The order I would take them in
 
 Cheapest-now-and-dearest-later first, which is not the same as most important.
@@ -358,7 +407,11 @@ Cheapest-now-and-dearest-later first, which is not the same as most important.
    removed once for getting this wrong.
 2. **G1's signal half**, which is not a task so much as a constraint on
    whatever reads it. See below.
-3. **G5**, not yet. Flag it in `IN-FLIGHT.md` when `ExerciseSpec` or `items`
+3. **G7**, whenever the first of its four needs is built rather than before.
+   It is cheapest to write alongside a claim that wants it — a harness built
+   speculatively gets the assertions someone imagined, and the four above are
+   real ones already waiting.
+4. **G5**, not yet. Flag it in `IN-FLIGHT.md` when `ExerciseSpec` or `items`
    is next touched, so the person widening them knows what is coming.
 
 **The three that closed did so in three different ways, which is worth more

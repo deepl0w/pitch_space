@@ -21,13 +21,29 @@ import { APP_RULES, customProperties, rulesFor } from '../testing/stylesheet';
  */
 
 /** The custom properties a rule sets, wherever it sits. */
+/**
+ * Whether a custom property's value is a colour.
+ *
+ * `:root` holds more than the palette — `--gutter` is a length the page
+ * edge and the fixed settings cog both derive from, so that two things
+ * meant to line up come from one value rather than two numbers that
+ * happen to match. A length has no business being redeclared per theme,
+ * and these cases are about the palette: every one of them is named for
+ * colours and compared every custom property, which agreed only while
+ * the palette was all there was.
+ */
+function isColour(value: string): boolean {
+  return /^(#|rgb|hsl|color\()/i.test(value.trim());
+}
+
 function paletteOf(selector: string): Map<string, string> {
   const bodies = selector.startsWith(':root:not')
     // This one lives inside the colour-scheme query, so it is not a
     // top-level rule and `rulesFor` will not see it.
     ? APP_RULES.filter((r) => r.selectors.includes(selector)).map((r) => r.body)
     : rulesFor(selector);
-  return customProperties(bodies.join(''));
+  const all = customProperties(bodies.join(''));
+  return new Map([...all].filter(([, v]) => isColour(v)));
 }
 
 describe('the dark palette', () => {
@@ -54,6 +70,19 @@ describe('the dark palette', () => {
       the screen it is on.
     */
     expect([...byChoice.keys()].sort()).toEqual([...light.keys()].sort());
+  });
+
+  it('reads colours only, or the case above fails on the first length added', () => {
+    /*
+      The control on the filter rather than on the palette. Without it,
+      a non-colour token in `:root` — a gutter, a radius, a duration —
+      makes "dark overrides everything light defines" fail for a reason
+      that has nothing to do with theming, and the obvious repair is to
+      declare the length twice.
+    */
+    expect([...light.values()].every(isColour), 'a non-colour reached the palette').toBe(true);
+    expect(isColour('16px'), 'a length is being read as a colour').toBe(false);
+    expect(isColour('#fbfaf8')).toBe(true);
   });
 
   it('is actually dark, rather than a second copy of the light one', () => {

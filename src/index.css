@@ -9,6 +9,12 @@
   --right: #2f7d4f;
   --wrong: #b4442e;
   --score-ink: #1a1a1a;
+  /*
+    The page's own edge, named so that anything which has to sit at it
+    derives from the same value rather than repeating a number that
+    merely matches. The fixed cog uses it; so does `main`'s padding.
+  */
+  --gutter: 16px;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -66,7 +72,7 @@ body {
 main {
   max-width: 60rem;
   margin: 0 auto;
-  padding: 2rem 16px 4rem;
+  padding: 2rem var(--gutter) 4rem;
 }
 
 /* Wide enough for two columns: use the screen rather than centring a
@@ -93,6 +99,7 @@ main {
    that would be clipped by the difference. */
 .practice-layout { display: grid; gap: 1.5rem; align-items: start; }
 
+
 @media (min-width: 60rem) {
   main.shell {
     max-width: none; padding: 0; margin: 0;
@@ -118,13 +125,45 @@ main {
   .practice-main {
     min-height: 0; overflow-y: auto;
     padding: 1.5rem 2rem 3rem;
+    /*
+      Centred in the pane rather than resting on its top edge. The
+      question is a handful of short rows in a tall column, and
+      top-aligned it sat in the upper quarter with the rest of the
+      screen empty beneath it.
+
+      `safe center` rather than `center`: a centred flex child that
+      grows taller than its container overflows in *both* directions
+      and the top becomes unreachable, scrollbar or not. The safe
+      keyword falls back to flex-start exactly then, so a long answer
+      list scrolls from its beginning instead of having its first rows
+      cut off above the pane.
+    */
+    display: flex;
+    flex-direction: column;
+  }
+  /*
+    The heading stays at the top and the exercise centres in what is
+    left of the pane. Centring the whole column moved the title into
+    the middle of the screen too, which is not what was wanted: the
+    title says where you are and belongs where a title goes.
+
+    `safe center` rather than `center` so a question taller than the
+    space falls back to starting at the top instead of overflowing in
+    both directions, which puts its first rows out of reach.
+  */
+  .practice-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: safe center;
   }
 }
 
 /* Below the breakpoint it is an ordinary page again: settings first, then
    the question, both scrolling with everything else. */
 @media (max-width: 59.999rem) {
-  main.shell { padding: 2rem 16px 4rem; }
+  main.shell { padding: 2rem var(--gutter) 4rem; }
   .practice-settings .back { padding-bottom: 0.5rem; }
 }
 
@@ -200,20 +239,27 @@ main .practice-main .question { max-width: 44rem; margin-inline: auto; }
 
 h1 { font-size: 1.45rem; margin: 0 0 0.3rem; font-weight: 650; letter-spacing: -0.01em; }
 
-/* The settings cog sits in the header's corner, aligned to the title rather
-   than to the lede below it, so it stays put as the lede wraps. */
-.home-header { position: relative; padding-right: 3rem; }
+/* The settings cog is fixed to the window, not to any page.
+
+   It was the home header's control and then also the practice layout's
+   corner — two controls doing one job, and the second moved to the far
+   side of a phone's scroll when the columns stacked. One element,
+   rendered outside every screen, so no screen's layout can move it. */
 .cog {
-  position: absolute; top: 0; right: 0;
+  position: fixed; top: var(--gutter); right: var(--gutter);
+  z-index: 15;
   display: grid; place-items: center;
-  /* 44px, which is the smallest target a thumb reliably hits; the icon
-     inside it is 20px, so the padding is the tap area and not decoration. */
-  width: 44px; height: 44px;
-  margin: -0.4rem -0.4rem 0 0;
+  /* Comfortably past the 44px a thumb reliably hits, because it is now
+     the only chrome on the page and is read as a landmark rather than
+     found by aiming at it. */
+  width: 52px; height: 52px;
   padding: 0;
-  background: none; border: 1px solid transparent; border-radius: 8px;
+  /* A background, because fixed over scrolling content it would
+     otherwise sit on whatever happened to pass beneath it. */
+  background: var(--bg); border: 1px solid transparent; border-radius: 10px;
   color: var(--muted); cursor: pointer;
 }
+.cog svg { width: 26px; height: 26px; }
 .cog:hover { color: var(--ink); border-color: var(--line); }
 .cog:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 h2 { font-size: 0.95rem; margin: 0 0 0.75rem; font-weight: 600; color: var(--muted); }
@@ -747,22 +793,11 @@ select,
 /* Settings reached without leaving the exercise.
 
    A route change unmounts the practice screen and discards the round, so
-   swapping instrument mid-question had to be a layer rather than a page.
-   Fixed to the viewport rather than placed in the grid: the shell gives
-   its two columns the whole window and each scrolls on its own, so a cog
-   in the flow would scroll away from exactly the moment it is wanted. */
-.cog-floating {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 10;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  padding: 0.6rem;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
-}
-
+   swapping instrument mid-question has to be a layer rather than a page.
+   The control that opens it is the ordinary `.cog` in the practice
+   screen's own header — same corner and same idiom as the home screen,
+   because it is the same job and a second shape for it reads as a second
+   thing. */
 .overlay {
   position: fixed;
   inset: 0;
@@ -794,8 +829,14 @@ select,
   margin-left: 1rem;
 }
 
-@media (pointer: coarse) {
-  /* Clear of the thumb's resting position and of any control at the
-     bottom of the question pane. */
-  .cog-floating { right: 1.25rem; bottom: 1.25rem; padding: 0.75rem; }
-}
+
+/* No padding for the cog, deliberately.
+
+   Reserving room on the header shifted its *content* centre half the
+   reserved width to the left — so the title no longer shared an axis
+   with the buttons and the stave under it, which are centred in the
+   full pane. A reader sees two centres and cannot say why.
+
+   The cog is fixed to the window's corner and the content column is
+   centred and narrower than the pane, so nothing reaches it. Where a
+   page's own heading is left-aligned it starts at the opposite edge. */

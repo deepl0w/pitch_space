@@ -54,7 +54,7 @@ function appAt(route: string) {
   return {
     buttons,
     press,
-    cog: () => container.querySelector('.cog-floating') as HTMLButtonElement | null,
+    cog: () => container.querySelector('.app-cog') as HTMLButtonElement | null,
     layer: () => container.querySelector('[role="dialog"]'),
     /**
      * What is on screen, as something that differs between two rounds.
@@ -74,7 +74,11 @@ function appAt(route: string) {
       return container.querySelector('.score-host svg')?.outerHTML
         .replace(/vf-auto\d+/g, 'vf-auto') ?? null;
     },
-    openSettings: () => act(() => { (container.querySelector('.cog-floating') as HTMLButtonElement).click(); }),
+    openSettings: () => act(() => {
+      const cog = container.querySelector('.app-cog') as HTMLButtonElement | null;
+      if (cog === null) throw new Error('no cog to open settings with');
+      cog.click();
+    }),
   };
 }
 
@@ -119,11 +123,53 @@ describe('settings over a running exercise', () => {
     expect(app.question(), 'one round looks exactly like the next').not.toBe(first);
   });
 
-  it('offers the layer only where there is a round to keep', () => {
-    // Two routes into one screen on one route is a thing to explain rather
-    // than a convenience, and the home screen's own cog already goes to the
-    // full page.
-    expect(appAt('').cog(), 'the floating cog is offered off an exercise').toBeNull();
+  it('opens a layer rather than navigating, everywhere it is offered', () => {
+    /*
+      **This replaced the claim it is standing in for, which had become
+      vacuous.** It used to say the cog is offered *only* over an exercise,
+      and it asserted that by looking for `.cog-floating` on the home
+      route. The cog is one control in `App` now, on every page, under a
+      different class — so the old case went on passing by finding nothing
+      under a name nothing uses any more.
+
+      The claim that replaces it is the one the change is for: one control
+      doing one thing. The reason it must not navigate over an exercise is
+      that the round would be discarded; the reason to do the same
+      elsewhere is that a control which means two things depending on where
+      you are is two controls.
+    */
+    for (const route of ['', 'interval-id', 'circle', 'calibration']) {
+      const app = appAt(route);
+      const before = window.location.hash;
+
+      expect(app.cog(), `no cog on ${route || 'the home screen'}`).not.toBeNull();
+      app.openSettings();
+
+      expect(app.layer(), `the cog on ${route || 'home'} opened nothing`).not.toBeNull();
+      expect(window.location.hash, `the cog on ${route || 'home'} navigated`).toBe(before);
+
+      act(() => root?.unmount());
+      root = null;
+    }
+  });
+
+  it('shows no cog on the settings page itself, and none while the layer is up', () => {
+    /*
+      Two conditions that have to be the same condition, which they were
+      not: the cog hid itself while the layer was open before the layer
+      opened everywhere, so on every page but a practice one it vanished
+      and opened nothing. A control that disappears and does nothing is
+      worse than one that is simply missing.
+    */
+    expect(appAt('settings').cog(), 'the settings page offers a cog to itself').toBeNull();
+
+    act(() => root?.unmount());
+    root = null;
+
+    const app = appAt('circle');
+    app.openSettings();
+    expect(app.layer()).not.toBeNull();
+    expect(app.cog(), 'the cog is still there under the layer it opened').toBeNull();
   });
 
   it('closes before it navigates, so nothing floats over the next screen', () => {

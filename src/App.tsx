@@ -133,34 +133,26 @@ export default function App() {
       ordinary scrolling page and keeps them.
     */
     <main className={exercise ? 'shell' : undefined}>
-      {Screen && !exercise && (
-        <button className="back" onClick={() => go(backFrom(route).route)}>
-          &larr; {backFrom(route).label}
-        </button>
-      )}
-      {exercise
-        ? <PracticeScreen exerciseId={route} onSwitch={go} onBack={() => go('')} />
-        : Screen ? <Screen go={go} /> : <Home go={go} />}
-
       {/*
-        Settings over the exercise rather than instead of it.
+        One cog, in one place, on every page.
 
-        A route change unmounts the practice screen and takes the round
-        with it, and `stopSound` fires on every one — so reaching the
-        instrument picker by navigating would cost the question the
-        learner was part way through and silence what was playing. The
-        user asked to swap instruments *on the fly*, which is precisely
-        the case navigation cannot serve.
+        It was the home screen's header control and then also the
+        practice layout's corner, which made it two controls doing one
+        job in two positions — and the practice one moved to the far
+        side of a phone's scroll when the columns stacked. Rendered here
+        it is outside every screen, so no screen's layout can move it
+        and no screen has to remember to offer it.
 
-        Only on an exercise route. Everywhere else the cog on the home
-        screen already goes to the full page, and two ways into one
-        screen on one route is a thing to explain rather than a
-        convenience.
+        It opens settings over whatever is showing rather than
+        navigating, everywhere rather than only on an exercise: the
+        reason it must not navigate on a practice screen is that the
+        round would be discarded, and the reason to do the same
+        elsewhere is that one control should do one thing.
       */}
-      {exercise && (
+      {route !== 'settings' && !settingsOpen && (
         <button
           type="button"
-          className="cog cog-floating"
+          className="cog app-cog"
           onClick={() => setSettingsOpen(true)}
           aria-label="Settings"
           title="Settings"
@@ -168,7 +160,31 @@ export default function App() {
           <CogIcon />
         </button>
       )}
-      {exercise && settingsOpen && (
+      {Screen && !exercise && (
+        <button className="back" onClick={() => go(backFrom(route).route)}>
+          &larr; {backFrom(route).label}
+        </button>
+      )}
+      {exercise
+        ? (
+          <PracticeScreen
+            exerciseId={route}
+            onSwitch={go}
+            onBack={() => go('')}
+          />
+        )
+        : Screen ? <Screen go={go} /> : <Home go={go} />}
+
+      {/*
+        Everywhere, not only over an exercise.
+
+        The cog became persistent before this did, so on every page but
+        a practice one it hid itself — the cog is hidden while the layer
+        is open — and opened nothing. A control that vanishes and does
+        nothing is worse than one that is simply missing. The two
+        conditions have to be the same condition.
+      */}
+      {settingsOpen && (
         <SettingsOverlay
           onClose={() => setSettingsOpen(false)}
           go={(next) => { setSettingsOpen(false); go(next); }}

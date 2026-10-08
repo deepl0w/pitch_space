@@ -88,7 +88,9 @@ interface Round {
 // The back control lives in this screen's own sidebar rather than above it.
 // Every other route keeps the router's, which is still the only one on the
 // page — the shell moved it, it did not add a second.
-export function PracticeScreen({ exerciseId, onSwitch, onBack, audio = defaultSynth }: {
+export function PracticeScreen({
+  exerciseId, onSwitch, onBack, audio = defaultSynth,
+}: {
   /**
    * Which exercise to run. The route decides, so the menu card and the URL
    * both mean something; the stored `lastExercise` is only the fallback for
@@ -199,6 +201,7 @@ export function PracticeScreen({ exerciseId, onSwitch, onBack, audio = defaultSy
         <p className="lede">{definition.description}</p>
       </header>
 
+      <div className="practice-body">
       {/*
         Keyed by type, which is the whole fix: a change of type builds a new
         component rather than handing this one a question it did not generate.
@@ -241,6 +244,7 @@ export function PracticeScreen({ exerciseId, onSwitch, onBack, audio = defaultSy
           {fromNewerRelease === 1 ? ' it' : ' them'}.
         </p>
       )}
+      </div>
       </div>
     </div>
   );

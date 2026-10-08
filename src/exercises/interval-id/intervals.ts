@@ -284,11 +284,18 @@ export function generateInterval(spec: ExerciseSpec<IntervalSettings>): Interval
     the user has switched off.
 
     A unison has one item and both directions produce it, so a wish for it
-    pins the semitones and leaves the direction to the seed.
+    pins the semitones and leaves the direction to the seed — which is what
+    `pick` is for rather than `find`. Taking the first match instead froze
+    the direction of every wished unison to whichever way the settings
+    happened to list first: inaudible, since a unison sounds the same
+    either way, and still the shape a wish is not allowed to have. Aiming
+    may decide what the item decides and no more, and the direction of a
+    unison is not one of those things.
   */
-  const wished = settings.semitones.flatMap(
+  const matches = settings.semitones.flatMap(
     (st) => settings.directions.map((dir) => ({ st, dir })),
-  ).find(({ st, dir }) => intervalItemId(st, dir) === spec.prefer);
+  ).filter(({ st, dir }) => intervalItemId(st, dir) === spec.prefer);
+  const wished = matches.length > 0 ? pick(rng, matches) : undefined;
 
   const semitones = wished?.st ?? pick(rng, settings.semitones);
   const direction = wished?.dir ?? pick(rng, settings.directions);

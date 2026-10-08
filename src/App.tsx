@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CogIcon } from './ui/controls';
 import { Home } from './ui/screens/Home';
 import { Scales } from './ui/screens/Scales';
 import { Chords } from './ui/screens/Chords';
@@ -132,6 +133,33 @@ export default function App() {
       ordinary scrolling page and keeps them.
     */
     <main className={exercise ? 'shell' : undefined}>
+      {/*
+        One cog, in one place, on every page.
+
+        It was the home screen's header control and then also the
+        practice layout's corner, which made it two controls doing one
+        job in two positions — and the practice one moved to the far
+        side of a phone's scroll when the columns stacked. Rendered here
+        it is outside every screen, so no screen's layout can move it
+        and no screen has to remember to offer it.
+
+        It opens settings over whatever is showing rather than
+        navigating, everywhere rather than only on an exercise: the
+        reason it must not navigate on a practice screen is that the
+        round would be discarded, and the reason to do the same
+        elsewhere is that one control should do one thing.
+      */}
+      {route !== 'settings' && !settingsOpen && (
+        <button
+          type="button"
+          className="cog app-cog"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Settings"
+          title="Settings"
+        >
+          <CogIcon />
+        </button>
+      )}
       {Screen && !exercise && (
         <button className="back" onClick={() => go(backFrom(route).route)}>
           &larr; {backFrom(route).label}
@@ -143,19 +171,20 @@ export default function App() {
             exerciseId={route}
             onSwitch={go}
             onBack={() => go('')}
-            /*
-              Settings over the exercise rather than instead of it: a
-              route change unmounts this screen and takes the round with
-              it, and `stopSound` fires on every one. The user asked to
-              swap instruments mid-question, which is the case
-              navigation cannot serve.
-            */
-            onOpenSettings={() => setSettingsOpen(true)}
           />
         )
         : Screen ? <Screen go={go} /> : <Home go={go} />}
 
-      {exercise && settingsOpen && (
+      {/*
+        Everywhere, not only over an exercise.
+
+        The cog became persistent before this did, so on every page but
+        a practice one it hid itself — the cog is hidden while the layer
+        is open — and opened nothing. A control that vanishes and does
+        nothing is worse than one that is simply missing. The two
+        conditions have to be the same condition.
+      */}
+      {settingsOpen && (
         <SettingsOverlay
           onClose={() => setSettingsOpen(false)}
           go={(next) => { setSettingsOpen(false); go(next); }}

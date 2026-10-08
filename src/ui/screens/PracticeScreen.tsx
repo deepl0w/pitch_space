@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
-import { CogIcon, Field, OneOf } from '../controls';
+import { Field, OneOf } from '../controls';
 import { ExerciseBoundary } from '../components/ExerciseBoundary';
 import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registry';
 import { itemLabel } from '../../exercises/itemLabel';
@@ -89,7 +89,7 @@ interface Round {
 // Every other route keeps the router's, which is still the only one on the
 // page — the shell moved it, it did not add a second.
 export function PracticeScreen({
-  exerciseId, onSwitch, onBack, onOpenSettings, audio = defaultSynth,
+  exerciseId, onSwitch, onBack, audio = defaultSynth,
 }: {
   /**
    * Which exercise to run. The route decides, so the menu card and the URL
@@ -99,15 +99,6 @@ export function PracticeScreen({
   exerciseId?: string;
   /** Change which exercise is running. The router owns that, not this screen. */
   onSwitch?: (exerciseId: string) => void;
-  /**
-   * Open settings over this screen.
-   *
-   * A callback rather than a route, because the point is that this
-   * screen stays mounted: navigating discards the round and silences
-   * whatever is playing, which is the opposite of swapping instrument
-   * mid-question.
-   */
-  onOpenSettings?: () => void;
   /** Leave for the home screen. The router owns that too. */
   onBack?: () => void;
   audio?: AudioOut;
@@ -203,25 +194,14 @@ export function PracticeScreen({
       </aside>
 
       <div className="practice-main">
-      <header className="page-header">
+      <header>
         {/* No "practice" tag. You are on the practice screen; saying so
             is the heading telling you where you already are. */}
         <h1>{family.name}</h1>
         <p className="lede">{definition.description}</p>
-        {/* The same corner and the same control as the home screen's.
-            It was briefly a floating circle over the question and read
-            as a different thing doing the same job. */}
-        <button
-          type="button"
-          className="cog"
-          onClick={onOpenSettings}
-          aria-label="Settings"
-          title="Settings"
-        >
-          <CogIcon />
-        </button>
       </header>
 
+      <div className="practice-body">
       {/*
         Keyed by type, which is the whole fix: a change of type builds a new
         component rather than handing this one a question it did not generate.
@@ -264,6 +244,7 @@ export function PracticeScreen({
           {fromNewerRelease === 1 ? ' it' : ' them'}.
         </p>
       )}
+      </div>
       </div>
     </div>
   );

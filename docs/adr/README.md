@@ -152,6 +152,16 @@ a comment is worth a test, and the comment should point at the test.** Where
 that is not possible, say what is unenforced rather than stating the rule as
 though it holds.
 
+**That remedy has a known failure mode, and it is this convention inverted.**
+Three cases in two days were comments that did not lie over code that rounded —
+a stiffness term documented for *upper* partials and applied to the fundamental
+too, an envelope documented as decaying and holding, a direction promised to
+the seed and taken by first match. Checking the claim against the code passes
+in all three, because both are right to the precision anyone reads them at. The
+remedy there is a mutant aimed at the gap rather than a closer reading;
+[`docs/misread-instruments.md`](../misread-instruments.md) carries the
+argument.
+
 **A fourth instance is the strongest, and it is a different and worse case than
 a stale comment.** `Round`'s own doc comment in `PracticeScreen.tsx` reads:
 

@@ -43,6 +43,24 @@ describe('chord types', () => {
    * fifth. The catalogue is right and the guess was wrong, and nothing in
    * the suite or in the file would have said so either way.
    */
+  /*
+    One omission this does not reach, recorded because it was looked for
+    and the result is otherwise lost.
+
+    dom7s11 drops the fifth, and the reason usually given is that ♯11
+    clashes with it. That is sound as voicing practice and is not a
+    constraint anything here can state: ♯11 over a perfect fifth is eleven
+    semitones, a major seventh, so the rule below does not reach it. The
+    obvious generalisation — no two tones adjacent as pitch classes unless
+    one is the root — was tried and is false of this catalogue: dom7s9 has
+    a ♯9 and a major third, pitch classes 3 and 4, and is correct.
+
+    So three of the four omissions follow from the rule below and the
+    fourth is convention. Leaving it unasserted is the decision, not an
+    oversight: a case naming dom7s11's dropped fifth would pin the array
+    rather than the reason, which is the snapshot this file is written to
+    avoid.
+  */
   it('never sounds a minor ninth except above the root', () => {
     const clashes: string[] = [];
     let aboveTheRoot = 0;

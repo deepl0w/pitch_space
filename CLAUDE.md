@@ -98,6 +98,14 @@ builds, and touches no source. It owns the three places the protocol is
 written — this section, `.claude/fleet.conf`, and the generic protocol in
 `~/.claude/` — for one reason that matters more than tidiness:
 
+From time to time, rather than only reacting to what went wrong here, it
+checks the protocol against outside practice — published research on
+multi-agent coordination and code review, not just this fleet's own
+incidents — and writes down what's confirmed, what's new, and what's still
+only a hypothesis this fleet hasn't tested. The fleet skill's "The review
+cycle" carries the last pass; say which is which rather than presenting
+borrowed evidence as this project's own.
+
 **`~/.claude/skills/fleet/SKILL.md` and `~/.claude/scripts/fleet.sh` are
 shared, unversioned, and outside git.** Every worktree in this repository
 reads the same two files, there is no history on them, no diff, and no merge:

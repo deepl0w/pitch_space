@@ -286,6 +286,18 @@ helps, because nothing is wrong with it.
   moment anything played. A partial amplitude of `0.4` is not wrong-*looking*.
   There is nothing in the text to be suspicious of.
 
+- **A reader, whose resolution is coarser than the defect.** Comparing a
+  comment against the code it describes is the check this project reaches for
+  most, and it has a precision below which it reports agreement. Three cases in
+  two days: a stiffness term documented as applying to *upper* partials and
+  applied to the fundamental as well, putting every note 0.7 cents sharp; an
+  envelope documented as decaying throughout and holding every voice at its
+  decay level; and a comment promising a wished unison's direction to the seed
+  over code that took the first match. **Not one is a comment that lied.** All
+  three are code that rounded, and each is individually plausible — an
+  implementation that is *nearly* the sentence is what a reasonable
+  implementation of a prose sentence looks like.
+
 The third is the one with a standing rule attached, and `instruments.ts` names
 the gap itself:
 
@@ -298,6 +310,24 @@ by measuring it again, never by reviewing the line that sets it.** That was
 already the rule for the pitch-detection constants inherited from the tuner;
 this is a second instance that arrived independently, which is better evidence
 for a rule than a restatement of it would be.
+
+**The fourth is the inverse of the ADR index's fourth convention and wants
+saying as such.** That convention says a comment stating a constraint is a test
+that cannot fail, and its remedy is to check the claim against the code. Here
+the claim *is* checked and the check *passes*: both artefacts are right to the
+precision anyone reads them at, and they part company below it. All three cases
+were found by mutation or by measurement, and none by comparing the two
+documents — which is the remedy being applied correctly and returning the wrong
+answer.
+
+So **the remedy is not more careful reading.** It is a mutant aimed at the gap
+between the sentence and the implementation — does the fundamental move if the
+stiffness term is removed from it, does a long note's level change — which is a
+different habit from checking that a comment is still true, and catches a
+different thing. Two of the three now carry their own history in the code
+(`synth.ts`, at the stiffness term and at the sustain), which is the cheapest
+form of the habit: the next reader is told what the sentence previously failed
+to constrain.
 
 **Why this is a separate question from the three selectors** above — interesting,
 flattering, expected. Those describe what happens to a finding once it exists.

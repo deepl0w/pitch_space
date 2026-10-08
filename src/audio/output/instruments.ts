@@ -41,16 +41,40 @@ export interface Instrument {
   readonly attack: number;
   /** Seconds from peak to {@link sustain}. */
   readonly decay: number;
+  /** The fraction of peak the note has fallen to after {@link decay}. */
+  readonly decayTo: number;
   /**
-   * The fraction of peak a held note settles at.
+   * Whether the note then *stays* there while it is held.
    *
-   * This is what separates struck from blown. A piano cannot hold a note
-   * and decays towards nothing; an organ holds it exactly as long as the
-   * key is down. Values near zero make the note's length a property of
-   * the instrument rather than of what was asked for, which is true of
-   * the real thing.
+   * This is what separates struck from blown, and it is a fact about the
+   * instrument rather than a level. A piano cannot hold a note: it falls
+   * past {@link decayTo} and keeps falling until it is silent, which is
+   * why a long note on a piano is quiet by the end. An organ holds
+   * exactly as long as the key is down.
+   *
+   * Written as a flag and not inferred from a low `decayTo`, because the
+   * first version did infer it — every voice held at its decay level —
+   * and that made the piano sustain like a bad sample. The two
+   * behaviours are different curves, not two ends of one.
    */
-  readonly sustain: number;
+  readonly holds: boolean;
+  /**
+   * A level trim, measured rather than chosen.
+   *
+   * Dividing by the partial count does not equalise loudness: a held
+   * voice delivers its level for the whole note where a struck one is
+   * already decaying, and a bright stack carries more energy than a
+   * plain one at the same peak. Measured through an analyser on the live
+   * graph, the organ came out about 15 dB above the piano — a
+   * loud-versus-quiet jump rather than a difference in timbre, so
+   * switching instrument felt like moving the volume slider.
+   *
+   * These bring the six within a few dB of each other. They are
+   * measurements of *this* synthesis and have to be re-measured if a
+   * voice's partials or envelope change; the suite cannot check them,
+   * because loudness is the one thing it has no instrument for.
+   */
+  readonly trim: number;
   /** Seconds from the note ending to silence. */
   readonly release: number;
 }
@@ -69,7 +93,9 @@ export const INSTRUMENTS: readonly Instrument[] = Object.freeze([
     inharmonicity: 0.0004,
     attack: 0.008,
     decay: 0.18,
-    sustain: 0.3,
+    decayTo: 0.3,
+    holds: false,
+    trim: 1,
     release: 0.25,
   },
   {
@@ -81,7 +107,9 @@ export const INSTRUMENTS: readonly Instrument[] = Object.freeze([
     inharmonicity: 0.0009,
     attack: 0.004,
     decay: 0.35,
-    sustain: 0.22,
+    decayTo: 0.22,
+    holds: false,
+    trim: 0.5,
     release: 0.4,
   },
   {
@@ -93,7 +121,9 @@ export const INSTRUMENTS: readonly Instrument[] = Object.freeze([
     inharmonicity: 0.0002,
     attack: 0.003,
     decay: 0.12,
-    sustain: 0.18,
+    decayTo: 0.18,
+    holds: false,
+    trim: 0.75,
     release: 0.3,
   },
   {
@@ -110,7 +140,9 @@ export const INSTRUMENTS: readonly Instrument[] = Object.freeze([
     inharmonicity: 0,
     attack: 0.02,
     decay: 0.04,
-    sustain: 1,
+    decayTo: 1,
+    holds: true,
+    trim: 0.2,
     release: 0.08,
   },
   {
@@ -122,7 +154,9 @@ export const INSTRUMENTS: readonly Instrument[] = Object.freeze([
     inharmonicity: 0.0001,
     attack: 0.12,
     decay: 0.25,
-    sustain: 0.85,
+    decayTo: 0.85,
+    holds: true,
+    trim: 0.3,
     release: 0.35,
   },
   {
@@ -138,7 +172,9 @@ export const INSTRUMENTS: readonly Instrument[] = Object.freeze([
     inharmonicity: 0,
     attack: 0.06,
     decay: 0.1,
-    sustain: 0.9,
+    decayTo: 0.9,
+    holds: true,
+    trim: 0.22,
     release: 0.12,
   },
 ]);

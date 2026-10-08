@@ -43,10 +43,13 @@ describe('the instrument catalogue', () => {
       expect(i.attack, `${i.id} attacks instantly`).toBeGreaterThan(0);
       expect(i.decay, `${i.id} has no decay`).toBeGreaterThan(0);
       expect(i.release, `${i.id} has no release`).toBeGreaterThan(0);
-      // Sustain is a fraction of peak, and a negative or louder-than-peak
-      // one would make the envelope's exponential ramp meaningless.
-      expect(i.sustain, `${i.id} sustains outside 0..1`).toBeGreaterThanOrEqual(0);
-      expect(i.sustain).toBeLessThanOrEqual(1);
+      // A fraction of peak, and strictly above zero: the envelope ramps
+      // to it exponentially and an exponential cannot reach zero.
+      expect(i.decayTo, `${i.id} decays outside 0..1`).toBeGreaterThan(0);
+      expect(i.decayTo).toBeLessThanOrEqual(1);
+      // A trim of zero is a silent instrument, which no other case here
+      // would notice: the rest are about shape rather than level.
+      expect(i.trim, `${i.id} is silent`).toBeGreaterThan(0);
       expect(i.inharmonicity, `${i.id} is sharp in the wrong direction`)
         .toBeGreaterThanOrEqual(0);
     }
@@ -60,55 +63,47 @@ describe('the instrument catalogue', () => {
       failure the picker exists to avoid.
     */
     const shapes = INSTRUMENTS.map(
-      (i) => `${i.partials.join()}|${i.attack}|${i.decay}|${i.sustain}`,
+      (i) => `${i.partials.join()}|${i.attack}|${i.decay}|${i.decayTo}|${i.holds}`,
     );
     expect(new Set(shapes).size).toBe(INSTRUMENTS.length);
   });
 
-  it('separates into a struck family and a held one, rather than a continuum', () => {
+  it('includes both a struck voice and a held one', () => {
     /*
-      The distinction a learner actually picks between, and the one the
-      envelope was generalised to express. Without both, the sustain field
+      The distinction a learner picks between, and the one the envelope
+      now has two curves for. Without both families the `holds` flag
       carries no weight and could be deleted unnoticed.
 
-      **Asked as a shape rather than against two thresholds.** The first
-      version of this required a sustain at or below 0.35 and one at or
-      above 0.8 — numbers chosen rather than measured, which pass a
-      catalogue tuned until the two families are 0.45 apart and nothing is
-      audibly either.
-
-      So: sort the sustains, take the widest gap, and require it to be
-      wider than the spread inside either group it separates. That is the
-      difference between two families and a gradient, it needs no figure
-      anyone picked, and it survives ordinary retuning — today the gap is
-      0.55 against a widest within-group spread of 0.15, so there is room
-      to move an instrument without this complaining.
-
-      **It does not settle the worry that motivated it, and should not be
-      read as doing so.** The concern was a catalogue tuned until the two
-      families stop being audibly different; tightening every instrument
-      to 0.33–0.35 and 0.80–0.82 passes this, because 0.45 apart with
-      spreads of 0.02 genuinely *is* two families by any structural
-      measure. It also passed the thresholds it replaced.
-
-      Whether 0.45 of sustain is audible is a listening question and
-      nothing off a speaker answers it. What this rules out is the other
-      failure — a catalogue with no families at all, where the field has
-      quietly stopped meaning anything — and it does that without a figure
-      anyone picked.
+      This case used to infer the families from where the sustain
+      values clustered, and carried an honest caveat that whether the
+      gap was *audible* was a listening question nothing here could
+      settle. Making struck-versus-held a declared property retires the
+      inference and the caveat together: it is no longer two ends of a
+      number, so the only thing left to assert is that each family has
+      a member.
     */
-    const sustains = INSTRUMENTS.map((i) => i.sustain).sort((a, b) => a - b);
-    const gaps = sustains.slice(1).map((v, i) => v - sustains[i]);
-    const widest = Math.max(...gaps);
-    const at = gaps.indexOf(widest);
+    expect(INSTRUMENTS.some((i) => !i.holds), 'nothing is struck').toBe(true);
+    expect(INSTRUMENTS.some((i) => i.holds), 'nothing is held').toBe(true);
+  });
 
-    const struck = sustains.slice(0, at + 1);
-    const held = sustains.slice(at + 1);
-    expect(struck.length, 'nothing is struck').toBeGreaterThan(0);
-    expect(held.length, 'nothing is held').toBeGreaterThan(0);
+  it('trims a held voice below a struck one, because it delivers more', () => {
+    /*
+      Measured through an analyser on the live graph rather than
+      reasoned: dividing by the partial count left the organ about 15 dB
+      above the piano, which reads as a volume change rather than a
+      change of instrument. A held voice sits at its level for the whole
+      note where a struck one is already falling, so it needs the deeper
+      trim.
 
-    const spread = (group: number[]) => group[group.length - 1] - group[0];
-    expect(widest, 'the sustains are a gradient rather than two families')
-      .toBeGreaterThan(Math.max(spread(struck), spread(held)));
+      An ordering rather than the figures, because the figures are
+      measurements of this synthesis and move when a voice does. What
+      must not move is the direction: a trim making held voices louder
+      would be the defect, correctly shaped.
+    */
+    const loudest = (held: boolean) => Math.max(
+      ...INSTRUMENTS.filter((i) => i.holds === held).map((i) => i.trim),
+    );
+    expect(loudest(true), 'a held voice is trimmed no further than a struck one')
+      .toBeLessThan(loudest(false));
   });
 });

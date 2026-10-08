@@ -594,6 +594,83 @@ describe('choosing an instrument', () => {
       .toBeLessThan(floor(sustained) / peak(sustained));
   });
 
+  it('keeps a struck note falling, where a held one stays put', () => {
+    /*
+      The regression this replaced: the first envelope held *every*
+      voice at its decay level, so a long piano note sat at a third of
+      its peak until it ended instead of dying away. That is a sustain
+      a piano does not have, and it was also most of why a held voice
+      measured far louder over the same note.
+
+      Asserted on the envelope's own curve rather than on loudness: for
+      a struck voice the value at the end of the note must be below the
+      value it decayed to, and for a held one it must still be there.
+      A comparison between the two instruments would pass with both
+      holding, which is how the first version of this missed it.
+    */
+    const envelopeOf = () => gains()
+      .reduce((a, b) => (b.events.length > a.events.length ? b : a)).events;
+
+    advanceAudioClock(5);
+    synth.setInstrument('piano');
+    synth.play([{ midi: 60, start: 0, duration: 2 }]);
+    const struck = envelopeOf();
+
+    resetAudio();
+    installAudioContext();
+    advanceAudioClock(5);
+    const organ = new Synth();
+    organ.setInstrument('organ');
+    organ.play([{ midi: 60, start: 0, duration: 2 }]);
+    const held = envelopeOf();
+
+    // The decay point is the second-highest value; the note's end is the
+    // last event before the release reaches silence.
+    const shape = (es: { time: number; value: number }[]) => {
+      const sorted = [...es].sort((a, b) => a.time - b.time);
+      const peak = Math.max(...sorted.map((e) => e.value));
+      const atEnd = sorted[sorted.length - 2];
+      return { peak, atEnd: atEnd.value };
+    };
+
+    const a = shape(struck);
+    const b = shape(held);
+    expect(a.peak, 'the envelope never rose').toBeGreaterThan(0);
+    expect(a.atEnd / a.peak, 'a struck note stopped falling')
+      .toBeLessThan(0.3);
+    expect(b.atEnd / b.peak, 'a held note did not hold')
+      .toBeGreaterThan(0.9);
+  });
+
+  it('trims a held voice down, so switching is not a volume change', () => {
+    /*
+      Measured on the live graph: dividing by the partial count left the
+      organ about 15 dB above the piano. The trim is what corrects it,
+      and nothing else in this file reads the field — the oscillator
+      counts and the frequencies are both unaffected by level, so
+      dropping the trim passed every case here.
+    */
+    const peakOf = () => Math.max(...gains()
+      .reduce((a, b) => (b.events.length > a.events.length ? b : a))
+      .events.map((e) => e.value));
+
+    advanceAudioClock(5);
+    synth.setInstrument('piano');
+    synth.play(notes(1));
+    const struck = peakOf();
+
+    resetAudio();
+    installAudioContext();
+    advanceAudioClock(5);
+    const organ = new Synth();
+    organ.setInstrument('organ');
+    organ.play(notes(1));
+
+    expect(struck, 'nothing sounded, so nothing below is asserted').toBeGreaterThan(0);
+    expect(peakOf(), 'the held voice peaks at or above the struck one')
+      .toBeLessThan(struck);
+  });
+
   it('runs a stiff instrument sharp in its upper partials and a pipe true', () => {
     /*
       Inharmonicity is what stops a stack of exact harmonics sounding

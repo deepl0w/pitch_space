@@ -333,15 +333,29 @@ export class Synth {
       way, and they cannot reach zero — hence the floor rather than a
       ramp to silence.
     */
-    const peak = (voice.gain ?? 1) / voiceOf.partials.length;
-    const sustain = Math.max(peak * voiceOf.sustain, SILENT);
+    const peak = Math.max((voice.gain ?? 1) * voiceOf.trim / voiceOf.partials.length, SILENT);
+    const decayed = Math.max(peak * voiceOf.decayTo, SILENT);
     const decayedBy = at + voiceOf.attack + voiceOf.decay;
     const ends = Math.max(at + voice.duration, decayedBy);
 
     envelope.gain.setValueAtTime(0, at);
     envelope.gain.linearRampToValueAtTime(peak, at + voiceOf.attack);
-    envelope.gain.exponentialRampToValueAtTime(sustain, decayedBy);
-    envelope.gain.setValueAtTime(sustain, ends);
+    envelope.gain.exponentialRampToValueAtTime(decayed, decayedBy);
+    if (voiceOf.holds) {
+      // Held there while the note lasts, then let go.
+      envelope.gain.setValueAtTime(decayed, ends);
+    } else {
+      /*
+        Struck, so it never stops falling. The first version of this
+        held every voice at its decay level, which gave the piano a
+        sustain it does not have — a long note stayed at a third of its
+        peak until it ended rather than dying away. Falling throughout
+        is what makes a struck string sound struck, and it is also most
+        of why a held voice measured far louder than a struck one over
+        the same note.
+      */
+      envelope.gain.exponentialRampToValueAtTime(decayed * 0.25, ends);
+    }
     envelope.gain.exponentialRampToValueAtTime(SILENT, ends + voiceOf.release);
 
     for (const [index, amplitude] of voiceOf.partials.entries()) {

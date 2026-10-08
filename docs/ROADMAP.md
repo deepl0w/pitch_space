@@ -40,6 +40,17 @@ Spaced repetition replaces the uniform sample with a schedule: each practisable
 atom carries its own review history, and the generator is steered towards the
 ones that are due.
 
+**Much of this is now built and none of it is connected**, which is a state
+worth naming because a plan describing built work as unstarted is the one kind
+of staleness nobody is positioned to notice. `src/state/schedule.ts`,
+`src/state/line.ts` and the item tally all exist and are tested;
+`tools/report-facts.sh` prints `scheduler 0 production importer(s)`, and that
+line rather than this paragraph is the thing to believe. Records
+[0039](adr/0039-a-line-is-an-exercise-and-the-items-its-settings-make-askable.md)
+to [0044](adr/0044-deterministic-is-not-the-same-as-seeded.md) settled the
+questions below that have been settled; where this section and a record
+disagree, the record is right and this text has not caught up.
+
 ### What an item is
 
 The unit the schedule tracks. These are not exercises — an exercise is a
@@ -123,13 +134,23 @@ algorithm knows the prior art exists and does not re-derive it.
 
 ### The algorithm
 
-Start with **SM-2**: about fifty lines, thoroughly understood, and its failure
-modes are documented everywhere. FSRS is better and the migration path is
-real — both store per-item state and differ in what they keep — but tuning FSRS
-needs a review corpus that does not exist yet. Revisit once there is one.
+Planned as **SM-2**. **What shipped is a Leitner ladder** — a fixed sequence
+of intervals in `INTERVALS_MS`, indexed by the count of consecutive correct
+answers, with no ease factor and no lapse count. Simpler than the plan and
+enough to schedule against; the paragraph below describing per-item ease and
+lapse counts was the plan and is not the code.
 
-Scheduler state is per item: ease, interval, due date, lapse count, plus a
-short rolling history for the latency signal below.
+Scheduler state is per item and per line: `seen`, `correct`, `lastSeenAt` and
+`streak`. The ladder is read at `streak`, so an item that lapses falls back
+down it rather than having an ease penalty applied.
+
+**FSRS is now the named successor rather than a someday.**
+[0040](adr/0040-completion-replaces-the-score.md) needs a continuous quantity
+to read a line's state from, and FSRS's *retrievability* — the decaying
+probability of recall now — is the one it was reaching for;
+`docs/research/2026-10-07-spaced-repetition.md` has the sources. Tuning it
+still needs a review corpus that does not exist, so the ladder stays until one
+does.
 
 **Latency matters more here than in flashcards.** A musician who plays the
 right note after two seconds of thought has not learned it. Grade on
@@ -147,7 +168,9 @@ pools, raising the probability of due items without ever making an excluded one
 reachable. So the order is constraints first (hard filter), then scheduling
 weights (soft preference), then the seeded draw.
 
-Two consequences worth stating now:
+Both consequences below have since landed, and are kept here because the
+reasoning is what makes the next one obvious rather than because they are
+outstanding:
 
 - The generator must be able to report **which items an exercise actually
   exercised**, which means emitting item ids alongside the notes. It already
@@ -159,12 +182,18 @@ Two consequences worth stating now:
 
 ### Storage and honesty
 
-Review history is user data, lives in IndexedDB, and needs a versioned
-migration from the first release. It is also the first thing in the app whose
+Review history is user data and lives in IndexedDB.
+**It does not get a versioned migration yet, and that is a ruling rather than
+an omission**: [0042](adr/0042-history-is-disposable-until-settings-settle.md)
+makes history disposable while the settings schemas are still moving, with the
+porting system owed once they settle. The sentence that stood here demanded a
+migration from the first release and was written before that was decided. It is also the first thing in the app whose
 loss would actually matter to someone, which makes export worth having early.
 
 A "due today" count on the home screen is the whole visible surface of this
-feature, and it should be honest: no streaks, no manufactured urgency. If
+feature, and it should be honest: no streaks, no manufactured urgency. That has
+since hardened into a decision: 0040 removes completion altogether, so there is
+no finished state to dramatise even if someone wanted to. If
 nothing is due, say so and offer free practice.
 
 ## Following the music on the staff

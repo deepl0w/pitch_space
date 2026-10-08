@@ -514,7 +514,8 @@ describe('dividing a stave into bars', () => {
    * the division.
    */
   const barlinesIn = (spec: ScoreSpec): number => {
-    const { barTicks, ...undivided } = spec;
+    const undivided = { ...spec };
+    delete undivided.barTicks;
     return verticals(spec) - verticals(undivided);
   };
 

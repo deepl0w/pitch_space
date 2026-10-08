@@ -129,19 +129,30 @@ export function Settings({ go }: { go(route: string): void }) {
             the user role caught it. What they can use is the reason.
           */}
           {/*
-            The reason has to be the true one. This said "so the app
-            keeps working offline", which is false: a recorded
-            instrument would be cached by the service worker and work
-            offline like everything else. What recordings actually cost
-            is size — a convincing library is tens of megabytes to
-            download and to keep on the device — and that is a real
-            constraint the reader can weigh. A plausible wrong reason
-            is worse than no reason, because nobody checks it.
+            Twice wrong here, the same way both times, which is why this
+            comment is longer than the sentence it guards.
+
+            It first said "so the app keeps working offline", which is
+            false — a recording would be cached by the service worker
+            like everything else. Corrected to a size argument: "tens of
+            megabytes". That was not measured either. Encoding the
+            project's own CC0 piano fixtures at a playable length puts a
+            note at roughly 22 KiB and a whole instrument, sampled every
+            third semitone across five octaves, at about 460 KiB. Off by
+            close to two orders of magnitude, and in the direction that
+            made a real option look impossible.
+
+            Both were plausible reasons nobody would check, offered for
+            a decision that had already been taken. The rule this earns:
+            user-facing copy does not get to state a cost that nothing
+            measured. Either cite a figure the repository can produce or
+            say the shape of the thing without the number.
           */}
           <p className="secondary">
-            Generated as they play, rather than recorded: a convincing set of
-            recordings would be tens of megabytes to download and keep. Picking
-            one plays a note.
+            Generated as they play rather than recorded, so they start instantly
+            and work offline from the first load. Recorded instruments are the
+            aim — they are what you have actually practised against — and these
+            stay as the fallback underneath them. Picking one plays a note.
           </p>
         </Field>
       </Panel>

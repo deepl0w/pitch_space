@@ -41,6 +41,7 @@ The block and the unblock are two edits, not one.
 - [`main` — capture, fed by recordings rather than by a microphone](#main--capture-fed-by-recordings-rather-than-by-a-microphone)
 - [`main` — four exercises, a scheduler, and the practice screen rebuilt](#main--four-exercises-a-scheduler-and-the-practice-screen-rebuilt)
 - [`architect`, then everyone — progress is per settings combination](#architect-then-everyone--progress-is-per-settings-combination)
+- [`main`, then `architect` — recorded instruments are the aim, synthesis the floor](#main-then-architect--recorded-instruments-are-the-aim-synthesis-the-floor)
 
 ### `main` — the score reports where it drew things, so a cursor can follow
 
@@ -395,3 +396,64 @@ thing anyone is tested on.
 - `ItemTally`, `tallyKey`, `schedule` and `dueAt` all read the old model.
   Nothing in production calls `schedule`, so the cost of changing it is
   tests and records rather than behaviour.
+
+### `main`, then `architect` — recorded instruments are the aim, synthesis the floor
+
+**Branch:** `main`, starting now. **Settled:** the direction, and the
+measurement below. **Not settled:** how a pack reaches the device, which
+is the architect's to propose and which nothing downstream has to wait
+for — the seam is the same either way.
+
+**Why.** The user's words: *"i want accurate sounds, the exercises work
+better when you listen to instruments you are familiar with. artificial
+sounds don't work as well"*, and then, when it looked like this might be
+read as a replacement, *"synthetic is fine to have but not the ultimate
+aim"*. The argument is pedagogical rather than aesthetic, which is what
+makes it binding: an exercise answered by ear is training recognition,
+and recognition transfers from the timbre you have actually played. A
+convincing synthetic piano is still not the instrument the learner sits
+at. That is a claim about what the app is *for*, so it outranks the
+convenience that chose synthesis.
+
+**The cost estimate that justified synthesis-only was wrong.** The
+settings screen told readers a recorded set would be "tens of megabytes".
+Nothing had measured it. Encoding this repository's own CC0 piano
+fixtures (`tools/fetch-test-audio.sh`, VCSL) to three seconds of mono
+AAC at 64 kbps gives **22 KiB a note**; VCSL samples every third
+semitone, so five octaves is 21 notes and **about 460 KiB an
+instrument** — six of them is a couple of megabytes, and one of them is
+smaller than the notation font already in the bundle. The figure that
+made recordings look impossible was out by nearly two orders of
+magnitude. Recorded as a caution as much as a number: it is the second
+unmeasured cost this feature has stated to users as fact.
+
+**What changes.** `Synth` stops being the only way a note is produced.
+A sampled voice plays an `AudioBufferSourceNode` resampled from the
+nearest recorded semitone, behind the same call the synthesised voice
+answers now, so no caller learns which one it got. Synthesis keeps its
+job rather than losing it: it is what sounds on the first load, while a
+pack downloads, and when a pack is unavailable at all.
+
+**For tester.** Three claims, and none of them is about timbre — the
+suite has no standing on whether a recording sounds like a piano.
+
+- **The fallback is transparent.** The same request produces a sounding
+  note whether or not a pack is loaded. A sampler that throws, or is
+  silent, when its pack has not arrived is the whole risk of this
+  change, and it is the one a user meets on a cold start.
+- **Resampling lands on the right pitch.** A note played from a
+  neighbouring sample at an adjusted rate must come out within a cent or
+  two of the frequency `pitch.ts` says it is. This is arithmetic on the
+  playback rate and wants no browser.
+- **Coverage spans what the exercises ask for.** A pack whose lowest
+  sample is above the lowest note a generated line can contain fails
+  silently, by transposing something far out of range. Assert the
+  manifest against the generators' range, not against a hardcoded list.
+
+**For architect.** [ADR 0045](adr/0045-an-instrument-may-change-how-a-note-is-produced-never-which-note-is-correct.md)
+stops being theoretical and starts being the constraint this is built
+against: a sampled instrument may change how a note is produced and must
+not change which note is correct, or what grading accepts. Worth a record
+of its own is the reversal — synthesis was chosen as the destination and
+is now the floor — together with the rule the measurement earns, that
+user-facing copy may not state a cost nothing measured.

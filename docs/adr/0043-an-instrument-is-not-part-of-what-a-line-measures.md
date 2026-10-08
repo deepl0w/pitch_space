@@ -84,3 +84,55 @@ settings id that reaches an attempt owes 0011's full obligation and is not
 editorial. **Which of the two a new id is depends on whether it is written to
 IndexedDB or to localStorage**, and under 0006 that is a question with a
 one-word answer rather than a judgement.
+
+## Addendum, 8 October 2026 — the gradient is designed, not incidental
+
+The limitation above was written as a reasonable worry. It is larger than that
+and it is deliberate, which is a different thing to accept.
+
+**The figures, checked against the declared partials rather than taken on
+report.** The flute suppresses its second harmonic by 21.9 dB and its third by
+28.0; the strings suppress theirs by 1.9 and 6.0. That is not a nuance between
+two timbres — it is close to a sine against a full harmonic stack, and hearing
+a tritone through one is a materially different task from hearing it through
+the other.
+
+**The two measurements agree and are not independent, which is worth saying
+precisely** because [0025](0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)
+is about exactly this. The user role read the six through an analyser; this
+record read the amplitudes the synthesis is driven *by*. The analyser sits
+downstream of the declared data, so agreement confirms that the synthesis
+implements what `instruments.ts` says — a real and useful check — and does not
+independently corroborate anything about difficulty. Two readings of one
+quantity, not two witnesses.
+
+**What actually supports the difficulty claim is the code saying so.** The
+flute's own comment states the intent rather than leaving it to be inferred:
+
+> Nearly a sine, which is the point rather than a simplification: an interval
+> played on something this plain is the easiest version of the ear-training
+> question, and a learner who cannot hear a tritone through a piano's upper
+> partials can often hear it here.
+
+**So the honest statement is stronger than the one above.** The app does not
+merely tolerate a difficulty difference across voices — it **builds one on
+purpose**, offers it as a choice, and then declines to record which was taken.
+An easy mode exists, it is good that it exists, and the progress reading cannot
+see it. A learner who finds a line hard, switches to the flute, and succeeds
+has their success recorded identically to one earned on the piano.
+
+That does not reverse the Decision. Splitting a line six ways is still worse
+than ignoring a difference of degree, and the instrument still changes nothing
+about `items(settings)`. It raises the limitation from a side-effect to a known
+cost of a deliberate design, which is the kind that should be visible on screen
+rather than only in a record — a learner choosing the flute could reasonably be
+told it is the easier voice, since the code already knows it.
+
+## Revisit when
+
+**A learner's reading moves sharply on changing voice.** The cause is known
+before the symptom appears — 21.9 dB against 1.9 — and so is the fix: 0039's
+escape clause, giving the item a different id rather than keying the line on
+the instrument, exactly as it provides for clef. That is the second time that
+clause has turned a hard question into an easy one, which is worth noting about
+0039 rather than about instruments.

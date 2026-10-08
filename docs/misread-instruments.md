@@ -336,3 +336,31 @@ the commit gate, the push gate, the mutation habit — was green on a test
 asserting something false. The catalogue above is a list of instruments read
 too widely; **this is the instrument the catalogue itself was read through.**
 
+
+### A clean diff is an instrument, and it cannot see a quantity
+
+Added 8 October, from two defects in `src/audio/output/instruments.ts`: an
+envelope curve and a loudness ratio. **Neither was found by reading the diff,
+and both were plain as soon as anything played.**
+
+The claim a diff review makes is structural — this code does what it says, the
+types line up, the branch is reachable. Its range stops at any value whose
+correctness is a physical or perceptual property rather than a structural one.
+A partial amplitude of `0.4` is not wrong-looking; it is wrong-sounding, and
+there is nothing in the text to be suspicious of.
+
+**The file names the gap itself**, which is why this belongs in the catalogue
+rather than in a bug report:
+
+> They are measurements of *this* synthesis and have to be re-measured if a
+> voice's partials or envelope change; the suite cannot check them, because
+> loudness is the one thing it has no instrument for.
+
+That is the same shape as everything above. The diff was not misread; it was
+read correctly and asked a question it cannot answer, by people who had no
+reason to think they were asking it of the wrong instrument. The practical
+consequence is narrow and worth stating as a rule: **a constant whose rightness
+is a matter of how it sounds or feels gets changed by measuring it again, never
+by reviewing the line that sets it** — which is already the standing rule for
+the pitch-detection constants inherited from the tuner, now with a second
+instance that arrived independently.

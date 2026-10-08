@@ -107,16 +107,22 @@ cycle" carries the last pass; say which is which rather than presenting
 borrowed evidence as this project's own.
 
 **`~/.claude/skills/fleet/SKILL.md` and `~/.claude/scripts/fleet.sh` are
-shared, unversioned, and outside git.** Every worktree in this repository
-reads the same two files, there is no history on them, no diff, and no merge:
-two agents editing them at once silently keep whichever wrote last. The skill
-changed under a process session mid-edit on 4 October, which is how this came
-to be written down. So the rule is the same shape as *only main pushes* —
+shared across every project on this machine, and outside *this* repository's
+git — not outside git entirely any more.** `~/.claude` got its own local
+repository on 9 October (no remote, no push), specifically because two
+agents editing these files at once used to silently keep whichever wrote
+last with no history, no diff and no way back. The skill changed under a
+process session mid-edit on 4 October, which is how that came to be
+written down in the first place. A local repo gives a record and a
+revert; it does not give real-time conflict detection between two
+sessions editing at once, which is still the single-writer rule's job —
 **only a process session edits the protocol's own files**, and anyone else
 who wants them changed says so and leaves them alone. If you find yourself
-about to improve the fleet skill from a tester worktree, that is the moment
-the rule is for. `docs/process/` carries the reasoning, because a decision
-recorded only in an unversioned file is not recorded.
+about to improve the fleet skill from a tester worktree, that is the
+moment the rule is for. Commit there after editing, the same discipline
+as this repository, so the record is actually kept rather than merely
+possible. `docs/process/` carries the reasoning that is specific to this
+project; `~/.claude`'s own log carries the rest.
 
 **This reaches the fleet's own coordination files, named above, and nothing
 else in `~/.claude/` by the same hazard alone.** `test-engineer` and every

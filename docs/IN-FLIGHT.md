@@ -27,6 +27,16 @@ whether it is safe to begin. If a piece cannot start until something else
 is settled, say that plainly rather than trusting "is the architect's to
 propose" to carry it.
 
+**Name what the condition is true of, not who was meant to check it.**
+"Kept until architect has reviewed" depends on one person remembering a
+file they may not read; "kept until 0021 is marked superseded in the
+index" is true or false of the repository itself, checkable by whoever
+holds the pen regardless of who else is reading anything. The second kind
+can also fail loudly — stays open, visibly, rather than aging silently
+into something nobody notices has been waiting a fortnight. Same reason a
+mechanism beats a correlate everywhere else in this protocol, applied to
+how a condition is phrased rather than to how it is checked.
+
 **A stated block has to be stated as removed, not just quietly stop
 applying.** Found on the first real use: once the open question was
 settled, the entry had to be edited a second time to say so — without

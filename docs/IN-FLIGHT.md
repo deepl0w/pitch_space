@@ -6,7 +6,10 @@ after a sync now includes this file as well as what just landed
 (`CLAUDE.md`, "Several agents work here at once"). This is not `ROADMAP.md`:
 that is what is planned but not yet started, architect's to keep; this is
 what is already underway, and an entry leaves the moment its change has
-merged and been reviewed.
+merged and been reviewed. Removing an entry is itself a claim — that both
+of those are actually true — and claims get checked against the tree
+before being acted on, the same as any other; an entry looking old is not
+evidence of either.
 
 **Main is the only writer.** A role that wants an entry says so to main
 rather than adding one, the same reason `.claude/scripts/fleet.sh` and the

@@ -24,7 +24,7 @@ it ships or is dropped.
 - [A settings screen](#a-settings-screen)
 - [Taking your progress with you](#taking-your-progress-with-you)
 - [Bringing your own material](#bringing-your-own-material)
-- [A guitar that sounds like a guitar](#a-guitar-that-sounds-like-a-guitar)
+- [Instruments that play like themselves](#instruments-that-play-like-themselves)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 [`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
@@ -550,12 +550,23 @@ Three things will be the work, and none of them is the parsing:
   contributor and wrong for data arriving from a file. An import needs to
   refuse an entry and say why, not take the app down.
 
-## A guitar that sounds like a guitar
+## Instruments that play like themselves
 
-From the user, deferred by them rather than asked for now:
+From the user, deferred by them rather than asked for now. The guitar first:
 
 > guitar sound is weird because the chords are still piano chords with reverb,
 > in the future they should be real guitar chords with strumming
+
+and then the general form of it, which is the actual scope:
+
+> the guitar is the thing i noticed but should have in mind the
+> characteristics of all the different instruments and adapt how the sound is
+> adapted for each when playing the notes
+
+[0045](adr/0045-an-instrument-may-change-how-a-note-is-produced-never-which-note-is-correct.md)
+sets the limit this work operates under: an instrument may change how a note is
+produced and may not change which notes are correct. Everything in the table
+below is articulation, and therefore free, except where it is marked otherwise.
 
 **The diagnosis is right and the code agrees with it in writing.** Chord voices
 come from `voiceChord` in `theory/chord.ts`, which is pianistic on purpose —
@@ -568,6 +579,30 @@ reading.** There is no convolver, no delay and no effects node anywhere in
 `src/audio/output/`. What is audible as a wash is the guitar's own envelope
 tail — a 0.12 s decay to 0.18 of peak and a 0.3 s release — across notes that
 all start at the same instant. Nothing to remove; something to stagger.
+
+### What each of the six actually does differently
+
+`Instrument` carries partials, inharmonicity and an envelope, and one
+behavioural field: `holds`, which its own comment calls "a fact about the
+instrument rather than a level". That field is the precedent — the rest of this
+is more of the same kind.
+
+| Voice | Idiom not yet modelled | Tier |
+| --- | --- | --- |
+| Piano, electric piano | Already the implicit default: struck together, pianistic voicing, notes decaying away. | — |
+| Guitar | Strummed, 15–30 ms low string upwards. Fretboard shapes, open strings, octave doubling. | 2 and **3** |
+| Organ | Simultaneous attack and no velocity: it is the one voice for which a block chord is honest. | 2 |
+| Strings | Bowed — slow attack already present, but also swell within a note and slurring between them. | 2 |
+| Flute | **Monophonic.** It cannot play a chord, and the app currently renders one as a stack of flute tones. | **3** |
+
+The two marked tier 3 are the two that reach what a learner is graded on, and
+0045 is about exactly them. The rest can be built whenever anyone wants a more
+convincing sound, in any order, with no record needed.
+
+**The flute is the one worth doing something about soonest**, not because it is
+hard but because it is the only entry here that is currently *dishonest* rather
+than merely unconvincing. Everything else sounds approximate; this sounds like
+an instrument that does not exist.
 
 ### The two halves are not the same size, and not in the same layer
 

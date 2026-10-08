@@ -172,16 +172,20 @@ role's own branch catching up, which `announce` and `status` read directly
 and which clears itself the moment a role syncs, whether or not any message
 reached it.
 
-**The per-commit nag is silent for a role nobody is running.** It used to
-ask main to tell every behind role on every commit, with no way to
-distinguish "reachable and untold" from "not running at all" — the second
-case has nothing to deliver and nothing that clears it, so the honest
-response was re-running `tools/sessions.sh` and saying "still not running"
-again, four times in one day. The check now also asks whether any process
-has that worktree's directory as its cwd, addressable or merely orphaned,
-and says nothing when the answer is no; `fleet.sh brief` still catches that
-role up whenever it next starts, which never depended on main doing
-anything.
+**The per-commit nag is silent unless a role is actually addressable.** It
+used to ask main to tell every behind role on every commit, with no way to
+distinguish "reachable and untold" from "nothing to tell" — the first
+pass fixed "not running" (nothing has nothing to deliver and nothing that
+clears it, costing four identical re-checks in one day) but, checked rather
+than assumed, still nagged about an **orphaned** role: a process does sit at
+the worktree's own directory, same as an addressable one, so a bare process
+check cannot tell them apart and the first version of this fix caught both.
+An orphaned role cannot be messaged or fixed from main either, so it has
+the same unclearable shape as not-running — the check now requires a
+socket, not merely a process, which is the exact line `tools/sessions.sh`
+already draws between the three states. `fleet.sh brief` still catches a
+silenced role up whenever it next starts, which never depended on main
+doing anything.
 
 **The role sessions are permanent, and main does not start them.** They run
 in the user's desktop app, they are part of this project's standing

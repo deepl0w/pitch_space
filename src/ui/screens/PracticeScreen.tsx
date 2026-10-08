@@ -310,11 +310,25 @@ function ExerciseRound({ definition, audio, tally, settings }: {
         <button type="button" onClick={start}>
           {round === null ? 'Start' : round.result ? 'Next' : 'Skip to the next'}
         </button>
-        {session.asked > 0 && (
-          <span className="secondary">
-            {session.right} of {session.asked} this session
-          </span>
-        )}
+        {/*
+          Always on the page, blank until there is a tally to put in it.
+
+          It used to appear with the first answer, and appearing is a
+          layout change: it pushed everything below it down 27px, which
+          is most of what remained of the question jumping when you
+          answered. The line above this one holds the question still
+          against anything *below* it; nothing could hold it against a
+          sibling that was not there a moment ago.
+
+          Measured at 27px on every exercise and at both widths, which
+          is what identified it — a shift that did not vary with the
+          answer's height was never the answer's doing.
+        */}
+        <span className="secondary" aria-hidden={session.asked === 0 || undefined}>
+          {session.asked > 0
+            ? `${session.right} of ${session.asked} this session`
+            : '\u00a0'}
+        </span>
       </div>
 
       {/*
@@ -327,7 +341,7 @@ function ExerciseRound({ definition, audio, tally, settings }: {
         they landed in different places, which the user noticed before
         any of us did.
       */}
-      <div className={round?.result ? 'round-body answered' : 'round-body'}>
+      <div className="round-body">
 
       {round === null
         /*

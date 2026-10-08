@@ -82,6 +82,28 @@ synthesised input. **Nobody was careless and the rate was four in four**, which
 is the rate to expect rather than a bad afternoon — an author's reading of
 their own work is the one reading taken from inside it.
 
+**The sharpest form of this is a description of *checking*, and it is the one
+that stops anyone else looking.** On 9 October a proposal for the eighth
+convention below named the wrong file for one of its two instances. The
+reviewing session — this one — grepped that file, found the one assertion the
+description got right, accepted the sentence around it, and published the
+convention saying both instances had been verified against the tree. The
+author of the proposal caught it afterwards, from memory, and checked the
+files again rather than relying on the review.
+
+**"I verified the half that was true and reported the whole as checked."**
+That is the fault, and it is worse than the four above rather than another of
+them. A description of work invites a reader to check it, which is what makes
+the four-in-four rate recoverable. A description of *having checked* does the
+opposite: it is the one claim whose acceptance guarantees nobody repeats the
+work, so an overstatement in it is self-sealing.
+
+The cure is not more care, which was already present. It is to **say which
+part was checked and by what, rather than that it was checked** — "grepped
+this file for a population assertion and found one at line 171" cannot be
+mistaken for "confirmed both instances", and the gap between them is visible
+to the reader rather than only to the author.
+
 The *working* rule that follows — read the code once it is synced rather than
 building on what a message said about it, because a merge gets independent
 review by construction and a message does not — belongs to the fleet protocol

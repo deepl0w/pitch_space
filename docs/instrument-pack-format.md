@@ -156,12 +156,21 @@ What remains is where it lives and what it binds. The constant sits in a test,
 and the test checks the seeds it drew — so it is still a sample, and the
 builder has nothing to read. Two consequences:
 
-- **The compass needs one home that the builder and the test share.** A bound
-  the pack is built against and the app is checked against is a constant two
-  things must agree on, and a second copy is how they stop agreeing.
-- **The observed reach is not the compass.** Sampled seeds reach MIDI 49 to 85
-  today; the bound is 21 to 108. A pack built to the observation would be
-  built to an accident of which seeds ran.
+- **The compass needs one home that the builder and the test share, and the
+  home it has is the wrong one.** A fact about instruments is sitting in
+  `packCoverage.test.tsx` because that is where it was first needed; the
+  physical argument beside it is sound and none of it is a testing concern.
+  The moment a builder needs the same bound, that constant becomes the first
+  of two copies. The right shape is one exported constant in `audio/output/`
+  carrying the physical argument, which the test then imports instead of
+  declaring — a source change with no test driving it, so it belongs to
+  whoever is next in that file rather than to the session that noticed.
+- **The observed reach is not the compass, and they are not the same kind of
+  claim.** The compass is a bound from the instrument: fixed, physical, true
+  whether or not this app exists. The 49-to-85 is a floor from the seeds that
+  happened to run. A pack sized to the floor would be sized to an accident,
+  and the two should not share a sentence anywhere this number is inherited —
+  which is the whole reason this bullet exists rather than a figure.
 
 The builder's rule follows: **refuse a pack that does not cover the declared
 compass** — checkable at build time against a constant, rather than against a

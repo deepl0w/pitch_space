@@ -11,6 +11,7 @@ import type {
 } from '../../exercises/types';
 import { appSynth } from '../sound';
 import { settingsStore, useSettings } from '../../state/settingsStore';
+import { lineOfRound } from '../../state/line';
 import {
   progressStore, tallyItems, tallyKey, useProgress,
   type ItemTally, type TallyKey,
@@ -382,11 +383,7 @@ function ExerciseRound({ definition, audio, tally, settings }: {
                 off the round rather than the panel for the same reason
                 the attempt's does: the settings may have moved since.
               */
-              const counts = tally.get(tallyKey({
-                exercise: definition.id,
-                askable: round.askable,
-                presentation: round.exercise.presentation,
-              }, item));
+              const counts = tally.get(tallyKey(lineOfRound(definition.id, round), item));
               return (
                 <li key={item}>
                   <span className="primary">{itemLabel(item)}</span>

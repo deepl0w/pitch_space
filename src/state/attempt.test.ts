@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { attemptFrom } from './attempt';
-import { tallyItems, tallyKey } from './progressStore';
+import { lineOf, tallyItems, tallyKey } from './progressStore';
 import { dueAt } from './schedule';
 import { coerceAttempt, type Attempt } from './schema';
 import type { ExerciseBase, ItemId, Result } from '../exercises/types';
-import type { ProgressLine } from './line';
+import { lineOfRound, type ProgressLine } from './line';
 
 /**
  * The join between what the screen stamps and what the scheduler reads.
@@ -415,5 +415,71 @@ describe('the askable set an attempt carries', () => {
   it('survives the coercion the log puts it through', () => {
     const a = attemptFrom(round(), 'interval-id', result(true), 2_000, pool);
     expect(coerceAttempt(a)).toEqual(a);
+  });
+});
+
+/**
+ * The readout beside a question and the history it is reading.
+ *
+ * `PracticeScreen` shows "N of M right" for each item of the round, looked
+ * up under the line the round belongs to; `tallyItems` files what the
+ * learner just answered under the line the *attempt* belongs to. **Two
+ * compositions of one identity, in two files, and neither had been checked
+ * against the other** — which is the shape that has found something every
+ * time it has been looked for.
+ *
+ * The failure would be quiet and total: a readout keyed on a line the fold
+ * never writes reads "not recorded yet" for every item for ever, and looks
+ * exactly like a learner who has not answered anything yet.
+ */
+describe('the line a readout asks under', () => {
+  it('is the line the attempt from that round is filed under', () => {
+    /*
+      Both presentations, because the fixture's own is `read` and a
+      composition that ignored the round and wrote `read` would agree with
+      it. That mutant survived the first version of this case: a fixture
+      whose two sides already agree cannot see which one was used.
+    */
+    for (const presentation of ['read', 'listen'] as const) {
+      const playing = {
+        ...round({ exercise: { ...round().exercise, presentation } as ExerciseBase }),
+        askable: POOL,
+      };
+      const attempt = attemptFrom(playing, 'interval-id', result(true), 2_000, playing.askable);
+
+      expect(lineOfRound('interval-id', playing), presentation).toEqual(lineOf(attempt));
+      expect(lineOfRound('interval-id', playing).presentation).toBe(presentation);
+    }
+  });
+
+  it('finds what the round just wrote, which is the whole point', () => {
+    /*
+      Through the key rather than through the line, because equal lines are
+      only useful if they key the same — and `lineKey` sorts, so two lines
+      agreeing on content but not on order would pass the case above and
+      fail here.
+    */
+    const playing = { ...round(), askable: [...POOL].reverse() };
+    const attempt = attemptFrom(playing, 'interval-id', result(true), 2_000, POOL);
+
+    const tallies = tallyItems([attempt]);
+    const asked = tallyKey(lineOfRound('interval-id', playing), 'interval:P5:up' as ItemId);
+
+    expect(tallies.get(asked), 'the readout looked under a line the fold never wrote')
+      .toBeDefined();
+    expect(tallies.get(asked)!.seen).toBe(1);
+  });
+
+  it('is a different line once the round is, so the figure is not a mixture', () => {
+    // The claim the readout's comment makes: the number is for the pool
+    // being practised, not for this item across every pool it has been in.
+    const wide = { ...round(), askable: POOL };
+    const narrow = { ...round(), askable: [POOL[0]] };
+    const attempt = attemptFrom(wide, 'interval-id', result(true), 2_000, wide.askable);
+
+    const tallies = tallyItems([attempt]);
+    expect(tallies.get(tallyKey(lineOfRound('interval-id', wide), POOL[0]))).toBeDefined();
+    expect(tallies.get(tallyKey(lineOfRound('interval-id', narrow), POOL[0])),
+      'a narrower pool read the wider pool\'s history').toBeUndefined();
   });
 });

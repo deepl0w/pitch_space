@@ -31,6 +31,15 @@ that edit it would read exactly as it did while still blocking, and a
 role that had agreed not to start would have no signal the reason expired.
 The block and the unblock are two edits, not one.
 
+**The second edit is a field moving, not a sentence announcing that it
+moved.** Found on the convention's own first real use, read more literally
+than intended: moving the item from a `Not settled:` line to a `Settled:`
+one, with the commit that settled it, already says what changed and when.
+A sentence on top — "the block this entry carried is removed" — tells a
+cold reader that a block they never saw once existed, restates what the
+line above it already says, and is the kind of narration this file is
+explicitly not meant to hold. Move the field; that is the statement.
+
 **The user role does not read this file.** See `CLAUDE.md`.
 
 ## Contents

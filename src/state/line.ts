@@ -66,3 +66,25 @@ export function lineKey(line: ProgressLine): string {
 export function sameLine(a: ProgressLine, b: ProgressLine): boolean {
   return lineKey(a) === lineKey(b);
 }
+
+/**
+ * The line a round belongs to, for a screen that has the round but no
+ * attempt yet.
+ *
+ * The readout beside a question asks what the learner's history is for the
+ * pool they are practising, and it has to ask under the same line the
+ * attempt will be filed under — otherwise it looks up a key the fold never
+ * wrote and reads "not recorded yet" for ever.
+ *
+ * Here rather than inline at the call site because there were two
+ * definitions of one line: `lineOf(attempt)` composes exercise, askable
+ * and presentation from a record, and the screen composed the same three
+ * from a round. Two spellings of one identity is how the readout and the
+ * history drift apart without either being wrong on its own.
+ */
+export function lineOfRound(
+  exercise: string,
+  round: { readonly askable: readonly ItemId[]; readonly exercise: { readonly presentation: Presentation } },
+): ProgressLine {
+  return { exercise, askable: round.askable, presentation: round.exercise.presentation };
+}

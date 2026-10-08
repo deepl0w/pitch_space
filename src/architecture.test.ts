@@ -287,6 +287,53 @@ describe('ADR 0003 — one importer for the notation library', () => {
   });
 });
 
+describe('what an attempt is told it was asked against', () => {
+  /**
+   * `attemptFrom`'s askable set comes from the round, never from the
+   * settings in scope at answering time.
+   *
+   * ADR 0039 keys a progression line on the set the settings could ask, so
+   * taking it from the panel after the learner has changed something files
+   * the attempt under a line they were never practising. That is the
+   * stale-settings defect in the one place it corrupts stored history
+   * rather than a drawing, and **a mutant doing exactly that survived every
+   * test**: the join that would catch it runs from the screen to storage,
+   * which no test can observe while `PracticeScreen` holds the
+   * module-level store and jsdom has no IndexedDB.
+   *
+   * So the opportunity was narrowed instead — `askable` is frozen on the
+   * `Round` beside `settings`, computed at generation where there is no
+   * live set to reach for. It is narrowed rather than closed:
+   * `definition.items(settings)` typechecks perfectly well at the call
+   * site, and both spellings compile.
+   *
+   * This is the shape the `vexKey` rule above has, for the same reason: a
+   * plausible edit at one call site, invisible to every behavioural test,
+   * and cheap to refuse by name.
+   */
+  it('passes a frozen set rather than recomputing one', () => {
+    const offenders: string[] = [];
+    let calls = 0;
+    for (const file of filesUnder(SRC)) {
+      if (/\.test\.tsx?$/.test(file)) continue;
+      const source = codeOf(file).join('\n');
+      for (const match of source.matchAll(/attemptFrom\s*\(([^;]*?)\)\s*;/gs)) {
+        calls += 1;
+        const args = match[1];
+        if (/\bitems\s*\(/.test(args)) {
+          offenders.push(`${show(file)}: recomputes the askable set at answering time`);
+        } else if (!/\.askable\b/.test(args)) {
+          offenders.push(`${show(file)}: passes no frozen set`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+    // The call itself, counted: a rename leaves this scanning for nothing
+    // and reporting that every call site is fine.
+    expect(calls, 'nothing calls attemptFrom in a shipped file').toBeGreaterThan(0);
+  });
+});
+
 describe('one audio graph', () => {
   /**
    * `new Synth()` outside the one module that owns it.

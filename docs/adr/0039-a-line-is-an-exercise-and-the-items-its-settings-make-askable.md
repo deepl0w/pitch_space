@@ -126,3 +126,45 @@ currently tests that an exercise's item set is stable across a release.
   accumulation is real.
 - **Narrowing is put to the user.** This record decided it by symmetry and
   would rather be corrected than inferred from.
+
+## Addendum, 7 October 2026 — it also closes something that was holding by luck
+
+Noticed after the fact and worth a reader knowing, because a decision that
+quietly fixes a latent fault is the kind of thing an author rarely spots and a
+later reader benefits from.
+
+**`tallyKey(item, presentation)` has no exercise dimension**, so two exercises
+emitting the same id share a tally. Nothing has gone wrong, and the reason is
+narrower than "the ids are disjoint". Measured across all seven exercises at
+their defaults:
+
+| Set | Disjoint? |
+| --- | --- |
+| Denominators — what `items(settings)` returns | **yes** |
+| Contained — what a generated exercise carries | **no**: `key:` is shared |
+| Outcomes — what a grader credits | **yes** |
+
+Degree identification contains `key:<id>` and never credits it; key
+identification both contains and credits it. So the overlap is real in the
+recorded `items` and closed at the outcome layer by one exercise declining to
+claim what it showed — which is
+[0022](0022-an-outcome-for-evidence-that-was-never-shown.md)'s rule holding a
+door shut that nobody had noticed was a door.
+
+**[0041](0041-practice-that-counts-towards-nothing.md) is the case that would
+have opened it.** A curated rhythm library and a generated rhythm exercise both
+credit `cell:<id>`, both as outcomes, and both would have folded into one tally
+under a key that cannot tell them apart. Under this record they are different
+lines, because the exercise is part of the line, and the question does not
+arise.
+
+So the dimension added here for the user's reason — a line is per exercise and
+per settings — also removes a dependency on an accident that was about to stop
+holding. That is luck rather than foresight and is recorded as such.
+
+**The disjointness was described to me as holding everywhere.** It holds for
+denominators, which is what a scheduler reads today and what was measured. It
+does not hold for the recorded `items`, which is what a key over attempts
+actually indexes — the distinction being exactly the one
+[0007](0007-an-attempt-records-per-event-item-attribution.md) keeps two lists
+for.

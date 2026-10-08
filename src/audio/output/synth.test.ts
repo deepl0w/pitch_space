@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Synth, type Voice } from './synth';
+import { DEVICE_OPEN_SECONDS, Synth, type Voice } from './synth';
 import {
   advanceAudioClock, audioClock, audioClosed, contextCount, gains, installAudioContext,
   attackTimes, masterGain, oscillators, resetAudio, soundingAfter, suspendUntilResumed,
@@ -371,5 +371,161 @@ describe('a passage waiting on a cold context', () => {
     // hardware must not turn it into a way to double it instead.
     expect(oscillators()).toHaveLength(oneBar);
     expect(attackTimes()).toHaveLength(8);
+  });
+});
+
+
+/**
+ * The first sound a page makes.
+ *
+ * A user reported the first note of an interval missing, the second
+ * sounding, and "play it again" fixing it. The cold path existed and
+ * keyed on `state === 'suspended'`, which a context built inside a click
+ * never is: measured in Chrome, `state` is `running` and `currentTime` is
+ * exactly 0 at construction. The guard was written for the right hazard
+ * and watched the wrong signal.
+ */
+describe('the first play, before the audio clock has started', () => {
+  it('schedules clear of a device that is still opening', () => {
+    /*
+      Stated as the defect rather than as the fix: with the clock at 0,
+      the old 60 ms put the first attack at 0.06, which passes while the
+      hardware opens. Anything at or below that reproduces the missing
+      note. The bound is the behaviour; 0.25 is a measurement and may be
+      retuned without this failing.
+    */
+    expect(audioClock()).toBe(0);
+    synth.play(notes(2));
+
+    const attacks = [...new Set(oscillators().map((o) => o.startedAt))].sort((a, b) => a! - b!);
+    expect(attacks, 'nothing was scheduled, so nothing below is asserted').toHaveLength(2);
+    expect(attacks[0], 'the first attack lands where an opening device will miss it')
+      .toBeGreaterThan(0.06);
+  });
+
+  it('keeps the small headroom once the clock is running', () => {
+    /*
+      The control, and the reason the fix is keyed on the clock rather
+      than applied to everything. Widening the headroom for every play
+      would pass the case above and put a quarter second of lag on every
+      sound in the app, which no test would have noticed.
+    */
+    synth.play(notes(1));
+    const first = oscillators()[0].startedAt!;
+    resetAudio();
+    installAudioContext();
+    advanceAudioClock(5);
+    const warm = new Synth();
+
+    warm.play(notes(1));
+    const second = oscillators()[0].startedAt!;
+    expect(second - audioClock()).toBeLessThan(first);
+    expect(second - audioClock()).toBeCloseTo(0.06, 5);
+  });
+});
+
+/**
+ * The figure the cold-start headroom is for, asserted as behaviour.
+ *
+ * The cases above pin a bound — the first attack must land past the 60 ms
+ * that was losing it — which is right, and which **nothing would fail if
+ * the headroom were too small for a real device.** 0.25 came from a comment
+ * claiming 200 ms to open a device is unremarkable, and that claim was
+ * prose in two places and a number in a third with nothing relating them.
+ *
+ * It is now `DEVICE_OPEN_SECONDS` with the headroom derived from it, so the
+ * quantity that a measurement on slower hardware would revise is the one
+ * that gets revised. These ask the question behaviourally rather than
+ * arithmetically: a device that takes the whole budget to open must still
+ * find the first note ahead of it.
+ */
+describe('a device that takes the full budget to open', () => {
+  it('has not missed the first attack by the time it is ready', () => {
+    /*
+      The clock at zero is the device still opening. Advancing it by the
+      budget is that device finishing — and the first attack has to be
+      still in the future at that moment, or the sample it needed was
+      never played.
+
+      Asserted against `DEVICE_OPEN_SECONDS` rather than against 0.25, so
+      raising the budget for slower hardware fails here unless the
+      headroom follows it. That is the coupling the three copies of this
+      figure did not have.
+    */
+    expect(audioClock()).toBe(0);
+    synth.play(notes(2));
+    const first = oscillators()[0].startedAt!;
+
+    advanceAudioClock(DEVICE_OPEN_SECONDS);
+    expect(first, 'the device finished opening after the first note was due')
+      .toBeGreaterThan(audioClock());
+  });
+
+  it('is not paying that budget on every sound afterwards', () => {
+    // The other side, and the reason the budget is not simply the headroom
+    // everywhere: a quarter second of lag on every note is a worse app than
+    // one missing note on the first play, and only the first play is cold.
+    advanceAudioClock(5);
+    const warm = new Synth();
+    warm.play(notes(1));
+
+    expect(oscillators()[0].startedAt! - audioClock(),
+      'a warm play is waiting out the device-opening budget')
+      .toBeLessThan(DEVICE_OPEN_SECONDS);
+  });
+});
+
+/**
+ * Pressing play again, before the last press has finished sounding.
+ *
+ * A user reported that a few quick presses layer the passages over each
+ * other, and said what they expected: play again stops what is sounding
+ * and starts from the beginning. `stopAll` already did that and was
+ * wired only to leaving a screen.
+ */
+describe('playing again while something is still sounding', () => {
+  it('replaces the passage rather than joining it', () => {
+    advanceAudioClock(5);
+    synth.play(notes(4));
+    const first = oscillators().length;
+    expect(first, 'nothing was sounding, so nothing below is asserted')
+      .toBeGreaterThan(0);
+
+    synth.play(notes(4));
+
+    /*
+      Counted as "still due to sound", not as "ever created". The old
+      oscillators exist either way; what the user hears is whether they
+      are still going to play, which is what `soundingAfter` asks.
+    */
+    const stillDue = soundingAfter(audioClock() + 0.03).length;
+    expect(stillDue, 'the first passage is still queued behind the second')
+      .toBe(first);
+  });
+
+  it('does not silence the passage it just started', () => {
+    /*
+      The control, and the risk of the fix: `stopAll` ramps the master to
+      zero and back, so a restart that scheduled inside that ramp would
+      fade out its own opening note. The ramp restores the level at
+      +0.02 and the new attack lands at +0.06.
+    */
+    advanceAudioClock(5);
+    synth.play(notes(1));
+    synth.play(notes(1));
+
+    const events = masterGain()!.events;
+    expect(events.length, 'the ramp never ran, so nothing below is asserted')
+      .toBeGreaterThan(0);
+
+    const silenced = Math.max(...events.filter((e) => e.value === 0).map((e) => e.time));
+    const last = events.reduce((a, b) => (b.time >= a.time ? b : a));
+    expect(last.value, 'the master is left silent').toBeGreaterThan(0);
+    expect(last.time, 'the level is restored only after it is dropped')
+      .toBeGreaterThan(silenced);
+
+    const attack = Math.min(...soundingAfter(audioClock()).map((o) => o.startedAt!));
+    expect(attack, 'the new passage attacks while the master is still down')
+      .toBeGreaterThan(last.time);
   });
 });

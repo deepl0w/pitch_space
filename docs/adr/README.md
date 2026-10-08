@@ -56,6 +56,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0039](0039-a-line-is-an-exercise-and-the-items-its-settings-make-askable.md) | A line is an exercise and the items its settings make askable | Accepted |
 | [0040](0040-completion-replaces-the-score.md) | Completion replaces the score | Accepted |
 | [0041](0041-practice-that-counts-towards-nothing.md) | Practice that counts towards nothing | Accepted |
+| [0042](0042-history-is-disposable-until-settings-settle.md) | History is disposable until settings settle | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in
@@ -231,6 +232,32 @@ That these four were fixed on four different days, in four different
 documents, without anyone noticing they were one fault is the convention
 demonstrating itself: each was checked locally and nothing summarised them.
 
+**A claim about what the user wants is a claim too, and it is the only kind
+nothing in the repository can contradict.** Every convention above points at
+statements about the code, where a grep, a test or a second reader eventually
+disagrees. A sentence reporting what the user decided has none of that: it
+cannot be checked against the tree, no guard turns red, and the one person
+positioned to correct it is the one being quoted — who is not reading the
+record.
+
+[0040](0040-completion-replaces-the-score.md) carries the instance. Its
+addendum recorded a ruling accurately in substance and overstated it in three
+small ways at once: a parenthetical aside was quoted as a standalone sentence,
+the user's own "maybe" was built on as settled, and an ambiguous phrase was
+resolved to one of its two readings without the choice being visible. The
+record then became the source for a second one. Nothing was invented and the
+drift was all in the same direction, which is the tell: tidying a quotation
+makes it more decisive, never less.
+
+It surfaced only because another agent had not seen the message and said so
+rather than assuming it had missed one. That is the mechanism, and it is thin —
+it works when a second party exists and speaks up. **So the rule is on the
+writer: quote the user verbatim, keep their hedges, and where a phrase has two
+readings record that it has two rather than picking one silently.** An
+inference drawn from what they said is this project's argument and should be
+written as this project's argument, under its own heading, where someone can
+disagree with it without appearing to contradict the user.
+
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code
 rides on the record that made it. The second says check exactly — a guard fires
@@ -243,7 +270,10 @@ goes stale exactly the way a record does; and the fifth is the first one
 pointed at a finding, because a measurement is a claim too, and it carries its
 instrument whether or not anyone writes the instrument down. The sixth is the
 first one pointed upwards: a summary is a claim about every claim beneath it,
-and it is the one position from which nothing below can answer back.
+and it is the one position from which nothing below can answer back. The
+seventh points outwards, at the one claim with no local evidence at all —
+what the user asked for — where the check cannot be a mechanism and has to be
+a habit of quoting exactly.
 
 [`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
 0018 and 0020 as one argument, because five of them are the same rule meeting a

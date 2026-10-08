@@ -27,6 +27,36 @@ const MASTER_GAIN = 0.22;
 /** A few partials with a little inharmonicity reads as struck rather than buzzy. */
 const PARTIALS = [1, 0.5, 0.28, 0.16, 0.09, 0.05, 0.03];
 
+/**
+ * How long a device may take to open before the first sample plays.
+ *
+ * The figure the cold-start headroom below is derived from, named because
+ * it was prose in two comments and a number in a third — three copies of
+ * one decision, and nothing relating them. 200 ms is unremarkable for a
+ * device opening, and it is the quantity that would be revised by a
+ * measurement on slower hardware; the headroom follows from it rather
+ * than being revised beside it.
+ */
+export const DEVICE_OPEN_SECONDS = 0.2;
+
+/**
+ * How far ahead to schedule when the audio clock has not started.
+ *
+ * Measured rather than chosen: a context reports `running` with
+ * `currentTime` at 0 and begins advancing a few milliseconds later, but
+ * the *device* behind it can take far longer to open, and every attack
+ * inside that window is behind the clock before a sample is played. This
+ * is only ever paid once per page, on a play that is already the first
+ * thing the user hears, where a quarter second of delay is not noticeable
+ * and a missing first note is.
+ *
+ * Wider than {@link DEVICE_OPEN_SECONDS} rather than equal to it: a note
+ * scheduled at the exact instant the device finishes opening is a note
+ * whose attack has no margin at all, and the margin is what the warm path
+ * spends 60 ms on for the same reason.
+ */
+export const CLOCKLESS_HEADROOM = DEVICE_OPEN_SECONDS + 0.05;
+
 export class Synth {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -73,10 +103,19 @@ export class Synth {
       this.master.gain.value = this.level();
       this.master.connect(this.context.destination);
     }
-    // Handed back rather than dropped. `currentTime` does not move while a
-    // context is still starting and jumps when it does, so a caller that
-    // schedules across the gap times the passage against a clock reading
-    // that is about to be wrong.
+    /*
+      Handed back rather than dropped. `currentTime` does not move while a
+      context is still starting and jumps when it does, so a caller that
+      schedules across the gap times the passage against a clock reading
+      that is about to be wrong.
+
+      **`suspended` is not the whole of the cold case**, and the rest of it
+      is handled in `lay` rather than here, because it needs no waiting. A
+      context constructed inside a click reports `running` *immediately* —
+      measured in Chrome, `state` is `running` and `currentTime` is exactly
+      0 at the moment of construction — so this branch is not taken on the
+      one play that most needed protecting.
+    */
     const waking = this.context.state === 'suspended'
       ? this.context.resume().catch(() => {})
       : null;
@@ -126,10 +165,32 @@ export class Synth {
   /** Play a set of voices, all timed from one `now` so a chord stays together. */
   play(voices: readonly Voice[]): void {
     const { context, master, waking } = this.ensure();
+    /*
+      A new passage replaces the one sounding; it does not join it.
+
+      A user reported that pressing "play it again" quickly a few times
+      layers the sounds over each other. Notes are scheduled into the
+      future against the audio clock, so a second press used to lay a
+      second passage beside the first rather than instead of it — and
+      the faster the presses, the more voices stacked. What they expect,
+      and said so, is that pressing play again stops what is sounding
+      and starts from the beginning.
+
+      `stopAll` already does exactly this and was only wired to leaving a
+      screen. Its ramp reaches silence at +0.012 and restores the level
+      at +0.02, both comfortably inside the 60 ms of headroom below, so
+      a restart does not fade out its own opening note.
+
+      It also bumps the generation, which cancels a passage still
+      waiting on a cold context — the same intention the ticket below
+      enforces, arriving from the other direction.
+    */
+    this.stopAll();
     // On the very first play of a page the hardware is still opening, and the
-    // 60 ms below is not enough to cover it — 200 ms to open a device is
-    // unremarkable, and every attack inside that is behind the clock before a
-    // sample is played. So the cold case waits for the clock it is about to
+    // 60 ms below is not enough to cover it — see `DEVICE_OPEN_SECONDS` for
+    // how long that is and where the figure comes from. Every attack inside
+    // it is behind the clock before a sample is played, so the cold case
+    // waits for the clock it is about to
     // read rather than guessing at a larger headroom, which would only move
     // the question to how large. Warm plays, which is all of them after the
     // first, are unchanged and still schedule synchronously.
@@ -150,7 +211,27 @@ export class Synth {
   }
 
   private lay(context: AudioContext, master: GainNode, voices: readonly Voice[]): void {
-    const now = context.currentTime + 0.06; // a beat of headroom to schedule into
+    /*
+      A beat of headroom to schedule into, and the whole device-opening
+      budget when the clock has not started.
+
+      **This is the first-note defect.** A user reported that the first
+      sound a page makes loses its first note — the second note of an
+      interval plays, the first does not, and pressing "play it again"
+      fixes it. The cause is that a context built inside a click reports
+      `running` with `currentTime` at exactly 0, so the suspended branch
+      above does not fire, and 60 ms ahead of a clock that has not
+      started is a moment that passes while the device is still opening.
+      Later attacks are far enough out to survive, which is why only the
+      first goes missing.
+
+      Keyed on the clock rather than on a "have we played yet" flag
+      because the clock is the thing that matters: a context whose clock
+      is at zero has not begun whatever the rest of the object believes.
+      Late is recoverable; missing is not.
+    */
+    const headroom = context.currentTime === 0 ? CLOCKLESS_HEADROOM : 0.06;
+    const now = context.currentTime + headroom;
     for (const voice of voices) {
       this.scheduleNote(context, master, voice, now + voice.start);
     }

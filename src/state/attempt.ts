@@ -1,4 +1,4 @@
-import type { ExerciseBase, Result } from '../exercises/types';
+import type { ExerciseBase, ItemId, Result } from '../exercises/types';
 import type { Attempt } from './schema';
 
 /**
@@ -30,6 +30,21 @@ export function attemptFrom(
   exerciseType: string,
   result: Result,
   answeredAt: number,
+  /**
+   * Everything the round's settings could have asked, from
+   * `definition.items(settings)`.
+   *
+   * A parameter rather than computed here, because computing it needs the
+   * definition and this module must not reach into the registry — the
+   * attempt is a record of what happened, not a thing that knows which
+   * exercises exist.
+   *
+   * Omitted means the attempt joins no line, which is what
+   * [0041](../../docs/adr/0041-practice-that-counts-towards-nothing.md)
+   * describes for practice that counts towards nothing. It is not a
+   * default for "we forgot": a caller that wants a line passes the set.
+   */
+  askable?: readonly ItemId[],
 ): Attempt {
   return {
     id: round.id,
@@ -56,5 +71,15 @@ export function attemptFrom(
     items: [...round.exercise.items],
     outcomes: result.outcomes.map((o) => ({ ...o })),
     correct: result.correct,
+    /*
+      Copied, and absent rather than empty when there is none.
+
+      An empty array is a real line — the one whose answer space holds
+      nothing — so defaulting to `[]` would fold every untracked attempt
+      and every pre-line row into a single bucket that reads as progress
+      against nothing. Absent is the only honest encoding of "this does
+      not belong to a line".
+    */
+    ...(askable === undefined ? {} : { askable: [...askable] }),
   };
 }

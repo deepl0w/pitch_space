@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { attemptFrom } from './attempt';
 import { tallyItems, tallyKey } from './progressStore';
 import { dueAt } from './schedule';
-import { coerceAttempt } from './schema';
-import type { ExerciseBase, Result } from '../exercises/types';
+import { coerceAttempt, type Attempt } from './schema';
+import type { ExerciseBase, ItemId, Result } from '../exercises/types';
+import type { ProgressLine } from './line';
 
 /**
  * The join between what the screen stamps and what the scheduler reads.
@@ -29,6 +30,17 @@ const round = (over: Partial<{ exercise: ExerciseBase; settings: unknown }> = {}
   ...over,
 });
 
+/**
+ * The askable set every tracked fixture here declares, and the line it
+ * makes. ADR 0039: the set is the line's identity, so a fixture that
+ * omits it is untracked practice rather than a shorthand — and
+ * `tallyItems` skips those, which would leave every fold below empty.
+ */
+const POOL = ['interval:P5:up', 'interval:M3:up'] as ItemId[];
+const LINE: ProgressLine = { exercise: 'interval-id', askable: POOL, presentation: 'read' };
+/** The same answer space heard rather than read: a different line. */
+const BY_EAR: ProgressLine = { ...LINE, presentation: 'listen' };
+
 const result = (correct: boolean): Result => ({
   correct,
   feedback: correct ? 'Yes' : 'No',
@@ -41,7 +53,7 @@ describe('an attempt built the way the screen builds one', () => {
     // through a validator on the way to storage, and a field the screen
     // stamps in a shape the validator repairs would be silently altered
     // between answering and reading back.
-    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000);
+    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000, POOL);
     expect(coerceAttempt(attempt)).toEqual(attempt);
   });
 
@@ -51,11 +63,11 @@ describe('an attempt built the way the screen builds one', () => {
       rather than an error, so the control below is what stops this
       passing on a tally that was never built.
     */
-    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000);
+    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000, POOL);
     const tallies = tallyItems([attempt]);
 
     expect(tallies.size, 'nothing was folded, so nothing below is asserted').toBe(1);
-    const tally = tallies.get(tallyKey('interval:P5:up', 'read'));
+    const tally = tallies.get(tallyKey(LINE, 'interval:P5:up' as ItemId));
     expect(tally, 'the key the screen stamps is not the key the fold builds').toBeDefined();
     expect(tally).toMatchObject({ seen: 1, correct: 1, streak: 1 });
     expect(dueAt(tally!)).toBeGreaterThan(attempt.answeredAt);
@@ -65,17 +77,17 @@ describe('an attempt built the way the screen builds one', () => {
     // The pair that makes the key composite rather than decorative: the
     // same item heard and read are two skills (ADR 0010), so a tally
     // found under the wrong presentation would credit the wrong one.
-    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000);
+    const attempt = attemptFrom(round(), 'interval-id', result(true), 2_000, POOL);
     const tallies = tallyItems([attempt]);
 
-    expect(tallies.get(tallyKey('interval:P5:up', 'listen'))).toBeUndefined();
-    expect(tallies.get(tallyKey('interval:P5:up', 'read'))).toBeDefined();
+    expect(tallies.get(tallyKey(BY_EAR, 'interval:P5:up' as ItemId))).toBeUndefined();
+    expect(tallies.get(tallyKey(LINE, 'interval:P5:up' as ItemId))).toBeDefined();
   });
 
   it('copies the items, so the record cannot be edited by the round', () => {
     const items = ['interval:P5:up'];
     const exercise = { ...round().exercise, items } as unknown as ExerciseBase;
-    const attempt = attemptFrom(round({ exercise }), 'interval-id', result(true), 2_000);
+    const attempt = attemptFrom(round({ exercise }), 'interval-id', result(true), 2_000, POOL);
 
     items.push('interval:m3:down');
     expect(attempt.items, 'the attempt shares the round’s array').toEqual(['interval:P5:up']);
@@ -88,13 +100,13 @@ describe('an attempt built the way the screen builds one', () => {
       reads it. So nothing else in the suite can catch it being wrong:
       hard-coding it to true left every other case here green.
     */
-    expect(attemptFrom(round(), 'interval-id', result(true), 2_000).correct).toBe(true);
-    expect(attemptFrom(round(), 'interval-id', result(false), 2_000).correct).toBe(false);
+    expect(attemptFrom(round(), 'interval-id', result(true), 2_000, POOL).correct).toBe(true);
+    expect(attemptFrom(round(), 'interval-id', result(false), 2_000, POOL).correct).toBe(false);
   });
 
   it('records a wrong answer as seen but not correct, and resets the streak', () => {
-    const wrong = attemptFrom(round(), 'interval-id', result(false), 2_000);
-    const tally = tallyItems([wrong]).get(tallyKey('interval:P5:up', 'read'));
+    const wrong = attemptFrom(round(), 'interval-id', result(false), 2_000, POOL);
+    const tally = tallyItems([wrong]).get(tallyKey(LINE, 'interval:P5:up' as ItemId));
     expect(tally).toMatchObject({ seen: 1, correct: 0, streak: 0 });
   });
 });
@@ -112,7 +124,7 @@ describe('an attempt built the way the screen builds one', () => {
  * demonstrate that over attempts built the way the screen builds them.
  */
 describe('several attempts on one item', () => {
-  const KEY = tallyKey('interval:P5:up' as never, 'read');
+  const KEY = tallyKey(LINE, 'interval:P5:up' as ItemId);
 
   /** One attempt per verdict, a minute apart, in the order given. */
   const sequence = (verdicts: readonly boolean[]) => verdicts.map((correct, i) =>
@@ -121,6 +133,7 @@ describe('several attempts on one item', () => {
       'interval-id',
       result(correct),
       10_000 + i * 60_000,
+      POOL,
     ));
 
   it('builds a streak the schedule spaces on', () => {
@@ -175,8 +188,232 @@ describe('several attempts on one item', () => {
     const onPaper = sequence([true]);
     const tally = tallyItems([...byEar, ...onPaper]);
 
-    expect(tally.get(tallyKey('interval:P5:up' as never, 'listen'))!.streak).toBe(2);
+    expect(tally.get(tallyKey(BY_EAR, 'interval:P5:up' as ItemId))!.streak).toBe(2);
     expect(tally.get(KEY)!.streak).toBe(1);
     expect(tally.size, 'the two presentations folded into one entry').toBe(2);
+  });
+});
+
+/**
+ * Practice that counts towards nothing, which is a recorded attempt with
+ * no outcomes.
+ *
+ * [ADR 0041](../../docs/adr/0041-practice-that-counts-towards-nothing.md)
+ * makes untracked practice a mode an exercise declares rather than an
+ * absence of recording: the attempt is written, `items` says what the
+ * rendering contained, and nothing is credited. That is 0007's machinery
+ * reused rather than a new field — an outcome is a claim the user was
+ * asked *and that the answer counts*.
+ *
+ * The mechanism already works, because `tallyItems` folds outcomes and an
+ * empty list contributes nothing. **Nothing asserted it**, and the half
+ * that matters is not that an untracked attempt adds nothing — it is that
+ * it does not *disturb* what a tracked one built. A fold that stamped
+ * `lastSeenAt` from every attempt it saw, say, would leave the streak
+ * intact and still move the due date, and twenty minutes of untracked
+ * practice would quietly reschedule a line the learner never advanced.
+ */
+describe('an attempt that counts towards nothing', () => {
+  const KEY = tallyKey(LINE, 'interval:P5:up' as ItemId);
+
+  /** What 0041 describes: what it contained, crediting nothing. */
+  const untracked = (answeredAt: number) => ({
+    ...attemptFrom({ ...round(), id: `untracked-${answeredAt}` }, 'interval-id',
+      { correct: false, feedback: '', outcomes: [] }, answeredAt),
+  });
+
+  it('still records what the rendering contained', () => {
+    // Not an absence of recording: "you practised for twenty minutes and
+    // the app has no idea" is the answer 0041 rejected, and an attempt is
+    // also how a defect gets reported by its seed.
+    const attempt = untracked(5_000);
+    expect(attempt.items).toEqual(['interval:P5:up']);
+    expect(attempt.outcomes).toEqual([]);
+    expect(coerceAttempt(attempt), 'the log would not carry it').toEqual(attempt);
+  });
+
+  it('folds into no tally at all', () => {
+    expect(tallyItems([untracked(5_000)]).size).toBe(0);
+  });
+
+  it('folds nothing from history written before lines existed', () => {
+    /*
+      **The case the untracked ones cannot make, and a mutant found it.**
+
+      Untracked practice carries no outcomes (0041), so the fold adds
+      nothing from it whether or not `tallyItems` skips the attempt — the
+      inner loop has nothing to walk. Replacing the skip with an invented
+      empty line passes every untracked case here.
+
+      Pre-line history is the other half and it is where the skip earns
+      its place: a v2 attempt has real outcomes and no askable set (0042),
+      so inventing a line for it files genuine practice under the line
+      whose answer space is empty. Every such attempt in a user's history
+      folds into that one bucket and reads as progress against nothing.
+    */
+    const preLine = {
+      ...attemptFrom({ ...round(), id: 'v2' }, 'interval-id', result(true), 9_000, POOL),
+    } as Partial<Attempt>;
+    delete preLine.askable;
+
+    expect(preLine.outcomes, 'the fixture has nothing to fold, so this proves nothing')
+      .toHaveLength(1);
+    expect(tallyItems([preLine as Attempt]).size).toBe(0);
+
+    // The control: the same attempt with its set is folded, so "nothing"
+    // above is the missing line rather than a fold that never works.
+    expect(tallyItems([preLine as Attempt, ...sequenceOne()]).size).toBe(1);
+  });
+
+  /** One ordinary tracked attempt, for the control above. */
+  function sequenceOne() {
+    return [attemptFrom({ ...round(), id: 'tracked' }, 'interval-id', result(true), 9_500, POOL)];
+  }
+
+  it('leaves a tracked line exactly where it was', () => {
+    /*
+      The half that matters. Three tracked answers build a streak and a due
+      date; an untracked attempt on the same item afterwards must change
+      neither — not the streak, not the count, and not `lastSeenAt`, which
+      is what `dueAt` adds its interval to.
+    */
+    const tracked = [10_000, 70_000, 130_000].map((at, i) => attemptFrom(
+      { ...round(), id: `tracked-${i}` }, 'interval-id', result(true), at, POOL,
+    ));
+
+    const before = tallyItems(tracked).get(KEY)!;
+    const after = tallyItems([...tracked, untracked(200_000)]).get(KEY)!;
+
+    expect(after).toEqual(before);
+    expect(dueAt(after), 'untracked practice moved when the item is next due')
+      .toBe(dueAt(before));
+    // And the control: the tracked attempts did build something, or
+    // "unchanged" is a statement about nothing.
+    expect(before.streak).toBe(3);
+  });
+});
+
+/**
+ * History written before a line existed.
+ *
+ * The user's ruling, 6 October: history is highly changeable while the
+ * project is young and need not survive a release; when settings settle,
+ * a porting and versioning system is owed. So a v2 attempt gets no
+ * askable set, joins no line, and is **kept** — a step that dropped rows
+ * would leave that owed system nothing to port.
+ */
+describe('an attempt from before the askable set existed', () => {
+  const v2 = {
+    id: 'old-1',
+    exerciseType: 'interval-id',
+    seed: 7,
+    settings: { semitones: [1, 2] },
+    presentation: 'read' as const,
+    startedAt: 1_000,
+    answeredAt: 2_000,
+    items: ['interval:m2:up'],
+    outcomes: [{ item: 'interval:m2:up', correct: true }],
+    correct: true,
+  };
+
+  it('is read rather than rejected, and keeps everything it had', () => {
+    const read = coerceAttempt(v2);
+    expect(read.askable, 'a set was invented for a row that has none').toBeUndefined();
+    expect(read.outcomes, 'the history itself was dropped').toEqual(v2.outcomes);
+  });
+
+  it('does not acquire an empty set, which would be a line of its own', () => {
+    /*
+      The failure this guards is quiet: `askable: []` keys to a real line
+      — the one whose answer space is empty — so every pre-line attempt
+      in a user's history would fold into one shared bucket and appear as
+      progress against nothing.
+    */
+    expect('askable' in coerceAttempt(v2)).toBe(false);
+  });
+
+  it('stays absent through the serialisations storage actually uses', () => {
+    /*
+      `coerceAttempt` spreads `askable` conditionally so an absent set does
+      not become a key holding `undefined`. The case above pins that for the
+      value it returns; this asks whether it survives being stored, which is
+      the half nobody could check because there is no export yet.
+
+      Both routes, because the app has two: attempts go to IndexedDB, which
+      serialises by structured clone and *does* keep a key whose value is
+      `undefined`, and anything JSON — an export, a bug report, a settings
+      blob — drops it. Only one of those two would have caught a stray key,
+      so neither is the one to rely on.
+    */
+    const read = coerceAttempt(v2);
+    expect('askable' in JSON.parse(JSON.stringify(read))).toBe(false);
+    expect('askable' in structuredClone(read)).toBe(false);
+
+    // And an explicit `undefined` on the way in does not become a key on
+    // the way out, which is the input a caller spreading an optional field
+    // produces without meaning to.
+    expect('askable' in coerceAttempt({ ...v2, askable: undefined })).toBe(false);
+
+    // The control: a set that is there survives both routes, so "absent"
+    // above is the coercer's doing rather than the serialiser's.
+    const withSet = coerceAttempt({ ...v2, askable: ['interval:m2:up'] });
+    expect(JSON.parse(JSON.stringify(withSet)).askable).toEqual(['interval:m2:up']);
+    expect(structuredClone(withSet).askable).toEqual(['interval:m2:up']);
+  });
+
+  it('refuses a row whose set is there but unreadable', () => {
+    // Absent is a fact about when it was written; malformed is a row that
+    // cannot be trusted, and this file skips those rather than repairing.
+    expect(() => coerceAttempt({ ...v2, askable: 'interval:m2:up' })).toThrow(/askable/);
+    expect(() => coerceAttempt({ ...v2, askable: [1, 2] })).toThrow(/askable/);
+  });
+
+  it('keeps a set that is there', () => {
+    const read = coerceAttempt({ ...v2, askable: ['interval:m2:up', 'interval:M2:up'] });
+    expect(read.askable).toEqual(['interval:m2:up', 'interval:M2:up']);
+  });
+});
+
+/**
+ * The answer space an attempt belongs to.
+ *
+ * ADR 0039: a line is identified by what the settings could have asked,
+ * so the attempt has to carry that set — settings get migrated and the
+ * identity must not move when they do. ADR 0041: an attempt with no set
+ * joins no line, which is how practice that counts towards nothing is
+ * expressed rather than by a flag.
+ */
+describe('the askable set an attempt carries', () => {
+  const pool = ['interval:m2:up', 'interval:M2:up'];
+
+  it('is kept, so a line can be identified without reading settings', () => {
+    const a = attemptFrom(round(), 'interval-id', result(true), 2_000, pool);
+    expect(a.askable).toEqual(pool);
+  });
+
+  it('is copied, so the caller cannot edit a stored record', () => {
+    // The same aliasing the exercise's own `choices` was fixed for: a
+    // record that *is* the array someone else holds is not a record.
+    const live = [...pool];
+    const a = attemptFrom(round(), 'interval-id', result(true), 2_000, live);
+    live.push('interval:m3:up');
+    expect(a.askable).toEqual(pool);
+  });
+
+  it('is absent rather than empty when there is none', () => {
+    /*
+      The distinction with teeth. `[]` is a real answer space — the empty
+      one — and keys to a real line, so defaulting to it would fold every
+      untracked attempt into a single bucket reading as progress against
+      nothing. Absent is the only encoding of "no line".
+    */
+    // No fifth argument, deliberately: this case is the omission itself.
+    const a = attemptFrom(round(), 'interval-id', result(true), 2_000);
+    expect('askable' in a).toBe(false);
+  });
+
+  it('survives the coercion the log puts it through', () => {
+    const a = attemptFrom(round(), 'interval-id', result(true), 2_000, pool);
+    expect(coerceAttempt(a)).toEqual(a);
   });
 });

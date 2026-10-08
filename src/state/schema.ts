@@ -220,7 +220,7 @@ function coerceAudio(value: unknown): AudioSettings {
 
 /* -- attempts ------------------------------------------------------------- */
 
-export const ATTEMPT_SCHEMA = 2;
+export const ATTEMPT_SCHEMA = 3;
 
 /**
  * One answered exercise, in the shape a spaced-repetition scheduler will
@@ -280,9 +280,53 @@ export interface AttemptV2 extends AttemptV1 {
   presentation: Presentation;
 }
 
-export type Attempt = AttemptV2;
+/**
+ * Version 3 adds the answer space the question was drawn from.
+ *
+ * ADR 0039: progress belongs to a line, and a line is identified by the
+ * set of items its settings make askable rather than by the settings
+ * themselves. So the attempt has to carry the set — settings get
+ * migrated and the identity must not move when they do.
+ *
+ * **Optional, and that is the migration.** An attempt written before this
+ * field cannot be given one: recovering it would mean calling today's
+ * `items(settings)` on yesterday's settings, which is the dependency 0039
+ * exists to avoid, performed in the release most likely to have changed
+ * the answer. So a v2 attempt arrives with `askable` absent, joins no
+ * line, and advances no progress.
+ *
+ * Nothing is destroyed. The row stays in the log and stays exportable, so
+ * the porting system owed below has something to port.
+ *
+ * **This is a licence with a term, not a policy.** The user's ruling, 6
+ * October: history is highly changeable while the project is young and
+ * need not survive a release; when settings settle, history becomes
+ * portable and versioned. Implemented and left unwritten, "no migration
+ * for now" becomes "this app does not migrate history", and the person
+ * who finds out is a learner who lost a month.
+ */
+export interface AttemptV3 extends AttemptV2 {
+  /**
+   * Everything the settings could have asked, as `items(settings)`
+   * returned it when the question was generated.
+   *
+   * Not the items the exercise *contained* — that is `items`, a subset,
+   * and a set cannot be recovered from a subset. This is the answer
+   * space, which is what the user's two-choices-against-three argument
+   * was about.
+   */
+  askable?: readonly ItemId[];
+}
+
+export type Attempt = AttemptV3;
 
 export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [
+  // 2 -> 3 is deliberately a no-op, and that is the decision rather than
+  // an omission. `askable` is optional precisely so this step has nothing
+  // to do: inventing a set from `settings` would call today's `items` on
+  // yesterday's settings, and leaving the row out would destroy a history
+  // the porting system is owed. See AttemptV3.
+  //
   // 1 -> 2: give every attempt a presentation of its own.
   //
   // Attempts written before the field existed were all heard — reading was
@@ -295,6 +339,18 @@ export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [
     const stored = (a.settings as { presentation?: unknown } | null)?.presentation;
     return { ...a, presentation: stored === 'read' ? 'read' : 'listen' };
   },
+  // 2 -> 3: nothing, and the nothing is the decision.
+  //
+  // A v2 attempt cannot be given an askable set. Recovering one means
+  // calling today's `items(settings)` on yesterday's settings, which is
+  // the dependency ADR 0039 exists to avoid, in the release most likely
+  // to have changed the answer. So the row passes through unchanged,
+  // arrives with `askable` absent, and joins no line.
+  //
+  // It is not dropped, which is the other half: the user's ruling makes
+  // history disposable *for now* and owes a porting system later, and a
+  // step that deleted rows would leave that system nothing to port.
+  (data) => data,
 ];
 
 /**
@@ -349,7 +405,7 @@ function isOutcome(value: unknown): value is ItemOutcome {
  */
 export function coerceAttempt(data: unknown): Attempt {
   if (typeof data !== 'object' || data === null) throw new Error('Attempt is not an object');
-  const a = data as Partial<AttemptV2>;
+  const a = data as Partial<AttemptV3>;
   if (typeof a.id !== 'string' || a.id === '') throw new Error('Attempt has no id');
   if (typeof a.exerciseType !== 'string') throw new Error(`Attempt ${a.id} has no exercise type`);
   if (a.presentation !== 'read' && a.presentation !== 'listen') {
@@ -371,6 +427,16 @@ export function coerceAttempt(data: unknown): Attempt {
     throw new Error(`Attempt ${a.id} has unreadable outcomes`);
   }
   if (typeof a.correct !== 'boolean') throw new Error(`Attempt ${a.id} has no verdict`);
+  /*
+    Absent is legal and malformed is not. A v2 row has no askable set by
+    design (see AttemptV3) and joins no line; a row carrying something
+    that is not a list of ids is a row this reader cannot trust, and the
+    file's rule is to skip such a row rather than repair it.
+  */
+  if (a.askable !== undefined
+    && (!Array.isArray(a.askable) || !a.askable.every((i): i is ItemId => typeof i === 'string'))) {
+    throw new Error(`Attempt ${a.id} has an unreadable askable set`);
+  }
   return {
     id: a.id,
     exerciseType: a.exerciseType,
@@ -382,6 +448,9 @@ export function coerceAttempt(data: unknown): Attempt {
     items: [...a.items],
     outcomes: a.outcomes.map((o) => ({ ...o })),
     correct: a.correct,
+    // Spread rather than assigned, so an absent set stays absent instead
+    // of becoming an explicit `undefined` that an export would then write.
+    ...(a.askable === undefined ? {} : { askable: [...a.askable] }),
   };
 }
 

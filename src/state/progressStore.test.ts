@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createProgressStore, defaultAttemptLog, tallyItems, tallyKey } from './progressStore';
+import type { ProgressLine } from './line';
 import { memoryLog, type Log } from './persistence';
 import type { ItemId } from '../exercises/types';
 import { versioned } from './migrate';
@@ -23,11 +24,28 @@ function attempt(over: Partial<Attempt> = {}): Attempt {
     startedAt: 1_000,
     answeredAt: 2_000,
     items: ['interval:m3:up'],
+    /*
+      Every fixture declares a line, because the fold skips an attempt
+      without one — untracked practice (0041) and pre-line history (0042)
+      are both real and neither is an error. A fixture that left this off
+      would make `tallyItems` return an empty map, which the positive
+      cases below would catch and the negative ones would not: `has(key)`
+      is `false` for an item that was never credited *and* for a history
+      that was never folded.
+    */
+    askable: ['interval:m3:up', 'interval:P5:up'],
     outcomes: [{ item: 'interval:m3:up', correct: true }],
     correct: true,
     ...over,
   };
 }
+
+/** The line every fixture above belongs to, which its tally hangs from. */
+const LINE: ProgressLine = {
+  exercise: 'interval-id',
+  askable: ['interval:m3:up', 'interval:P5:up'] as ItemId[],
+  presentation: 'listen',
+};
 
 /** A log that refuses everything, as a device with no storage quota does. */
 function brokenLog(): Log<AttemptRow> {
@@ -219,9 +237,9 @@ describe('folding a history into per-item counts', () => {
     ]);
     // m3 ends on a wrong answer, so its streak is 0 where p5's is 1 — the
     // field the schedule reads, and the one totals cannot give it.
-    expect(tally.get(tallyKey(m3, 'listen')))
+    expect(tally.get(tallyKey(LINE, m3 as ItemId)))
       .toEqual({ seen: 2, correct: 1, lastSeenAt: 2000, streak: 0 });
-    expect(tally.get(tallyKey(p5, 'listen')))
+    expect(tally.get(tallyKey(LINE, p5 as ItemId)))
       .toEqual({ seen: 1, correct: 1, lastSeenAt: 2000, streak: 1 });
   });
 
@@ -229,9 +247,9 @@ describe('folding a history into per-item counts', () => {
     const tally = tallyItems([attempt({
       outcomes: [{ item: m3, correct: true }, { item: p5, correct: false }],
     })]);
-    expect(tally.get(tallyKey(m3, 'listen'))?.correct).toBe(1);
-    expect(tally.get(tallyKey(p5, 'listen'))?.correct).toBe(0);
-    expect(tally.get(tallyKey(p5, 'listen'))?.seen).toBe(1);
+    expect(tally.get(tallyKey(LINE, m3 as ItemId))?.correct).toBe(1);
+    expect(tally.get(tallyKey(LINE, p5 as ItemId))?.correct).toBe(0);
+    expect(tally.get(tallyKey(LINE, p5 as ItemId))?.seen).toBe(1);
   });
 
   it('credits only what was tested, never what the exercise merely contained', () => {
@@ -241,9 +259,9 @@ describe('folding a history into per-item counts', () => {
       items: [m3, p5],
       outcomes: [{ item: m3, correct: true }],
     })]);
-    expect(tally.get(tallyKey(m3, 'listen')))
+    expect(tally.get(tallyKey(LINE, m3 as ItemId)))
       .toEqual({ seen: 1, correct: 1, lastSeenAt: 2000, streak: 1 });
-    expect(tally.has(tallyKey(p5, 'listen'))).toBe(false);
+    expect(tally.has(tallyKey(LINE, p5 as ItemId))).toBe(false);
   });
 
   it('remembers the most recent sighting, whatever order the attempts arrive in', () => {
@@ -251,7 +269,7 @@ describe('folding a history into per-item counts', () => {
     // a history that only ever runs one way.
     const seen = (times: number[]) => tallyItems(
       times.map((answeredAt) => attempt({ answeredAt, outcomes: [{ item: m3, correct: true }] })),
-    ).get(tallyKey(m3, 'listen'))?.lastSeenAt;
+    ).get(tallyKey(LINE, m3 as ItemId))?.lastSeenAt;
     expect(seen([500, 100])).toBe(500);
     expect(seen([100, 500])).toBe(500);
   });
@@ -259,6 +277,8 @@ describe('folding a history into per-item counts', () => {
 
 describe('tallying by eye and by ear', () => {
   const m3 = 'interval:m3:up' as ItemId;
+  /** The same answer space, read rather than heard — a different line. */
+  const READING: ProgressLine = { ...LINE, presentation: 'read' };
 
   /**
    * ADR 0010: progress is tracked against the item *and* the sense it was
@@ -271,17 +291,28 @@ describe('tallying by eye and by ear', () => {
       attempt({ id: 'r', presentation: 'read', outcomes: [{ item: m3, correct: true }] }),
       attempt({ id: 'l', presentation: 'listen', outcomes: [{ item: m3, correct: false }] }),
     ]);
-    expect(tally.get(tallyKey(m3, 'read')))
+    expect(tally.get(tallyKey(READING, m3 as ItemId)))
       .toEqual({ seen: 1, correct: 1, lastSeenAt: 2000, streak: 1 });
-    expect(tally.get(tallyKey(m3, 'listen')))
+    expect(tally.get(tallyKey(LINE, m3 as ItemId)))
       .toEqual({ seen: 1, correct: 0, lastSeenAt: 2000, streak: 0 });
     expect(tally.size).toBe(2);
   });
 
-  // The key is built, not concatenated at each call site, and the item id
-  // stays free of the presentation so either can change without the other.
+  /*
+    The key is built rather than concatenated at each call site, and the
+    item id survives it whole.
+
+    Asserted as a suffix rather than as the finished string: the line's
+    half is `lineKey`'s business and `line.test.ts` pins its shape, while
+    what this half owes is that an id full of colons — every id has at
+    least one — comes back out unmangled. That is why the join is two
+    colons and not one, and a single colon would let a line ending in one
+    and an item beginning with one produce another pair's key.
+  */
   it('builds a key that keeps the item id intact', () => {
-    expect(tallyKey(m3, 'read')).toBe('read:interval:m3:up');
-    expect(tallyKey(m3, 'listen')).toBe('listen:interval:m3:up');
+    expect(tallyKey(LINE, m3)).toMatch(/::interval:m3:up$/);
+    expect(tallyKey(READING, m3)).toMatch(/::interval:m3:up$/);
+    expect(tallyKey(LINE, m3), 'the two presentations share one key')
+      .not.toBe(tallyKey(READING, m3));
   });
 });

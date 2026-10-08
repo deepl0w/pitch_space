@@ -6,7 +6,9 @@ import { ExerciseBoundary } from '../components/ExerciseBoundary';
 import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registry';
 import { itemLabel } from '../../exercises/itemLabel';
 import { newAttemptId, newSeed } from '../../exercises/seed';
-import type { AnyExerciseDefinition, AudioOut, ExerciseBase, Result } from '../../exercises/types';
+import type {
+  AnyExerciseDefinition, AudioOut, ExerciseBase, ItemId, Result,
+} from '../../exercises/types';
 import { appSynth } from '../sound';
 import { settingsStore, useSettings } from '../../state/settingsStore';
 import {
@@ -46,6 +48,18 @@ interface Round {
    * so it has to be what was actually used.
    */
   settings: unknown;
+  /**
+   * Everything those settings could have asked, frozen with them.
+   *
+   * Computed here rather than at answering time so there is no live
+   * `settings` in scope to reach for by mistake. ADR 0039 keys a
+   * progression line on this set, and taking it from the panel after the
+   * learner has changed something would file the attempt under a line
+   * they were never practising — which is the stale-settings defect
+   * again, in the one place it would corrupt stored history rather than
+   * a drawing.
+   */
+  askable: readonly ItemId[];
   startedAt: number;
   result: Result | null;
 }
@@ -266,6 +280,7 @@ function ExerciseRound({ definition, audio, tally, settings }: {
       id: newAttemptId(),
       exercise: definition.generate({ seed, settings: fresh }),
       settings: fresh,
+      askable: definition.items(fresh),
       startedAt: Date.now(),
       result: null,
     });
@@ -280,7 +295,7 @@ function ExerciseRound({ definition, audio, tally, settings }: {
     setRound({ ...round, result });
     setSession((s) => ({ asked: s.asked + 1, right: s.right + (result.correct ? 1 : 0) }));
 
-    const attempt = attemptFrom(round, definition.id, result, Date.now());
+    const attempt = attemptFrom(round, definition.id, result, Date.now(), round.askable);
     void progressStore.getState().record(attempt);
   }
 
@@ -360,9 +375,18 @@ function ExerciseRound({ definition, audio, tally, settings }: {
               unique.
             */}
             {[...new Set(round.result.outcomes.map((o) => o.item))].map((item) => {
-              // Counted per sense (ADR 0010), so the figure shown is for the
-              // way this exercise was actually asked.
-              const counts = tally.get(tallyKey(item, round.exercise.presentation));
+              /*
+                Counted per line (ADR 0039), so the figure is for the pool
+                the learner was actually practising — not for this item
+                across every pool they have ever had it in. The line comes
+                off the round rather than the panel for the same reason
+                the attempt's does: the settings may have moved since.
+              */
+              const counts = tally.get(tallyKey({
+                exercise: definition.id,
+                askable: round.askable,
+                presentation: round.exercise.presentation,
+              }, item));
               return (
                 <li key={item}>
                   <span className="primary">{itemLabel(item)}</span>

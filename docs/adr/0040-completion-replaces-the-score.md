@@ -85,3 +85,85 @@ intervals rather than about counts.
   was a scheduling adjustment becomes a visible re-grading of everybody.
 - **A learner asks what their score is.** If the answer has to be a count after
   all, this decision was wrong and should be superseded rather than softened.
+
+## Addendum, 7 October 2026 — there is no done
+
+The Decision above says what a line's grade is read from and leaves "done"
+open, as the user's. They have answered it, and the answer removes the question
+rather than settling it:
+
+> There is no done, exercises will always come — but if there are no wrong
+> answers consistently then there is a high cap. Maybe some colouring from red
+> to green.
+
+**A line has no terminal state.** It is not a progress bar with an end, and
+nothing is ever finished. An item answered correctly for long enough earns a
+long interval, not an exit — which the schedule already has as
+`MAX_INTERVAL_MS`, the top of the `INTERVALS_MS` ladder, reached rather than
+passed.
+
+**So the figure is a state, not a fraction**, and that is why a colour is the
+right form for it. A percentage implies a denominator and an end; a hue from
+red to green says how well a thing is currently known and says nothing about
+arriving anywhere. It is also the form least able to be mistaken for a score,
+which is the whole of this record's subject.
+
+**This firms up what the colour should be a function of.** The research note
+for today identifies *retrievability* — the continuous probability of recall
+now, decaying between reviews — as the quantity FSRS uses and the one this
+record was reaching for. It maps onto a red-to-green scale directly, with no
+threshold to choose and no definition of done required, which is what the
+user's ruling asks for. A line's own colour is then the aggregate of its
+items', with the same property: it drifts back towards red while nobody
+practises, because that is true.
+
+**What this costs is that nothing is ever achieved.** A learner who wants to
+finish something will not find anything to finish, and "it goes green and stays
+green while you keep turning up" is a harder thing to feel good about than a
+bar reaching the end. That is the honest model of memory and it is a worse
+motivational design, which the user has chosen deliberately and should be
+reminded they chose if it ever feels like a defect.
+
+## Correction, 7 October 2026 — the addendum above is stronger than its source
+
+Main asked where the ruling came from, having not seen it. The answer is that
+the user sent it to the architect session directly, on 6 October, and this is
+it verbatim, punctuation and spelling as typed:
+
+> there is no done, exercises will always come but if there are no wrong
+> answers consistently then there is a high cap (maybe some coloring from red
+> to green)
+
+**Set beside what the addendum quotes, the quotation is the first error.** A
+parenthetical aside — `(maybe some coloring from red to green)` — was rendered
+as a standalone sentence, *Maybe some colouring from red to green.*, and
+anglicised. Neither change was meant and together they promote the weakest
+clause in the message to the same footing as the rest. A quotation in a record
+is evidence; tidying it is editing the evidence.
+
+**So the colour is a suggestion and this record treated it as a decision.**
+"Maybe" is the user's own hedge. What the addendum goes on to build — that a
+hue is the right form because a percentage implies an end, that retrievability
+is what it should be a function of, that a line's colour is the aggregate of
+its items' — is sound reasoning and remains worth having, but it is *this
+record's argument for the user's suggestion*, not a thing they settled. ADR
+0042 inherits the overstatement where it says "the reading is a colour".
+
+**"A high cap" was ambiguous and the addendum picked a reading silently.** It
+can mean a cap on the review interval, which is what `MAX_INTERVAL_MS` already
+is and what the addendum assumed; or a high ceiling on the reading itself, so
+that sustained correctness approaches a maximum it never quite reaches. Those
+differ in what is being bounded and the message does not choose between them.
+It needs asking rather than inferring.
+
+**What is unambiguous and does stand as a ruling** is the first clause: there
+is no done, and exercises keep coming. That is what closed this record's open
+question, and nothing above weakens it.
+
+**The general fault is worth naming because it is not the one anyone was
+watching for.** The index's conventions all point at claims about the code, and
+this project has got good at checking those. A claim about what the *user*
+wants has no equivalent — it cannot be grepped, no test turns red, and the only
+person positioned to contradict it is the one being quoted. On a day with four
+corrections of exactly this shape, a claim travelling one step further than its
+evidence, it travelled furthest in the one place nothing was looking.

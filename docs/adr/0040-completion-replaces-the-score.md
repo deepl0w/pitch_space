@@ -167,3 +167,28 @@ wants has no equivalent — it cannot be grepped, no test turns red, and the onl
 person positioned to contradict it is the one being quoted. On a day with four
 corrections of exactly this shape, a claim travelling one step further than its
 evidence, it travelled furthest in the one place nothing was looking.
+
+## Addendum, 8 October 2026 — what the colour would have to clear
+
+Not an answer to the open question above, which is still the user's. While it
+was open, three uses of the same two hues turned up within two days, and
+[`docs/colour-as-a-reading.md`](../colour-as-a-reading.md) collects what they
+imply.
+
+The short version, because it bears on whether the suggestion is cheap: `--right`
+and `--wrong` already exist and already mean *this answer, just now, was
+correct*. A retention reading in the same hues makes a second claim over a
+different time span, and the two can disagree in front of the learner — a line
+decayed to red beside a green verdict on a correct answer to one of its items.
+Both honest, and together they teach that the colour means nothing in
+particular.
+
+The app also has a rule about this, written as a CSS comment and kept
+everywhere by habit: a verdict that is only a hue is no verdict at all to a
+colour-blind user. A binary verdict pairs with a word for free. **A continuous
+gradient has no natural word**, which makes the proposed reading the first case
+that strains the rule rather than following it.
+
+None of that argues against the suggestion. It says the suggestion needs a
+second visual channel and a separation from the verdict, and that the rule it
+strains should stop being a comment.

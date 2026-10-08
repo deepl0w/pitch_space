@@ -103,13 +103,25 @@ describe('the stylesheet', () => {
  * empty string — the cascade never reaches the element at all. So "render,
  * answer, assert nothing moved" passes identically with the fix present and
  * with it deleted. That is a check whose medium cannot represent the
- * defect, and the figure itself is a measurement with no ground truth in
- * the suite, the same as the instrument trims.
+ * defect.
  *
- * It belongs to someone looking at the page at several widths, and the
- * user role has it. What is left here is the pair of silent deaths: the
- * rule keyed to a class nobody writes any more, and the value declared for
- * nobody.
+ * **Not the same as the instrument trims, and the first draft of this
+ * comment said it was.** Nothing in this repository can hear, by any
+ * means, so a trim has no instrument at all. Layout has one: the project
+ * drives real Chrome over CDP and `docs/RUNNING-THE-APP.md` describes it,
+ * where one `getBoundingClientRect().top` before and after answering
+ * measures precisely the thing the reserve exists for. The claim is a
+ * bound rather than a length — the question moves by no more than a few
+ * pixels when the answer appears, which is what the CSS comment concedes
+ * when it says being wrong by a little moves things by half of that
+ * little — and it would hold for all six exercises and both layouts.
+ *
+ * What it has no home in is a *check*: nothing in the repository drives a
+ * browser as part of one, so there is no tier for it to live in and
+ * building that tier is a larger decision than one assertion justifies.
+ * Until there is, it is the user role's sweep that covers it. What is
+ * left here is the pair of silent deaths vitest can see: the rule keyed to
+ * a class nobody writes any more, and the value declared for nobody.
  */
 describe('a value the stylesheet reserves', () => {
   /**

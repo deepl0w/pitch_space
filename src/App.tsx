@@ -175,7 +175,16 @@ export default function App() {
         )
         : Screen ? <Screen go={go} /> : <Home go={go} />}
 
-      {exercise && settingsOpen && (
+      {/*
+        Everywhere, not only over an exercise.
+
+        The cog became persistent before this did, so on every page but
+        a practice one it hid itself — the cog is hidden while the layer
+        is open — and opened nothing. A control that vanishes and does
+        nothing is worse than one that is simply missing. The two
+        conditions have to be the same condition.
+      */}
+      {settingsOpen && (
         <SettingsOverlay
           onClose={() => setSettingsOpen(false)}
           go={(next) => { setSettingsOpen(false); go(next); }}

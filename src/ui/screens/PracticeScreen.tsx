@@ -201,6 +201,7 @@ export function PracticeScreen({
         <p className="lede">{definition.description}</p>
       </header>
 
+      <div className="practice-body">
       {/*
         Keyed by type, which is the whole fix: a change of type builds a new
         component rather than handing this one a question it did not generate.
@@ -243,6 +244,7 @@ export function PracticeScreen({
           {fromNewerRelease === 1 ? ' it' : ' them'}.
         </p>
       )}
+      </div>
       </div>
     </div>
   );

@@ -382,6 +382,18 @@ reproduce exactly.
   The ADR README's conventions and `fleet.sh check` both exist because a
   first occurrence was fixed and a second one was not going to be caught by
   more care alone. See the fleet skill, "The review cycle".
+- **Positioning derives from a named value, not a repeated constant.**
+  Where two things have to line up — a fixed control and the page edge it
+  sits at, a column and the gutter beside it — give the value a name once
+  and reference it, rather than writing a number in each place and
+  trusting them to stay equal. `--gutter` is the first of these. The cost
+  of the other way is not untidiness: reserving space for the settings cog
+  with a `padding-right` on every header shifted each header's *content*
+  centre by half the reserved width, so the title stopped sharing an axis
+  with the stave beneath it and the page had two centres for no reason a
+  reader could see. A number that merely matches another number is a
+  number that will stop matching.
+
 - **A tracked document does not chase a figure the next commit can change.**
   Either the number is read out of the repository when someone asks for it
   (`tools/report-facts.sh`), or the document says which commit it describes

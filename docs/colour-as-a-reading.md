@@ -3,9 +3,12 @@
 What colour is allowed to mean in this app, and what a red-to-green progress
 reading would have to satisfy before it could be built.
 
-Written because three things arrived within two days that each use the same two
-hues for a different purpose, and no one of them is positioned to see the other
-two. Nothing here decides the open question in
+Written because the hues are about to be asked to carry more than one meaning,
+and no single change is positioned to see that. **One use exists, one is
+proposed, and one is planned** — an earlier draft of this sentence said three
+had arrived, which was the summary being more decisive than the sections under
+it, and is the sixth convention in the ADR index catching this document rather
+than something else. Nothing here decides the open question in
 [ADR 0040](adr/0040-completion-replaces-the-score.md); it says what the answer
 has to clear.
 
@@ -69,16 +72,16 @@ more frequent use.
 
 ## Where the third use lands
 
-`ScoreNote.colour` has existed since the renderer was written and no exercise
-has ever set it. Main is now building the cursor and per-note marking for
-rhythm, which will set it for the first time.
+`ScoreNote.colour` has existed since the renderer was written and **no exercise
+has ever set it.** The cursor and per-note marking for rhythm are in flight and
+will set it for the first time; nothing on a stave is coloured today.
 
-**That one does not add a meaning** — marking a played note against the score
-is a per-event verdict, the same claim `.choice.right` makes, moved onto the
-stave. It belongs with the first meaning and should use the same tokens rather
-than new ones. It is listed here because it is the use that makes the first
-meaning visually prominent for the first time, which is what turns the
-collision above from a latent clash into one a learner will actually see.
+**When it lands it will not add a meaning** — marking a played note against the
+score is a per-event verdict, the same claim `.choice.right` makes, moved onto
+the stave. It belongs with the first meaning and should use the same tokens
+rather than new ones. It is listed here because it is the use that will make
+the first meaning visually prominent for the first time, which is what would
+turn the collision above from a latent clash into one a learner actually sees.
 
 The accessibility rule reaches it too, and less comfortably: a coloured
 notehead has no room for a word beside it. Position already carries whether a

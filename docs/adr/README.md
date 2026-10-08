@@ -272,6 +272,52 @@ inference drawn from what they said is this project's argument and should be
 written as this project's argument, under its own heading, where someone can
 disagree with it without appearing to contradict the user.
 
+**A guard must be able to fail, and a sound assertion over nothing is the way
+it most often cannot.** This is the fourth convention's predicate — a test that
+cannot fail — reached by a different route and needing a different cure. There
+the constraint was never wired to anything; here it is wired correctly and runs
+over a population that could not have contained the failure.
+
+Two instances, found by the tester a day apart and both now fixed:
+
+- **A population that is structurally empty.** `src/ui/labelling.test.tsx`
+  asks of every screen that no `<label>` wraps more than one interactive
+  control. Breaking the sweep deliberately — renaming the button it presses —
+  left the compass cases green, because a screen that rendered nothing has no
+  offending label. The sweep's own case failed; the claim's did not.
+- **A case that is drawn at random and did not come up.**
+  `PracticeScreen.test.tsx` narrowed a pool to two and walked eight rounds
+  hoping to reach the one where the drawn answer was the unticked interval.
+  That is a coin eight times: **one run in 256 finished having proved
+  nothing**, failed on its own control, and reported the defect against
+  whichever commit was passing through the shared gate at that moment. It cost
+  two sessions an afternoon and nearly cost a retraction that would have left
+  the real fault in the tree.
+
+**They are one convention because the cure is one, not because the cause is.**
+Structurally empty and stochastically unlucky are different faults — the first
+can never contain the case, the second merely did not. What they share is the
+remedy: **assert that the case occurred, in its own assertion, separately from
+asserting what it shows.** A sweep states the size of what it swept; a
+randomised walk draws until it reaches its case, bounded, and fails loudly at
+the bound rather than falling off the end.
+
+**And both fail disguised as something else**, which is why neither was caught
+by reading. The empty sweep looks green. The unlucky walk looks like somebody
+else's bug — the most expensive disguise available, because it sends people to
+investigate a commit that was innocent.
+
+**One cure that looks right and is not, measured rather than reasoned about.**
+`expect.assertions(n)` is the first thing anyone reaches for. On the unfixed
+test with the seed stubbed, the passing run makes eighteen assertions and the
+unlucky run also makes eighteen: the control runs and fails, nothing
+short-circuits, and the count never reports. It counts assertions. It cannot
+see that an assertion ran over nothing.
+
+[`docs/misread-instruments.md`](../misread-instruments.md) carries the same
+fault from the instrument's side and has the longer argument; what is here is
+the rule the next sweep needs, which is not a thing a test can hold.
+
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code
 rides on the record that made it. The second says check exactly — a guard fires
@@ -287,7 +333,9 @@ first one pointed upwards: a summary is a claim about every claim beneath it,
 and it is the one position from which nothing below can answer back. The
 seventh points outwards, at the one claim with no local evidence at all —
 what the user asked for — where the check cannot be a mechanism and has to be
-a habit of quoting exactly.
+a habit of quoting exactly. The eighth turns the whole set on the checks
+themselves: every convention above assumes that a guard which runs is a guard
+that could have failed, and that assumption is the one none of them examine.
 
 [`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
 0018 and 0020 as one argument, because five of them are the same rule meeting a

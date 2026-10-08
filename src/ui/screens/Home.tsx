@@ -1,4 +1,3 @@
-import { CogIcon } from '../controls';
 import { EXERCISE_MENU, REFERENCE_MENU, type MenuEntry } from '../menu';
 
 /**
@@ -8,28 +7,8 @@ import { EXERCISE_MENU, REFERENCE_MENU, type MenuEntry } from '../menu';
 export function Home({ go }: { go: (route: string) => void }) {
   return (
     <>
-      <header className="page-header">
+      <header>
         <h1>Pitch Space</h1>
-        {/*
-          Settings is chrome, not a destination, so it is a corner control
-          rather than a card. It used to be one of two cards under "Setup",
-          beside audio calibration — which Settings already links to and
-          already names in its own blurb, so the home screen offered the
-          same place twice and called the second one something else.
-
-          Calibration is still offered rather than required (ADR 0018); it
-          is reached from inside Settings, which is where a technical setup
-          step belongs once the screen that owns it exists.
-        */}
-        <button
-          type="button"
-          className="cog"
-          onClick={() => go('settings')}
-          aria-label="Settings"
-          title="Settings"
-        >
-          <CogIcon />
-        </button>
         {/*
           The second sentence says what is not here yet, and it stays until
           it is. This line claimed the app was answered by playing while

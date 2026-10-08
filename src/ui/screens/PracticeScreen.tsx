@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
-import { CogIcon, Field, OneOf } from '../controls';
+import { Field, OneOf } from '../controls';
 import { ExerciseBoundary } from '../components/ExerciseBoundary';
 import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registry';
 import { itemLabel } from '../../exercises/itemLabel';
@@ -89,7 +89,7 @@ interface Round {
 // Every other route keeps the router's, which is still the only one on the
 // page — the shell moved it, it did not add a second.
 export function PracticeScreen({
-  exerciseId, onSwitch, onBack, onOpenSettings, audio = defaultSynth,
+  exerciseId, onSwitch, onBack, audio = defaultSynth,
 }: {
   /**
    * Which exercise to run. The route decides, so the menu card and the URL
@@ -99,15 +99,6 @@ export function PracticeScreen({
   exerciseId?: string;
   /** Change which exercise is running. The router owns that, not this screen. */
   onSwitch?: (exerciseId: string) => void;
-  /**
-   * Open settings over this screen.
-   *
-   * A callback rather than a route, because the point is that this
-   * screen stays mounted: navigating discards the round and silences
-   * whatever is playing, which is the opposite of swapping instrument
-   * mid-question.
-   */
-  onOpenSettings?: () => void;
   /** Leave for the home screen. The router owns that too. */
   onBack?: () => void;
   audio?: AudioOut;
@@ -159,26 +150,6 @@ export function PracticeScreen({
       own the viewport until it was noticed.
     */
     <div className="practice-layout">
-      {/*
-        The settings cog belongs to the layout rather than to either
-        column, because the two columns swap places below the
-        breakpoint. In the question pane's header it was top-right of
-        the window when wide and **697 px down the page** on a phone —
-        below every exercise setting, which is the one place a control
-        for changing settings must not be. Anchored here it is the
-        top-right corner of the practice page in both arrangements,
-        which is where the home screen's cog is and what the user asked
-        for.
-      */}
-      <button
-        type="button"
-        className="cog cog-corner"
-        onClick={onOpenSettings}
-        aria-label="Settings"
-        title="Settings"
-      >
-        <CogIcon />
-      </button>
       {/*
         The sidebar: where you are, and what you are being asked. The
         panel is rendered here rather than inside `ExerciseRound` so the

@@ -173,7 +173,8 @@ export function Settings({ go }: { go(route: string): void }) {
           </p>
           <p className="secondary">
             Recorded instruments are planned, and wait on the sample packs being
-            built. These will go on playing while one downloads.
+            built. A pack will download in the background, with the generated
+            voice playing until it lands.
           </p>
         </Field>
       </Panel>

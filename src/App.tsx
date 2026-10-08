@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { CogIcon } from './ui/controls';
 import { Home } from './ui/screens/Home';
 import { Scales } from './ui/screens/Scales';
 import { Chords } from './ui/screens/Chords';
@@ -139,35 +138,23 @@ export default function App() {
         </button>
       )}
       {exercise
-        ? <PracticeScreen exerciseId={route} onSwitch={go} onBack={() => go('')} />
+        ? (
+          <PracticeScreen
+            exerciseId={route}
+            onSwitch={go}
+            onBack={() => go('')}
+            /*
+              Settings over the exercise rather than instead of it: a
+              route change unmounts this screen and takes the round with
+              it, and `stopSound` fires on every one. The user asked to
+              swap instruments mid-question, which is the case
+              navigation cannot serve.
+            */
+            onOpenSettings={() => setSettingsOpen(true)}
+          />
+        )
         : Screen ? <Screen go={go} /> : <Home go={go} />}
 
-      {/*
-        Settings over the exercise rather than instead of it.
-
-        A route change unmounts the practice screen and takes the round
-        with it, and `stopSound` fires on every one — so reaching the
-        instrument picker by navigating would cost the question the
-        learner was part way through and silence what was playing. The
-        user asked to swap instruments *on the fly*, which is precisely
-        the case navigation cannot serve.
-
-        Only on an exercise route. Everywhere else the cog on the home
-        screen already goes to the full page, and two ways into one
-        screen on one route is a thing to explain rather than a
-        convenience.
-      */}
-      {exercise && (
-        <button
-          type="button"
-          className="cog cog-floating"
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Settings"
-          title="Settings"
-        >
-          <CogIcon />
-        </button>
-      )}
       {exercise && settingsOpen && (
         <SettingsOverlay
           onClose={() => setSettingsOpen(false)}

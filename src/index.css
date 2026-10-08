@@ -201,8 +201,12 @@ main .practice-main .question { max-width: 44rem; margin-inline: auto; }
 h1 { font-size: 1.45rem; margin: 0 0 0.3rem; font-weight: 650; letter-spacing: -0.01em; }
 
 /* The settings cog sits in the header's corner, aligned to the title rather
-   than to the lede below it, so it stays put as the lede wraps. */
-.home-header { position: relative; padding-right: 3rem; }
+   than to the lede below it, so it stays put as the lede wraps.
+
+   Shared by the home screen and the practice screen, which is the point:
+   the cog was briefly a floating circle over the exercise and read as a
+   different control for the same job. One class, one corner, one idiom. */
+.page-header { position: relative; padding-right: 3rem; }
 .cog {
   position: absolute; top: 0; right: 0;
   display: grid; place-items: center;
@@ -747,22 +751,11 @@ select,
 /* Settings reached without leaving the exercise.
 
    A route change unmounts the practice screen and discards the round, so
-   swapping instrument mid-question had to be a layer rather than a page.
-   Fixed to the viewport rather than placed in the grid: the shell gives
-   its two columns the whole window and each scrolls on its own, so a cog
-   in the flow would scroll away from exactly the moment it is wanted. */
-.cog-floating {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 10;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  padding: 0.6rem;
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
-}
-
+   swapping instrument mid-question has to be a layer rather than a page.
+   The control that opens it is the ordinary `.cog` in the practice
+   screen's own header — same corner and same idiom as the home screen,
+   because it is the same job and a second shape for it reads as a second
+   thing. */
 .overlay {
   position: fixed;
   inset: 0;
@@ -794,8 +787,3 @@ select,
   margin-left: 1rem;
 }
 
-@media (pointer: coarse) {
-  /* Clear of the thumb's resting position and of any control at the
-     bottom of the question pane. */
-  .cog-floating { right: 1.25rem; bottom: 1.25rem; padding: 0.75rem; }
-}

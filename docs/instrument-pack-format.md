@@ -98,7 +98,29 @@ volume mid-exercise.
 This is the repository's standing rule about this kind of constant rather than
 a new one: a value whose rightness is a matter of how it sounds gets changed by
 measuring it again, never by reviewing the line that sets it. The builder
-should measure the pack and write the figure; nothing downstream can check it.
+measures the pack and writes the figure.
+
+**What cannot be checked is the figure. The structure around it can be, and
+must be.** An earlier draft of this section said "nothing downstream can check
+it", which is true of the number and false of everything else, and a reader
+could fairly have taken it as licence to skip the check that is available. The
+suite has no instrument for loudness; it has a perfectly good one for which
+field a code path reads.
+
+So two claims are worth a test, neither of them a quantity:
+
+- **A pack carries its own measured `trim`**, and a pack lacking one does not
+  load — rather than defaulting to `1`, which looks like a value and is the
+  absence of one.
+- **Nothing in the loading path substitutes the synthesised voice's `trim`**
+  for a sampled one. That is the defect this section exists to prevent and it
+  is exactly the kind a mutant can demonstrate.
+
+`instruments.test.ts` already shows the pattern for the half that is a
+quantity: it asserts `trim > 0` and that held voices are trimmed below struck
+ones — "an ordering rather than the figures, because the figures are"
+measurements. A pack's figure gets the same treatment, and its wiring gets an
+ordinary test.
 
 ## What the builder refuses
 

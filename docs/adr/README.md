@@ -58,6 +58,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0041](0041-practice-that-counts-towards-nothing.md) | Practice that counts towards nothing | Accepted |
 | [0042](0042-history-is-disposable-until-settings-settle.md) | History is disposable until settings settle | Accepted |
 | [0043](0043-an-instrument-is-not-part-of-what-a-line-measures.md) | An instrument is not part of what a line measures | Accepted |
+| [0044](0044-deterministic-is-not-the-same-as-seeded.md) | Deterministic is not the same as seeded | Accepted |
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in

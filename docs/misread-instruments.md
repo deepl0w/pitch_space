@@ -23,6 +23,7 @@ that got this wrong twice in one day from the harness side.
 - [The catalogue](#the-catalogue)
 - [Three accounts of how it felt](#three-accounts-of-how-it-felt)
 - [A reproduction attempt is an instrument too](#a-reproduction-attempt-is-an-instrument-too)
+- [A check can be sound and still have no coordinate for the failure](#a-check-can-be-sound-and-still-have-no-coordinate-for-the-failure)
 - [The other direction: a true finding killed](#the-other-direction-a-true-finding-killed)
 
 ## The clearest case, and it owes the convention nothing
@@ -64,6 +65,15 @@ Four instances, two of them in records on this list:
   the same fault one layer down: the stimulus was measured through a gain
   stage nobody had characterised, 24 dB below full scale, and the attenuation
   read as the stimulus being wrong.
+
+- [0043](adr/0043-an-instrument-is-not-part-of-what-a-line-measures.md) is the
+  fifth and the only one caught before it was published. Six synthesised voices
+  were read through an analyser, and the reading agreed with the partial
+  amplitudes declared in `instruments.ts` — but the analyser sits *downstream*
+  of that file, measuring audio the declared data produced. The agreement
+  confirms the synthesis implements the catalogue and says nothing about
+  whether the catalogue is right. Two readings of one quantity, not two
+  witnesses.
 
 [0011](adr/0011-what-a-catalogue-owes.md) is the counter-example and shows the
 cost of getting it right is one sentence. It named its instrument — "the
@@ -241,6 +251,59 @@ a corrupted clef, and that churn does not reproduce it — with the original
 state unrecoverable. It is left open rather than closed, which is the honest
 end for a question whose evidence is gone.
 
+## A check can be sound and still have no coordinate for the failure
+
+Offered by the tester as a consolidation and taken as half of one, because
+**two of the four cases it proposed are this document's existing subject rather
+than a new one.** The catalogue above is made of measurements taken *through*
+something uncharacterised, and a witness standing downstream of what it
+witnesses is that exact fault — which is why 0043 is a fifth bullet up there
+and not a section down here. A sweep whose population never builds the failing
+case is the closing section below, already written.
+
+What is left is genuinely different and worth its own name. In the catalogue's
+cases the instrument is pointed at the wrong thing. Here it is pointed at the
+right thing, works correctly, and **the defect lives in a direction the
+measurement does not have an axis for.** No amount of care with the instrument
+helps, because nothing is wrong with it.
+
+- **A relative assertion cannot see a translation.** The tester's line, from a
+  case comparing a piano's envelope against an organ's: a change that moved
+  *both* curves left the distance between them unchanged, so a test measuring
+  only that distance was silent. Reading one curve against its own decay level
+  catches what comparing two curves cannot. The defect was in the null space of
+  the comparison.
+- **A medium that cannot represent the defect.** `askable: undefined` survives
+  a JSON round trip by vanishing — `JSON.stringify` drops the key — and is real
+  under `structuredClone`, which is what IndexedDB actually stores. A test
+  asserting through the first medium cannot express the state the second one
+  keeps. `src/state/attempt.test.ts` now checks through `structuredClone` for
+  this reason.
+- **A quantity whose rightness is not structural.** A diff review's claim is
+  that the code does what it says: the types line up, the branch is reachable,
+  the name means what it does. Two defects in `src/audio/output/instruments.ts`
+  — an envelope curve and a loudness ratio — passed that and were plain the
+  moment anything played. A partial amplitude of `0.4` is not wrong-*looking*.
+  There is nothing in the text to be suspicious of.
+
+The third is the one with a standing rule attached, and `instruments.ts` names
+the gap itself:
+
+> They are measurements of *this* synthesis and have to be re-measured if a
+> voice's partials or envelope change; the suite cannot check them, because
+> loudness is the one thing it has no instrument for.
+
+**A constant whose rightness is a matter of how it sounds or feels gets changed
+by measuring it again, never by reviewing the line that sets it.** That was
+already the rule for the pitch-detection constants inherited from the tuner;
+this is a second instance that arrived independently, which is better evidence
+for a rule than a restatement of it would be.
+
+**Why this is a separate question from the three selectors** above — interesting,
+flattering, expected. Those describe what happens to a finding once it exists.
+This one asks whether the check could have produced the finding at all, which
+is a question asked earlier and answered before any of them apply.
+
 ## The other direction: a true finding killed
 
 Everything above is a false claim surviving. This is the opposite, in the
@@ -335,32 +398,3 @@ That is worth the last word. Every instrument this project built in a day —
 the commit gate, the push gate, the mutation habit — was green on a test
 asserting something false. The catalogue above is a list of instruments read
 too widely; **this is the instrument the catalogue itself was read through.**
-
-
-### A clean diff is an instrument, and it cannot see a quantity
-
-Added 8 October, from two defects in `src/audio/output/instruments.ts`: an
-envelope curve and a loudness ratio. **Neither was found by reading the diff,
-and both were plain as soon as anything played.**
-
-The claim a diff review makes is structural — this code does what it says, the
-types line up, the branch is reachable. Its range stops at any value whose
-correctness is a physical or perceptual property rather than a structural one.
-A partial amplitude of `0.4` is not wrong-looking; it is wrong-sounding, and
-there is nothing in the text to be suspicious of.
-
-**The file names the gap itself**, which is why this belongs in the catalogue
-rather than in a bug report:
-
-> They are measurements of *this* synthesis and have to be re-measured if a
-> voice's partials or envelope change; the suite cannot check them, because
-> loudness is the one thing it has no instrument for.
-
-That is the same shape as everything above. The diff was not misread; it was
-read correctly and asked a question it cannot answer, by people who had no
-reason to think they were asking it of the wrong instrument. The practical
-consequence is narrow and worth stating as a rule: **a constant whose rightness
-is a matter of how it sounds or feels gets changed by measuring it again, never
-by reviewing the line that sets it** — which is already the standing rule for
-the pitch-detection constants inherited from the tuner, now with a second
-instance that arrived independently.

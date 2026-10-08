@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CogIcon } from './ui/controls';
 import { Home } from './ui/screens/Home';
 import { Scales } from './ui/screens/Scales';
 import { Chords } from './ui/screens/Chords';
@@ -50,8 +51,47 @@ const SCREENS: Partial<Record<string, (props: { go(route: string): void }) => Re
   settings: Settings,
 };
 
+/**
+ * Settings, over whatever is already on screen.
+ *
+ * The same component the route renders, in a layer rather than a page,
+ * so the exercise underneath keeps its round and its audio. Escape and
+ * the backdrop both close it, because a thing that covers your work
+ * should be dismissible without aiming at a button.
+ *
+ * `go` closes before it navigates: the two destinations reachable from
+ * inside — calibration and the back link — are real route changes, and
+ * leaving the layer open over the screen they land on would be a
+ * settings panel floating above calibration with no way to tell which
+ * one the Escape key belonged to.
+ */
+function SettingsOverlay({ onClose, go }: { onClose(): void; go(route: string): void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
+      /* The backdrop only, not a click that bubbled out of the panel. */
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="overlay-panel">
+        <button type="button" className="overlay-close" onClick={onClose}>Done</button>
+        <Settings go={go} />
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [route, go] = useRoute();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const Screen = SCREENS[route];
   const appearance = useSettings((state) => state.doc.appearance);
 
@@ -101,6 +141,39 @@ export default function App() {
       {exercise
         ? <PracticeScreen exerciseId={route} onSwitch={go} onBack={() => go('')} />
         : Screen ? <Screen go={go} /> : <Home go={go} />}
+
+      {/*
+        Settings over the exercise rather than instead of it.
+
+        A route change unmounts the practice screen and takes the round
+        with it, and `stopSound` fires on every one — so reaching the
+        instrument picker by navigating would cost the question the
+        learner was part way through and silence what was playing. The
+        user asked to swap instruments *on the fly*, which is precisely
+        the case navigation cannot serve.
+
+        Only on an exercise route. Everywhere else the cog on the home
+        screen already goes to the full page, and two ways into one
+        screen on one route is a thing to explain rather than a
+        convenience.
+      */}
+      {exercise && (
+        <button
+          type="button"
+          className="cog cog-floating"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Settings"
+          title="Settings"
+        >
+          <CogIcon />
+        </button>
+      )}
+      {exercise && settingsOpen && (
+        <SettingsOverlay
+          onClose={() => setSettingsOpen(false)}
+          go={(next) => { setSettingsOpen(false); go(next); }}
+        />
+      )}
     </main>
   );
 }

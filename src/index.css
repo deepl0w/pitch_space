@@ -743,3 +743,59 @@ select,
   */
   .chips-single { gap: 0.4rem; padding: 0.35rem; }
 }
+
+/* Settings reached without leaving the exercise.
+
+   A route change unmounts the practice screen and discards the round, so
+   swapping instrument mid-question had to be a layer rather than a page.
+   Fixed to the viewport rather than placed in the grid: the shell gives
+   its two columns the whole window and each scrolls on its own, so a cog
+   in the flow would scroll away from exactly the moment it is wanted. */
+.cog-floating {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 10;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  padding: 0.6rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgb(0 0 0 / 0.45);
+  display: flex;
+  justify-content: center;
+  /* Top-aligned, not centred: the panel is as tall as its content and a
+     centred one jumps up the screen as fields appear. */
+  align-items: flex-start;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.overlay-panel {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  padding: 1rem 1.25rem 1.5rem;
+  width: min(42rem, 100%);
+  /* Its own scroll, so a long settings list does not scroll the backdrop
+     out from under itself on a phone. */
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+
+.overlay-close {
+  float: right;
+  margin-left: 1rem;
+}
+
+@media (pointer: coarse) {
+  /* Clear of the thumb's resting position and of any control at the
+     bottom of the question pane. */
+  .cog-floating { right: 1.25rem; bottom: 1.25rem; padding: 0.75rem; }
+}

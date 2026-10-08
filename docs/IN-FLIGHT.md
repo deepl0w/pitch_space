@@ -402,8 +402,6 @@ thing anyone is tested on.
 
 **Branch:** `main`, starting now. **Settled:** the direction, the
 measurement below, and — as of `83e5d19` — how a pack reaches the device.
-**The block this entry carried is removed**, stated rather than left to
-lapse: nothing here is waiting on a decision any more.
 
 [ADR 0046](adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md)
 answers it. Synthesis is precached and is the offline guarantee; a pack
@@ -479,6 +477,21 @@ the old sentence would leave the repository asserting a licence analysis
 for a use it explicitly excluded. The pack builder carries the licence and
 the source URL per instrument in the manifest, and refuses to build one
 that names neither.
+
+**The format is specified before the builder**, in
+[`instrument-pack-format.md`](instrument-pack-format.md): the index, the
+in-pack manifest, SPDX licence identifiers the builder can enforce
+mechanically, and content-hashed filenames that make 0046's immutable URL
+structural rather than a discipline. Read it rather than this entry for
+field names.
+
+The one thing in it a test could be written against, and the reason it is
+worth a line here as well: **a pack's `trim` is measured per pack and may
+not be inherited from the synthesised voice of the same name.** Those
+figures are measurements of that synthesis and say so. Copying one across
+would reintroduce the defect they were taken to remove, and do it between
+the two halves of one instrument — so a pack landing mid-exercise would
+change the volume as it swapped in.
 
 **For tester.** Three claims, and none of them is about timbre — the
 suite has no standing on whether a recording sounds like a piano.

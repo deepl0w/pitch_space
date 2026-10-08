@@ -138,6 +138,19 @@ export interface ProgressionExercise extends ExerciseBase {
   readonly numerals: readonly string[];
   /** The chord tones behind each numeral, for sounding and engraving. */
   readonly voicings: readonly (readonly Pitch[])[];
+  /**
+   * How long each chord lasts, in bars. One per numeral.
+   *
+   * Carried because the generator decides it and the exercise used to
+   * throw it away. A template's chords fill its bars, and a template
+   * may put two of them in one bar — the ii–V before a final tonic is
+   * the commonest shape in the catalogue and thirty of its steps are
+   * half-bar ones. Played and drawn as though every chord were a whole
+   * bar, a four-bar progression with five chords is heard as five bars,
+   * which is what a user reported: *"they sound like there's an extra
+   * bar"*. There was.
+   */
+  readonly barsPer: readonly number[];
   readonly cadence: CadenceType | null;
   readonly clef: Clef;
   /** The cadence that puts the key in the ear, as chords. */
@@ -398,6 +411,10 @@ export function generateProgression(
   });
 
   const asked = harmony.events.map((e) => asTriad(e.numeral));
+  // In bars rather than ticks: the exercise's own unit is the bar, and a
+  // reader comparing this with a template's `s(0.5, …)` should see the
+  // same number rather than convert.
+  const barsPer = harmony.events.map((e) => e.durationTicks / harmony.timeSignature.barTicks);
   const numerals = asked.map(numeralText);
   const voicings = asked.map((n) => realizePitches(key, n));
   const cadence = harmony.plan.phrases[harmony.plan.phrases.length - 1]?.cadence ?? null;
@@ -416,6 +433,7 @@ export function generateProgression(
     keyId: keyId(key),
     numerals,
     voicings,
+    barsPer,
     cadence,
     clef: settings.clef,
     context: establishingCadence(key),
@@ -462,6 +480,18 @@ export function gradeProgression(
   };
 }
 
+/**
+ * How long one bar of a progression sounds for.
+ *
+ * The figure the old fixed per-chord gap used, kept so a progression of
+ * whole-bar chords is unchanged — this is a correction to chords that
+ * were the wrong length, not a retiming of the exercise.
+ */
+const BAR_SECONDS = 1.1;
+
+/** Held slightly short of its slot, so two chords in a bar are two chords. */
+const HELD_FRACTION = 0.92;
+
 function cadenceTail(exercise: ProgressionExercise): string {
   return exercise.cadence ? `, closing on ${CADENCE_NAMES[exercise.cadence].toLowerCase()}` : '';
 }
@@ -480,16 +510,47 @@ export function keyFor(exercise: ProgressionExercise): Key {
 export function progressionVoices(exercise: ProgressionExercise): Voice[] {
   const voices = chordVoices(exercise.context, ESTABLISHING);
   const after = exercise.context.length * ESTABLISHING.eventGap + 0.5;
-  // Slower and longer than the establishing cadence: this is the question
-  // rather than the preamble, and it has to be followable.
-  const body = chordVoices(exercise.voicings, { eventGap: 1.1, hold: 1.0 });
-  return [...voices, ...body.map((v) => ({ ...v, start: v.start + after }))];
+  /*
+    Each chord for its own length, not one length for every chord.
+
+    It used to give every chord an equal slot, so a bar holding a ii and
+    a V took twice as long as the bar beside it and the progression ran
+    long by however many half-bar chords it contained. A user heard it
+    as an extra bar, which is exactly what it was.
+
+    `BAR_SECONDS` is the old per-chord gap, so a progression of
+    whole-bar chords sounds exactly as it did; only the ones that were
+    wrong have changed.
+  */
+  let at = after;
+  const body = exercise.voicings.flatMap((pitches, i) => {
+    const seconds = exercise.barsPer[i] * BAR_SECONDS;
+    const [voice] = chordVoices([pitches], { eventGap: seconds, hold: seconds * HELD_FRACTION });
+    const placed = { ...voice, start: voice.start + at };
+    at += seconds;
+    return [placed];
+  });
+  return [...voices, ...body];
 }
 
 /** The progression engraved, one whole-note chord per slot. */
 export function progressionScoreSpec(exercise: ProgressionExercise): ScoreSpec {
-  const notes: ScoreNote[] = exercise.voicings.map((pitches) => ({
-    pitches: [...pitches], value: noteValue('w'),
+  /*
+    Drawn for its length too. Every chord was a whole note whatever it
+    lasted, so the engraving showed five bars for a four-bar
+    progression — the same fault as the playback and visible rather
+    than audible.
+
+    **A chord longer than a bar is still drawn as one bar**, and that
+    is a known understatement rather than an oversight: the longest
+    note base is `w`, so two bars of one harmony is a tie across a
+    barline, which this spec has no way to express. It reads as the
+    chord changing where it does not. Sub-bar chords are the common
+    case — thirty template steps are half-bar ones and none is longer
+    than two — so this fixes the half that can be fixed here.
+  */
+  const notes: ScoreNote[] = exercise.voicings.map((pitches, i) => ({
+    pitches: [...pitches], value: noteValue(exercise.barsPer[i] < 1 ? 'h' : 'w'),
   }));
   return { notes, clef: exercise.clef, key: keyFor(exercise) };
 }

@@ -354,3 +354,89 @@ describe('varying the close', () => {
     expect(varied).toContain('PC');
   });
 });
+
+/**
+ * A progression lasts as long as its bars say, not as long as it has
+ * chords.
+ *
+ * Reported by the user: *"they sound like there's an extra bar"*. They
+ * did. A template's chords fill its bars and a template may put two in
+ * one bar — the ii–V before a final tonic, which is the commonest
+ * cadential shape in the catalogue. Every chord was given an equal
+ * slot, so each half-bar chord added half a bar to what was heard and
+ * a half note to what was drawn.
+ */
+describe('the length of a progression', () => {
+  const fourBars: ProgressionSettings = { ...PROGRESSION_DEFAULTS, bars: 4 };
+
+  /**
+   * A progression holding a chord shorter than a bar.
+   *
+   * Sub-bar specifically, not merely uneven: a chord *longer* than a
+   * bar is still drawn as a whole note, because the longest note base
+   * is `w` and two bars of one harmony needs a tie this spec cannot
+   * express. Asking for `b !== 1` found those too and the drawing case
+   * failed on a limitation it was not about.
+   */
+  const withSubBar = () => {
+    for (let seed = 0; seed < 200; seed += 1) {
+      const ex = generateProgression({ seed, settings: fourBars });
+      if (ex.barsPer.some((b) => b < 1)) return ex;
+    }
+    return undefined;
+  };
+
+  it('sounds for its bars, whatever its chord count', () => {
+    /*
+      Asserted as the total against the declared bars rather than
+      against a figure: the per-bar tempo may be retuned and this stays
+      true, where a test naming 4.4 seconds would have to be edited to
+      permit a change it has no opinion about.
+    */
+    for (let seed = 0; seed < 40; seed += 1) {
+      const e = generateProgression({ seed, settings: fourBars });
+      const sounded = e.barsPer.reduce((a, b) => a + b, 0);
+      expect(sounded, `seed ${seed}: chords do not fill the bars asked for`).toBeCloseTo(4, 6);
+    }
+  });
+
+  it('gives a half-bar chord half the time of a whole-bar one', () => {
+    const ex = withSubBar();
+    expect(ex, 'no sub-bar progression was generated, so nothing below is asserted')
+      .toBeDefined();
+
+    const starts = [...new Set(progressionVoices(ex!).map((v) => +v.start.toFixed(4)))]
+      .sort((a, b) => a - b)
+      .slice(-ex!.numerals.length);
+    const gaps = starts.slice(1).map((v, i) => v - starts[i]);
+
+    // Each gap is proportional to the bars of the chord that opened it.
+    for (const [i, gap] of gaps.entries()) {
+      expect(gap / ex!.barsPer[i], `chord ${i} is not timed by its length`)
+        .toBeCloseTo(gaps[0] / ex!.barsPer[0], 6);
+    }
+    // The control: at least two different lengths, or the loop above is
+    // comparing a constant with itself.
+    expect(new Set(ex!.barsPer).size, 'every chord is the same length here').toBeGreaterThan(1);
+  });
+
+  it('draws a half-bar chord shorter than a whole-bar one', () => {
+    // The same fault, seen rather than heard: five whole notes is five
+    // bars of notation for a four-bar progression.
+    const ex = withSubBar()!;
+    /*
+      By note base, not by a tick count: `NoteValue` is `{base, dots}`
+      and has no `ticks` field. Reading one gave `undefined` for every
+      chord, which compares equal to itself — the case failed for the
+      right reason by accident and would have passed a renderer that
+      drew nothing at all.
+    */
+    const spec = progressionScoreSpec(ex);
+    const bases = spec.notes.map((n) => n.value.base);
+    expect(new Set(bases).size, 'every chord drawn the same length').toBeGreaterThan(1);
+    for (const [i, base] of bases.entries()) {
+      expect(base, `chord ${i} is drawn the wrong length`)
+        .toBe(ex.barsPer[i] < 1 ? 'h' : 'w');
+    }
+  });
+});

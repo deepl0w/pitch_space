@@ -209,6 +209,23 @@ main .practice-main .choices,
 main .practice-main .slots,
 main .practice-main .nav { justify-content: center; }
 
+/* A note about the question goes under the button, not beside it.
+
+   Beside it, the row centres the button *and* the sentence as one
+   group, so the button sits left of centre by half the sentence's
+   width — and it moves as the sentence changes length, which is how a
+   screen ends up with two centres that drift apart between questions.
+   The user asked for both: the text off the button's line, and the
+   alignment fixed. They are the same fix.
+
+   `flex-basis: 100%` rather than a separate element, so a row of two
+   buttons still sits side by side and only the prose drops. */
+main .practice-main .actions > .secondary {
+  flex: 1 0 100%;
+  text-align: center;
+  margin-top: 0.2rem;
+}
+
 /* The one button there is before a question exists. It is the whole of
    what the screen is asking you to do, so it says so. */
 main .practice-main .actions > button:first-child {

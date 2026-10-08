@@ -100,6 +100,14 @@ a new one: a value whose rightness is a matter of how it sounds gets changed by
 measuring it again, never by reviewing the line that sets it. The builder
 measures the pack and writes the figure.
 
+**What makes this rule apply is the absence of an instrument, not the fact of
+having measured.** Worth stating because the rule reads like it generalises to
+any measured constant and it does not: a measured *length* has an instrument —
+this project drives real Chrome over CDP — so treating one as uncheckable
+because it was measured would be this rule used to excuse exactly what it
+exists to prevent. Loudness is special here because nothing in the repository
+can hear.
+
 **What cannot be checked is the figure. The structure around it can be, and
 must be.** An earlier draft of this section said "nothing downstream can check
 it", which is true of the number and false of everything else, and a reader

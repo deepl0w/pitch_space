@@ -8,7 +8,7 @@ import { EXERCISE_MENU, REFERENCE_MENU, type MenuEntry } from '../menu';
 export function Home({ go }: { go: (route: string) => void }) {
   return (
     <>
-      <header className="home-header">
+      <header className="page-header">
         <h1>Pitch Space</h1>
         {/*
           Settings is chrome, not a destination, so it is a corner control

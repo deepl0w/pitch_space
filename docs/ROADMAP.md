@@ -24,6 +24,7 @@ it ships or is dropped.
 - [A settings screen](#a-settings-screen)
 - [Taking your progress with you](#taking-your-progress-with-you)
 - [Bringing your own material](#bringing-your-own-material)
+- [A guitar that sounds like a guitar](#a-guitar-that-sounds-like-a-guitar)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 [`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
@@ -39,6 +40,17 @@ it evenly — which is the usual reason a practice app stops being used.
 Spaced repetition replaces the uniform sample with a schedule: each practisable
 atom carries its own review history, and the generator is steered towards the
 ones that are due.
+
+**Much of this is now built and none of it is connected**, which is a state
+worth naming because a plan describing built work as unstarted is the one kind
+of staleness nobody is positioned to notice. `src/state/schedule.ts`,
+`src/state/line.ts` and the item tally all exist and are tested;
+`tools/report-facts.sh` prints `scheduler 0 production importer(s)`, and that
+line rather than this paragraph is the thing to believe. Records
+[0039](adr/0039-a-line-is-an-exercise-and-the-items-its-settings-make-askable.md)
+to [0044](adr/0044-deterministic-is-not-the-same-as-seeded.md) settled the
+questions below that have been settled; where this section and a record
+disagree, the record is right and this text has not caught up.
 
 ### What an item is
 
@@ -123,13 +135,23 @@ algorithm knows the prior art exists and does not re-derive it.
 
 ### The algorithm
 
-Start with **SM-2**: about fifty lines, thoroughly understood, and its failure
-modes are documented everywhere. FSRS is better and the migration path is
-real — both store per-item state and differ in what they keep — but tuning FSRS
-needs a review corpus that does not exist yet. Revisit once there is one.
+Planned as **SM-2**. **What shipped is a Leitner ladder** — a fixed sequence
+of intervals in `INTERVALS_MS`, indexed by the count of consecutive correct
+answers, with no ease factor and no lapse count. Simpler than the plan and
+enough to schedule against; the paragraph below describing per-item ease and
+lapse counts was the plan and is not the code.
 
-Scheduler state is per item: ease, interval, due date, lapse count, plus a
-short rolling history for the latency signal below.
+Scheduler state is per item and per line: `seen`, `correct`, `lastSeenAt` and
+`streak`. The ladder is read at `streak`, so an item that lapses falls back
+down it rather than having an ease penalty applied.
+
+**FSRS is now the named successor rather than a someday.**
+[0040](adr/0040-completion-replaces-the-score.md) needs a continuous quantity
+to read a line's state from, and FSRS's *retrievability* — the decaying
+probability of recall now — is the one it was reaching for;
+`docs/research/2026-10-07-spaced-repetition.md` has the sources. Tuning it
+still needs a review corpus that does not exist, so the ladder stays until one
+does.
 
 **Latency matters more here than in flashcards.** A musician who plays the
 right note after two seconds of thought has not learned it. Grade on
@@ -147,7 +169,9 @@ pools, raising the probability of due items without ever making an excluded one
 reachable. So the order is constraints first (hard filter), then scheduling
 weights (soft preference), then the seeded draw.
 
-Two consequences worth stating now:
+Both consequences below have since landed, and are kept here because the
+reasoning is what makes the next one obvious rather than because they are
+outstanding:
 
 - The generator must be able to report **which items an exercise actually
   exercised**, which means emitting item ids alongside the notes. It already
@@ -159,12 +183,18 @@ Two consequences worth stating now:
 
 ### Storage and honesty
 
-Review history is user data, lives in IndexedDB, and needs a versioned
-migration from the first release. It is also the first thing in the app whose
+Review history is user data and lives in IndexedDB.
+**It does not get a versioned migration yet, and that is a ruling rather than
+an omission**: [0042](adr/0042-history-is-disposable-until-settings-settle.md)
+makes history disposable while the settings schemas are still moving, with the
+porting system owed once they settle. The sentence that stood here demanded a
+migration from the first release and was written before that was decided. It is also the first thing in the app whose
 loss would actually matter to someone, which makes export worth having early.
 
 A "due today" count on the home screen is the whole visible surface of this
-feature, and it should be honest: no streaks, no manufactured urgency. If
+feature, and it should be honest: no streaks, no manufactured urgency. That has
+since hardened into a decision: 0040 removes completion altogether, so there is
+no finished state to dramatise even if someone wanted to. If
 nothing is due, say so and offer free practice.
 
 ## Following the music on the staff
@@ -519,6 +549,60 @@ Three things will be the work, and none of them is the parsing:
   on a corpus that does not add up, which is right for data written by a
   contributor and wrong for data arriving from a file. An import needs to
   refuse an entry and say why, not take the app down.
+
+## A guitar that sounds like a guitar
+
+From the user, deferred by them rather than asked for now:
+
+> guitar sound is weird because the chords are still piano chords with reverb,
+> in the future they should be real guitar chords with strumming
+
+**The diagnosis is right and the code agrees with it in writing.** Chord voices
+come from `voiceChord` in `theory/chord.ts`, which is pianistic on purpose —
+its own comment on drop-2 says it is "the voicing a pianist actually plays".
+Selecting the guitar timbre changes the oscillators and nothing about which
+notes are chosen, so the chord is already a piano's before any sound is made.
+
+**There is no reverb, and that matters because removing it is the obvious
+reading.** There is no convolver, no delay and no effects node anywhere in
+`src/audio/output/`. What is audible as a wash is the guitar's own envelope
+tail — a 0.12 s decay to 0.18 of peak and a 0.3 s release — across notes that
+all start at the same instant. Nothing to remove; something to stagger.
+
+### The two halves are not the same size, and not in the same layer
+
+That second point is the reason to sequence them, more than the cost is.
+
+**Strumming is cheap and changes only the sound.** A `Voice` already carries
+its own `start`, and `playVoice` takes the time to schedule at, so spreading a
+chord's voices by 15–30 ms from the lowest string upwards needs no new theory
+and no new data. It lives entirely in `audio/output/`, below the platform edge,
+where nothing above it can observe the difference — which means no exercise's
+answer can change as a result.
+
+**Guitar voicings are expensive and change what is correct.** A real chord is a
+fretboard shape: six strings, open strings ringing, notes doubled an octave
+apart, and a bass note that is whatever the shape puts there rather than
+whatever the inversion asked for. That is a new catalogue in `theory/` keyed by
+shape rather than inversion, and `voiceChord` is not only a sound — the
+chord-identification exercise and the chords screen both call it, so its output
+is part of what a learner is graded against. Changing it is a change to the
+question, not to its presentation.
+
+**So strumming first**, and not merely because it is smaller. It is reversible,
+invisible to every test above `audio/output/`, and improves the thing the user
+actually complained about first hearing. The voicing work can then be taken as
+what it is — a theory change with exercise consequences — rather than smuggled
+in beside an audio tweak.
+
+**One open question it should not pretend to settle**: whether a guitar voicing
+is the same item as the piano voicing of the same chord.
+[0043](adr/0043-an-instrument-is-not-part-of-what-a-line-measures.md) ruled
+that an instrument is a property of playback and not part of what a line
+measures, which is right while the instrument changes only timbre. A fretboard
+shape changes the notes, so it would reach `items(settings)` and the ruling
+would not cover it. That is 0039's escape clause territory and wants deciding
+before the catalogue is written, not after.
 
 ## Also planned, not yet designed
 

@@ -408,7 +408,6 @@ reproduce exactly.
   the reader may have changed. Before asking what a value should be,
   ask which quantity the page already has that it *is*.
 
-
 - **A tracked document does not chase a figure the next commit can change.**
   Either the number is read out of the repository when someone asks for it
   (`tools/report-facts.sh`), or the document says which commit it describes

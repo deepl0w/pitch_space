@@ -392,13 +392,22 @@ reproduce exactly.
   Where two things have to line up — a fixed control and the page edge it
   sits at, a column and the gutter beside it — give the value a name once
   and reference it, rather than writing a number in each place and
-  trusting them to stay equal. `--gutter` is the first of these. The cost
+  trusting them to stay equal. `--page-inset` is the first of these. The cost
   of the other way is not untidiness: reserving space for the settings cog
   with a `padding-right` on every header shifted each header's *content*
   centre by half the reserved width, so the title stopped sharing an axis
   with the stave beneath it and the page had two centres for no reason a
   reader could see. A number that merely matches another number is a
   number that will stop matching.
+
+  **Naming a constant is not the same as removing one**, and the first
+  attempt at this rule did only the first. `--page-inset` began as
+  `16px`: three copies collapsed into one, which is better, and still a
+  number chosen rather than derived. It is `1rem` now — the browser's
+  default text size, which the document already scales from and which
+  the reader may have changed. Before asking what a value should be,
+  ask which quantity the page already has that it *is*.
+
 
 - **A tracked document does not chase a figure the next commit can change.**
   Either the number is read out of the repository when someone asks for it

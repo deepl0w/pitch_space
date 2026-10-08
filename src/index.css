@@ -10,11 +10,27 @@
   --wrong: #b4442e;
   --score-ink: #1a1a1a;
   /*
-    The page's own edge, named so that anything which has to sit at it
-    derives from the same value rather than repeating a number that
-    merely matches. The fixed cog uses it; so does `main`'s padding.
+    How far the page's content stands off the window's edge.
+
+    Named so that anything which has to sit at that edge derives from
+    the same value rather than repeating a number that merely matches:
+    `main`'s padding uses it, and so does the fixed settings cog, which
+    is why the cog lines up with the text rather than approximately so.
+
+    Not `--gutter`, which it was briefly called and which means the
+    space *between* columns — `gap`'s job, not this one. A reader asked
+    what it was, which is the whole of the argument for the rename.
+
+    **One `rem`, not sixteen pixels.** It was written as `16px`, which
+    is a hardcoded copy of the browser's default text size and the only
+    pixel spacing in a file where every other margin and padding is in
+    `rem`. Two faults in one number: it duplicated a value the document
+    already has, and it ignored it — a reader who sets larger text got
+    bigger words crowded against the same narrow edge. Expressed in
+    `rem` it is not an independent choice at all, it is the page edge
+    standing off by the width the reader reads at.
   */
-  --gutter: 16px;
+  --page-inset: 1rem;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -72,7 +88,7 @@ body {
 main {
   max-width: 60rem;
   margin: 0 auto;
-  padding: 2rem var(--gutter) 4rem;
+  padding: 2rem var(--page-inset) 4rem;
 }
 
 /* Wide enough for two columns: use the screen rather than centring a
@@ -163,7 +179,7 @@ main {
 /* Below the breakpoint it is an ordinary page again: settings first, then
    the question, both scrolling with everything else. */
 @media (max-width: 59.999rem) {
-  main.shell { padding: 2rem var(--gutter) 4rem; }
+  main.shell { padding: 2rem var(--page-inset) 4rem; }
   .practice-settings .back { padding-bottom: 0.5rem; }
 }
 
@@ -246,7 +262,7 @@ h1 { font-size: 1.45rem; margin: 0 0 0.3rem; font-weight: 650; letter-spacing: -
    side of a phone's scroll when the columns stacked. One element,
    rendered outside every screen, so no screen's layout can move it. */
 .cog {
-  position: fixed; top: var(--gutter); right: var(--gutter);
+  position: fixed; top: var(--page-inset); right: var(--page-inset);
   z-index: 15;
   display: grid; place-items: center;
   /* Comfortably past the 44px a thumb reliably hits, because it is now

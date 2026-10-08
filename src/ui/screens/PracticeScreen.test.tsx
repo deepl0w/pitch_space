@@ -503,7 +503,31 @@ describe('narrowing the pool while a question is on screen', () => {
     let wouldHaveBeenUnanswerable = 0;
     let answered = 0;
 
-    for (let round = 0; round < 8; round += 1) {
+    /*
+      Eight rounds, then as many more as it takes to reach the state the
+      control is about, up to a bound.
+
+      The screen mints its own seed per round (`newSeed`, by design — that is
+      where nondeterminism is allowed to enter), so which of the two intervals
+      comes up is a coin. Eight rounds therefore left a one-in-256 chance that
+      Unison never came up, the control never fired, and the walk reported a
+      defect in whoever's commit happened to be passing through the shared
+      gate. That is not a flake to retry: it is a sweep whose population does
+      not reliably contain the case it exists to demonstrate.
+
+      Continuing until it does is the mechanism rather than a bigger number
+      hoped at — if the generator ever stopped producing Unison from a pool of
+      two, the bound trips and the failure says so, which is the honest
+      outcome and the one a larger fixed count would hide for another 256
+      runs.
+    */
+    const ENOUGH = 8;
+    const BOUND = 48;
+    for (
+      let round = 0;
+      round < BOUND && (round < ENOUGH || wouldHaveBeenUnanswerable === 0);
+      round += 1
+    ) {
       act(() => { screen.button(round === 0 ? 'Start' : 'Next')?.click(); });
       screen.toggle('Unison');
       const offered = screen.choices();
@@ -534,7 +558,10 @@ describe('narrowing the pool while a question is on screen', () => {
       is the state that used to leave one wrong button on screen.
     */
     expect(wouldHaveBeenUnanswerable,
-      'no round had its own answer unticked, so none of them was the defect')
+      `no round in ${answered} had its own answer unticked, so none of them `
+      + 'was the defect — from a pool of two that is the generator, not luck')
       .toBeGreaterThan(0);
+    expect(answered, 'the walk ran to its bound without reaching the case')
+      .toBeLessThan(BOUND);
   });
 });

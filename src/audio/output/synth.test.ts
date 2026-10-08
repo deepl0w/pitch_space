@@ -539,6 +539,30 @@ describe('playing again while something is still sounding', () => {
  * oscillators, and that it reaches them differently for different
  * instruments.
  */
+/**
+ * The one note envelope on the graph, identified rather than guessed at.
+ *
+ * It used to be "the gain with the most automation events", which worked
+ * and was a structural guess about the fake rather than a stated contract.
+ * Measured: the master also carries automation — `stopAll` ramps it down
+ * and back on every play — so the margin was **5 events against 4**. One
+ * more point in the master's ramp, or one fewer in the envelope, and every
+ * case below would have been asserting about the master's fade with
+ * nothing to say so.
+ *
+ * The master is `gains()[0]` and the double exposes it, so the envelope is
+ * the automated gain that is not it. The count is checked because "exactly
+ * one" is the thing that makes "the" meaningful: a chord, or a second
+ * voice, would make this ambiguous and should fail here rather than pick
+ * one silently.
+ */
+function noteEnvelope(): { time: number; value: number }[] {
+  const master = masterGain();
+  const automated = gains().filter((g) => g !== master && g.events.length > 0);
+  expect(automated, 'not exactly one note envelope on the graph').toHaveLength(1);
+  return [...automated[0].events].sort((a, b) => a.time - b.time);
+}
+
 describe('choosing an instrument', () => {
   it('changes how many oscillators a note costs', () => {
     /*
@@ -608,13 +632,10 @@ describe('choosing an instrument', () => {
       A comparison between the two instruments would pass with both
       holding, which is how the first version of this missed it.
     */
-    const envelopeOf = () => gains()
-      .reduce((a, b) => (b.events.length > a.events.length ? b : a)).events;
-
     advanceAudioClock(5);
     synth.setInstrument('piano');
     synth.play([{ midi: 60, start: 0, duration: 2 }]);
-    const struck = envelopeOf();
+    const struck = noteEnvelope();
 
     resetAudio();
     installAudioContext();
@@ -622,24 +643,34 @@ describe('choosing an instrument', () => {
     const organ = new Synth();
     organ.setInstrument('organ');
     organ.play([{ midi: 60, start: 0, duration: 2 }]);
-    const held = envelopeOf();
+    const held = noteEnvelope();
 
-    // The decay point is the second-highest value; the note's end is the
-    // last event before the release reaches silence.
+    /*
+      Read off the curve rather than against a figure. The claim is the
+      comment's own — a struck note ends *below the level it decayed to*
+      and a held one ends *at* it — and the decay level is on the curve:
+      the peak is the attack and the value after it is where the decay
+      settled. Comparing against 0.3 instead was that claim only by
+      arithmetic coincidence, because the piano's `decayTo` happens to be
+      0.3 of a peak of 1; retuning it would have made the assertion
+      quietly stronger or weaker than the sentence above it.
+    */
     const shape = (es: { time: number; value: number }[]) => {
-      const sorted = [...es].sort((a, b) => a.time - b.time);
-      const peak = Math.max(...sorted.map((e) => e.value));
-      const atEnd = sorted[sorted.length - 2];
-      return { peak, atEnd: atEnd.value };
+      const peak = Math.max(...es.map((e) => e.value));
+      const decayed = es[es.findIndex((e) => e.value === peak) + 1].value;
+      return { peak, decayed, atEnd: es[es.length - 2].value };
     };
 
     const a = shape(struck);
     const b = shape(held);
     expect(a.peak, 'the envelope never rose').toBeGreaterThan(0);
-    expect(a.atEnd / a.peak, 'a struck note stopped falling')
-      .toBeLessThan(0.3);
-    expect(b.atEnd / b.peak, 'a held note did not hold')
-      .toBeGreaterThan(0.9);
+    expect(a.decayed, 'the decay went nowhere, so there is no level to fall below')
+      .toBeLessThan(a.peak);
+
+    expect(a.atEnd, 'a struck note stopped falling at its decay level')
+      .toBeLessThan(a.decayed);
+    expect(b.atEnd, 'a held note fell below the level it decayed to')
+      .toBeCloseTo(b.decayed, 6);
   });
 
   it('trims a held voice down, so switching is not a volume change', () => {

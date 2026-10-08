@@ -400,10 +400,21 @@ thing anyone is tested on.
 
 ### `main`, then `architect` — recorded instruments are the aim, synthesis the floor
 
-**Branch:** `main`, starting now. **Settled:** the direction, and the
-measurement below. **Not settled:** how a pack reaches the device, which
-is the architect's to propose and which nothing downstream has to wait
-for — the seam is the same either way.
+**Branch:** `main`, starting now. **Settled:** the direction, the
+measurement below, and — as of `83e5d19` — how a pack reaches the device.
+**The block this entry carried is removed**, stated rather than left to
+lapse: nothing here is waiting on a decision any more.
+
+[ADR 0046](adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md)
+answers it. Synthesis is precached and is the offline guarantee; a pack
+is runtime-cached on first use, immutable and versioned in its URL, and
+never enters `globPatterns`. Choosing an instrument whose pack is absent
+is not an error — synthesis plays, the download runs behind it, later
+notes are sampled — so there is nothing to block on and no spinner to
+design. Two consequences for whoever builds this: **the pack builder
+writes the credits index**, which ships in the bundle so the surface
+works offline and before any download, and **CC0 packs may ship before
+that screen exists while CC-BY packs may not**.
 
 **Why.** The user's words: *"i want accurate sounds, the exercises work
 better when you listen to instruments you are familiar with. artificial
@@ -517,6 +528,25 @@ component *can* be used correctly while the mistake was being made at the
 call site. Every other `OneOf` in the app passes `group`; these two were
 the only ones that did not, which is exactly the distribution a
 component-level test cannot see.
+
+**The mechanism is confirmed from first principles, not just asserted
+here.** Worth stating in the repository because the check itself lives in
+`docs/findings/`, which is gitignored and never leaves the worktree that
+wrote it. The user role built a bare static page — a `<label>` round two
+buttons and `button:active { transform: translateY(1px) }`, no app code —
+pressed the second button and sampled while the mouse was genuinely held:
+both buttons carried `matrix(1, 0, 0, 1, 0, 1)` and both matched
+`:active`, and neither did before or after. So the rule below rests on
+how `<label>` behaves in HTML, not on how this codebase happens to be
+written, which is why it is worth carrying to other screens.
+
+Two earlier attempts at that confirmation are worth knowing about,
+because both are easy to repeat. A before-and-after pixel diff finds
+nothing: the transform exists only while the button is held, so comparing
+two idle states compares two correct screens. And reading this
+repository's own commit message and test comments is reading the author's
+account of the author's measurement — it would have agreed just as
+readily had the mechanism been wrong.
 
 **For tester.** The generalisable claim, now in
 `src/ui/screens/Settings.test.tsx`: **no `<label>` may contain more than

@@ -106,6 +106,53 @@ describe('generating an interval', () => {
     }
   });
 
+  it('does not tie a sounding note to one spelling, wished or not', () => {
+    /*
+      The reading difficulty of a question is partly its accidentals, and
+      the same sound written two ways is two different things to read: a
+      learner who only ever meets `F#` has not met `Gb`. So the spelling is
+      a coin the seed tosses, and **nothing pinned that it goes on being
+      tossed**.
+
+      Handed here from `aiming.test.ts` rather than bolted onto it. That
+      file asks whether aiming flattens a field, and it cannot see this
+      one: pinning the spelling whenever a wish is honoured leaves
+      `pitches` varying by register alone, so the field goes on varying
+      while a dimension inside it has stopped. Projecting the register out
+      — asking what a *given* sounding note is written as — is a claim
+      about spelling, which is why it lives where the spelling rules do.
+
+      **Asked of the first note only, which took a measurement to get
+      right.** Over both notes the claim is true and blunt: the second note
+      is spelled from the interval rather than from the coin, so a given
+      sounding note turns up spelled one way as a first note and another
+      way as a second, and the count stays healthy even when the coin is
+      pinned. Projected onto the first note — the one the coin actually
+      spells — pinning it takes 7 of 18 to 0, which is the whole of the
+      claim. Over both notes the same mutant only falls 14 to 7 and passes.
+    */
+    const spec = settings({ semitones: ALL_SEMITONES, directions: ALL_DIRECTIONS });
+    const spellingsByNote = (prefer?: string) => {
+      const byMidi = new Map<number, Set<string>>();
+      for (let seed = 0; seed < 300; seed += 1) {
+        const exercise = generateInterval({
+          seed, settings: spec, ...(prefer === undefined ? {} : { prefer }),
+        } as never);
+        const first = exercise.pitches[0];
+        const midi = midiOf(first);
+        byMidi.set(midi, (byMidi.get(midi) ?? new Set<string>()).add(pitchName(first, false)));
+      }
+      return [...byMidi.values()].filter((names) => names.size > 1).length;
+    };
+
+    // The control first: a generator that spelled everything one way would
+    // make the aimed half below true for the wrong reason.
+    expect(spellingsByNote(), 'no sounding note is ever written two ways')
+      .toBeGreaterThan(0);
+    expect(spellingsByNote('interval:m2:up'),
+      'honouring a wish tied every note to one spelling').toBeGreaterThan(0);
+  });
+
   it('never needs more than a double accidental, which is all a staff can draw', () => {
     const spec = settings({ semitones: ALL_SEMITONES, directions: ALL_DIRECTIONS });
     for (let seed = 0; seed < SEEDS; seed++) {

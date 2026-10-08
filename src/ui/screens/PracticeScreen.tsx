@@ -160,6 +160,26 @@ export function PracticeScreen({
     */
     <div className="practice-layout">
       {/*
+        The settings cog belongs to the layout rather than to either
+        column, because the two columns swap places below the
+        breakpoint. In the question pane's header it was top-right of
+        the window when wide and **697 px down the page** on a phone —
+        below every exercise setting, which is the one place a control
+        for changing settings must not be. Anchored here it is the
+        top-right corner of the practice page in both arrangements,
+        which is where the home screen's cog is and what the user asked
+        for.
+      */}
+      <button
+        type="button"
+        className="cog cog-corner"
+        onClick={onOpenSettings}
+        aria-label="Settings"
+        title="Settings"
+      >
+        <CogIcon />
+      </button>
+      {/*
         The sidebar: where you are, and what you are being asked. The
         panel is rendered here rather than inside `ExerciseRound` so the
         column can be the height of the window — inside, it began below
@@ -203,23 +223,11 @@ export function PracticeScreen({
       </aside>
 
       <div className="practice-main">
-      <header className="page-header">
+      <header>
         {/* No "practice" tag. You are on the practice screen; saying so
             is the heading telling you where you already are. */}
         <h1>{family.name}</h1>
         <p className="lede">{definition.description}</p>
-        {/* The same corner and the same control as the home screen's.
-            It was briefly a floating circle over the question and read
-            as a different thing doing the same job. */}
-        <button
-          type="button"
-          className="cog"
-          onClick={onOpenSettings}
-          aria-label="Settings"
-          title="Settings"
-        >
-          <CogIcon />
-        </button>
       </header>
 
       {/*

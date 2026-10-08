@@ -1,5 +1,6 @@
 import type { ItemId, ItemOutcome, Presentation } from '../exercises/types';
 import { assertStepsCoverVersions, type MigrationStep, type Versioned } from './migrate';
+import { DEFAULT_INSTRUMENT_ID, isInstrumentId } from '../audio/output/instruments';
 
 /**
  * Every shape this app writes to a user's device, with its version.
@@ -88,6 +89,17 @@ export interface AppearanceSettings {
    */
   theme: 'system' | 'light' | 'dark';
   /**
+   * Which synthesised voice the app plays in, by id.
+   *
+   * An id rather than the instrument itself, because this is written to
+   * a user's device: storing the partials and envelope would freeze a
+   * release's idea of a piano into every profile that ever chose one,
+   * and tuning it afterwards would reach nobody. An id that no longer
+   * exists repairs to the default below, which is the same rule every
+   * other field here follows.
+   */
+  instrument: string;
+  /**
    * Output level, 0 to 1, as a fraction of the engine's own level rather
    * than an absolute: `synth.ts` sets a master gain chosen so a chord does
    * not clip, and this scales it. One is that level and not full scale.
@@ -95,7 +107,9 @@ export interface AppearanceSettings {
   volume: number;
 }
 
-export const APPEARANCE_DEFAULTS: AppearanceSettings = { theme: 'system', volume: 1 };
+export const APPEARANCE_DEFAULTS: AppearanceSettings = {
+  theme: 'system', volume: 1, instrument: DEFAULT_INSTRUMENT_ID,
+};
 
 /** Version 3 adds the preferences that are not about a particular exercise. */
 export interface SettingsDocV3 extends SettingsDocV2 {
@@ -186,7 +200,18 @@ function coerceAppearance(value: unknown): AppearanceSettings {
   const volume = typeof a.volume === 'number' && Number.isFinite(a.volume)
     ? Math.min(1, Math.max(0, a.volume))
     : APPEARANCE_DEFAULTS.volume;
-  return { theme, volume };
+  /*
+    No version bump for this field, and that is the point of repairing
+    field by field: a stored document written before the instrument
+    existed has no `instrument` key, reads as unknown, and becomes the
+    default. A migration step would do the same thing and would also
+    have to be kept in step with the catalogue, which can retire a
+    voice — an id that was valid when written and is not now takes the
+    same path as one that never was.
+  */
+  const instrument = isInstrumentId(a.instrument)
+    ? a.instrument : APPEARANCE_DEFAULTS.instrument;
+  return { theme, volume, instrument };
 }
 
 /**

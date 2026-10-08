@@ -1,5 +1,6 @@
 import { entryFor } from '../menu';
 import { Field, OneOf, Panel, Slider } from '../controls';
+import { INSTRUMENTS } from '../../audio/output/instruments';
 import { appSynth } from '../sound';
 import { settingsStore, useSettings } from '../../state/settingsStore';
 
@@ -29,6 +30,21 @@ export function Settings({ go }: { go(route: string): void }) {
   function setTheme(theme: string) {
     if (theme !== 'system' && theme !== 'light' && theme !== 'dark') return;
     settingsStore.getState().setAppearance({ theme });
+  }
+
+  function setInstrument(id: string) {
+    settingsStore.getState().setAppearance({ instrument: id });
+    // Stored and pushed, the same pair as the volume below: stored so it
+    // survives a reload, pushed so the next note uses it rather than the
+    // next session.
+    appSynth.setInstrument(id);
+    /*
+      And sounded, which the volume does not need to do because the user
+      is already hearing something when they drag it. An instrument
+      picked in silence tells you nothing, and the whole reason to pick
+      one is what it sounds like — so the control demonstrates itself.
+    */
+    appSynth.play([{ midi: 60, start: 0, duration: 0.6 }]);
   }
 
   function setVolume(volume: number) {
@@ -102,15 +118,19 @@ export function Settings({ go }: { go(route: string): void }) {
 
       <Panel>
         <Field label="Instrument">
+          <OneOf
+            options={INSTRUMENTS.map((i) => ({ id: i.id, label: i.name }))}
+            chosen={appearance.instrument}
+            onChange={setInstrument}
+          />
           {/*
             No repository path here. This screen is served to anyone who
             opens the site, and a reader there cannot follow a filename —
             the user role caught it. What they can use is the reason.
           */}
           <p className="secondary">
-            One synthesised instrument for now. Sampled instruments are
-            planned, and are waiting on a sample pack small enough to keep
-            the app working offline.
+            Synthesised rather than recorded, so the app keeps working
+            offline. Picking one plays a note.
           </p>
         </Field>
       </Panel>

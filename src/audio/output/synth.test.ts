@@ -529,3 +529,109 @@ describe('playing again while something is still sounding', () => {
       .toBeGreaterThan(last.time);
   });
 });
+
+/**
+ * The voice a note is played in.
+ *
+ * The envelope used to be the piano's, written into `scheduleNote`. It
+ * now comes from the chosen instrument, which is the whole of what makes
+ * a picker worth having — so the claims are that the choice reaches the
+ * oscillators, and that it reaches them differently for different
+ * instruments.
+ */
+describe('choosing an instrument', () => {
+  it('changes how many oscillators a note costs', () => {
+    /*
+      Observable from outside without listening: the partial count is
+      the oscillator count, and the organ's stack is deliberately
+      shorter than the strings'. If the choice were ignored, both would
+      produce the piano's seven.
+    */
+    advanceAudioClock(5);
+    synth.setInstrument('organ');
+    synth.play(notes(1));
+    const organ = oscillators().length;
+
+    resetAudio();
+    installAudioContext();
+    advanceAudioClock(5);
+    const other = new Synth();
+    other.setInstrument('strings');
+    other.play(notes(1));
+
+    expect(organ, 'no oscillators, so nothing below is asserted').toBeGreaterThan(0);
+    expect(oscillators().length).not.toBe(organ);
+  });
+
+  it('holds a sustained voice and lets a struck one decay', () => {
+    /*
+      The behavioural half, and the reason the envelope was generalised
+      rather than branched. An organ's note is still near its peak when
+      a piano's has fallen away, which is a fact about the gain curve
+      and needs no ear to check.
+    */
+    advanceAudioClock(5);
+    synth.setInstrument('piano');
+    synth.play([{ midi: 60, start: 0, duration: 1 }]);
+    // The envelope is the gain with automation on it: partial gains get a
+    // plain `.value` and the master is set once, so neither has a curve.
+    const envelopeOf = () => gains()
+      .reduce((a, b) => (b.events.length > a.events.length ? b : a)).events.map((e) => e.value);
+    const struck = envelopeOf();
+
+    resetAudio();
+    installAudioContext();
+    advanceAudioClock(5);
+    const held = new Synth();
+    held.setInstrument('organ');
+    held.play([{ midi: 60, start: 0, duration: 1 }]);
+    const sustained = envelopeOf();
+
+    const floor = (vs: number[]) => Math.min(...vs.filter((v) => v > 0.0002));
+    const peak = (vs: number[]) => Math.max(...vs);
+    expect(peak(struck), 'the envelope never rose').toBeGreaterThan(0);
+    expect(floor(struck) / peak(struck), 'a struck note did not decay')
+      .toBeLessThan(floor(sustained) / peak(sustained));
+  });
+
+  it('runs a stiff instrument sharp in its upper partials and a pipe true', () => {
+    /*
+      Inharmonicity is what stops a stack of exact harmonics sounding
+      like an organ whatever envelope it is given, so the organ's value
+      being honestly zero is a claim about the sound and not a rounding.
+
+      Asserted against the exact multiple rather than against a figure:
+      the coefficient is tunable and this stays true while it is, which
+      is the difference between pinning a constant and pinning that the
+      constant is used at all.
+    */
+    advanceAudioClock(5);
+    synth.setInstrument('piano');
+    synth.play([{ midi: 69, start: 0, duration: 1 }]);
+    const stiff = oscillators().map((o) => o.frequency).sort((a, b) => a - b);
+
+    resetAudio();
+    installAudioContext();
+    advanceAudioClock(5);
+    const pipe = new Synth();
+    pipe.setInstrument('organ');
+    pipe.play([{ midi: 69, start: 0, duration: 1 }]);
+    const true_ = oscillators().map((o) => o.frequency).sort((a, b) => a - b);
+
+    expect(stiff.length, 'nothing sounded, so nothing below is asserted')
+      .toBeGreaterThan(2);
+    // A440, so the nth partial is exactly 440n if nothing bends it.
+    expect(stiff[0]).toBeCloseTo(440, 3);
+    expect(stiff[2], 'the piano’s third partial is not sharp').toBeGreaterThan(440 * 3);
+    expect(true_[2], 'the organ’s third partial is not true').toBeCloseTo(440 * 3, 3);
+  });
+
+  it('falls back to the default rather than throwing on an unknown id', () => {
+    // The store repairs, but the engine is also handed ids by a caller
+    // and must not take the app down over one.
+    advanceAudioClock(5);
+    expect(() => synth.setInstrument('tuba')).not.toThrow();
+    synth.play(notes(1));
+    expect(oscillators().length).toBeGreaterThan(0);
+  });
+});

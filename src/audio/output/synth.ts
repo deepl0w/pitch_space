@@ -1,3 +1,6 @@
+import {
+  DEFAULT_INSTRUMENT_ID, instrument, isInstrumentId, type Instrument,
+} from './instruments';
 /**
  * A small synthesised instrument.
  *
@@ -25,7 +28,7 @@ export interface Voice {
 const MASTER_GAIN = 0.22;
 
 /** A few partials with a little inharmonicity reads as struck rather than buzzy. */
-const PARTIALS = [1, 0.5, 0.28, 0.16, 0.09, 0.05, 0.03];
+/* The piano's stack now lives in the catalogue; see `instruments.ts`. */
 
 /**
  * How long a device may take to open before the first sample plays.
@@ -57,6 +60,16 @@ export const DEVICE_OPEN_SECONDS = 0.2;
  */
 export const CLOCKLESS_HEADROOM = DEVICE_OPEN_SECONDS + 0.05;
 
+/**
+ * The floor an exponential ramp fades to.
+ *
+ * `exponentialRampToValueAtTime` cannot reach zero — it throws — so
+ * every fade ends just below hearing instead. One constant rather than
+ * the literal repeated, because it appears at both ends of the envelope
+ * and the two have to agree.
+ */
+const SILENT = 0.0001;
+
 export class Synth {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
@@ -77,6 +90,33 @@ export class Synth {
    * in; nothing here reaches out for it.
    */
   private volume = 1;
+  /**
+   * Which voice to speak in, pushed in by the composition root for the
+   * same reason the volume is: this class must not reach into a store.
+   *
+   * Held as an id rather than an `Instrument` so an unknown one coming
+   * back from storage fails at the boundary that read it rather than
+   * here, and so the default survives a release that retires a voice.
+   */
+  private voice = instrument(DEFAULT_INSTRUMENT_ID);
+
+  /**
+   * Choose the instrument. Takes effect on the next note, not this one.
+   *
+   * Notes already scheduled keep the voice they were scheduled with,
+   * because their oscillators and envelope are already laid down against
+   * the audio clock. Changing instrument mid-passage therefore changes
+   * the next passage, which is also what a listener expects — a piano
+   * does not become an organ halfway through a chord.
+   */
+  setInstrument(id: string): void {
+    this.voice = isInstrumentId(id) ? instrument(id) : instrument(DEFAULT_INSTRUMENT_ID);
+  }
+
+  /** The voice the next note will be scheduled with. */
+  private instrument(): Instrument {
+    return this.voice;
+  }
 
   /** Set the output level. Takes effect immediately, mid-passage included. */
   setVolume(fraction: number): void {
@@ -276,30 +316,60 @@ export class Synth {
   private scheduleNote(
     context: AudioContext, destination: GainNode, voice: Voice, at: number,
   ): void {
+    const voiceOf = this.instrument();
     const frequency = 440 * Math.pow(2, (voice.midi - 69) / 12);
     const envelope = context.createGain();
     envelope.connect(destination);
 
-    // A struck string decays throughout rather than holding a level, so the
-    // envelope is attack-and-decay with no sustain segment.
-    const peak = (voice.gain ?? 1) / PARTIALS.length;
-    envelope.gain.setValueAtTime(0, at);
-    envelope.gain.linearRampToValueAtTime(peak, at + 0.008);
-    envelope.gain.exponentialRampToValueAtTime(peak * 0.3, at + 0.18);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, at + voice.duration + 0.25);
+    /*
+      Attack, decay to a sustain level, then release — one shape covering
+      both kinds of instrument rather than a branch. A struck string has
+      a sustain near zero and reaches it quickly, which is the same curve
+      as an organ's with different numbers in it; writing them as two
+      cases would make "is this plucked" a thing the synth decides rather
+      than a thing the instrument says.
 
-    for (const [index, amplitude] of PARTIALS.entries()) {
+      Exponential ramps throughout because loudness is perceived that
+      way, and they cannot reach zero — hence the floor rather than a
+      ramp to silence.
+    */
+    const peak = (voice.gain ?? 1) / voiceOf.partials.length;
+    const sustain = Math.max(peak * voiceOf.sustain, SILENT);
+    const decayedBy = at + voiceOf.attack + voiceOf.decay;
+    const ends = Math.max(at + voice.duration, decayedBy);
+
+    envelope.gain.setValueAtTime(0, at);
+    envelope.gain.linearRampToValueAtTime(peak, at + voiceOf.attack);
+    envelope.gain.exponentialRampToValueAtTime(sustain, decayedBy);
+    envelope.gain.setValueAtTime(sustain, ends);
+    envelope.gain.exponentialRampToValueAtTime(SILENT, ends + voiceOf.release);
+
+    for (const [index, amplitude] of voiceOf.partials.entries()) {
       const partial = index + 1;
       const oscillator = context.createOscillator();
       oscillator.type = 'sine';
-      // Real strings are slightly sharp in their upper partials; without this
-      // a stack of exact harmonics sounds like an organ rather than a piano.
-      oscillator.frequency.value = frequency * partial * (1 + 0.0004 * partial * partial);
+      // Real strings are slightly sharp in their upper partials; without
+      // this a stack of exact harmonics sounds like an organ rather than
+      // a piano — which is why the organ's coefficient is honestly zero.
+      /*
+        The fundamental is exact and only the partials above it are
+        stretched. The stiffness term used to apply to every partial
+        including the first, which put the note itself 0.7 cents sharp —
+        inaudible, and still the wrong number for an app whose subject is
+        pitch: a learner matching a played A against this one was matching
+        something that was not quite A. The comment above always said
+        *upper* partials; the code did not.
+      */
+      oscillator.frequency.value = partial === 1
+        ? frequency
+        : frequency * partial * (1 + voiceOf.inharmonicity * partial * partial);
       const partialGain = context.createGain();
       partialGain.gain.value = amplitude;
       oscillator.connect(partialGain).connect(envelope);
       oscillator.start(at);
-      oscillator.stop(at + voice.duration + 0.4);
+      // Past the release rather than at it: stopping an oscillator while
+      // its envelope is still above silence is an audible click.
+      oscillator.stop(ends + voiceOf.release + 0.05);
       this.scheduled.push(oscillator);
       oscillator.addEventListener('ended', () => {
         this.scheduled = this.scheduled.filter((o) => o !== oscillator);

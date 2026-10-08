@@ -195,6 +195,33 @@ describe('asking for a particular item', () => {
     }
   });
 
+/*
+  Three measurements about generalising the case below, taken 8 October and
+  kept here because this is where someone generalising it will be reading.
+
+  ADR 0044 makes the wider claim: every value the settings allow should
+  appear over many seeds, wish or no wish. The case below is that claim
+  under a wish. The unwished version was swept for and **there is no second
+  instance of the defect today** — 400 exercises per type at the widest
+  settings, every multi-select dimension varying, and every frozen one a
+  `choice` field, which pins a single value by design. `scale-id.direction`
+  and `chord-id.sounding` were checked by name because they read like the
+  unison shape and are not.
+
+  **The generic guard is harder than it looks, and the reason is a fact
+  rather than a worry.** Matching an option id against generated output
+  needs the correspondence between a setting and the field it decides,
+  which a sweep does not have: `tonic:Ab` is an option id and the exercise
+  carries a `keyId`, so a first attempt reported twelve false positives
+  from that alone. 0044 says a coverage property has to know what should
+  vary; this is the shape of that cost.
+
+  **And `rhythm-id` varies no scalar field at all**, because its variety is
+  structural — bars and events. A scalar-coverage guard reads it as totally
+  frozen and is wrong about it, which is a false alarm rather than a false
+  pass, and the one that would be chased or special-cased by whoever writes
+  the obvious extension without knowing why.
+*/
   it('freezes only what the wish decides, and nothing else that was varying', () => {
     /*
       The contract above says the wished item must be asked. It says nothing

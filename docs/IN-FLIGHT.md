@@ -42,6 +42,7 @@ The block and the unblock are two edits, not one.
 - [`main` — four exercises, a scheduler, and the practice screen rebuilt](#main--four-exercises-a-scheduler-and-the-practice-screen-rebuilt)
 - [`architect`, then everyone — progress is per settings combination](#architect-then-everyone--progress-is-per-settings-combination)
 - [`main`, then `architect` — recorded instruments are the aim, synthesis the floor](#main-then-architect--recorded-instruments-are-the-aim-synthesis-the-floor)
+- [`main` — a caption that was a control, and the test that was at the wrong altitude](#main--a-caption-that-was-a-control-and-the-test-that-was-at-the-wrong-altitude)
 
 ### `main` — the score reports where it drew things, so a cursor can follow
 
@@ -491,3 +492,47 @@ not change which note is correct, or what grading accepts. Worth a record
 of its own is the reversal — synthesis was chosen as the destination and
 is now the floor — together with the rule the measurement earns, that
 user-facing copy may not state a cost nothing measured.
+
+### `main` — a caption that was a control, and the test that was at the wrong altitude
+
+**Branch:** `main`, landed at `0b15f55`. Kept here until tester has
+reviewed, because the interesting part is a claim about where a test
+belongs rather than the fix itself.
+
+**What it was.** `Field` renders `<label class="field">`, and a `<label>`
+forwards activation to its labelled control — the first labelable element
+inside it. The Theme and Instrument rows each wrapped six `<button>`
+chips, so the caption was a remote control for the first chip: pressing
+any option also depressed the first, and clicking the word "Instrument"
+selected Piano with nothing on screen to say the word did anything.
+Reported by the user, who saw the first chip's text twitch when they
+clicked a different one.
+
+**Why it survived.** `Field` grew a `group` prop for this exact defect
+some time ago, and `src/ui/controls.test.tsx` pins it with a comment
+describing the failure almost word for word. The component was correct
+the whole time. Two call sites in `Settings.tsx` never passed the flag,
+and nothing asked whether they had — so the suite was testing that the
+component *can* be used correctly while the mistake was being made at the
+call site. Every other `OneOf` in the app passes `group`; these two were
+the only ones that did not, which is exactly the distribution a
+component-level test cannot see.
+
+**For tester.** The generalisable claim, now in
+`src/ui/screens/Settings.test.tsx`: **no `<label>` may contain more than
+one interactive control**, asserted against a rendered screen rather than
+a hand-built fixture. Two things about it are worth copying rather than
+the fix.
+
+First, it found a third field on its first run — the volume slider, which
+pairs an `<input type="range">` with an `<output>`. That one is benign,
+because `<output>` is labelable but inert, so the rule was narrowed to
+interactive elements and the reason written into the test. A rule that
+fires where there is no defect gets switched off rather than obeyed.
+
+Second, the test is worth extending to the screens this one does not
+cover — `SettingsPanel`, `PracticeScreen`, `Calibration` — and that is
+the part left undone deliberately, because deciding whether it wants to
+be one shared helper or one case per screen is a tester's call and not
+main's. The three screens currently pass by inspection, which is not the
+same as being checked.

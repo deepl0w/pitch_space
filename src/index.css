@@ -31,6 +31,9 @@
     standing off by the width the reader reads at.
   */
   --page-inset: 1rem;
+  /* What a revealed answer adds, so the question does not move when it
+     appears. Measured, not chosen — see `.round-body:not(.answered)`. */
+  --answer-reserve: 19rem;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -188,6 +191,25 @@ main {
     flex-direction: column;
     justify-content: safe center;
   }
+  /*
+    The answer's room is held open before the answer exists.
+
+    Centring the question meant revealing the answer made the block
+    taller and re-centred it, so every control jumped — measured at
+    195px up, which moved the choice buttons out from under the
+    pointer that had just pressed one. A centred block is only stable
+    if its height does not change, so the unanswered state reserves
+    what the answered state will add.
+
+    The figure is measured rather than chosen: it is the height the
+    verdict, the stave and the tally actually occupy, read off the
+    chord round at a desktop width. It does not have to be exact —
+    being wrong by a little moves things by half of that little, and
+    `safe center` already gives up and anchors to the top when the
+    content is taller than the space, which is the case a reserve
+    cannot help with anyway.
+  */
+  .practice-body > .round-body:not(.answered) { padding-bottom: var(--answer-reserve); }
 }
 
 /* Below the breakpoint it is an ordinary page again: settings first, then
@@ -432,10 +454,30 @@ button {
 button:hover { filter: brightness(1.08); }
 button:active { transform: translateY(1px); }
 
+/*
+  The tally is a footnote, not a section.
+
+  It was built at the same weight as the question — a full heading, a
+  1rem box and two stacked lines per item — for content that is one
+  number per thing practised. At a glance it competed with the staff
+  above it for the eye, and the user asked for it smaller. Shrunk by
+  demoting the heading and putting each item's count beside its name
+  rather than under it, which is most of the height.
+*/
 .readout {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: 10px; padding: 1rem;
+  border-radius: 10px; padding: 0.6rem 0.75rem;
 }
+.readout h2 {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em;
+  margin: 0 0 0.45rem;
+}
+.readout .items li {
+  flex-direction: row; align-items: baseline; gap: 0.4rem;
+  padding: 0.3rem 0.55rem; min-width: 0;
+}
+.readout .items .primary { font-size: 0.82rem; }
+.readout .items .secondary { font-size: 0.72rem; }
 
 .items { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; }
 .items li {
@@ -693,6 +735,21 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 .choice.right { border-color: var(--right); color: var(--right); opacity: 1; font-weight: 650; }
 .choice.wrong { border-color: var(--wrong); color: var(--wrong); opacity: 1; font-weight: 650; }
 .verdict { font-size: 0.9rem; margin: 0.9rem 0 0; }
+
+/*
+  One axis for the whole question.
+
+  The buttons centre because they are flex rows; the prose did not,
+  because text defaults to the start edge. So the verdict and the
+  spelling under it began at the container's left edge while every
+  control above them was centred on the container's middle — about
+  480px apart at a desktop width, which reads as a column that has
+  come loose rather than as two deliberate alignments.
+
+  Set on `.prompt` rather than on each line, so an exercise that adds
+  a sentence gets it without knowing this rule exists.
+*/
+.prompt { text-align: center; }
 .verdict.right { color: var(--right); }
 .verdict.wrong { color: var(--wrong); }
 

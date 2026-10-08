@@ -24,7 +24,7 @@ import { APP_RULES, customProperties, rulesFor } from '../testing/stylesheet';
 /**
  * Whether a custom property's value is a colour.
  *
- * `:root` holds more than the palette — `--gutter` is a length the page
+ * `:root` holds more than the palette — `--page-inset` is a length the page
  * edge and the fixed settings cog both derive from, so that two things
  * meant to line up come from one value rather than two numbers that
  * happen to match. A length has no business being redeclared per theme,
@@ -75,7 +75,7 @@ describe('the dark palette', () => {
   it('reads colours only, or the case above fails on the first length added', () => {
     /*
       The control on the filter rather than on the palette. Without it,
-      a non-colour token in `:root` — a gutter, a radius, a duration —
+      a non-colour token in `:root` — an inset, a radius, a duration —
       makes "dark overrides everything light defines" fail for a reason
       that has nothing to do with theming, and the obvious repair is to
       declare the length twice.

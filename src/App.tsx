@@ -72,6 +72,32 @@ function SettingsOverlay({ onClose, go }: { onClose(): void; go(route: string): 
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  /*
+    Hold the page still underneath.
+
+    `.overlay` is fixed and scrolls its own content, which is enough
+    until the content fits — then a wheel over the backdrop has nothing
+    to scroll, falls through to the document, and moves the page behind
+    the panel. Worst on a phone, where the backdrop is the 16px either
+    side of a full-width panel and is most of what a thumb lands on.
+
+    The padding is not cosmetic. Removing the scrollbar by hiding
+    overflow widens the content box by its width, so every centred thing
+    on the page jumps sideways as settings opens and back as it closes —
+    replacing a scroll nobody wanted with a lurch nobody wanted. The gap
+    is measured rather than assumed because it is zero on overlay
+    scrollbars, which is most phones and some desktops.
+  */
+  useEffect(() => {
+    const root = document.documentElement;
+    const gap = window.innerWidth - root.clientWidth;
+    const scroll = root.style.overflow;
+    const pad = root.style.paddingRight;
+    root.style.overflow = 'hidden';
+    if (gap > 0) root.style.paddingRight = `${gap}px`;
+    return () => { root.style.overflow = scroll; root.style.paddingRight = pad; };
+  }, []);
+
   return (
     <div
       className="overlay"

@@ -172,6 +172,39 @@ describe('settings over a running exercise', () => {
     expect(app.cog(), 'the cog is still there under the layer it opened').toBeNull();
   });
 
+  /**
+   * Reported twice by the user role from the built app, at 375px: the
+   * strip of backdrop either side of the panel scrolls the page
+   * underneath. `.overlay` is fixed and has its own scroll, which hides
+   * the problem exactly while its content overflows — so the defect
+   * appears on the short settings screens and not the long ones, which
+   * is why reading the stylesheet did not find it.
+   *
+   * Asserted on the document element rather than on a wheel event,
+   * because jsdom has no scrolling to observe: what is checkable here is
+   * that the lock is applied while the layer is up and *given back*
+   * afterwards. The second half is the one worth having — a lock that
+   * leaks leaves the whole app unscrollable, which is far worse than the
+   * bug it fixes.
+   */
+  it('holds the page still while the layer is up, and gives it back', () => {
+    const root = document.documentElement;
+    root.style.overflow = 'scroll';           // a value of its own to restore
+
+    const app = appAt('interval-id');
+    expect(root.style.overflow, 'locked before it was opened').toBe('scroll');
+
+    app.openSettings();
+    expect(app.layer()).not.toBeNull();
+    expect(root.style.overflow, 'the page can still scroll behind the layer').toBe('hidden');
+
+    app.press('Done');
+    expect(app.layer(), 'the layer did not close').toBeNull();
+    expect(root.style.overflow, 'the lock outlived the layer').toBe('scroll');
+
+    root.style.overflow = '';
+  });
+
   it('closes before it navigates, so nothing floats over the next screen', () => {
     /*
       Calibration is reachable from inside the layer. Without the close the

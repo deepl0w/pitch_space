@@ -20,6 +20,91 @@ describe('chord types', () => {
     }
   });
 
+  /**
+   * The interval no voicing may contain, and the reason four of these chords
+   * are a note shorter than their names suggest.
+   *
+   * A minor ninth between two chord tones is the one vertical interval
+   * common practice treats as unusable — not a colour but a beat, and the
+   * reason a dominant eleventh is voiced without its third rather than with
+   * both. Above the root it is admitted, because that is a ♭9 chord: the
+   * tension is the point and the root is below everything else holding it.
+   *
+   * Written as the clash rather than as which index each type omits. The
+   * omissions are four different decisions — the eleventh drops the third,
+   * the sharp eleventh and the thirteenth and the flat thirteenth each drop
+   * the fifth — and a test naming them would be a snapshot of the catalogue
+   * that blocked a legitimate revoicing. This forbids the thing that is
+   * actually wrong, so a sixth tone added to any of them for consistency
+   * fails here and a defensible addition does not.
+   *
+   * Found sideways: the user role counted five noteheads on a Dominant 11th,
+   * did not report it as a defect, and guessed the missing tone was the
+   * fifth. The catalogue is right and the guess was wrong, and nothing in
+   * the suite or in the file would have said so either way.
+   */
+  it('never sounds a minor ninth except above the root', () => {
+    const clashes: string[] = [];
+    let aboveTheRoot = 0;
+
+    for (const type of CHORD_TYPES) {
+      for (let lower = 0; lower < type.semitones.length; lower += 1) {
+        for (let upper = lower + 1; upper < type.semitones.length; upper += 1) {
+          if (type.semitones[upper] - type.semitones[lower] !== 13) continue;
+          if (lower === 0) { aboveTheRoot += 1; continue; }
+          clashes.push(
+            `${type.id}: ${type.semitones[lower]} and ${type.semitones[upper]}`,
+          );
+        }
+      }
+    }
+
+    expect(clashes).toEqual([]);
+    /*
+      And the exception is a real one rather than a clause nothing reaches.
+      A catalogue with no ♭9 chord in it would satisfy the rule above by
+      never meeting it, and the detector would be unexercised — so the ♭9
+      chords are what prove the arithmetic can see thirteen semitones at all.
+    */
+    expect(aboveTheRoot, 'no chord puts a flat ninth over its root, so the '
+      + 'exception is untested and so is the interval it excepts')
+      .toBeGreaterThan(0);
+  });
+
+  /**
+   * Every tone is the degree its staff step names, bent no further than a
+   * reader can write.
+   *
+   * `spellChord` is already asked to land on the step and the semitone the
+   * type gives it; nothing asked whether that pair was a note anyone could
+   * notate. A third written on the step of a fourth passes every other case
+   * here — distinct pitch classes, distinct steps, correct spelling of what
+   * it was told — and comes out as a chord whose notehead and sound
+   * disagree. That is the shape of mistake a tidying edit makes: add the
+   * eleventh's "missing" third to the semitones and leave the steps alone.
+   *
+   * Two accidentals is the bound rather than one, because the diminished
+   * seventh needs a double flat and is correct.
+   */
+  it('writes each tone on the step its degree belongs to', () => {
+    // Semitones above the tonic of the major scale's degrees, by staff step.
+    const DIATONIC = [0, 2, 4, 5, 7, 9, 11];
+    const misspelled: string[] = [];
+
+    for (const type of CHORD_TYPES) {
+      type.steps.forEach((step, i) => {
+        const natural = DIATONIC[step % 7] + 12 * Math.floor(step / 7);
+        const alter = type.semitones[i] - natural;
+        if (Math.abs(alter) > 2) {
+          misspelled.push(`${type.id} tone ${i}: step ${step} wants about `
+            + `${natural} semitones, has ${type.semitones[i]}`);
+        }
+      });
+    }
+
+    expect(misspelled).toEqual([]);
+  });
+
   it('have unique ids that chordType resolves', () => {
     expect(new Set(CHORD_TYPES.map((t) => t.id)).size).toBe(CHORD_TYPES.length);
     for (const type of CHORD_TYPES) expect(chordType(type.id)).toBe(type);

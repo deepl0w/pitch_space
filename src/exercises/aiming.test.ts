@@ -195,28 +195,74 @@ describe('asking for a particular item', () => {
     }
   });
 
-  it('keeps asking varied questions while it honours a wish', () => {
+  it('freezes only what the wish decides, and nothing else that was varying', () => {
     /*
-      The contract above says the wished item must be asked. It does not say
-      anything else may move, so a generator that satisfied every wish by
-      always picking the same root, clef and octave would pass it and be a
-      worse exercise than one that ignored the wish entirely.
+      The contract above says the wished item must be asked. It says nothing
+      about what else may move, so a generator that satisfied every wish by
+      always picking the same root, register or spelling would pass it and
+      be a worse exercise than one that ignored the wish entirely.
 
-      Weak on purpose — "not frozen" rather than any distribution, because
-      distributions are the tuning this repository does not pin. Measured at
-      80 seeds all five vary completely; one distinct shape would mean
-      aiming had collapsed the rest of the question.
+      **"Not frozen" was too weak to see that.** The first version of this
+      asked only that aiming produce more than one distinct exercise, which
+      a generator can do while collapsing a whole dimension: freezing the
+      enharmonic spelling whenever a wish is honoured left everything else
+      varying, and that mutant survived.
+
+      So the question is asked per field, and which fields may freeze is
+      derived rather than listed. A field the wish *determines* is constant
+      within an item group already — group the unaimed exercises by the item
+      they produced, and anything constant inside every group is a
+      consequence of the item rather than a casualty of aiming. Everything
+      that varies *within* a group has to go on varying when aimed, because
+      nothing about the wish fixes it.
     */
     for (const type of aimable()) {
       if (type.aims !== 'exact') continue;
       const settings = widestSettings(type);
       const wish = type.items(settings)[0];
-      const shapes = new Set<string>();
-      for (let seed = 0; seed < 20; seed += 1) {
-        shapes.add(JSON.stringify(type.generate({ seed, settings, prefer: wish })));
+      const SEEDS = 40;
+
+      /** Field values across seeds, with the item each exercise produced. */
+      const sweep = (prefer?: string) => {
+        const rows: { item: string; fields: Record<string, string> }[] = [];
+        for (let seed = 0; seed < SEEDS; seed += 1) {
+          const exercise = type.generate({
+            seed, settings, ...(prefer === undefined ? {} : { prefer }),
+          }) as unknown as Record<string, unknown> & { items: readonly string[] };
+          rows.push({
+            item: [...exercise.items].sort().join(','),
+            fields: Object.fromEntries(
+              Object.entries(exercise).map(([k, v]) => [k, JSON.stringify(v)]),
+            ),
+          });
+        }
+        return rows;
+      };
+
+      const free = sweep();
+      const aimed = sweep(wish);
+
+      /** Fields the item decides: constant inside every group that shares one. */
+      const byItem = new Map<string, typeof free>();
+      for (const row of free) byItem.set(row.item, [...(byItem.get(row.item) ?? []), row]);
+      const decided = (field: string) => [...byItem.values()]
+        .every((group) => new Set(group.map((r) => r.fields[field])).size === 1);
+
+      const collapsed: string[] = [];
+      for (const field of Object.keys(free[0].fields)) {
+        const variedFreely = new Set(free.map((r) => r.fields[field])).size > 1;
+        const variesAimed = new Set(aimed.map((r) => r.fields[field])).size > 1;
+        if (variedFreely && !variesAimed && !decided(field)) collapsed.push(field);
       }
-      expect(shapes.size, `${type.id} asks one frozen question when aimed at ${wish}`)
-        .toBeGreaterThan(1);
+
+      expect(collapsed, `${type.id} aimed at ${wish} stopped varying`).toEqual([]);
+      // The sweep has to have found something varying, or the loop above
+      // compared nothing: a generator frozen already would pass in silence.
+      expect(
+        Object.keys(free[0].fields).filter((f) => new Set(free.map((r) => r.fields[f])).size > 1)
+          .length,
+        `${type.id} varies nothing at all over ${SEEDS} seeds`,
+      ).toBeGreaterThan(1);
     }
   });
 

@@ -1,8 +1,18 @@
 # What the architecture supports of what is planned
 
-A review of the system as it stands on 6 October 2026 against
-[`ROADMAP.md`](ROADMAP.md), asking one question: where will the roadmap meet
-a seam that cannot take it?
+A review of the system against [`ROADMAP.md`](ROADMAP.md), asking one
+question: where will the roadmap meet a seam that cannot take it?
+
+**Written as a dated snapshot on 6 October and converted on 9 October into a
+document that checks itself**, because the first form was the wrong one for
+what this is. A snapshot is right for a report nobody acts on; this one exists
+to be acted on, and by 9 October **three of its six gaps had been closed while
+it went on asserting them**. That is the failure its own sixth-convention
+neighbour describes — a claim that something is *missing* is contradicted by
+nobody, because building the thing does not prompt anyone to delete the entry.
+
+So every gap below now carries the command that answers whether it is still
+open. Run the command, not the prose.
 
 The answer is mostly reassuring and it has one bad spot. The spaced-repetition
 design the roadmap describes is *already built into the contract* — not
@@ -12,7 +22,9 @@ the roadmap says distinguishes this app from a flashcard deck, and the place a
 user would first see any of it.
 
 This document takes no decisions. It names six gaps, says which are cheap now
-and expensive later, and ends with an order.
+and expensive later, and ends with an order. **Three are now closed and are
+kept rather than deleted**, because what closed them is the useful part and a
+vanished entry teaches nobody.
 
 ## Contents
 
@@ -70,6 +82,12 @@ is the prerequisite for "following the music on the staff" and already ships.
 
 ## G1 — the latency signal is recorded and then discarded
 
+**Open** (checked 9 October).
+
+```bash
+grep -rn 'latencyMs' src/ | grep -v '\.test\.'   # written on an outcome; no reader
+```
+
 **The worst of the six, because it is the roadmap's stated differentiator.**
 
 > Latency matters more here than in flashcards. A musician who plays the right
@@ -120,6 +138,12 @@ absent**, which is a design constraint the roadmap's paragraph does not carry.
 
 ## G2 — the scheduler is a fixed ladder and the roadmap says SM-2
 
+**Closed 9 October.** The gap asked for "a record either way: adopt SM-2, or say why the ladder is the decision". `ROADMAP.md` now states the ladder as what shipped, names SM-2 as the plan it departed from, and names FSRS retrievability as the successor and why it waits. The divergence is recorded, which is what was wanted; nothing was adopted.
+
+```bash
+grep -n 'Leitner ladder' docs/ROADMAP.md
+```
+
 The roadmap: "Scheduler state is per item: ease, interval, due date, lapse
 count, plus a short rolling history for the latency signal."
 
@@ -135,6 +159,12 @@ the kind of thing that gets "corrected" back by someone who read the plan. It
 wants a record either way: adopt SM-2, or say why the ladder is the decision.
 
 ## G3 — a due item the settings exclude is unrepresentable
+
+**Closed.** `ScheduledItem` now carries whether the current settings can ask the item, with a comment saying a due item the settings exclude has to be representable. The contract was widened while `items` still had few callers, which is what the gap asked for.
+
+```bash
+grep -n 'interface ScheduledItem' -A 12 src/state/schedule.ts
+```
 
 The roadmap:
 
@@ -159,6 +189,12 @@ why it belongs on this list rather than in a backlog — it is cheap while
 and the scheduler all read it.
 
 ## G4 — the home screen cannot say "I do not know"
+
+**Architectural half closed; the count itself is unbuilt.** G3 closing also removes the two remaining failures' blocker, since they were G3's.
+
+```bash
+grep -rn 'dueCount' src/ui/ | grep -v '\.test\.'   # empty means no count has shipped
+```
 
 The roadmap calls a due count "the whole visible surface of this feature". It
 also records that a count shipped once and was removed within the hour, and the
@@ -254,6 +290,12 @@ five minutes that were spent and reverted once already.
 
 ## G5 — imported scores break `generate(spec)` and `items(settings)`
 
+**Open**, and not yet due. Nothing imports a score.
+
+```bash
+grep -rln 'MusicXML\|musicxml' src/   # empty means this is still ahead
+```
+
 The furthest out and the one that stresses the most load-bearing decision.
 
 A score is "not a new exercise type — a *source* the existing ones draw on".
@@ -284,6 +326,13 @@ score is coming.
 
 ## G6 — the roadmap's item ids are not the ids being written
 
+**Closed.** The roadmap's table was corrected against the code, and on 9 October verified by the method the table itself demands — running `items()` over every exercise and reading back the prefixes, rather than reading the table. Every prefix and every example checks out.
+
+```bash
+# the table names its own method: enumerate rather than read
+grep -n 'Correct this table that way or not at all' docs/ROADMAP.md
+```
+
 Item ids are a compatibility commitment from the first release
 ([0011](adr/0011-what-a-catalogue-owes.md), obligation 2). The roadmap's table
 and the code disagree:
@@ -302,22 +351,23 @@ written against the wrong vocabulary.
 ## The order I would take them in
 
 Cheapest-now-and-dearest-later first, which is not the same as most important.
-**G1's storage half is not on this list**: it has no later penalty, so it is
-simply cheap and belongs with whatever scheduler work it serves.
+**G2, G3 and G6 are done** and have left the list. What remains:
 
-1. **G6**, minutes. Correct the roadmap's id table against the code before
-   anyone plans a migration from it.
-2. **G3**, while `items` has one caller. Decide whether the schedule can see
-   past the settings, because G4's second and third failures depend on the
-   answer and the contract is cheapest to widen now.
-3. **G4**, before the due count ships a second time. The tri-state is the
-   decision; the count is the easy part, and it has already been removed once
-   for getting this wrong.
-4. **G2**, whenever the scheduler is next opened. A record either way; no
-   urgency, but the divergence should not be discovered by someone reading the
-   roadmap.
-5. **G5**, not yet. Flag it in `IN-FLIGHT.md` when `ExerciseSpec` or `items`
+1. **G4**, before the due count ships a second time. Its blocker was G3 and
+   G3 is closed, so the count is now the whole of it — and it has already been
+   removed once for getting this wrong.
+2. **G1's signal half**, which is not a task so much as a constraint on
+   whatever reads it. See below.
+3. **G5**, not yet. Flag it in `IN-FLIGHT.md` when `ExerciseSpec` or `items`
    is next touched, so the person widening them knows what is coming.
+
+**The three that closed did so in three different ways, which is worth more
+than the fact that they closed.** G3 was closed by someone building the wider
+contract this document asked for. G6 was closed by correcting a document
+against the code and then verifying it by the method that document names. G2
+was closed by *writing down a departure that had already happened* — no code
+changed, and the gap was never about the code. Only the first is what "closing
+a gap" usually means.
 
 The one I would not defer is G1's absent-latency constraint, which is not a
 task but a thing the scheduler's design has to assume from the start: **the

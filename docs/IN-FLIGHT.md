@@ -113,13 +113,28 @@ worse: the next exercise that genuinely narrows without closing would
 otherwise be pushed to claim `exact` because that is the only word for
 "aims", which is the silent failure this seam exists to avoid.
 
-**For tester.** `aiming.test.ts` passes. Two things it does not cover. The
-`exact` cases are checked at the widest settings only, so a wish for an
-item the settings exclude — reachable, since the schedule reads history
-rather than current settings — is handled (ignored, not obeyed) and
-unasserted. And nothing yet checks that aiming does not distort *what else*
-is asked: a generator that honoured every wish by always picking the same
-root would pass the contract and be a worse exercise.
+**For tester — both halves now closed, 8 October, and the entry stays only
+to say what they found.** A wish the settings exclude is asserted:
+`ignores a wish the current settings exclude`. And aiming distorting
+*what else* is asked is checked per field, with which fields may freeze
+*derived* rather than listed — a field the wish decides is already
+constant within an item group, so grouping the unaimed exercises by the
+item they produced separates what the wish fixes from what aiming merely
+flattened. No list to go stale.
+
+Writing the second found the defect it was written to look for. **Aiming
+at a unison froze the direction**: both directions produce a unison, the
+first matching pair was taken, so every wished unison came out whichever
+way the settings happened to list — while the comment two lines above
+said the direction was left to the seed. Fixed by picking among the
+matches.
+
+**One known gap, measured rather than assumed**: the spelling mutant
+still survives, because `pitches` varies by register alone when the
+spelling is pinned, so a field several things feed into cannot show one
+of them freezing. Catching it needs the register projected out, which is
+a claim about interval spelling rather than about aiming and belongs
+where the spelling rules live.
 
 ### `main` — a passage: the generator's three layers joined
 

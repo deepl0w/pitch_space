@@ -82,6 +82,13 @@ So a **user** works from the built app and the brief, and nothing else:
   of what is about to change in it, to decide what is wrong is how the role
   collapses into the tester's. If a finding cannot be stated in terms of
   what the app did, it is not this role's finding.
+- **Does not modify or revert `src/` to test a hypothesis either.** Not
+  reading it to diagnose was never only about reading; a worktree checked
+  back to an older build to compare behaviour is acting on the code, which
+  is further into the tester's role than reading it ever was. A static page
+  with no app code, built fresh to isolate the one mechanism in question,
+  reproduces the same thing without touching the tree — found, not assumed,
+  the day this needed saying.
 - **Reports what happened, not what to change.** "The home card says I can
   read intervals off the staff and I cannot find how" is a finding; "add a
   presentation field to the settings schema" is someone else's job and is
@@ -164,6 +171,17 @@ prints the names. "Told" is not a flag main sets about itself — it is a
 role's own branch catching up, which `announce` and `status` read directly
 and which clears itself the moment a role syncs, whether or not any message
 reached it.
+
+**The per-commit nag is silent for a role nobody is running.** It used to
+ask main to tell every behind role on every commit, with no way to
+distinguish "reachable and untold" from "not running at all" — the second
+case has nothing to deliver and nothing that clears it, so the honest
+response was re-running `tools/sessions.sh` and saying "still not running"
+again, four times in one day. The check now also asks whether any process
+has that worktree's directory as its cwd, addressable or merely orphaned,
+and says nothing when the answer is no; `fleet.sh brief` still catches that
+role up whenever it next starts, which never depended on main doing
+anything.
 
 **The role sessions are permanent, and main does not start them.** They run
 in the user's desktop app, they are part of this project's standing

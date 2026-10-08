@@ -122,6 +122,40 @@ ones — "an ordering rather than the figures, because the figures are"
 measurements. A pack's figure gets the same treatment, and its wiring gets an
 ordinary test.
 
+## The compass is declared once for the app, not per generator
+
+A pack has to cover what the app can ask to be played, and a coverage test that
+samples seeds can only ever report a floor. The question that raises is whether
+each generator should declare its pitch range so the check becomes exact.
+
+**It should not, and the reason is in the one generator that already has a
+range.** `interval-id` exports `pitchWindow(settings)` — the MIDI range both
+notes are kept inside — and it exists to keep notes on the staff they are drawn
+on, not to describe a compass. Its own comment says why the previous form was
+replaced: "Symmetric about the clef's centre, where the table it replaces leant
+one semitone sharp at every level. That asymmetry was not a decision about
+register; it is what you get from writing five pairs of numbers by hand." Six
+more hand-written pairs is that mistake again, multiplied, and a declared range
+is a comment stating a constraint — the thing that cannot fail.
+
+**So invert it: the app declares one compass, and no generator may leave it.**
+A single pair of MIDI bounds, asserted across every exercise by the test that
+already drives the practice screen and collects what reaches `audio.play`. The
+pack is then built to cover the compass rather than to cover a sample, and the
+coverage check stops being a floor because it is no longer measuring — it is
+checking a bound that something else enforces.
+
+This is a decision rather than a measurement, and the measurement informs it:
+the observed reach today is MIDI 49 to 85 across sampled seeds, so the compass
+must be at least that and should have deliberate headroom. **A future exercise
+that genuinely needs more will fail that assertion**, which is the right
+failure — widening the app's compass is a decision with a cost in pack size,
+and it should be taken by someone who can see both.
+
+The builder's rule follows: **refuse a pack that does not cover the declared
+compass**, which is checkable at build time against a constant rather than
+against a sample of what some seeds happened to produce.
+
 ## What the builder refuses
 
 - A licence identifier not on the allowlist, or absent.

@@ -327,7 +327,7 @@ function ExerciseRound({ definition, audio, tally, settings }: {
         they landed in different places, which the user noticed before
         any of us did.
       */}
-      <div className="round-body">
+      <div className={round?.result ? 'round-body answered' : 'round-body'}>
 
       {round === null
         /*
@@ -410,7 +410,15 @@ function ExerciseRound({ definition, audio, tally, settings }: {
               );
             })}
           </ol>
-          <p className="secondary">Seed {round.exercise.seed}</p>
+          {/*
+            No seed here. It was printed on every answered round for a
+            reader who has no use for it — generation is reproducible
+            from `(seed, settings)`, which matters when something has
+            gone wrong and never otherwise. `ExerciseBoundary` still
+            names it when a round fails to draw, which is the one moment
+            it is worth a line, so nothing that made it worth showing has
+            been lost.
+          */}
         </section>
       )}
       </div>

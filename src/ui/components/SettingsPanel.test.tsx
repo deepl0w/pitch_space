@@ -328,10 +328,22 @@ describe('every registered exercise type', () => {
           onChange={() => {}}
         />,
       ));
-      // The fields that apply to the defaults, not all of them. A field
-      // may declare itself irrelevant — the Picardy third has nothing to
-      // do when no minor key is in play — and a panel that drew it anyway
-      // would be the inert control `FieldRelevance` exists to prevent.
+      /*
+        The fields that apply to the defaults, not all of them. A field
+        may declare itself irrelevant — the Picardy third has nothing to
+        do when no minor key is in play — and a panel that drew it anyway
+        would be the inert control `FieldRelevance` exists to prevent.
+
+        At the defaults only, deliberately. A reader reported a scale
+        control as visible and inert in reading mode, which would be a
+        gap here if the panel could honour `relevant` at one settings
+        shape and ignore it at another. It cannot: the filter is a single
+        line with no settings-dependent branch, so a sweep over more
+        shapes would exercise the same line repeatedly while reading as
+        though a dimension varied — and then be maintained as though one
+        did. Whether a predicate says the right thing is a separate
+        question with its own sweep, in `exercises/presentation.test.ts`.
+      */
       const shown = definition.settings.fields
         .filter((f) => f.relevant?.(definition.settings.defaults) !== false);
       expect(container.querySelectorAll('.field')).toHaveLength(shown.length);

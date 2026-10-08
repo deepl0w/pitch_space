@@ -46,6 +46,52 @@ function paletteOf(selector: string): Map<string, string> {
   return new Map([...all].filter(([, v]) => isColour(v)));
 }
 
+describe('what a theme block is allowed to hold', () => {
+  /**
+   * A dark block declares colours and nothing else.
+   *
+   * The cases below filter to colours before comparing, which is right —
+   * they are about the palette and a length has no business being
+   * redeclared per theme. But a filter only protects the comparison. It
+   * says nothing about what is *in* the block, so declaring `--page-inset`
+   * in both themes would pass every one of them.
+   *
+   * That is the repair someone reaches for the next time a length looks
+   * like it needs to differ, and it is exactly what the token exists to
+   * prevent: one named value that positioning derives from, not a
+   * constant copied per theme and free to drift.
+   *
+   * The filter and this are opposite halves. `isColour` keeps a non-colour
+   * out of the comparison; this keeps it out of the block.
+   */
+  const everything = (selector: string) => {
+    const bodies = selector.startsWith(':root:not')
+      ? APP_RULES.filter((r) => r.selectors.includes(selector)).map((r) => r.body)
+      : rulesFor(selector);
+    return customProperties(bodies.join(''));
+  };
+
+  it('declares no token a theme has no business changing', () => {
+    const intruders: string[] = [];
+    for (const selector of [':root:not([data-theme="light"])', ':root[data-theme="dark"]']) {
+      for (const [name, value] of everything(selector)) {
+        if (!isColour(value)) intruders.push(`${selector} sets ${name} to ${value}`);
+      }
+    }
+    expect(intruders, 'a theme block redeclares something that is not a colour')
+      .toEqual([]);
+  });
+
+  it('is looking at blocks that hold something, or the case above is idle', () => {
+    // Both selectors have to resolve: the system one sits inside a media
+    // query and is reached a different way from the explicit one, so a
+    // change to either lookup could leave this scanning nothing.
+    for (const selector of [':root:not([data-theme="light"])', ':root[data-theme="dark"]']) {
+      expect(everything(selector).size, `${selector} declares nothing`).toBeGreaterThan(5);
+    }
+  });
+});
+
 describe('the dark palette', () => {
   const light = paletteOf(':root');
   const bySystem = paletteOf(':root:not([data-theme="light"])');

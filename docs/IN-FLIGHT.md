@@ -33,6 +33,15 @@ The block and the unblock are two edits, not one.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
+## Contents
+
+- [`main` — the score reports where it drew things, so a cursor can follow](#main--the-score-reports-where-it-drew-things-so-a-cursor-can-follow)
+- [`main` — `prefer` has landed, and the three-way split was wrong](#main--prefer-has-landed-and-the-three-way-split-was-wrong)
+- [`main` — a passage: the generator's three layers joined](#main--a-passage-the-generators-three-layers-joined)
+- [`main` — capture, fed by recordings rather than by a microphone](#main--capture-fed-by-recordings-rather-than-by-a-microphone)
+- [`main` — four exercises, a scheduler, and the practice screen rebuilt](#main--four-exercises-a-scheduler-and-the-practice-screen-rebuilt)
+- [`architect`, then everyone — progress is per settings combination](#architect-then-everyone--progress-is-per-settings-combination)
+
 ### `main` — the score reports where it drew things, so a cursor can follow
 
 **Branch:** `main`, starting now. Written here first because it adds to

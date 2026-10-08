@@ -65,7 +65,7 @@ for branch in $(git for-each-ref --format='%(refname:short)' 'refs/heads/claude/
         state="running, addressable (pid $pid) — ListAgents for its current name;"
         state="$state also stale with no socket:$stale"
     elif [ -n "$stale" ] && [ -z "$pid" ]; then
-        state="running, ORPHANED (pid${stale# }) — no socket; cannot save or be messaged"
+        state="running, ORPHANED (pid ${stale# }) — no socket; cannot save or be messaged"
     elif [ -z "$pid" ]; then
         state='not running — brief will catch it up'
     elif [ -S "$socks/$pid.sock" ]; then

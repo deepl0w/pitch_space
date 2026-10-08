@@ -660,3 +660,45 @@ describe("the home screen's claim about how exercises are answered", () => {
     expect(/\bplaying\b/i.test(lede)).toBe(true);
   });
 });
+
+/**
+ * `docs/instrument-pack-format.md`: a sampled pack carries its own measured
+ * `trim`, and nothing in the loading path substitutes the synthesised voice's.
+ *
+ * Written before the loading path exists, because this is the half of that
+ * rule the suite can hold. The other half — whether a pack lacking a trim
+ * refuses to load — needs a loader to refuse, and the figure itself cannot be
+ * checked at all: loudness is the one thing this suite has no instrument for,
+ * which `instruments.test.ts` says of the synthesised numbers and which is no
+ * less true of a recorded one.
+ *
+ * What it does have an instrument for is which field a code path reads. The
+ * six synthesised trims are measurements of that synthesis and say so; a
+ * sampled voice's level comes from whoever made the recording and has no
+ * relation to a figure tuned for an oscillator stack. Copying one across is
+ * the obvious shortcut, and it would put the defect those measurements were
+ * taken to remove *inside one instrument* — so a pack arriving mid-exercise
+ * would change the volume as it swapped in.
+ */
+describe('a sampled voice does not inherit a synthesised trim', () => {
+  it('reads the synthesised trim only where the synthesised voice is built', () => {
+    const readers = filesUnder(SRC)
+      .filter((file) => !/\.test\.tsx?$/.test(file))
+      // `.trim` the property, not `.trim()` the string method, which is
+      // everywhere and means nothing here.
+      .filter((file) => hits([file], /\.trim\b(?!\s*\()/).length > 0);
+
+    expect(readers.map(show)).toEqual(['audio/output/synth.ts']);
+  });
+
+  /**
+   * And the guard is not idle: it is looking for something that is there.
+   * A pattern that matched nothing would pass the case above by finding no
+   * readers at all, which is the same empty-population failure as a sweep
+   * over no seeds.
+   */
+  it('is looking at a file that does read it', () => {
+    expect(hits([join(SRC, 'audio', 'output', 'synth.ts')], /\.trim\b(?!\s*\()/))
+      .toHaveLength(1);
+  });
+});

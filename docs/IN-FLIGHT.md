@@ -434,6 +434,25 @@ answers now, so no caller learns which one it got. Synthesis keeps its
 job rather than losing it: it is what sounds on the first load, while a
 pack downloads, and when a pack is unavailable at all.
 
+**Every recording must be free to use, and that is a filter, not a
+preference.** The user's constraint, and it decides the source before any
+quality judgement does: a pack may only contain audio under a licence that
+permits redistribution in a shipped application, with no attribution the
+app fails to make and no non-commercial clause. CC0-1.0 clears this
+outright, which is why VCSL is the starting point rather than a
+better-sounding library with terms nobody has read.
+
+**The existing licence note does not cover this and must not be reused as
+if it did.** `tools/fetch-test-audio.sh` argues VCSL is safe partly
+because *"these files are never shipped: they are a build-time input to a
+test and the bundle does not contain them"*. A pack ships. The conclusion
+survives — a public-domain dedication permits redistribution, so nothing
+here is blocked — but it survives on a different premise, and inheriting
+the old sentence would leave the repository asserting a licence analysis
+for a use it explicitly excluded. The pack builder carries the licence and
+the source URL per instrument in the manifest, and refuses to build one
+that names neither.
+
 **For tester.** Three claims, and none of them is about timbre — the
 suite has no standing on whether a recording sounds like a piano.
 

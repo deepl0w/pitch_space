@@ -69,6 +69,11 @@ licence obligation.
 **The sequencing consequence is worth stating plainly**: CC0 packs can ship
 before the credits screen exists; CC-BY packs cannot.
 
+The format both files take is specified in
+[`docs/instrument-pack-format.md`](../instrument-pack-format.md), written
+before the builder so that the fields are settled while they are still cheap to
+settle.
+
 ## What this costs
 
 **The first note on a newly chosen instrument is the synthesised one.** A

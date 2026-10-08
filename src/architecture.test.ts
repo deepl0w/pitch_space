@@ -420,6 +420,48 @@ describe('the npm scripts', () => {
  * will go red. That is allowed. Change the clause here to match, and keep the
  * habit; the test defends a phrasing only because it cannot defend a meaning.
  */
+describe('the records the code cites', () => {
+  /**
+   * Every ADR a source file points at exists.
+   *
+   * A dangling reference is the worst kind this project has: a comment
+   * saying "see ADR 0028" reads as *decided*, and a reader who does not go
+   * and look carries away a decision nobody made. It is not a broken link,
+   * it is a claim about the state of the argument.
+   *
+   * It happened. `0028` was cited by `keys.ts`, `KeyPrompt.tsx`,
+   * `keys.test.ts` and `index.ts` for days before the record was written,
+   * and it was caught because the person who owed it said so rather than
+   * because anything checked. `CLAUDE.md`'s own convention is that a
+   * mistake which recurs wants a rule rather than more care; this is the
+   * rule, and it costs one scan.
+   *
+   * Numbers rather than links, because the citations are prose — "see ADR
+   * 0028", `docs/adr/0005`, `adr/0011-what-a-catalogue-owes.md` — and what
+   * is checked is that the record exists, not how it was spelled.
+   */
+  it('cites no record that was never written', () => {
+    const cited = new Set<string>();
+    for (const file of filesUnder(SRC)) {
+      for (const match of readFileSync(file, 'utf8')
+        .matchAll(/(?:ADR\s+|adr\/)(\d{4})/g)) cited.add(match[1]);
+    }
+
+    const written = new Set(
+      readdirSync(join(SRC, '..', 'docs', 'adr'))
+        .filter((name) => /^\d{4}-.*\.md$/.test(name))
+        .map((name) => name.slice(0, 4)),
+    );
+
+    const dangling = [...cited].filter((n) => !written.has(n)).sort();
+    expect(dangling, 'cited by the code and not in docs/adr/').toEqual([]);
+
+    // The scan has to have found citations, or a codebase that stopped
+    // naming its records reports a clean bill of health it has not earned.
+    expect(cited.size, 'no source file cites a record at all').toBeGreaterThan(20);
+  });
+});
+
 describe('the conventions the ADR index carries', () => {
   it('still tells the next author to check a claim against the code', () => {
     // Whitespace collapsed first: the sentence is hard-wrapped in the source,

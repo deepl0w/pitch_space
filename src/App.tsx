@@ -70,6 +70,10 @@ export default function App() {
   // Pushed into the engine rather than read by it: `audio/output/` may not
   // import state, which is what keeps the whole engine testable off-browser.
   useEffect(() => { appSynth.setVolume(appearance.volume); }, [appearance.volume]);
+  // Pushed on load as well as on change, for the same reason the volume
+  // is: a stored choice that only takes effect once you visit Settings
+  // is a stored choice the app ignores until you go looking for it.
+  useEffect(() => { appSynth.setInstrument(appearance.instrument); }, [appearance.instrument]);
   // A family id is what the menu links to; a member id is what links made
   // before the families existed still carry. Both land on the practice
   // screen rather than silently on the home one.

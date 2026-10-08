@@ -518,6 +518,25 @@ call site. Every other `OneOf` in the app passes `group`; these two were
 the only ones that did not, which is exactly the distribution a
 component-level test cannot see.
 
+**The mechanism is confirmed from first principles, not just asserted
+here.** Worth stating in the repository because the check itself lives in
+`docs/findings/`, which is gitignored and never leaves the worktree that
+wrote it. The user role built a bare static page — a `<label>` round two
+buttons and `button:active { transform: translateY(1px) }`, no app code —
+pressed the second button and sampled while the mouse was genuinely held:
+both buttons carried `matrix(1, 0, 0, 1, 0, 1)` and both matched
+`:active`, and neither did before or after. So the rule below rests on
+how `<label>` behaves in HTML, not on how this codebase happens to be
+written, which is why it is worth carrying to other screens.
+
+Two earlier attempts at that confirmation are worth knowing about,
+because both are easy to repeat. A before-and-after pixel diff finds
+nothing: the transform exists only while the button is held, so comparing
+two idle states compares two correct screens. And reading this
+repository's own commit message and test comments is reading the author's
+account of the author's measurement — it would have agreed just as
+readily had the mechanism been wrong.
+
 **For tester.** The generalisable claim, now in
 `src/ui/screens/Settings.test.tsx`: **no `<label>` may contain more than
 one interactive control**, asserted against a rendered screen rather than

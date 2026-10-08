@@ -436,11 +436,26 @@ pack downloads, and when a pack is unavailable at all.
 
 **Every recording must be free to use, and that is a filter, not a
 preference.** The user's constraint, and it decides the source before any
-quality judgement does: a pack may only contain audio under a licence that
-permits redistribution in a shipped application, with no attribution the
-app fails to make and no non-commercial clause. CC0-1.0 clears this
-outright, which is why VCSL is the starting point rather than a
-better-sounding library with terms nobody has read.
+quality judgement does. The bar, in their words: attribution and carrying
+a licence file are fine, *"just don't want anything commercial or that has
+some other implications"*, and **the app is MIT and stays MIT**.
+
+So, concretely — **in**: public domain and CC0, CC-BY, and samples under a
+permissive software licence. **Out**: any non-commercial clause, any
+share-alike or copyleft term, and any custom end-user agreement that
+restricts redistribution. The test is whether a licence reaches past the
+audio file and makes a claim on the application around it; MIT must
+survive the addition unchanged.
+
+**CC-BY is allowed and is not free of obligation.** Attribution that the
+app does not display is attribution the app has failed to make, so taking
+a CC-BY library means building somewhere to credit it — a surface that
+does not exist yet. The cheapest honest version is a credits list in
+settings naming each pack's source and licence, read from the manifest
+rather than typed, so a pack cannot be added without its credit appearing.
+Worth knowing before choosing a library, because it is the difference
+between a decision and a dependency: CC0 needs nothing, CC-BY needs that
+screen first.
 
 **The existing licence note does not cover this and must not be reused as
 if it did.** `tools/fetch-test-audio.sh` argues VCSL is safe partly

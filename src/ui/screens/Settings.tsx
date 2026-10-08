@@ -15,12 +15,16 @@ const entry = entryFor('settings');
  * about the hardware — and that had nowhere to live, so audio calibration
  * sat on the home screen beside the exercises as though it were one.
  *
- * Two of the rows below are not built. They are here rather than omitted
- * because the shape of the screen is the useful part: a reader can see
- * where the instrument picker will go, and `docs/ROADMAP.md` says what each
- * is waiting on. A row that says "not yet, and here is why" is honest; a
- * row that looks live and is not is the defect this project keeps finding,
- * so these are plainly inert rather than disabled-looking controls.
+ * One row below is not built — exporting your history — and it is here
+ * rather than omitted because a row that says "not yet, and here is why"
+ * is honest, while a row that looks live and is not is the defect this
+ * project keeps finding. `docs/ROADMAP.md` says what it waits on.
+ *
+ * The instrument picker used to be the other one, and this comment went
+ * on describing it as a placeholder after it had been built. A comment
+ * that narrates the screen's contents has to be edited every time the
+ * screen changes, and will not be; this one now states the rule it is
+ * really there for and names the single exception.
  */
 export function Settings({ go }: { go(route: string): void }) {
   const appearance = useSettings((s) => s.doc.appearance);
@@ -75,7 +79,7 @@ export function Settings({ go }: { go(route: string): void }) {
       )}
 
       <Panel>
-        <Field label="Theme">
+        <Field label="Theme" group>
           <OneOf
             options={[
               { id: 'system', label: 'System' },
@@ -117,7 +121,7 @@ export function Settings({ go }: { go(route: string): void }) {
       </Panel>
 
       <Panel>
-        <Field label="Instrument">
+        <Field label="Instrument" group>
           <OneOf
             options={INSTRUMENTS.map((i) => ({ id: i.id, label: i.name }))}
             chosen={appearance.instrument}

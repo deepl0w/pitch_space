@@ -24,6 +24,7 @@ it ships or is dropped.
 - [A settings screen](#a-settings-screen)
 - [Taking your progress with you](#taking-your-progress-with-you)
 - [Bringing your own material](#bringing-your-own-material)
+- [A guitar that sounds like a guitar](#a-guitar-that-sounds-like-a-guitar)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 [`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
@@ -548,6 +549,60 @@ Three things will be the work, and none of them is the parsing:
   on a corpus that does not add up, which is right for data written by a
   contributor and wrong for data arriving from a file. An import needs to
   refuse an entry and say why, not take the app down.
+
+## A guitar that sounds like a guitar
+
+From the user, deferred by them rather than asked for now:
+
+> guitar sound is weird because the chords are still piano chords with reverb,
+> in the future they should be real guitar chords with strumming
+
+**The diagnosis is right and the code agrees with it in writing.** Chord voices
+come from `voiceChord` in `theory/chord.ts`, which is pianistic on purpose —
+its own comment on drop-2 says it is "the voicing a pianist actually plays".
+Selecting the guitar timbre changes the oscillators and nothing about which
+notes are chosen, so the chord is already a piano's before any sound is made.
+
+**There is no reverb, and that matters because removing it is the obvious
+reading.** There is no convolver, no delay and no effects node anywhere in
+`src/audio/output/`. What is audible as a wash is the guitar's own envelope
+tail — a 0.12 s decay to 0.18 of peak and a 0.3 s release — across notes that
+all start at the same instant. Nothing to remove; something to stagger.
+
+### The two halves are not the same size, and not in the same layer
+
+That second point is the reason to sequence them, more than the cost is.
+
+**Strumming is cheap and changes only the sound.** A `Voice` already carries
+its own `start`, and `playVoice` takes the time to schedule at, so spreading a
+chord's voices by 15–30 ms from the lowest string upwards needs no new theory
+and no new data. It lives entirely in `audio/output/`, below the platform edge,
+where nothing above it can observe the difference — which means no exercise's
+answer can change as a result.
+
+**Guitar voicings are expensive and change what is correct.** A real chord is a
+fretboard shape: six strings, open strings ringing, notes doubled an octave
+apart, and a bass note that is whatever the shape puts there rather than
+whatever the inversion asked for. That is a new catalogue in `theory/` keyed by
+shape rather than inversion, and `voiceChord` is not only a sound — the
+chord-identification exercise and the chords screen both call it, so its output
+is part of what a learner is graded against. Changing it is a change to the
+question, not to its presentation.
+
+**So strumming first**, and not merely because it is smaller. It is reversible,
+invisible to every test above `audio/output/`, and improves the thing the user
+actually complained about first hearing. The voicing work can then be taken as
+what it is — a theory change with exercise consequences — rather than smuggled
+in beside an audio tweak.
+
+**One open question it should not pretend to settle**: whether a guitar voicing
+is the same item as the piano voicing of the same chord.
+[0043](adr/0043-an-instrument-is-not-part-of-what-a-line-measures.md) ruled
+that an instrument is a property of playback and not part of what a line
+measures, which is right while the instrument changes only timbre. A fretboard
+shape changes the notes, so it would reach `items(settings)` and the ruling
+would not cover it. That is 0039's escape clause territory and wants deciding
+before the catalogue is written, not after.
 
 ## Also planned, not yet designed
 

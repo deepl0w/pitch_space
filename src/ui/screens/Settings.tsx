@@ -152,11 +152,28 @@ export function Settings({ go }: { go(route: string): void }) {
             measured. Either cite a figure the repository can produce or
             say the shape of the thing without the number.
           */}
+          {/*
+            Third revision, and the first one that was not about being
+            wrong. It led with the comparison — recorded instruments are
+            "the aim" and these a "fallback underneath them" — on a
+            screen showing six generated instruments and nothing
+            recorded anywhere. Underneath what? The reader has no tier to
+            see. It answered a question they had not asked inside the
+            one paragraph explaining the control they are using.
+
+            "Your history" below does the same present-fact-then-plan
+            move and reads cleanly, because it telegraphs the pivot at
+            the start of its own sentence rather than burying it in the
+            middle of one. Same house style; copy it rather than
+            inventing a second shape.
+          */}
           <p className="secondary">
             Generated as they play rather than recorded, so they start instantly
-            and work offline from the first load. Recorded instruments are the
-            aim — they are what you have actually practised against — and these
-            stay as the fallback underneath them. Picking one plays a note.
+            and work offline. Picking one plays a note.
+          </p>
+          <p className="secondary">
+            Recorded instruments are planned, and wait on the sample packs being
+            built. These will go on playing while one downloads.
           </p>
         </Field>
       </Panel>

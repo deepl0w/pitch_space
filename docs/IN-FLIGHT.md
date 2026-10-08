@@ -6,7 +6,10 @@ after a sync now includes this file as well as what just landed
 (`CLAUDE.md`, "Several agents work here at once"). This is not `ROADMAP.md`:
 that is what is planned but not yet started, architect's to keep; this is
 what is already underway, and an entry leaves the moment its change has
-merged and been reviewed.
+merged and been reviewed. Removing an entry is itself a claim — that both
+of those are actually true — and claims get checked against the tree
+before being acted on, the same as any other; an entry looking old is not
+evidence of either.
 
 **Main is the only writer.** A role that wants an entry says so to main
 rather than adding one, the same reason `.claude/scripts/fleet.sh` and the
@@ -24,12 +27,31 @@ whether it is safe to begin. If a piece cannot start until something else
 is settled, say that plainly rather than trusting "is the architect's to
 propose" to carry it.
 
+**Name what the condition is true of, not who was meant to check it.**
+"Kept until architect has reviewed" depends on one person remembering a
+file they may not read; "kept until 0021 is marked superseded in the
+index" is true or false of the repository itself, checkable by whoever
+holds the pen regardless of who else is reading anything. The second kind
+can also fail loudly — stays open, visibly, rather than aging silently
+into something nobody notices has been waiting a fortnight. Same reason a
+mechanism beats a correlate everywhere else in this protocol, applied to
+how a condition is phrased rather than to how it is checked.
+
 **A stated block has to be stated as removed, not just quietly stop
 applying.** Found on the first real use: once the open question was
 settled, the entry had to be edited a second time to say so — without
 that edit it would read exactly as it did while still blocking, and a
 role that had agreed not to start would have no signal the reason expired.
 The block and the unblock are two edits, not one.
+
+**The second edit is a field moving, not a sentence announcing that it
+moved.** Found on the convention's own first real use, read more literally
+than intended: moving the item from a `Not settled:` line to a `Settled:`
+one, with the commit that settled it, already says what changed and when.
+A sentence on top — "the block this entry carried is removed" — tells a
+cold reader that a block they never saw once existed, restates what the
+line above it already says, and is the kind of narration this file is
+explicitly not meant to hold. Move the field; that is the statement.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 

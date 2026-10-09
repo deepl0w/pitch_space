@@ -10,6 +10,13 @@ delivery: synthesis is precached and guarantees offline, a pack is
 runtime-cached on first use, and the credits index ships in the bundle. This is
 the shape of the two files that implies.
 
+**This document specifies the artefact, not its provenance.** Where the
+recordings come from and how the builder reaches them — loose files over HTTP
+for two libraries, an archive unpacked once for the third — is the builder's
+business and changes whenever a library does. What a pack *is* must not,
+because packs are immutable and already on devices. A source shape in here
+would be a fact about today's three libraries sitting in a format contract.
+
 ## Two artefacts, one source
 
 The builder emits **one index for the bundle** and **one manifest inside each
@@ -54,6 +61,16 @@ readme — and neither constrains an app that is MIT, free, and names its source
 in settings. But **a reader who checks the SPDX identifier and stops has not
 finished**, and the gap between what a licence permits and what a source asks
 is where someone ships something they should not have.
+
+**The gap has a second instance running the other way, which is why this is a
+rule rather than a note about one library.** FreePats states CC0 in a readme
+shipped *inside the archive* — a reader checking the project page, or the
+repository metadata that settled the other two libraries, would never see it.
+There the identifier was not too narrow but **absent from everywhere anyone
+would look**, and what established it was opening the package. One library's
+licence is weaker than its readme suggests and another's is only findable
+inside the download; the allowlist decides in both cases and in neither case
+could it have been applied without a person fetching the thing.
 
 So the mechanical check stays mechanical, and a person still reads the readme.
 The second never silently overrides the first: a request that turns out to be a

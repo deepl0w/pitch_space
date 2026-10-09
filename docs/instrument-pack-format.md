@@ -59,6 +59,43 @@ because editing it changes its name. There is no version counter for anyone to
 forget to bump, and a rebuilt pack with identical contents keeps its URL and
 its cache entry.
 
+## The container
+
+A pack is **one file**: the ASCII magic `PSPACK\0\1`, a big-endian `uint32`
+giving the manifest's length, the manifest as UTF-8 JSON, then the audio. Note
+offsets are relative to the start of the audio section.
+
+Specified here rather than left in `pack.ts` because a file format outlives the
+code that first read it. A second builder, a validator, or anything that has to
+open a pack without running this app needs the layout from a document.
+
+**The version lives in the magic**, so a later shape is a different file rather
+than a misread one — the same reasoning as the content-addressed name, applied
+to the bytes inside instead of the bytes outside.
+
+### Why not JSON with base64 audio
+
+The alternative is one JSON document with the audio base64-encoded inside it,
+which would be `fetch().json()` and no binary framing, at about a third more
+bytes. It was considered and is worse on two counts that are not the size.
+
+**`fetch().json()` is not actually enough.** The offsets still index into
+decoded bytes, so a reader must base64-decode the payload and do the same
+slicing arithmetic regardless. What the container costs a reader is a nine-byte
+comparison and one `getUint32`; what base64 costs is decoding the entire
+payload before anything can be sliced. The simplicity the alternative is bought
+for does not arrive.
+
+**And it would hold the audio twice, in the worse form.** A base64 payload
+reaches JavaScript as a string — UTF-16 in memory — so a 396 KiB pack becomes
+roughly a megabyte of string before a byte is decoded, on a device that may be
+a phone. The container hands `decodeAudioData` an `ArrayBuffer` slice directly.
+
+**The argument that the manifest and audio must not be separable is sound and
+does not decide this**, which is worth saying because it is the reason that
+first suggests itself. Both options are a single file; what that argument rules
+out is a JSON file beside a blob, which neither of these is.
+
 ## The note table
 
 ```json
@@ -89,6 +126,15 @@ themselves what their scope is:
 
 **A sampled voice is not that synthesis.** Its level comes from whoever made
 the recording and has no relation to the figure tuned for an oscillator stack.
+
+**And it is one gain for the whole pack, never one per note.** This is a claim
+about instruments rather than about files, which is why it belongs with the
+rule rather than in the builder: the top of a piano really is weaker than its
+middle, and normalising each note to the same peak would flatten a real
+property of the instrument into a recording artefact. A learner would hear an
+instrument nothing sounds like. So the builder measures the set and applies one
+figure across it, and a per-note normalisation is a defect rather than a
+refinement.
 Copying the synthesised `trim` across is the obvious shortcut and it would
 reintroduce exactly the defect those measurements were taken to remove — worse,
 between the two halves of the same instrument, so switching from the

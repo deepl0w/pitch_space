@@ -82,6 +82,24 @@ describe('the packs the app will fetch', () => {
    * filename means a rebuilt pack is a *new* file rather than a changed one,
    * so the old one survives unless something removes it — bytes in the
    * deployment that no code can reach and no credit covers.
+   *
+   * **This case is an approximation, and
+   * [ADR 0046](../../../docs/adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md)
+   * records which one.** The honest condition is *no pack unreferenced by any
+   * index still deployed*; what is checked here is *no pack unreferenced by
+   * the current index*. The two differ exactly across a deploy window: a page
+   * open when a release lands holds the previous index and asks for a pack
+   * this sweep insisted on deleting, gets the SPA shell with 200 and
+   * `text/html`, and plays the synthesised voice until it reloads.
+   *
+   * That is deliberate, not an oversight — the alternative is a sweep that
+   * has to know which indexes are still deployed, which is permanent
+   * complexity bought for a transient and self-correcting fault. **The
+   * condition under which it stops being the right trade is written down so
+   * that this case can be changed rather than rediscovered: if a sampled
+   * instrument ever becomes required rather than preferred**, the same window
+   * stops being a worse timbre and becomes a broken exercise, and this case
+   * then needs the real condition.
    */
   it('are the only packs shipped', () => {
     const named = new Set(index.map((pack) => pack.file));

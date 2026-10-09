@@ -276,6 +276,17 @@ Chrome: selecting Piano fetches the pack and a chord plays through three
 outside the allowlist, or no measured `trim` — the last one rather than
 defaulting to 1, because 1 looks like a value and is the absence of one.
 
+**Waiting on the service worker, and easy to get wrong by doing nothing.**
+ADR 0046 requires that a pack never enters `globPatterns`, and
+`vite-plugin-pwa` sweeps `public/` into a precache by default — so the
+configuration somebody writes without thinking about it precaches 1.5 MB
+of packs and silently inverts the record. Nothing can check that yet
+because there is no manifest to inspect; the claim belongs with the
+`it.todo` that wires the plugin up, not ahead of it. Noted by tester, and
+written here rather than left in a message because the packs were already
+missing for a week by a fault nobody could see — this is the same shape,
+seen early enough to say so.
+
 **For tester.** Three claims, and none of them is about timbre — the
 suite has no standing on whether a recording sounds like a piano.
 

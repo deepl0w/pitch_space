@@ -1,101 +1,146 @@
-import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { checkManifest, parsePack } from './pack';
 import index from './packs.json';
-import { COMPASS, licenceAllowed } from './pack';
-
-const ROOT = dirname(dirname(dirname(dirname(fileURLToPath(import.meta.url)))));
-const SERVED = join(ROOT, 'public', 'packs');
 
 /**
- * The index and the files it names have to agree.
+ * The packs as shipped, rather than a manifest invented in a test.
  *
- * **This is the defect that shipped.** `public/packs/` was gitignored, so the
- * packs existed in exactly one checkout: every other worktree, a fresh
- * clone, CI and the deployed site served the single-page fallback for them
- * and the app played the synthesised voice instead.
+ * `pack.test.ts` asks what a pack has to be; this asks whether the files in
+ * the repository are that. The distinction earned itself: `public/packs/`
+ * was gitignored, so the packs existed in one checkout and nowhere else —
+ * every other worktree, every fresh clone, CI and the deployed site served
+ * the SPA fallback for them and the app played the synthesised voice.
  *
- * It was silent by construction, and ADR 0046's addendum now says why. The
- * record argues — correctly — that a pack which has not arrived is not an
- * error, because synthesis is already sounding and there is nothing to
- * block on. That is right for a pack still downloading and wrong for one
- * that will never come, **and the same silence covers both**. A design
- * whose degraded path is pleasant needs a separate way to tell degraded
- * from fine, and it cannot live where the pack is consumed, because the
- * consumer genuinely cannot tell the difference.
+ * **Nothing failed.** ADR 0046 makes synthesis the floor precisely so that
+ * an absent pack is not an error, which is right, and which is what made a
+ * total absence look exactly like a working app. 1,245 tests saw nothing. It
+ * was found by a person patching `AudioScheduledSourceNode.start` and
+ * noticing that no `AudioBufferSourceNode` ever ran.
  *
- * So it lives here, where the artefact is produced. Note what this would
- * have done about the original defect: nothing, in the checkout that built
- * the packs, because the files were present there. It would have failed in
- * every checkout where the bug was real — which is the only place a check
- * on this could have helped, and is the reason it is worth having rather
- * than a reason it is weak.
+ * **Why existence in the working tree is the whole claim, and git is not
+ * needed to make it.** What went wrong is better described as "not
+ * committed" than "ignored", and the mechanism that answers *that* is
+ * already in the repository: `.github/workflows/ci.yml` checks out a fresh
+ * clone and runs `npx vitest run`, so a file absent from the commit is
+ * absent from the directory this reads. Shelling out to `git check-ignore`
+ * would answer the question a few minutes earlier on the author's own
+ * machine, at the cost of the suite depending on being inside a repository
+ * at all — and it would still be a proxy for what matters, which is whether
+ * the bytes reach the browser.
  */
-describe('the pack index', () => {
-  it('names packs that are actually there to fetch', () => {
-    /*
-      The population first. An empty index satisfies every case below by
-      having nothing to check, and an index that failed to generate is
-      exactly how that would happen.
-    */
-    expect(index.length, 'the index names no packs at all').toBeGreaterThan(0);
 
+const PACKS = join(dirname(dirname(dirname(fileURLToPath(import.meta.url)))), '..', 'public', 'packs');
+
+/** The shipped file for an index entry, read once. */
+function bytesOf(file: string): Uint8Array {
+  return new Uint8Array(readFileSync(join(PACKS, file)));
+}
+
+describe('the packs the app will fetch', () => {
+  it('are listed by an index with something in it', () => {
+    // The population every case below sweeps. An index that had become an
+    // empty array would satisfy all of them by having nothing to check,
+    // while the app silently lost every recorded instrument.
+    expect(index.length).toBeGreaterThan(1);
+  });
+
+  it('each exist at the path the index names', () => {
     const missing = index
-      .filter((pack) => !existsSync(join(SERVED, pack.file)))
-      .map((pack) => `${pack.id} -> ${pack.file}`);
-    expect(missing, 'named in the index and not in public/packs').toEqual([]);
+      .filter((pack) => !readdirSync(PACKS).includes(pack.file))
+      .map((pack) => `${pack.id} wants ${pack.file}`);
+    expect(missing, 'named in packs.json and not in public/packs/').toEqual([]);
   });
 
-  it('declares the size the file actually is', () => {
-    /*
-      `bytes` is what a reader is deciding whether to download, and it is
-      written by the builder rather than measured here — so a pack rebuilt
-      without the index being rewritten would advertise the old figure. The
-      declared size is the audio; the manifest in front of it is under a
-      kilobyte, which is the allowance below.
-    */
-    for (const pack of index) {
-      const actual = statSync(join(SERVED, pack.file)).size;
-      expect(actual, `${pack.id} is ${actual} bytes, index says ${pack.bytes}`)
-        .toBeGreaterThanOrEqual(pack.bytes);
-      expect(actual - pack.bytes, `${pack.id}'s manifest is implausibly large`)
-        .toBeLessThan(4096);
+  /**
+   * And nothing is shipped that the index does not name. A content-addressed
+   * filename means a rebuilt pack is a *new* file rather than a changed one,
+   * so the old one survives unless something removes it — bytes in the
+   * deployment that no code can reach and no credit covers.
+   */
+  it('are the only packs shipped', () => {
+    const named = new Set(index.map((pack) => pack.file));
+    const orphans = readdirSync(PACKS).filter((file) => file.endsWith('.pack') && !named.has(file));
+    expect(orphans, 'in public/packs/ and not in packs.json — rebuilt and not swept up')
+      .toEqual([]);
+  });
+
+  /**
+   * Every shipped pack passes the refusals it would be refused by at
+   * runtime. The synthetic manifests in `pack.test.ts` check that the rules
+   * work; this checks that the artefacts obey them, which is the half a
+   * truncated file, a stray Git LFS pointer or a hand-edited index breaks.
+   */
+  it('parse, and satisfy the rules a pack is refused by', () => {
+    for (const entry of index) {
+      const { manifest, audio } = parsePack(bytesOf(entry.file));
+      expect(() => checkManifest(manifest), entry.id).not.toThrow();
+
+      // The format's one piece of deliberate duplication: the index carries
+      // every pack's header and each pack repeats its own, so that a
+      // downloaded pack is self-describing when the index has moved on.
+      // Deliberate duplication is still duplication, and it can disagree.
+      for (const field of ['id', 'name', 'source', 'licence', 'attribution', 'file', 'trim'] as const) {
+        expect(manifest[field], `${entry.id}: ${field} differs from the index`)
+          .toEqual(entry[field]);
+      }
+
+      // `bytes` is the audio, not the file — it is what a reader is deciding
+      // whether to download, and the manifest in front of it is under a
+      // kilobyte.
+      expect(audio.length, `${entry.id}: declared size is not the audio`).toBe(entry.bytes);
+      expect(manifest.notes).toHaveLength(entry.notes);
     }
   });
 
-  it('carries a credit and a licence the allowlist permits', () => {
-    /*
-      The obligation half. A pack whose licence requires attribution and
-      whose attribution is empty is a pack the app cannot honestly ship, and
-      the settings screen renders these fields directly — so an empty one is
-      a blank line rather than a visible failure.
-    */
-    for (const pack of index) {
-      expect(licenceAllowed(pack.licence), `${pack.id} has licence ${pack.licence}`).toBe(true);
-      expect(pack.source, `${pack.id} names no source`).toBeTruthy();
-      expect(pack.attribution.length, `${pack.id} has no attribution`).toBeGreaterThan(0);
+  /**
+   * The filename is the content hash, and that is what makes ADR 0046's
+   * immutable URL structural rather than a discipline: a pack cannot be
+   * edited in place because editing it changes its name.
+   *
+   * Recomputed here the way `tools/build-instrument-pack.mjs` computes it —
+   * over the header, the note table and the trim, then the audio — because a
+   * claim that something is content-addressed is only worth making if
+   * somebody checks the address against the content. A pack edited by hand,
+   * truncated in transit, or rebuilt without its index entry following all
+   * fail here and nowhere else.
+   */
+  it('are named after what is inside them', () => {
+    for (const entry of index) {
+      const { manifest, audio } = parsePack(bytesOf(entry.file));
+      const header = {
+        id: manifest.id,
+        name: manifest.name,
+        source: manifest.source,
+        licence: manifest.licence,
+        attribution: manifest.attribution,
+      };
+      const digest = createHash('sha256')
+        .update(JSON.stringify({ header, notes: manifest.notes, trim: manifest.trim }))
+        .update(audio)
+        .digest('hex')
+        .slice(0, 8);
+      expect(entry.file, `${entry.id} is not named after its contents`)
+        .toBe(`${entry.id}-${digest}.pack`);
     }
   });
 
-  it('is a real pack container, not whatever a server felt like returning', () => {
-    /*
-      The shape of the original failure: the path resolved, with 200 and a
-      body, and the body was the application's own HTML. Reading the first
-      bytes is what distinguishes "a file is there" from "the right file is
-      there", and it is the difference the user role had to find by hand.
-    */
-    for (const pack of index) {
-      const head = readFileSync(join(SERVED, pack.file)).subarray(0, 6).toString('latin1');
-      expect(head, `${pack.file} does not begin like a pack`).toBe('PSPACK');
+  /**
+   * Every note the table indexes is inside the audio it came with. An offset
+   * past the end decodes to nothing, which — behind a synthesised voice that
+   * is already sounding — is the same silence as no pack at all.
+   */
+  it('index only into audio they actually carry', () => {
+    for (const entry of index) {
+      const { manifest, audio } = parsePack(bytesOf(entry.file));
+      for (const note of manifest.notes) {
+        expect(note.offset + note.bytes, `${entry.id}: note ${note.midi} runs past the audio`)
+          .toBeLessThanOrEqual(audio.length);
+        expect(note.bytes, `${entry.id}: note ${note.midi} is empty`).toBeGreaterThan(0);
+      }
     }
-  });
-
-  it('records notes inside the compass an instrument can be recorded over', () => {
-    for (const pack of index) {
-      expect(pack.notes, `${pack.id} records no notes`).toBeGreaterThan(0);
-      expect(pack.trim, `${pack.id} has no measured trim`).toBeGreaterThan(0);
-    }
-    expect(COMPASS.lowest).toBeLessThan(COMPASS.highest);
   });
 });

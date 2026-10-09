@@ -103,11 +103,24 @@ export const PACK_MAGIC = 'PSPACK\u0000\u0001';
  * Read a pack: its manifest, and the audio the note table indexes into.
  *
  * The container is the magic, a big-endian `uint32` manifest length, the
- * manifest as UTF-8 JSON, and then the audio. One file rather than a JSON
- * beside a blob, because the two must not be separable: a note table that can
- * arrive without its audio, or match a different copy of it, is the failure a
- * content-addressed filename exists to prevent, and two files reintroduce it
- * one directory listing later.
+ * manifest as UTF-8 JSON, and then the audio, with `offset` relative to the
+ * audio section. `docs/instrument-pack-format.md` carries the layout, because
+ * a file format outlives the code that first read it.
+ *
+ * **The reason is not that one file is inseparable.** That was the first
+ * argument for this shape and it does not decide anything: the obvious
+ * alternative — a JSON manifest with the audio base64 inside it — is equally
+ * one file, so inseparability rules out only a JSON beside a blob, which
+ * nobody proposed. What decides it is the cost of reading:
+ *
+ * - `offset` and `bytes` index into *decoded* audio, so a base64 reader has
+ *   to decode the entire payload before it can slice the first note. The
+ *   `fetch().json()` simplicity it appears to buy never arrives, while this
+ *   costs a nine-byte compare and one `getUint32`.
+ * - Base64 reaches JavaScript as a UTF-16 string, so a 396 KiB pack is
+ *   roughly a megabyte of string before a byte is decoded — on a phone.
+ *   Here the bytes are handed to `decodeAudioData` as a slice and never
+ *   exist twice.
  */
 export function parsePack(bytes: Uint8Array): { manifest: PackManifest; audio: Uint8Array } {
   const magic = new TextDecoder().decode(bytes.subarray(0, PACK_MAGIC.length));

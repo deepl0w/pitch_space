@@ -63,10 +63,32 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // The notation font is the reason offline is worth claiming at
-        // all — a cached shell that cannot draw a stave is a blank
-        // exercise — so the glyph formats are precached with everything
-        // else rather than left to a runtime cache.
+        /*
+          The notation font is the reason offline is worth claiming at
+          all — a cached shell that cannot draw a stave is a blank
+          exercise — so the glyph formats are precached with everything
+          else rather than left to a runtime cache.
+
+          **`.pack` is left out on purpose, and the omission is the
+          whole of the protection.** ADR 0046 requires that a sampled
+          instrument is fetched on first use and never precached:
+          synthesis is already in the bundle and guarantees an
+          instrument always sounds, so precaching 1.6 MB of recordings
+          would roughly triple the first load for every reader
+          including the ones who never change instrument.
+
+          This list is what enforces that, by not naming them. Which
+          means the rule dies quietly to anything that widens it — a
+          media type added for an unrelated reason, a switch to the
+          plugin's own default glob, or a catch-all glob reached for
+          to fix a missed asset. (Not written out here: a glob with a
+          star-slash in it ends this comment, which is how the first
+          draft of this paragraph broke the build.) The only symptom would be a slower first load
+          that nobody is measuring. So: **add an extension here only
+          after checking it does not pull the packs in, and if packs
+          ever should be precached, change 0046 rather than this
+          line.**
+        */
         globPatterns: ['**/*.{js,css,html,svg,png,woff,woff2,otf}'],
       },
     }),

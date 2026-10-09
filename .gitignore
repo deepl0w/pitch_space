@@ -65,10 +65,22 @@ docs/process/
 # they are 4-6 MiB each and are a build-time input, never shipped.
 fixtures/
 
-# Built instrument packs. The recordings they are made from are tens of
-# megabytes and the packs are derived from them, so neither belongs in a
-# repository anyone has to clone. `tools/build-instrument-pack.mjs` rebuilds
-# both, and `src/audio/output/packs.json` — the index it writes, which the
-# settings screen needs to credit a pack before one is downloaded — is
-# committed precisely because it is the small part.
-public/packs/
+# The recordings a pack is built FROM are tens of megabytes and are fetched
+# by `tools/build-instrument-pack.mjs` into `fixtures/`, which is ignored
+# above. The packs themselves are committed, and the first version of this
+# rule ignored them too — which was wrong in a way nothing in the suite
+# could see.
+#
+# A pack is only ever loaded over HTTP, so an ignored one is simply absent
+# everywhere except the checkout that built it: every other worktree, a
+# fresh clone, CI and the deployed site served the SPA fallback for it and
+# the app quietly played the synthesised voice instead. It is exactly the
+# failure synthesis-as-a-floor is designed to absorb, which is why it was
+# silent — no error, no console warning, just nobody ever hearing a
+# recording. Found by the user role, from the built app, after main had
+# "verified" it against the one working tree where the files happened to
+# exist.
+#
+# 1.5 MB for five instruments, content-addressed and immutable, is not the
+# recording corpus the argument above is about. The corpus is the 60 MB of
+# source WAVs, and those stay out.

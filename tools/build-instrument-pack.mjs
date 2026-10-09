@@ -71,6 +71,25 @@ const BITRATE = '64k';
 const REFERENCE_DBFS = -20;
 
 /**
+ * How much of a note the level is measured over.
+ *
+ * **Not the whole sample, and the first version of this got it wrong.** A
+ * pack stores three seconds; the app plays about one. Measuring the stored
+ * length matched the instruments over audio most of which is never heard,
+ * and the two kinds of instrument hide their energy in different places —
+ * a struck piano puts nearly all of it in the first second and a sustained
+ * flute spreads it evenly, so two voices with the same three-second RMS
+ * are nothing like the same loudness over the second that plays.
+ *
+ * That is exactly what shipped: piano and flute were matched to within
+ * 0.3 dB across three seconds, and the user role measured the piano at
+ * roughly three times the flute's level in the app. Measured over what is
+ * actually sounded instead. `BAR_SECONDS` in `progression-id` is the
+ * longest single sound any exercise schedules, at 1.1s.
+ */
+const HEARD_SECONDS = 1.2;
+
+/**
  * Where the loudest note in a pack is put before encoding.
  *
  * Not 0: a lossy encoder overshoots the waveform it was given, so a file
@@ -209,8 +228,8 @@ function rmsOf(paths) {
     // Both streams: ffmpeg writes its filter reports to stderr, so reading
     // stdout alone measures nothing and reports every note as silent.
     const { stdout, stderr } = spawnSync('ffmpeg',
-      ['-nostdin', '-v', 'info', '-i', path, '-af', 'astats=measure_perchannel=none',
-        '-f', 'null', '-'],
+      ['-nostdin', '-v', 'info', '-i', path, '-t', String(HEARD_SECONDS),
+        '-af', 'astats=measure_perchannel=none', '-f', 'null', '-'],
       { encoding: 'utf8' });
     const match = /RMS level dB:\s*(-?[\d.]+|-?inf)/.exec(`${stdout}${stderr}`);
     return match && match[1] !== '-inf' ? Number(match[1]) : null;

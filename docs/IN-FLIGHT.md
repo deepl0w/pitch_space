@@ -262,6 +262,20 @@ would reintroduce the defect they were taken to remove, and do it between
 the two halves of one instrument — so a pack landing mid-exercise would
 change the volume as it swapped in.
 
+**Built, as of `ccd200d`.** `src/audio/output/pack.ts` is the format,
+pure and testable; `sampled.ts` fetches, decodes and sounds it;
+`tools/build-instrument-pack.mjs` builds a pack and writes the index.
+One pack exists — an upright piano from VCSL, CC0, 16 notes every four
+semitones from A1 to A6, **396 KiB**, which is the measured answer to the
+"tens of megabytes" this feature twice told users. Verified in real
+Chrome: selecting Piano fetches the pack and a chord plays through three
+`AudioBufferSourceNode`s, with oscillators before it lands.
+
+**The loader signature tester was waiting on now exists**:
+`checkManifest(manifest)` throws on a pack with no `source`, a licence
+outside the allowlist, or no measured `trim` — the last one rather than
+defaulting to 1, because 1 looks like a value and is the absence of one.
+
 **For tester.** Three claims, and none of them is about timbre — the
 suite has no standing on whether a recording sounds like a piano.
 

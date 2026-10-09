@@ -944,11 +944,19 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   */
 }
 
-/* `.wedge.wedge-self` rather than `.wedge-self`: the rule above is a
-   class plus a pseudo-class, so one class here would tie on
-   specificity and lose on source order — silently, since both are
-   valid and only one paints. The same trap cost an hour on the
-   settings cog.
+/* `.wedge.wedge-self` rather than `.wedge-self`, and **not for the
+   reason the first version of this comment gave.** It said a single
+   class would tie on specificity and lose on source order. It would
+   tie — both are one class and one pseudo-class — but this rule sits
+   below the one it overrides, and a tie goes to the later rule, so a
+   single class would have won. The mechanism was right and pointed
+   the wrong way round; the settings-cog trap it was recalling had the
+   override *above* its base, which is where a tie is lost.
+
+   The compound earns its place on the other ground: (0,3,0) beats
+   (0,2,0) outright, so it keeps working if someone moves either rule.
+   A win that depends on being last is a win that a tidy-up can
+   silently take away.
 
    Why it flips: this wedge is neat `--accent`, where an ink ring is
    1.84:1 in dark and 2.38:1 in light — under the 3:1 floor for a

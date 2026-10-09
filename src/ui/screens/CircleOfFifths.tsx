@@ -199,6 +199,28 @@ export function CircleOfFifths() {
     return `wedge wedge-${relation}`;
   }
 
+  /*
+    A label on the selected wedge is written in the background colour,
+    not the text colour — the same flip `.chip.on` already makes when a
+    chip fills with the accent.
+
+    Measured rather than preferred. The selected wedge is neat
+    `--accent`; every other wedge is the accent mixed down into the
+    surface. Against those mixes `--ink` runs from 4.6:1 to 11.7:1 and
+    `--bg` collapses to as little as 1.4:1, so ink is right there. On
+    the selected wedge it inverts: ink is **1.84:1 in dark and 2.38:1
+    in light**, under the 4.5:1 floor for text and under even the 3:1
+    one for a non-text indicator, while `--bg` gives 8.2 and 7.0.
+
+    So no single colour serves both and the one in use was the wrong
+    one exactly where the eye goes first. A reader looking at it called
+    it legible but soft, which is what a 2:1 ratio looks like when you
+    already know what the letter says.
+  */
+  function labelClassFor(key: Key, base: string): string {
+    return relationBetween(selected, key) === 'self' ? `${base} wedge-label-on-fill` : base;
+  }
+
   return (
     <>
       <header>
@@ -266,12 +288,14 @@ export function CircleOfFifths() {
                     second as a fact about the first. On a screen whose job
                     is teaching key signatures, that is the one thing it must
                     not do. */}
-                <WedgeLabel x={mx} y={my} row="major" className="wedge-label"
+                <WedgeLabel x={mx} y={my} row="major"
+                  className={labelClassFor(major, 'wedge-label')}
                             lines={position.major.map((k) => ({
                               text: keyName(k).replace(' major', ''),
                               signature: signatureText(k),
                             }))} />
-                <WedgeLabel x={nx} y={ny} row="minor" className="wedge-label wedge-label-minor"
+                <WedgeLabel x={nx} y={ny} row="minor"
+                  className={labelClassFor(minor, 'wedge-label wedge-label-minor')}
                             lines={position.minor.map((k) => ({
                               text: `${keyName(k).replace(' minor', '')}m`,
                             }))} />

@@ -890,6 +890,11 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 }
 .wedge-label-minor { font-weight: 500; fill: var(--muted); }
 
+/* On the selected wedge, which is neat `--accent`: see `labelClassFor`
+   in CircleOfFifths.tsx for the measured ratios. Last, so it wins over
+   `.wedge-label-minor`'s `--muted`, which is worse again on that fill. */
+.wedge-label-on-fill, .wedge-label-on-fill tspan { fill: var(--bg); }
+
 /* A focused wedge has to be visible on the wheel itself: the default
    outline is drawn round the path's bounding box, which for a thirty
    degree segment is a rectangle most of which is not the wedge. Drawn
@@ -932,6 +937,19 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
     edges nobody is looking at.
   */
 }
+
+/* `.wedge.wedge-self` rather than `.wedge-self`: the rule above is a
+   class plus a pseudo-class, so one class here would tie on
+   specificity and lose on source order — silently, since both are
+   valid and only one paints. The same trap cost an hour on the
+   settings cog.
+
+   Why it flips: this wedge is neat `--accent`, where an ink ring is
+   1.84:1 in dark and 2.38:1 in light — under the 3:1 floor for a
+   non-text indicator, on the wedge a keyboard lands on first. `--bg`
+   measures 8.2 and 7.0 here, and is the wrong choice on every other
+   wedge, which is why it is scoped to this one. */
+.wedge.wedge-self:focus-visible { stroke: var(--bg); }
 /* A tspan inside its key's name, so it inherits anchoring and centring and
    only has to say that it is an annotation rather than part of the name. */
 .wedge-signature { fill: var(--muted); font-weight: 500; }

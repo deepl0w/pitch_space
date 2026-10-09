@@ -123,6 +123,50 @@ function WedgeLabel({ x, y, lines, row, className }: {
 }
 
 /** Small enough to read as an annotation, large enough to read at all. */
+/**
+ * One key on the wheel, as a control rather than a shape.
+ *
+ * `role="button"` with a name, a tab stop and Enter/Space, because a
+ * `path` has none of those and the wedges were mouse-only. The name is
+ * the key itself — "G major" — since a screen reader otherwise announces
+ * a button with no label twenty-four times.
+ *
+ * **Not `radio` in a `radiogroup`**, which is the tempting fit. That
+ * pattern owes the reader arrow-key navigation and a roving tab stop,
+ * and a radio group that takes Tab twenty-four times is a worse
+ * experience than the buttons while also claiming to be something it is
+ * not. Buttons promise only what they deliver; the related-keys list
+ * beside the wheel is already the quick path for anyone who does not
+ * want to walk the circle.
+ *
+ * `preventDefault` on Space because the page scrolls otherwise, which on
+ * a page this tall moves the thing you were aiming at.
+ */
+function Wedge({ className, d, name, selected, onChoose }: {
+  className: string;
+  d: string;
+  name: string;
+  selected: boolean;
+  onChoose(): void;
+}) {
+  return (
+    <path
+      className={className}
+      d={d}
+      role="button"
+      tabIndex={0}
+      aria-label={name}
+      aria-pressed={selected}
+      onClick={onChoose}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        onChoose();
+      }}
+    />
+  );
+}
+
 const SIGNATURE_SIZE = 8;
 
 export function CircleOfFifths() {
@@ -175,7 +219,18 @@ export function CircleOfFifths() {
       */}
       <div className="circle-page">
       <div className="circle-layout">
-        <svg viewBox="-168 -168 336 336" className="circle" role="img"
+        {/*
+          `group`, not `img`. An `img` role collapses everything inside
+          it to one node, so the twenty-four keys were a picture of a
+          control rather than a control — and the wedges, being bare
+          `path` elements, were not reachable by keyboard either. Two
+          different reasons for the same outcome: you could choose a key
+          with a mouse and by no other means.
+
+          Found by the user role while checking something else, in both
+          layouts, so it long predates the two-column change.
+        */}
+        <svg viewBox="-168 -168 336 336" className="circle" role="group"
              aria-label="The circle of fifths. Major keys outside, their relative minors inside.">
           {CIRCLE.map((position) => {
             const major = position.major[0];
@@ -184,15 +239,19 @@ export function CircleOfFifths() {
             const [nx, ny] = polar((MIDDLE + INNER) / 2, position.index * WEDGE);
             return (
               <g key={position.index}>
-                <path
+                <Wedge
                   className={classFor(major)}
                   d={wedgePath(position.index, OUTER, MIDDLE)}
-                  onClick={() => setSelectedId(keyId(major))}
+                  name={keyName(major)}
+                  selected={keyId(major) === selectedId}
+                  onChoose={() => setSelectedId(keyId(major))}
                 />
-                <path
+                <Wedge
                   className={classFor(minor)}
                   d={wedgePath(position.index, MIDDLE, INNER)}
-                  onClick={() => setSelectedId(keyId(minor))}
+                  name={keyName(minor)}
+                  selected={keyId(minor) === selectedId}
+                  onChoose={() => setSelectedId(keyId(minor))}
                 />
                 {/* Stacked rather than joined by a slash. Three of the twelve
                     positions carry two spellings, and "B♭ / C♭ 7♭" is wider

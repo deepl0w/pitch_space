@@ -889,6 +889,18 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   text-anchor: middle; dominant-baseline: middle; pointer-events: none;
 }
 .wedge-label-minor { font-weight: 500; fill: var(--muted); }
+
+/* A focused wedge has to be visible on the wheel itself: the default
+   outline is drawn round the path's bounding box, which for a thirty
+   degree segment is a rectangle most of which is not the wedge. Drawn
+   as a stroke on the shape instead, so the thing highlighted is the
+   thing that will be chosen. */
+.wedge:focus-visible {
+  outline: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  paint-order: stroke;
+}
 /* A tspan inside its key's name, so it inherits anchoring and centring and
    only has to say that it is an annotation rather than part of the name. */
 .wedge-signature { fill: var(--muted); font-weight: 500; }

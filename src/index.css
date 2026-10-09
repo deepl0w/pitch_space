@@ -912,17 +912,23 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
     than a focused ordinary one; the ring looked fine on five wedges out
     of six and the sixth was the one that mattered.
 
-    `--ink` carries against a full-strength accent *on this wheel*,
-    which is demonstrated a few lines below: `.wedge-label` is
-    `fill: var(--ink)` and the labels sit on `.wedge-self`, which is
-    neat accent. Same two colours, same surface, already legible.
+    **Ink is right here and wrong on one wedge**, which is why the
+    scoped rule below exists. Against the mixed fills it measures 4.6:1
+    to 11.1:1; against the neat accent of the selected wedge it is
+    1.84:1 in dark and 2.38:1 in light, under the 3:1 a non-text
+    indicator needs. `--bg` is the mirror image — 8.2 and 7.0 on the
+    neat fill, and down to 1.2:1 on the palest mix — so neither token
+    serves the whole wheel and the ring follows the fill.
 
-    **Narrower than the first version of this comment**, which claimed
-    ink was safe because everything written on an accent uses it. That
-    is false — `.chip.on` and `.figure-play:hover` both write `--bg` on
-    a neat accent, so the app has two conventions for text on that
-    background and this is the less common one. The wide claim would
-    have been cited for some other element where it does not hold.
+    **Two earlier versions of this paragraph were wrong**, and both in
+    the same direction, which is why the figures are now written down
+    rather than argued. The first said ink was safe because everything
+    written on an accent uses it: false, `.chip.on` and
+    `.figure-play:hover` both write `--bg` there. The second narrowed
+    it to this wheel, citing `.wedge-label` as the demonstration — and
+    `.wedge-label-on-fill`, forty lines down, overrides exactly that
+    case, because the labels were failing the same floor. A precedent
+    repealed by the commit that cited it.
   */
   stroke: var(--ink);
   stroke-width: 3;

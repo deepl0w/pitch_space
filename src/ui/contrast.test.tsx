@@ -1,0 +1,256 @@
+// @vitest-environment jsdom
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it } from 'vitest';
+import { CircleOfFifths } from './screens/CircleOfFifths';
+import { APP_RULES, customProperties } from '../testing/stylesheet';
+
+/**
+ * The focus ring on the circle of fifths, against the fill it actually
+ * lands on, in both themes.
+ *
+ * **Why this one is computable here when the general version is not.** A
+ * focus indicator lands on whatever is painted behind it, which is
+ * geometry and belongs to a browser. The wheel is the case where it is
+ * not: `.wedge` carries the ring and `.wedge-self` carries the fill, and
+ * they are two classes on *one element*, so the pairing can be read off
+ * the rendered DOM rather than guessed from how things were named. That
+ * distinction is the whole reason this file exists and the reason there
+ * is no sweep over every control — for the rest, the suite genuinely
+ * cannot know what is underneath.
+ *
+ * **What it cost to get here.** The ring was `--ink`, which is 1.84:1 on
+ * the neat-accent wedge in dark and 2.38:1 in light, under the 3:1 floor
+ * for a non-text indicator — on precisely the wedge a keyboard reaches
+ * first. It is scoped to `--bg` there now. Two readers measured it by
+ * different means, one through a canvas pixel read and one through this
+ * arithmetic, and agreed to two decimals; what neither saw alone was that
+ * a *compound* selector had already fixed it, because a reader matching
+ * on single class names cannot see `.wedge.wedge-self:focus-visible`.
+ * Hence the specificity resolution below, which is not decoration: it is
+ * the exact blindness this test was written after.
+ */
+
+declare global {
+  // oxlint-disable-next-line no-var
+  var IS_REACT_ACT_ENVIRONMENT: boolean;
+}
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+/** WCAG 1.4.11: a non-text indicator needs this against what surrounds it. */
+const INDICATOR_FLOOR = 3;
+
+/* -- colour, as the browser computes it ------------------------------------ */
+
+function srgbToLinear(channel: number): number {
+  const c = channel / 255;
+  return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}
+
+function linearOf(hex: string): [number, number, number] {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) throw new Error(`not a hex colour: ${hex}`);
+  const n = parseInt(m[1], 16);
+  return [srgbToLinear((n >> 16) & 255), srgbToLinear((n >> 8) & 255), srgbToLinear(n & 255)];
+}
+
+/** Linear sRGB to Oklab, by Björn Ottosson's matrices — what `in oklab` means. */
+function toOklab([r, g, b]: [number, number, number]): [number, number, number] {
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function fromOklab([L, a, b]: [number, number, number]): [number, number, number] {
+  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  return [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+}
+
+function mixOklab(a: string, b: string, percent: number): [number, number, number] {
+  const [x, y] = [toOklab(linearOf(a)), toOklab(linearOf(b))];
+  const t = percent / 100;
+  return fromOklab([0, 1, 2].map((i) => x[i] * t + y[i] * (1 - t)) as [number, number, number]);
+}
+
+function luminance([r, g, b]: [number, number, number]): number {
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function contrast(a: [number, number, number], b: [number, number, number]): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+/* -- the cascade, enough of it --------------------------------------------- */
+
+/** The palette a theme declares, as `--name` to a literal colour. */
+function palette(...selectors: string[]): Map<string, string> {
+  const bodies = APP_RULES
+    .filter((rule) => rule.selectors.some((s) => selectors.includes(s)))
+    .map((rule) => rule.body);
+  return customProperties(bodies.join(''));
+}
+
+const THEMES = {
+  light: palette(':root'),
+  dark: palette(':root:not([data-theme="light"])', ':root[data-theme="dark"]'),
+};
+
+/**
+ * Specificity as the cascade counts it: ids, then classes and
+ * pseudo-classes and attributes, then element names.
+ *
+ * Written out because this is the thing that was missed.
+ * `.wedge.wedge-self:focus-visible` beats `.wedge:focus-visible` by one
+ * class, and a reader taking the first or the last match rather than the
+ * most specific gets the wrong answer with both rules present and valid.
+ */
+function specificity(selector: string): [number, number, number] {
+  const ids = selector.match(/#[\w-]+/g)?.length ?? 0;
+  const classes = (selector.match(/\.[\w-]+/g)?.length ?? 0)
+    + (selector.match(/\[[^\]]*\]/g)?.length ?? 0)
+    + (selector.match(/:(?!:)[\w-]+/g)?.length ?? 0);
+  const types = selector.replace(/[.#:[][^\s>+~]*/g, '').match(/[\w-]+/g)?.length ?? 0;
+  return [ids, classes, types];
+}
+
+function beats(a: [number, number, number], b: [number, number, number]): boolean {
+  for (let i = 0; i < 3; i += 1) {
+    if (a[i] !== b[i]) return a[i] > b[i];
+  }
+  return true; // Equal specificity: later in the source wins.
+}
+
+/**
+ * The value that wins for a property on an element, among the rules whose
+ * selectors it matches once `:focus-visible` is taken off.
+ *
+ * jsdom applies no stylesheet of its own, so `getComputedStyle` cannot
+ * answer this; what it can do is `matches`, which is the part that has to
+ * be right. The cascade is then specificity and source order.
+ */
+function winning(element: Element, property: string, focus: boolean): string | null {
+  let best: { value: string; spec: [number, number, number] } | null = null;
+  for (const rule of APP_RULES) {
+    const declaration = new RegExp(`(?:^|;)\\s*${property}\\s*:([^;}]+)`).exec(rule.body);
+    if (!declaration) continue;
+    for (const selector of rule.selectors) {
+      const isFocus = selector.includes(':focus-visible');
+      if (isFocus !== focus) continue;
+      const base = selector.replace(/:focus-visible/g, '').trim();
+      if (!element.matches(base)) continue;
+      const spec = specificity(selector);
+      if (!best || beats(spec, best.spec)) best = { value: declaration[1].trim(), spec };
+    }
+  }
+  return best?.value ?? null;
+}
+
+/** A declared value resolved against a palette, as linear sRGB. */
+function resolve(value: string, theme: Map<string, string>): [number, number, number] {
+  const mix = /^color-mix\(\s*in oklab\s*,\s*var\((--[\w-]+)\)\s*([\d.]+)%\s*,\s*var\((--[\w-]+)\)\s*\)$/
+    .exec(value);
+  if (mix) {
+    return mixOklab(token(mix[1], theme), token(mix[3], theme), Number(mix[2]));
+  }
+  const single = /^var\((--[\w-]+)\)$/.exec(value);
+  if (single) return linearOf(token(single[1], theme));
+  return linearOf(value);
+}
+
+function token(name: string, theme: Map<string, string>): string {
+  const value = theme.get(name);
+  if (!value) throw new Error(`${name} is not in this palette`);
+  return value;
+}
+
+/* -- the claim -------------------------------------------------------------- */
+
+function wedges(): Element[] {
+  const host = document.createElement('div');
+  document.body.append(host);
+  act(() => { createRoot(host).render(<CircleOfFifths />); });
+  return [...host.querySelectorAll('.wedge')];
+}
+
+describe('the focus ring on the circle of fifths', () => {
+  const found = wedges();
+
+  it('is asked of every wedge, in both themes', () => {
+    // The population. A selector rename, or a wheel that stopped
+    // rendering, would otherwise leave every case below asserting over an
+    // empty list and passing.
+    expect(found.length, 'no wedges rendered').toBeGreaterThan(20);
+    expect(THEMES.light.size, 'no light palette').toBeGreaterThan(4);
+    expect(THEMES.dark.size, 'no dark palette').toBeGreaterThan(4);
+  });
+
+  /**
+   * The arithmetic, pinned against figures measured in a browser.
+   *
+   * Without this the whole file could pass on a broken mix: a contrast
+   * function returning a large number for everything satisfies the claim
+   * below perfectly. These four are the ones two readers measured
+   * independently — a canvas pixel read and this code — and agreed on.
+   */
+  it('computes what a browser measured', () => {
+    const pairs: [keyof typeof THEMES, string, string, number][] = [
+      ['light', '--ink', '--accent', 2.38],
+      ['dark', '--ink', '--accent', 1.84],
+      ['light', '--bg', '--accent', 7.02],
+      ['dark', '--bg', '--accent', 8.16],
+    ];
+    for (const [theme, a, b, expected] of pairs) {
+      const got = contrast(
+        linearOf(token(a, THEMES[theme])),
+        linearOf(token(b, THEMES[theme])),
+      );
+      expect(got, `${a} on ${b} in ${theme}`).toBeCloseTo(expected, 1);
+    }
+    // And a mix resolves rather than throwing, which is the other half of
+    // what the claim below depends on.
+    const relative = resolve('color-mix(in oklab, var(--accent) 55%, var(--surface))', THEMES.dark);
+    expect(contrast(linearOf(token('--ink', THEMES.dark)), relative)).toBeCloseTo(4.62, 1);
+  });
+
+  it('clears the floor for an indicator on every wedge it can land on', () => {
+    const failures: string[] = [];
+    for (const [name, theme] of Object.entries(THEMES)) {
+      for (const wedge of found) {
+        const ring = winning(wedge, 'stroke', true);
+        const fill = winning(wedge, 'fill', false);
+        if (ring === null || fill === null) continue;
+        const ratio = contrast(resolve(ring, theme), resolve(fill, theme));
+        if (ratio < INDICATOR_FLOOR) {
+          failures.push(`${name}: ${wedge.getAttribute('class')} — ring ${ring} on fill `
+            + `${fill} is ${ratio.toFixed(2)}:1`);
+        }
+      }
+    }
+    expect([...new Set(failures)]).toEqual([]);
+  });
+
+  /**
+   * And the resolution above is actually doing the work it was written
+   * for. If every wedge took its ring from the same rule, the specificity
+   * code would be dead and the compound override — the thing that was
+   * invisible to the reader this file replaces — would go unexercised.
+   */
+  it('resolves a compound override, not merely the first rule that matched', () => {
+    const rings = new Set(found.map((wedge) => winning(wedge, 'stroke', true)));
+    expect([...rings].filter((r) => r !== null).length,
+      'every wedge rings the same colour, so no override is being resolved')
+      .toBeGreaterThan(1);
+  });
+});

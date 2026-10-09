@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * The stylesheet as rules, for the tests that have to ask it questions.
@@ -58,9 +59,20 @@ export function parseRules(css: string, at: string | null = null): Rule[] {
   return out;
 }
 
-/** `index.css`, with comments stripped so prose cannot match a selector. */
+/**
+ * `index.css`, with comments stripped so prose cannot match a selector.
+ *
+ * From the working directory rather than from `import.meta.url`, which
+ * this used and which breaks the moment a jsdom-environment test imports
+ * it: under jsdom the global `URL` is the DOM's and resolves against the
+ * document base, giving `/src/index.css`, and the module specifier is not
+ * a `file:` URL there either, so neither `.pathname` nor `fileURLToPath`
+ * survives. Vitest runs from the project root and `recorded.test.ts`
+ * already reads `fixtures/audio` the same way, so this is the convention
+ * here rather than a shortcut.
+ */
 export const APP_CSS = readFileSync(
-  new URL('../index.css', import.meta.url).pathname, 'utf8',
+  join(process.cwd(), 'src', 'index.css'), 'utf8',
 ).replace(/\/\*[\s\S]*?\*\//g, '');
 
 export const APP_RULES = parseRules(APP_CSS);

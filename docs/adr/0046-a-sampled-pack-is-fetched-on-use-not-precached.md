@@ -161,3 +161,37 @@ path is pleasant needs a separate way to tell *degraded* from *fine*, and the
 place to put it is wherever the artefact is produced rather than wherever it is
 consumed. The consumer cannot distinguish them — that is the whole point of the
 fallback.
+
+## Addendum, 10 October 2026 — the tool that will implement this defaults to the opposite
+
+**`vite-plugin-pwa` sweeps `public/` into its precache by default.** The packs
+live in `public/packs/`, so the unconsidered configuration of the very plugin
+that implements this record inverts its central decision: 1.6 MB of recordings
+enter the precache, the first load pays for all five instruments, and the
+offline guarantee stops being synthesis.
+
+**The current configuration is safe by omission rather than by intent**, which
+is the part worth recording. `vite.config.ts` names an explicit extension list —
+`js,css,html,svg,png,woff,woff2,otf` — and `.pack` is simply not in it. The
+comment above it explains why the notation font is *included* and says nothing
+about what is deliberately *excluded*. So the protection is real, undocumented,
+and one generalisation away from gone: anyone adding a media type, switching to
+the plugin's default glob, or reaching for `**/*` to fix an unrelated miss
+inverts this record and the only symptom is a larger first load that nobody is
+measuring.
+
+**This belongs in the record rather than in a forward-plan entry**, which is
+the question that prompted the addendum. `docs/IN-FLIGHT.md` entries are
+removed once their work has merged and been reviewed — correctly, since they
+describe work in flight. **The hazard outlives the work.** It is not a thing to
+remember while wiring the plugin up; it is a standing property of the tool,
+live for as long as the plugin is used and renewed by every upgrade.
+
+The general form, which is why this is a Consequence and not a note: **when a
+decision's implementing tool defaults to the opposite of it, the record carries
+the hazard, because the warning is temporary and the default is permanent.**
+
+What this asks of the configuration is one line saying the omission is
+deliberate and pointing here. An exclusion with no stated reason is the
+absent-claim problem the ADR index's sixth convention describes — nothing
+contradicts it, so it gets tidied away by someone being helpful.

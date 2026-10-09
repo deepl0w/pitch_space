@@ -16,6 +16,7 @@ preview pane is not the app.
 
 - [Starting a server](#starting-a-server)
 - [What the preview harness gets wrong about this app](#what-the-preview-harness-gets-wrong-about-this-app)
+- [A counter that never ran reads like a counter reading zero](#a-counter-that-never-ran-reads-like-a-counter-reading-zero)
 - [Driving real Chrome](#driving-real-chrome)
 - [What this does not cover](#what-this-does-not-cover)
 
@@ -58,6 +59,51 @@ coarse)` rule in the stylesheet is inert and each control measures at its
 mouse size. At 375 px the same page gives 33 controls under 44 px with a
 mouse pointer and none with a touch pointer. A touch-target claim made from
 a resized preview is a claim about a desktop browser squeezed thin.
+
+## A counter that never ran reads like a counter reading zero
+
+Two measurements an hour apart were both false this way, and neither
+announced it.
+
+A harness patched `AudioScheduledSourceNode.prototype.start` to count notes.
+**`AudioBufferSourceNode` declares its own `start`** — it takes
+`(when, offset, duration)` rather than `(when)`, and the override is in the
+IDL this repository already ships, at `AudioBufferSourceNode` and again at
+`AudioScheduledSourceNode` in `node_modules/typescript/lib/lib.dom.d.ts`, so
+the next person can establish it without a browser. A patch on the base is
+shadowed rather than inherited: it caught every oscillator and no buffer
+source. Before a sampled pack lands every note is an oscillator and the count
+moves; after it lands every note is a buffer source and the count stops dead.
+That is indistinguishable from the instrument going silent, and it was
+reported as exactly that.
+
+The second was a `Page.navigate` to a URL differing from the current one only
+in the hash. The document never reloaded, so the script installing the
+counters — injected with `Page.addScriptToEvaluateOnNewDocument`, which fires
+only on a real navigation — never ran, and every counter was `undefined`.
+**How that becomes a number is worth being exact about**, because the obvious
+guard tests for the wrong value: `+undefined - +undefined` is `NaN`, not `0`.
+The zero came from the readings being joined into a string before being
+parsed, where an absent counter contributes an empty field and `+'' === 0`.
+A harness that defended against `NaN` would have passed this through
+unchanged.
+
+**The two sections above are the tool lying about the app. This is the tool
+not running and saying so in the voice of a true measurement**, which is
+worse: a misdrawn stave is visible the moment you look at it, and a dead
+counter looks exactly like the finding you went to get.
+
+So, before trusting a reading, **assert the instrument, not the reading**.
+`typeof window.__counters === 'object'` before any delta is read; a canary
+the page increments unconditionally, so a zero in it is impossible; and a
+baseline taken after the patch is installed rather than before. If a
+navigation is only a hash change, reload explicitly — nothing will tell you
+the injected script was skipped.
+
+This is the suite's own rule arriving from outside it. A dozen cases under
+`src/` assert the size of what they swept before asserting anything about it,
+because a guard over an empty population passes. An instrument pointed at the
+app needs the same guard and had none.
 
 ## Driving real Chrome
 

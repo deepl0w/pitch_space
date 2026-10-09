@@ -149,30 +149,20 @@ describe.skipIf(found.length === 0)('a recorded piano note', () => {
 });
 
 describe.skipIf(found.length > 0)('the recorded tier', () => {
-  /**
-   * Absent because the recordings are, not because nothing matched them.
-   *
-   * This case used to assert `found` was empty, which is what the gate
-   * above already decided — true by construction, and so a guard that
-   * could not fail. What it is actually worth saying is *why* the tier is
-   * absent, because the two reasons are not alike. No `fixtures/audio` is
-   * the ordinary one: the directory is gitignored, a fresh checkout has
-   * none, and the message below is the remedy.
-   *
-   * The other reason is a filter that has drifted from the files — a
-   * renamed download, a note added to the fetch script and not to `HZ` —
-   * and it is much worse, because the tier then reports itself absent on
-   * a machine that has the recordings, the remedy prints, somebody runs
-   * it, and it says absent again. The whole tier would evaporate on every
-   * machine with nothing failing anywhere.
-   */
-  it('is absent because the recordings are, not because nothing matched them', () => {
-    const wavs = existsSync(DIR) ? readdirSync(DIR).filter((f) => f.endsWith('.wav')) : [];
-    expect(wavs, `${DIR} holds recordings that no case matched — the file names `
-      + 'or the HZ table have drifted apart, and the remedy below is a lie')
-      .toEqual([]);
-    // Not a silent skip: a tier nobody knows is missing is a tier that
-    // stays missing. This case exists so the run says so out loud.
+  it('is absent, and names a remedy that is actually there', () => {
+    /*
+      The message is the whole point of this case, and a message naming a
+      script that has moved is worse than no message: the reader runs it,
+      gets nothing, and concludes the tier is broken rather than absent.
+      Asserting the remedy exists is the one claim available in a checkout
+      that has no recordings to say anything else about.
+
+      The drift check that used to be here has moved outside both gates —
+      see below. It belonged there: inside this block it only ran when
+      *nothing* matched, so it caught a wholesale rename and missed the
+      likelier shape, one file the table does not know about.
+    */
+    expect(existsSync(REMEDY), `${REMEDY} is gone, so the message below is a lie`).toBe(true);
     console.log(`\n  No recordings in ${DIR}. Run ${REMEDY} to enable the recorded-audio tests.\n`);
   });
 });
@@ -183,3 +173,27 @@ function toArrayBuffer(buffer: Buffer): ArrayBuffer {
     buffer.byteOffset, buffer.byteOffset + buffer.byteLength,
   ) as ArrayBuffer;
 }
+
+/**
+ * Outside both gates, because the question is the same in either state.
+ *
+ * A recording in the directory that no case reads is the tier being quietly
+ * short: the fetch script gains a note and `HZ` does not, or a download is
+ * renamed upstream, and the run goes green over five files where it used to
+ * read six. Nothing in the two blocks above can see that — one only runs
+ * when every file matched is none of them, the other asserts about the
+ * files it did match and cannot miss what it never saw.
+ *
+ * Vacuous where there are no recordings at all, which is honest: a checkout
+ * without the fixtures has nothing to be wrong about, and the case above
+ * says so out loud.
+ */
+describe('the recordings this tier reads', () => {
+  it('leaves nothing in the directory unread', () => {
+    const wavs = existsSync(DIR) ? readdirSync(DIR).filter((f) => f.endsWith('.wav')) : [];
+    const read = new Set(found.map((r) => r.path.slice(DIR.length + 1)));
+    expect(wavs.filter((f) => !read.has(f)),
+      `in ${DIR} and read by nothing — the file names and the HZ table have drifted apart`)
+      .toEqual([]);
+  });
+});

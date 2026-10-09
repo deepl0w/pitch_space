@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { checkManifest, parsePack } from './pack';
+import { checkManifest, nearestRecorded, parsePack } from './pack';
 import index from './packs.json';
 
 /**
@@ -165,6 +165,58 @@ describe('the packs the app will fetch', () => {
         .slice(0, 8);
       expect(entry.file, `${entry.id} is not named after its contents`)
         .toBe(`${entry.id}-${digest}.pack`);
+    }
+  });
+
+  /**
+   * No note is ever reached from further than two semitones away.
+   *
+   * This is the builder's own stated rule rather than a figure chosen here.
+   * `tools/build-instrument-pack.mjs` says it in the course of explaining
+   * why a finely sampled library gets thinned out: *the furthest a note is
+   * ever shifted is what matters, and two semitones is already inaudible as
+   * a formant shift.* So what is asserted is that the shipped tables obey
+   * the rule the builder declares — not that the rule is right, which is a
+   * question about hearing and not this suite's.
+   *
+   * **The quantity is the shift, not the gap, and that distinction is the
+   * whole case.** A rule phrased as "no gap wider than four semitones" is
+   * the obvious form and is already false of the shipped set: the flute's
+   * section has an uneven spacing that is not ours to fix and carries one
+   * gap of five. Its worst shift is still two, because a gap of five has a
+   * recording within two of every note inside it. Measured before writing,
+   * which is the only reason this case is about the right number.
+   *
+   * It earns its place now that note lists are hand-picked. Five of the six
+   * libraries are regularly spaced and the list falls out of the spacing;
+   * the guitar's does not — FreePats is missing G♯2 and C♯3 among others, so
+   * the four-semitone rule could not be applied literally and someone chose
+   * from what exists. A hole left in a hand-picked list is a quiet thing: it
+   * sounds wrong rather than absent, which is the one failure the floor does
+   * not absorb and nobody reports as a bug.
+   *
+   * Asked through `nearestRecorded` rather than by re-deriving the distance,
+   * so this is a claim about the function that will choose the recording at
+   * runtime rather than about a copy of its arithmetic.
+   */
+  it('never shifts a recording further than the builder says it may', () => {
+    // Semitones. Changing it is a decision about what a resampled note
+    // sounds like, which is a listening question — so it is written here
+    // once, loudly, rather than implied by a table somewhere.
+    const FURTHEST = 2;
+
+    for (const entry of index) {
+      const { manifest } = parsePack(bytesOf(entry.file));
+      const recorded = manifest.notes.map((note) => note.midi).sort((a, b) => a - b);
+
+      // Across the range the pack itself declares. Outside it there is
+      // nothing to shift from, which is `uncovered`'s question and is asked
+      // against the generators in `packCoverage.test.tsx`.
+      for (let midi = recorded[0]; midi <= recorded[recorded.length - 1]; midi += 1) {
+        const from = nearestRecorded(manifest.notes, midi).midi;
+        expect(Math.abs(midi - from), `${entry.id}: ${midi} is reached from ${from}`)
+          .toBeLessThanOrEqual(FURTHEST);
+      }
     }
   });
 

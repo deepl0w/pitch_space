@@ -10,6 +10,9 @@ const entry = entryFor('settings');
 /** The packs this build produced, in the order the picker shows them. */
 const RECORDED = PACKS;
 
+/** Whether every instrument on offer has a recording behind it. */
+const ALL_RECORDED = INSTRUMENTS.every((i) => hasPack(i.id));
+
 /**
  * The preferences that are not about a particular exercise.
  *
@@ -134,9 +137,20 @@ export function Settings({ go }: { go(route: string): void }) {
               the generated index means a pack added tomorrow labels
               itself and nobody has to remember this line exists.
             */
+            /*
+              The label marks a recorded instrument only while there is
+              something to contrast it with. Every instrument is a
+              recording now, so saying so on all six says nothing on any
+              of them — it was a distinction, and a distinction that
+              applies to everything is noise.
+
+              Derived rather than deleted: if a seventh instrument
+              arrives before its pack does, the five words come back on
+              their own and nobody has to remember this line existed.
+            */
             options={INSTRUMENTS.map((i) => ({
               id: i.id,
-              label: hasPack(i.id) ? `${i.name} \u00b7 recorded` : i.name,
+              label: ALL_RECORDED || !hasPack(i.id) ? i.name : `${i.name} \u00b7 recorded`,
             }))}
             chosen={appearance.instrument}
             onChange={setInstrument}
@@ -189,11 +203,12 @@ export function Settings({ go }: { go(route: string): void }) {
             cost, and a comparison to a tier the screen did not show.
           */}
           <p className="secondary">
-            {RECORDED.length > 0
-              ? `Recorded instruments play real recordings, downloaded once and
-                 kept. The rest are generated as they play.`
-              : 'Generated as they play rather than recorded.'}
-            {' '}Picking one plays a note.
+            {ALL_RECORDED
+              ? `Real recordings, downloaded once and kept. Picking one plays
+                 a note.`
+              : `Recorded instruments play real recordings, downloaded once and
+                 kept. The rest are generated as they play. Picking one plays
+                 a note.`}
           </p>
           {/*
             The credit, read off the generated index rather than typed.

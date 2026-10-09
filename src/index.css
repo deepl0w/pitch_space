@@ -785,6 +785,35 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 
 /* ---- The circle of fifths ----------------------------------------------- */
 
+/*
+  The circle page in two columns, where the window can hold them.
+
+  Stacked it is about 1190px and scrolls at every size, which is what
+  the user reported. What sits under the circle is not more circle — it
+  is what the selected key produces, a picker, a stave and the chords —
+  so beside it reads the same and the page fits a laptop. One column
+  below the breakpoint, in the original order.
+
+  `start` rather than stretch: the two sides are different heights and
+  nothing is served by the shorter one growing to match.
+*/
+/* No gap of its own when stacked: `.circle-layout`'s bottom margin is
+   already the space between the two halves, and adding one on top of it
+   made the single-column page 24px taller than before this existed —
+   measured, and the opposite of the point. The gap belongs to the
+   side-by-side case only. */
+.circle-page { display: grid; align-items: start; }
+@media (min-width: 64rem) {
+  .circle-page {
+    grid-template-columns: auto minmax(22rem, 34rem);
+    justify-content: center;
+    gap: 1.5rem;
+  }
+  /* Its own bottom margin is the gap between the two columns' business
+     when they are stacked; side by side the grid gap is doing that job. */
+  .circle-page > .circle-layout { margin-bottom: 0; }
+}
+
 .circle-layout { display: grid; gap: 1.25rem; align-items: start; margin-bottom: 1.25rem; }
 /*
   The diagram and the keys related to it are one object, so they stay

@@ -174,6 +174,30 @@ const INSTRUMENTS = [{
   notes: ['G2', 'A2', 'B2', 'D3', 'F#3', 'A3', 'C4', 'E4', 'G4', 'B4', 'D5'],
   file: (note) => `VlnEns_susVib_${note}_v1.wav`,
 }, {
+  id: 'guitar',
+  name: 'Guitar',
+  source: 'https://freepats.zenvoid.org/Guitar/acoustic-guitar.html',
+  licence: 'CC0-1.0',
+  attribution: 'FreePats — Spanish Classical Guitar, recorded by Roberto Zenvoid',
+  /*
+    The one library of the three that publishes an archive rather than loose
+    files, and the only free per-note guitar I could find at all: VCSL and
+    VSCO both have none, and the usual alternatives are either
+    non-commercial or a single strummed chord.
+  */
+  archive: 'https://freepats.zenvoid.org/Guitar/SpanishClassicalGuitar/'
+    + 'SpanishClassicalGuitar-SFZ-20190618.7z',
+  within: 'SpanishClassicalGuitar-SFZ-20190618/samples',
+  /*
+    Densely sampled — 48 notes — but not chromatically: G#2 and C#3 are
+    missing, among others, so the four-semitone spacing used elsewhere
+    cannot be taken literally here. Chosen from what exists, no gap wider
+    than four, across a guitar's own range rather than a keyboard's.
+  */
+  notes: ['E2', 'G2', 'B2', 'D3', 'F#3', 'A3', 'C4', 'E4', 'G4', 'B4',
+    'D5', 'F#5', 'A5', 'C6'],
+  file: (note) => `${note}.wav`,
+}, {
   id: 'flute',
   name: 'Flute',
   source: 'https://github.com/sgossner/VSCO-2-CE',
@@ -190,6 +214,27 @@ function midiOf(name) {
   const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[letter];
   const alter = accidental === '#' ? 1 : accidental === 'b' ? -1 : 0;
   return (Number(octave) + 1) * 12 + base + alter;
+}
+
+/**
+ * Fetch and unpack an archived sound bank once, returning where it landed.
+ *
+ * Two libraries publish loose files over HTTP and one publishes an archive;
+ * rather than teach the rest of this script about that difference, an
+ * archived instrument is unpacked into the cache and then read exactly like
+ * a directory of downloads.
+ */
+async function unpack(instrument, cacheDir) {
+  const into = join(cacheDir, instrument.id);
+  const marker = join(into, '.unpacked');
+  if (!existsSync(marker)) {
+    mkdirSync(into, { recursive: true });
+    const archive = join(into, 'bank.7z');
+    await fetchTo(instrument.archive, archive);
+    run('7z', ['x', '-y', `-o${into}`, archive]);
+    writeFileSync(marker, instrument.archive);
+  }
+  return join(into, instrument.within);
 }
 
 /**
@@ -249,10 +294,17 @@ async function fetchTo(url, path) {
 
 async function build(instrument, outDir, cacheDir) {
   console.log(`\n${instrument.name} (${instrument.licence})`);
+  const unpacked = instrument.archive ? await unpack(instrument, cacheDir) : null;
   const sources = [];
   for (const note of instrument.notes) {
-    const source = join(cacheDir, `${instrument.id}_${note}.wav`);
-    await fetchTo(urlFor(instrument, note), source);
+    let source;
+    if (unpacked) {
+      source = join(unpacked, instrument.file(note));
+      if (!existsSync(source)) throw new Error(`${instrument.id}: no ${source}`);
+    } else {
+      source = join(cacheDir, `${instrument.id}_${note}.wav`);
+      await fetchTo(urlFor(instrument, note), source);
+    }
     sources.push({ midi: midiOf(note), note, source });
   }
 

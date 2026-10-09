@@ -162,6 +162,18 @@ export function CircleOfFifths() {
         <p className="lede">{entry.lede}</p>
       </header>
 
+      {/*
+        Two columns where there is room: the figure and its legend on one
+        side, everything the chosen key produces on the other.
+
+        Stacked, this page is about 1190px of content and scrolls at every
+        window size — which the user reported. The sections below the
+        circle are not more of the circle; they are what the key you
+        picked sounds like, so putting them beside it costs no reading
+        order and buys the page fitting a laptop screen. Below the
+        breakpoint it is one column again and the order is unchanged.
+      */}
+      <div className="circle-page">
       <div className="circle-layout">
         <svg viewBox="-168 -168 336 336" className="circle" role="img"
              aria-label="The circle of fifths. Major keys outside, their relative minors inside.">
@@ -230,6 +242,7 @@ export function CircleOfFifths() {
         </div>
       </div>
 
+      <div className="circle-detail">
       <Panel>
         <Picker
           label="Chords"
@@ -253,6 +266,8 @@ export function CircleOfFifths() {
           secondary: chordSymbol(chord),
         }))}
       />
+      </div>
+      </div>
     </>
   );
 }

@@ -44,6 +44,17 @@
     "notes": 11
   },
   {
+    "id": "guitar",
+    "name": "Guitar",
+    "source": "https://freepats.zenvoid.org/Guitar/acoustic-guitar.html",
+    "licence": "CC0-1.0",
+    "attribution": "FreePats — Spanish Classical Guitar, recorded by Roberto Zenvoid",
+    "bytes": 282826,
+    "file": "guitar-3fd24cb9.pack",
+    "trim": 0.6742476521811313,
+    "notes": 14
+  },
+  {
     "id": "flute",
     "name": "Flute",
     "source": "https://github.com/sgossner/VSCO-2-CE",

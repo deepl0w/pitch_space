@@ -31,9 +31,6 @@
     standing off by the width the reader reads at.
   */
   --page-inset: 1rem;
-  /* What a revealed answer adds, so the question does not move when it
-     appears. Measured, not chosen — see `.round-body:not(.answered)`. */
-  --answer-reserve: 19rem;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -192,24 +189,27 @@ main {
     justify-content: safe center;
   }
   /*
-    The answer's room is held open before the answer exists.
+    The question keeps the upper half; the answer gets the lower one.
 
-    Centring the question meant revealing the answer made the block
-    taller and re-centred it, so every control jumped — measured at
-    195px up, which moved the choice buttons out from under the
-    pointer that had just pressed one. A centred block is only stable
-    if its height does not change, so the unanswered state reserves
-    what the answered state will add.
+    Centring the whole block made every control jump when the answer
+    appeared — 195px, measured, which moved the choice buttons out from
+    under the pointer that had just pressed one. The first fix reserved
+    the answer's height, and that was wrong in a way worth recording:
+    it was tuned against one exercise, and a sweep of the other five
+    found key and scale identification still moving 113px, because each
+    exercise's answer is a different height. A single constant cannot
+    stand for six.
 
-    The figure is measured rather than chosen: it is the height the
-    verdict, the stave and the tally actually occupy, read off the
-    chord round at a desktop width. It does not have to be exact —
-    being wrong by a little moves things by half of that little, and
-    `safe center` already gives up and anchors to the top when the
-    content is taller than the space, which is the case a reserve
-    cannot help with anyway.
+    So the split is a fraction of the pane rather than a length. The
+    spacer above the question is the only thing deciding where it sits,
+    and nothing below can reach it — which makes this stable by
+    construction for every exercise and every answer, present or
+    future, rather than correct for the one it was measured against.
+    It shrinks when the content needs the room, so a tall answer still
+    gets the pane instead of overflowing it.
   */
-  .practice-body > .round-body:not(.answered) { padding-bottom: var(--answer-reserve); }
+  .practice-body > .round-body { justify-content: flex-start; }
+  .practice-body > .round-body::before { content: ''; flex: 0 1 15%; }
 }
 
 /* Below the breakpoint it is an ordinary page again: settings first, then

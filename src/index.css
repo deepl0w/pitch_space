@@ -803,12 +803,33 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    measured, and the opposite of the point. The gap belongs to the
    side-by-side case only. */
 .circle-page { display: grid; align-items: start; }
-@media (min-width: 64rem) {
+/*
+  76rem, and the figure is arithmetic rather than a guess at "a laptop".
+
+  Two columns only once both fit at their own size: the circle is
+  capped at 30rem, its key list is 15rem with a 1.25rem gap between
+  them, the detail column will not go below 22rem, there is a 1.5rem
+  gap between the two and 2rem of page padding each side. That comes to
+  about 74rem, so the breakpoint sits just above it.
+
+  **Set at 64rem first, which was worse than not doing it.** Below the
+  width where everything fits, the columns squeeze the thing the page
+  exists for: the diagram measured 480px at 1920, 308px at 1200 and
+  **162px at 1024** — smaller than at any width on either side of that
+  range, since dropping to one column restores it to 480px. A
+  breakpoint placed where the layout *changes* rather than where it
+  *fits* makes the worst case out of the commonest screen.
+*/
+@media (min-width: 76rem) {
   .circle-page {
     grid-template-columns: auto minmax(22rem, 34rem);
     justify-content: center;
     gap: 1.5rem;
   }
+  /* Not `minmax(0, 30rem)` here: inside a column that can be squeezed,
+     a floor of zero is permission to shrink the diagram instead of the
+     prose beside it, which is the wrong way round. */
+  .circle-page > .circle-layout { grid-template-columns: 30rem 15rem; }
   /* Its own bottom margin is the gap between the two columns' business
      when they are stacked; side by side the grid gap is doing that job. */
   .circle-page > .circle-layout { margin-bottom: 0; }

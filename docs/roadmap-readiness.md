@@ -372,10 +372,16 @@ is checked exactly when a person remembers to check it.**
 Four live needs are already waiting on it, which is what moves this from a
 preference to a gap:
 
-- **The layout-shift threshold.** `--answer-reserve` is a measured length
-  holding the answer's room open. The checkable property is that the question
-  moves less than some tolerance when the answer appears, across six exercises
-  and two layouts — not the figure. Nowhere to put it.
+- **That the question does not move when the answer appears.** This was
+  listed as watching a measured length, `--answer-reserve`, for drift. **The
+  length is gone** — a sweep of the other five exercises found key and scale
+  identification still moving 113px, because each exercise's answer is a
+  different height and one constant cannot stand for six, so the pane is now
+  split by a fraction and nothing below the question can reach it. The need
+  did not go with it: *stable by construction* is a claim about CSS behaviour
+  that nothing checks, and the coupling can be reintroduced by any later
+  change. What is wanted is the property, not the figure, and it still has
+  nowhere to live.
 - **The colour rule.** `src/index.css` states that a verdict which is only a
   hue is no verdict to a colour-blind reader. It is kept everywhere and
   enforced nowhere, and the proposed red-to-green progress reading is the first
@@ -383,6 +389,13 @@ preference to a gap:
 - **Touch targets.** The reason the preview harness is distrusted at all.
 - **Notation rendering.** `Score` redraws at the measured width; whether the
   result is legible at phone widths is not a thing jsdom can answer.
+
+**One thing this gap has already demonstrated about itself.** The first
+bullet above went stale within a day of being written, and **G7's own command
+could not catch it** — that command asks whether a harness exists, which is
+still no, so the gap stayed correctly open while the reason given for it
+quietly stopped being true. A per-gap check tests the gap, not the
+justification, and a justification is a claim like any other.
 
 **The cost is why this has not happened and should be stated with the gap.** A
 browser harness is slow, flaky and a maintenance burden, and this project has

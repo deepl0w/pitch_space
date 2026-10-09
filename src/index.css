@@ -903,32 +903,26 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 .wedge:focus-visible {
   outline: none;
   /*
-    `--ink`, not `--accent`, and the difference is not cosmetic.
+    Ink here, background on the selected wedge — see the scoped rule
+    below. **`src/ui/contrast.test.tsx` fails if either drops below
+    3:1 against the fill it lands on**, on every wedge and in both
+    themes, so this comment points at a check rather than making a
+    case.
 
-    Every wedge is some proportion of `--accent` mixed with the surface,
-    and the *selected* one is `--accent` neat — so an accent ring was
-    invisible on precisely the wedge a keyboard user meets first, in
-    both themes. Found by zooming on a focused selected wedge rather
-    than a focused ordinary one; the ring looked fine on five wedges out
-    of six and the sixth was the one that mattered.
+    That distinction is the whole history of these four lines. The
+    ring was `--accent` first, invisible on the one wedge that is neat
+    accent — found by zooming a focused *selected* wedge after a
+    focused ordinary one looked fine. Each repair then carried a
+    justification in prose, and prose was the one part nothing could
+    verify: three in a row were plausible, none was load-bearing, and
+    all three were wrong. The colours have been right since the first
+    fix; only the reasons kept failing.
 
-    **Ink is right here and wrong on one wedge**, which is why the
-    scoped rule below exists. Against the mixed fills it measures 4.6:1
-    to 11.1:1; against the neat accent of the selected wedge it is
-    1.84:1 in dark and 2.38:1 in light, under the 3:1 a non-text
-    indicator needs. `--bg` is the mirror image — 8.2 and 7.0 on the
-    neat fill, and down to 1.2:1 on the palest mix — so neither token
-    serves the whole wheel and the ring follows the fill.
-
-    **Two earlier versions of this paragraph were wrong**, and both in
-    the same direction, which is why the figures are now written down
-    rather than argued. The first said ink was safe because everything
-    written on an accent uses it: false, `.chip.on` and
-    `.figure-play:hover` both write `--bg` there. The second narrowed
-    it to this wheel, citing `.wedge-label` as the demonstration — and
-    `.wedge-label-on-fill`, forty lines down, overrides exactly that
-    case, because the labels were failing the same floor. A precedent
-    repealed by the commit that cited it.
+    The measurements, which are data rather than argument: ink runs
+    4.6:1 to 11.1:1 across the mixed fills and 1.84:1 dark, 2.38:1
+    light on the neat accent; background is the mirror, 8.2 and 7.0
+    neat, down to 1.2:1 on the palest mix. Neither token serves the
+    whole wheel.
   */
   stroke: var(--ink);
   stroke-width: 3;

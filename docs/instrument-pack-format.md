@@ -45,6 +45,22 @@ non-commercial, share-alike or copyleft is out, as is any custom agreement that
 restricts redistribution. **The builder refuses an identifier that is not on
 the allowlist, and refuses a pack with no `source`.**
 
+**The allowlist decides whether a licence is *permitted*; it does not tell you
+what the source *asks*.** VSCO 2 Community Edition is CC0-1.0 by its
+repository's own licence metadata, and its readme additionally says *"We ask
+that you do not sell the samples directly"* and asks for credit to Versilian
+Studios. Neither is a condition CC0 imposes — CC0 cannot be narrowed by a
+readme — and neither constrains an app that is MIT, free, and names its sources
+in settings. But **a reader who checks the SPDX identifier and stops has not
+finished**, and the gap between what a licence permits and what a source asks
+is where someone ships something they should not have.
+
+So the mechanical check stays mechanical, and a person still reads the readme.
+The second never silently overrides the first: a request that turns out to be a
+*condition* means the identifier was wrong and the pack is refused; a request
+that stays a request is honoured because it costs nothing, not because it
+binds.
+
 `attribution` is present even for CC0, where nothing requires it. Crediting a
 public-domain dedication costs a line and makes the credits screen uniform;
 having the field be optional makes the screen branch, and a branch that is only

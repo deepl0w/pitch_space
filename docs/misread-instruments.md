@@ -146,6 +146,16 @@ property: its errors are uncorrelated with the tester's, which is a different
 kind of usefulness and survives both roles being equally diligent. Whether that
 belongs in `CLAUDE.md` is a process session's call, not this document's.
 
+**And it is cheaper than it sounds, which is the usual objection.** The
+clearest instance ran in both directions inside one exchange: a tester fixed a
+guard of its own that could not fail and predicted the fix would catch drift
+elsewhere; it did not, because the fix sat inside a gate that skips when
+recordings are present. The other session ran the mutation the tester could not
+run — its `fixtures/` is git-ignored and empty — and the check was moved
+outside both gates. **Neither message was wrong and neither gap was findable by
+reading the other.** It cost one `cp` and two test runs each way: the cheap
+thing was running, not reviewing.
+
 **The caveat is what makes it fail quietly.** It works only while the second
 observer really is holding a different instrument. Two sessions reading the
 same file, or one agent asked to check another's reasoning on the evidence that

@@ -681,14 +681,54 @@ describe("the home screen's claim about how exercises are answered", () => {
  * would change the volume as it swapped in.
  */
 describe('a sampled voice does not inherit a synthesised trim', () => {
-  it('reads the synthesised trim only where the synthesised voice is built', () => {
+  it('reads a trim only where a voice is built', () => {
     const readers = filesUnder(SRC)
       .filter((file) => !/\.test\.tsx?$/.test(file))
       // `.trim` the property, not `.trim()` the string method, which is
       // everywhere and means nothing here.
       .filter((file) => hits([file], /\.trim\b(?!\s*\()/).length > 0);
 
-    expect(readers.map(show)).toEqual(['audio/output/synth.ts']);
+    /*
+      Two readers now, and they read two different figures. `synth.ts`
+      reads the synthesised voice's trim; `sampled.ts` reads the one its
+      pack measured from its own recordings. This case asked for exactly
+      one reader when only one voice existed, and widening it is the
+      right response to a sampled voice arriving — but widening a list is
+      also how a guard quietly stops guarding, so the claim that actually
+      prevents the defect is the one below, not this one.
+    */
+    expect(readers.map(show)).toEqual([
+      // Refuses a pack whose trim was never measured, rather than
+      // defaulting it to 1 — a plausible-looking value for a thing nobody
+      // measured is worse than an absent one, because nothing goes looking.
+      'audio/output/pack.ts',
+      'audio/output/sampled.ts',
+      'audio/output/synth.ts',
+    ]);
+  });
+
+  /**
+   * The defect itself, which a list of filenames cannot express.
+   *
+   * Copying the synthesised trim onto a sampled voice is the obvious
+   * shortcut and `docs/instrument-pack-format.md` forbids it: those figures
+   * are measurements of *that synthesis* and have no relation to whatever
+   * level a recording was made at. Worse than being wrong, it would be
+   * wrong between the two halves of one instrument — so a pack landing
+   * mid-exercise would change the volume as it swapped in, which is the one
+   * thing the trims were measured to prevent.
+   *
+   * Stated as an import rather than as a value, because that is what can be
+   * checked: the sampled path cannot borrow a figure from a catalogue it
+   * cannot see. A sampled voice reaching for `instruments.ts` has no honest
+   * reason to, and this fails the moment it does.
+   */
+  it('builds the sampled voice without seeing the synthesised catalogue', () => {
+    const sampled = join(SRC, 'audio', 'output', 'sampled.ts');
+    expect(hits([sampled], /from '\.\/instruments'/), 'sampled.ts imports the synth catalogue')
+      .toHaveLength(0);
+    // Not idle: it does import its own source of a trim.
+    expect(hits([sampled], /from '\.\/pack'/).length).toBeGreaterThan(0);
   });
 
   /**

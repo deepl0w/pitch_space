@@ -1,13 +1,26 @@
 import {
   DEFAULT_INSTRUMENT_ID, instrument, isInstrumentId, type Instrument,
 } from './instruments';
+import { hasPack, loadPack, playSampled, type SampleBank } from './sampled';
 /**
- * A small synthesised instrument.
+ * The instrument, synthesised and — once its pack arrives — recorded.
  *
- * Deliberately not a sampler and deliberately not Tone.js: a sample pack is
- * megabytes that have to be precached for offline use, and Tone's ~40-60 kB
- * is mostly a Transport, which is the one piece of timing logic this app's
- * correctness depends on and so the last thing worth handing away.
+ * **Synthesis is the floor, not the aim.** It used to be both, and this
+ * comment used to defend it on the grounds that a sample pack is "megabytes
+ * that have to be precached for offline use". Both halves were wrong: a
+ * measured pack is about 400 KiB, and ADR 0046 settles that it is fetched on
+ * use rather than precached, precisely because synthesis already guarantees
+ * an instrument always sounds. The user's reason for wanting recordings is
+ * pedagogical — an exercise answered by ear trains recognition, and
+ * recognition transfers from the timbre you have actually played.
+ *
+ * So this class does both and no caller learns which it got: `play` takes
+ * the same voices either way, and a note is sampled when a decoded pack is
+ * in hand and synthesised when it is not.
+ *
+ * Still deliberately not Tone.js: its ~40-60 kB is mostly a Transport, which
+ * is the one piece of timing logic this app's correctness depends on and so
+ * the last thing worth handing away.
  *
  * Notes are scheduled against the AudioContext clock rather than setTimeout,
  * because a metronome driven by a timer drifts audibly within a few bars.
@@ -74,7 +87,7 @@ export class Synth {
   private context: AudioContext | null = null;
   private master: GainNode | null = null;
   /** Everything scheduled and not yet finished, so it can be cut short. */
-  private scheduled: OscillatorNode[] = [];
+  private scheduled: (OscillatorNode | AudioBufferSourceNode)[] = [];
   /**
    * Which intention is current, so a passage waiting on a cold context can be
    * told it has been superseded. Bumped by every play and by every stop.
@@ -100,6 +113,11 @@ export class Synth {
    */
   private voice = instrument(DEFAULT_INSTRUMENT_ID);
 
+  /** Decoded packs by instrument id, and the ids already asked for. */
+  private packs = new Map<string, SampleBank>();
+
+  private asked = new Set<string>();
+
   /**
    * Choose the instrument. Takes effect on the next note, not this one.
    *
@@ -111,6 +129,37 @@ export class Synth {
    */
   setInstrument(id: string): void {
     this.voice = isInstrumentId(id) ? instrument(id) : instrument(DEFAULT_INSTRUMENT_ID);
+    this.wantPack(this.voice.id);
+  }
+
+  /**
+   * Ask for the recorded instrument, and carry on without it.
+   *
+   * Every failure here is silent on purpose. ADR 0046 makes synthesis the
+   * floor rather than a fallback nobody maintains: an instrument always
+   * sounds, so a pack that does not arrive — no network, a refused fetch,
+   * audio this browser will not decode — leaves the reader with a working
+   * instrument and nothing to be told about. Reporting it would be
+   * reporting a download they did not ask for and do not need.
+   *
+   * Kept per id rather than as one slot, because switching back to an
+   * instrument whose pack has already been fetched should not fetch it
+   * again, and because a request in flight when the reader switches away
+   * still resolves — it lands in the map and is there if they come back.
+   */
+  private wantPack(id: string): void {
+    if (!hasPack(id) || this.packs.has(id) || this.asked.has(id)) return;
+    const context = this.context;
+    if (!context) return;
+    this.asked.add(id);
+    void loadPack(id, context)
+      .then((bank) => { this.packs.set(id, bank); })
+      .catch(() => { /* synthesis is already playing; there is nothing to say */ });
+  }
+
+  /** The decoded pack for the current voice, if one has arrived. */
+  private bank(): SampleBank | null {
+    return this.packs.get(this.voice.id) ?? null;
   }
 
   /** The voice the next note will be scheduled with. */
@@ -205,6 +254,13 @@ export class Synth {
   /** Play a set of voices, all timed from one `now` so a chord stays together. */
   play(voices: readonly Voice[]): void {
     const { context, master, waking } = this.ensure();
+    /*
+      Here as well as in `setInstrument`, because the context does not exist
+      until something plays: the instrument is pushed into this object on
+      load, before any user gesture, so the request made there has nothing
+      to fetch into and returns. This is the first moment there is one.
+    */
+    this.wantPack(this.voice.id);
     /*
       A new passage replaces the one sounding; it does not join it.
 
@@ -316,6 +372,29 @@ export class Synth {
   private scheduleNote(
     context: AudioContext, destination: GainNode, voice: Voice, at: number,
   ): void {
+    /*
+      The recorded voice when there is one, the synthesised one otherwise,
+      and the caller is told neither. This is the whole of what "synthesis
+      is the floor" means in code: the branch is here, once, below every
+      exercise, rather than each caller asking whether a pack has arrived.
+
+      Checked per note rather than per passage so a pack landing mid-round
+      is used by the next note instead of the next question. The seam is
+      audible — the voice changes partway — but the alternative is holding
+      a finished download back for no reason the listener would thank you
+      for, and the usual case is a pack that arrives before the first press
+      of Start.
+    */
+    const bank = this.bank();
+    if (bank) {
+      const source = playSampled(context, destination, bank, voice, at);
+      this.scheduled.push(source);
+      source.onended = () => {
+        this.scheduled = this.scheduled.filter((n) => n !== source);
+      };
+      return;
+    }
+
     const voiceOf = this.instrument();
     const frequency = 440 * Math.pow(2, (voice.midi - 69) / 12);
     const envelope = context.createGain();

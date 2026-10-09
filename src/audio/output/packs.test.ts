@@ -27,8 +27,15 @@ import index from './packs.json';
  * offset and a duration the base class has no parameters for — so a patch on
  * the base is shadowed and sees no buffer source **on a perfectly healthy
  * app**. The instrument could not have returned any other answer, so it
- * agreed with a true conclusion by luck. `docs/RUNNING-THE-APP.md` carries
- * the general form.
+ * agreed with a true conclusion by luck.
+ *
+ * That last fact is checkable from this repository without a browser and
+ * without running anything: `node_modules/typescript/lib/lib.dom.d.ts`
+ * declares `start()` on `AudioBufferSourceNode` and, separately,
+ * `start(when?: number)` on `AudioScheduledSourceNode`. Said here because
+ * the browser check that first confirmed it is one browser on one day,
+ * where the IDL is the shape every browser is implementing.
+ * `docs/RUNNING-THE-APP.md` carries the general form.
  *
  * What actually established it was the rest of the same sweep, and all of it
  * holds: the pack path returning 200 with `text/html` and the app's own

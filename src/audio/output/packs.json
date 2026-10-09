@@ -6,8 +6,8 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Community Sample Library — Upright Piano, Knight",
     "bytes": 404271,
-    "file": "piano-444aafd7.pack",
-    "trim": 2.524027493547712,
+    "file": "piano-10c56f8f.pack",
+    "trim": 1.6806498845571072,
     "notes": 16
   },
   {
@@ -17,8 +17,8 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Community Sample Library — Yamaha TX81Z",
     "bytes": 334072,
-    "file": "electric-piano-cb4209c3.pack",
-    "trim": 0.6682236678069631,
+    "file": "electric-piano-92fa3517.pack",
+    "trim": 0.4600650378443295,
     "notes": 13
   },
   {
@@ -28,8 +28,8 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Community Sample Library — Renaissance Organ, 8'",
     "bytes": 282838,
-    "file": "organ-68563e2e.pack",
-    "trim": 0.5313961456029032,
+    "file": "organ-c5cb3c77.pack",
+    "trim": 0.5351006708618191,
     "notes": 11
   },
   {
@@ -39,8 +39,8 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Chamber Orchestra 2 CE — Violin Section, sustained",
     "bytes": 283198,
-    "file": "strings-4597b647.pack",
-    "trim": 1.1171737385795566,
+    "file": "strings-f07173e9.pack",
+    "trim": 2.291226471177376,
     "notes": 11
   },
   {
@@ -50,8 +50,8 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Chamber Orchestra 2 CE — Flute, sustained",
     "bytes": 258972,
-    "file": "flute-589f6238.pack",
-    "trim": 2.4308625057030966,
+    "file": "flute-4c916fee.pack",
+    "trim": 2.4700377175496677,
     "notes": 10
   }
 ]

@@ -169,7 +169,24 @@ third was a test rather than a comment — the applied-chord exemption in
 `isBorrowedIn`, whose only example was the one applied chord that returns false
 with the exemption deleted.
 
-All three are confidence without a check, and the confidence is what did the
+**A fourth instance is worth having because it forecloses a misreading the
+other three invite.** On 10 October `tools/build-instrument-pack.mjs` said
+*"**No guitar.** Neither library has one… It stays synthesised until there is a
+real one"* — fifty-five lines above the guitar entry, in the same file, added
+by the same author in the same sitting. A third library had one after all, and
+nobody read upward.
+
+Both of the comment instances above are *distance* failures: a claim in one
+file contradicted by a path in another, and a claim falsified later by a change
+made past it. (The third is a different fault — a test whose single example
+could not fail.) Two cases both shaped that way is how this convention gets
+read as **watch comments that sit far from what they describe**, which is
+comfortably wrong and would license skipping the near ones. **This instance had
+no distance to accumulate**: the contradiction fitted on a screen, and it was
+still shipped. Distance is not the variable, which is the sharpest support yet
+for the convention's own claim that the remedy is not more care.
+
+All four are confidence without a check, and the confidence is what did the
 damage: a comment stating a constraint reads like an assurance that somebody is
 enforcing it, so the next reader does not look. **A constraint worth writing in
 a comment is worth a test, and the comment should point at the test.** Where

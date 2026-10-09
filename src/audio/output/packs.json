@@ -4,10 +4,54 @@
     "name": "Upright Piano",
     "source": "https://github.com/sgossner/VCSL",
     "licence": "CC0-1.0",
-    "attribution": "Versilian Community Sample Library — Upright Piano, Knight",
+    "attribution": "Versilian Studios Community Sample Library — Upright Piano, Knight",
     "bytes": 404271,
-    "file": "piano-900d6827.pack",
+    "file": "piano-444aafd7.pack",
     "trim": 2.524027493547712,
     "notes": 16
+  },
+  {
+    "id": "electric-piano",
+    "name": "Electric piano",
+    "source": "https://github.com/sgossner/VCSL",
+    "licence": "CC0-1.0",
+    "attribution": "Versilian Studios Community Sample Library — Yamaha TX81Z",
+    "bytes": 334072,
+    "file": "electric-piano-cb4209c3.pack",
+    "trim": 0.6682236678069631,
+    "notes": 13
+  },
+  {
+    "id": "organ",
+    "name": "Organ",
+    "source": "https://github.com/sgossner/VCSL",
+    "licence": "CC0-1.0",
+    "attribution": "Versilian Studios Community Sample Library — Renaissance Organ, 8'",
+    "bytes": 282838,
+    "file": "organ-68563e2e.pack",
+    "trim": 0.5313961456029032,
+    "notes": 11
+  },
+  {
+    "id": "strings",
+    "name": "Strings",
+    "source": "https://github.com/sgossner/VSCO-2-CE",
+    "licence": "CC0-1.0",
+    "attribution": "Versilian Studios Chamber Orchestra 2 CE — Violin Section, sustained",
+    "bytes": 283198,
+    "file": "strings-4597b647.pack",
+    "trim": 1.1171737385795566,
+    "notes": 11
+  },
+  {
+    "id": "flute",
+    "name": "Flute",
+    "source": "https://github.com/sgossner/VSCO-2-CE",
+    "licence": "CC0-1.0",
+    "attribution": "Versilian Studios Chamber Orchestra 2 CE — Flute, sustained",
+    "bytes": 258972,
+    "file": "flute-589f6238.pack",
+    "trim": 2.4308625057030966,
+    "notes": 10
   }
 ]

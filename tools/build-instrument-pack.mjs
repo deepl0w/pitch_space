@@ -80,32 +80,89 @@ const REFERENCE_DBFS = -20;
 const PEAK_CEILING_DBFS = -1;
 
 /**
- * The notes to record, and why these.
+ * What each pack is built from.
  *
- * **VCSL samples roughly every other semitone** — A, B, C♯, D♯, F, G and
- * nothing between — so the spacing is not free to choose. Taking A, C♯ and F
- * from each octave gives a recording every four semitones, which means the
- * furthest any note is shifted is two: enough to keep the pack small, little
- * enough that the formant shift is not what you notice about the sound.
+ * **Two libraries, both CC0, both verified from their own repository rather
+ * than from a page describing them.** VCSL is the broader set; VSCO 2 CE is
+ * the orchestral one, and is where the sustained instruments come from
+ * because VCSL has no strings and no flute.
  *
- * The range covers what the generators actually ask for. Measured at MIDI 49
- * to 85 by `src/packCoverage.test.tsx`, which drives the practice screen and
- * collects what reaches the audio layer; this runs 33 to 93 so there is an
- * octave of margin at each end for settings nobody has swept yet.
+ * VSCO's readme adds two requests on top of CC0 — credit Versilian Studios,
+ * and do not sell the samples directly. Neither is a condition CC0 imposes
+ * and neither constrains this app, which is MIT, free, and names the source
+ * in its settings screen. Recorded because the next person to read the
+ * licence field will find CC0 and should know the requests exist.
+ *
+ * **The note lists are what each library actually holds**, enumerated from
+ * its file tree rather than assumed: the spacing is not free to choose and
+ * differs per instrument. Where a library samples more finely than four
+ * semitones the list thins it out, because the furthest a note is ever
+ * shifted is what matters and two semitones is already inaudible as a
+ * formant shift.
+ *
+ * **No guitar.** Neither library has one, and a guitar faked from another
+ * plucked instrument would be exactly the "not the instrument you know"
+ * problem recordings were added to solve. It stays synthesised until there
+ * is a real one, which also suits the user's own note that a guitar wants
+ * strummed voicings rather than block chords.
  */
-const NOTES = ['A1', 'C#2', 'F2', 'A2', 'C#3', 'F3', 'A3', 'C#4', 'F4', 'A4',
-  'C#5', 'F5', 'A5', 'C#6', 'F6', 'A6'];
+const VCSL = 'https://raw.githubusercontent.com/sgossner/VCSL/master';
+const VSCO = 'https://raw.githubusercontent.com/sgossner/VSCO-2-CE/SFZ';
+
+const VERSILIAN = 'Versilian Studios';
 
 const INSTRUMENTS = [{
   id: 'piano',
   name: 'Upright Piano',
   source: 'https://github.com/sgossner/VCSL',
   licence: 'CC0-1.0',
-  attribution: 'Versilian Community Sample Library — Upright Piano, Knight',
-  base: 'https://raw.githubusercontent.com/sgossner/VCSL/master/Chordophones/'
-    + 'Zithers/Upright%20Piano%2C%20Knight/Sustains',
+  attribution: `${VERSILIAN} Community Sample Library — Upright Piano, Knight`,
+  dir: `${VCSL}/Chordophones/Zithers/Upright Piano, Knight/Sustains`,
+  // Every four semitones: VCSL samples every other one, so this is its set
+  // thinned by half.
+  notes: ['A1', 'C#2', 'F2', 'A2', 'C#3', 'F3', 'A3', 'C#4', 'F4', 'A4',
+    'C#5', 'F5', 'A5', 'C#6', 'F6', 'A6'],
   file: (note) => `Player_vl1_rr1_${note}.wav`,
-  notes: NOTES,
+}, {
+  id: 'electric-piano',
+  name: 'Electric piano',
+  source: 'https://github.com/sgossner/VCSL',
+  licence: 'CC0-1.0',
+  attribution: `${VERSILIAN} Community Sample Library — Yamaha TX81Z`,
+  dir: `${VCSL}/Electrophones/TX81Z/FM Piano`,
+  // C, E and G# an octave at a time, which is this library's own spacing.
+  notes: ['C2', 'E2', 'G#2', 'C3', 'E3', 'G#3', 'C4', 'E4', 'G#4',
+    'C5', 'E5', 'G#5', 'C6'],
+  file: (note) => `FMPiano_${note}_vl1.wav`,
+}, {
+  id: 'organ',
+  name: 'Organ',
+  source: 'https://github.com/sgossner/VCSL',
+  licence: 'CC0-1.0',
+  attribution: `${VERSILIAN} Community Sample Library — Renaissance Organ, 8'`,
+  dir: `${VCSL}/Aerophones/Edge-blown Aerophones/Renaissance Organ/8'`,
+  // The library holds every two semitones from C1; taken every four.
+  notes: ['C2', 'E2', 'G#2', 'C3', 'E3', 'G#3', 'C4', 'E4', 'G#4', 'C5', 'E5'],
+  file: (note) => `RenOrgan_8foot_Room_${note}_rr1.wav`,
+}, {
+  id: 'strings',
+  name: 'Strings',
+  source: 'https://github.com/sgossner/VSCO-2-CE',
+  licence: 'CC0-1.0',
+  attribution: `${VERSILIAN} Chamber Orchestra 2 CE — Violin Section, sustained`,
+  dir: `${VSCO}/Strings/Violin Section/susVib`,
+  // Everything the section has; its spacing is uneven and not ours to fix.
+  notes: ['G2', 'A2', 'B2', 'D3', 'F#3', 'A3', 'C4', 'E4', 'G4', 'B4', 'D5'],
+  file: (note) => `VlnEns_susVib_${note}_v1.wav`,
+}, {
+  id: 'flute',
+  name: 'Flute',
+  source: 'https://github.com/sgossner/VSCO-2-CE',
+  licence: 'CC0-1.0',
+  attribution: `${VERSILIAN} Chamber Orchestra 2 CE — Flute, sustained`,
+  dir: `${VSCO}/Woodwinds/Flute/susNV`,
+  notes: ['C3', 'E3', 'A3', 'C4', 'E4', 'A4', 'C5', 'E5', 'A5', 'C6'],
+  file: (note) => `LDFlute_susNV_${note}_v1_1.wav`,
 }];
 
 /** MIDI number for a name like `C#3`, with A4 = 69 and C4 = 60. */
@@ -114,6 +171,22 @@ function midiOf(name) {
   const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[letter];
   const alter = accidental === '#' ? 1 : accidental === 'b' ? -1 : 0;
   return (Number(octave) + 1) * 12 + base + alter;
+}
+
+/**
+ * The URL of one recording.
+ *
+ * Each path segment is encoded on its own: these libraries have spaces,
+ * commas and apostrophes in their directory names and sharps in their
+ * filenames, and a sharp left raw is read as the start of a fragment — the
+ * server is asked for the natural, which 404s and looks exactly like the
+ * note not existing. Encoding the whole URL at once would instead destroy
+ * the slashes.
+ */
+function urlFor(instrument, note) {
+  const [scheme, rest] = instrument.dir.split('://');
+  const path = rest.split('/').map(encodeURIComponent).join('/');
+  return `${scheme}://${path}/${encodeURIComponent(instrument.file(note))}`;
 }
 
 function run(command, args) {
@@ -160,7 +233,7 @@ async function build(instrument, outDir, cacheDir) {
   const sources = [];
   for (const note of instrument.notes) {
     const source = join(cacheDir, `${instrument.id}_${note}.wav`);
-    await fetchTo(`${instrument.base}/${encodeURIComponent(instrument.file(note))}`, source);
+    await fetchTo(urlFor(instrument, note), source);
     sources.push({ midi: midiOf(note), note, source });
   }
 

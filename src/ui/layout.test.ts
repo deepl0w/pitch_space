@@ -86,44 +86,48 @@ describe('the stylesheet', () => {
 });
 
 /**
- * The two things about a reserved space that a suite without layout can
- * still hold.
+ * Two things a suite without layout can still hold about the stylesheet,
+ * and one it cannot — written against a mistake that has since been fixed
+ * by deleting the thing it was about.
  *
- * `--answer-reserve` keeps the question from jumping when the answer
- * appears: the block is centred, revealing the answer made it taller, and
- * every control moved 195px — out from under the pointer that had just
- * pressed one. The fix pads the unanswered state by what the answered
- * state will add.
+ * The practice screen's question jumped 195px when the answer appeared,
+ * out from under the pointer that had just pressed a button. The first fix
+ * reserved the answer's height as a measured constant, `--answer-reserve`.
+ * A sweep of the other five exercises found key and scale identification
+ * still moving 113px, because each exercise's answer is a different
+ * height, and `c689de1` replaced the constant with a fraction of the pane
+ * — stable by construction rather than correct for the one exercise it was
+ * measured against. **The lesson is kept here because the code that taught
+ * it is gone:** a single measured length standing for six different
+ * contents is a figure that is right once and wrong five times, and
+ * nothing in the suite said so.
  *
- * **Whether it works is not checkable here, and a test that looked like it
- * was would be the worst outcome.** Measured rather than assumed: mounting
- * the practice screen under jsdom and answering a round gives
- * `offsetHeight` 0 and a bounding rect of height 0 both before and after,
- * `padding-bottom` computes to `0`, and `--answer-reserve` resolves to the
- * empty string — the cascade never reaches the element at all. So "render,
- * answer, assert nothing moved" passes identically with the fix present and
- * with it deleted. That is a check whose medium cannot represent the
- * defect.
+ * **Whether any of that works is not checkable here, and a test that
+ * looked like it was would be the worst outcome.** Measured rather than
+ * assumed, while the reserve still existed: mounting the practice screen
+ * under jsdom and answering a round gives `offsetHeight` 0 and a bounding
+ * rect of height 0 both before and after, `padding-bottom` computes to
+ * `0`, and a custom property resolves to the empty string — the cascade
+ * never reaches the element at all. So "render, answer, assert nothing
+ * moved" passes identically with the fix present and with it deleted.
  *
- * **Not the same as the instrument trims, and the first draft of this
- * comment said it was.** Nothing in this repository can hear, by any
- * means, so a trim has no instrument at all. Layout has one: the project
- * drives real Chrome over CDP and `docs/RUNNING-THE-APP.md` describes it,
- * where one `getBoundingClientRect().top` before and after answering
- * measures precisely the thing the reserve exists for. The claim is a
- * bound rather than a length — the question moves by no more than a few
- * pixels when the answer appears, which is what the CSS comment concedes
- * when it says being wrong by a little moves things by half of that
- * little — and it would hold for all six exercises and both layouts.
+ * **Not the same as the instrument trims, and an earlier draft of this
+ * comment said it was.** Nothing here can hear, by any means, so a trim
+ * has no instrument. Layout has one: the project drives real Chrome over
+ * CDP and `docs/RUNNING-THE-APP.md` describes it, where one
+ * `getBoundingClientRect().top` before and after answering measures
+ * exactly this. The claim is a bound and not a length — the question moves
+ * by no more than a few pixels — and it holds for all six exercises and
+ * both layouts. What it has no home in is a *check*: nothing in the
+ * repository drives a browser as part of one, so there is no tier for it
+ * to live in and building that tier is a larger decision than one
+ * assertion justifies. Until there is, the user role's sweep covers it —
+ * and did, which is how the 113px was found.
  *
- * What it has no home in is a *check*: nothing in the repository drives a
- * browser as part of one, so there is no tier for it to live in and
- * building that tier is a larger decision than one assertion justifies.
- * Until there is, it is the user role's sweep that covers it. What is
- * left here is the pair of silent deaths vitest can see: the rule keyed to
- * a class nobody writes any more, and the value declared for nobody.
+ * What is left here is the pair of silent deaths vitest can see: a rule
+ * keyed to a class nobody renders, and a value declared for nobody.
  */
-describe('a value the stylesheet reserves', () => {
+describe('what the stylesheet refers to', () => {
   /**
    * A state selector names a class a component has to set. Renaming
    * `answered` in the component leaves the rule valid CSS that matches

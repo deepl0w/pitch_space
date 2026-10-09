@@ -736,6 +736,20 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 .choice.wrong { border-color: var(--wrong); color: var(--wrong); opacity: 1; font-weight: 650; }
 .verdict { font-size: 0.9rem; margin: 0.9rem 0 0; }
 
+/* The sample credits.
+
+   Set below the prose rather than beside it. They are an obligation the
+   app meets, not something a reader came for — five lines of library
+   names at body size read as clutter and crowd out the sentence that
+   actually explains the control, which is what the user role reported.
+   Smaller, dimmer, and separated by a rule, so they are findable by
+   someone looking for a licence and ignorable by everyone else. */
+.credits {
+  list-style: none; margin: 0.6rem 0 0; padding: 0.5rem 0 0;
+  border-top: 1px solid var(--line);
+}
+.credits li { font-size: 0.68rem; color: var(--muted); line-height: 1.5; }
+
 /*
   One axis for the whole question.
 

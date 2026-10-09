@@ -207,11 +207,13 @@ export function Settings({ go }: { go(route: string): void }) {
             exactly why it is worth wiring now — the cheap case is a bad
             time to leave the mechanism unbuilt.
           */}
-          {RECORDED.map((pack) => (
-            <p className="secondary" key={pack.id}>
-              {pack.name}: {pack.attribution} ({pack.licence}).
-            </p>
-          ))}
+          <ul className="credits">
+            {RECORDED.map((pack) => (
+              <li key={pack.id}>
+                {pack.name}: {pack.attribution} ({pack.licence}).
+              </li>
+            ))}
+          </ul>
         </Field>
       </Panel>
 

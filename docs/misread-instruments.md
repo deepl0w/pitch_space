@@ -123,6 +123,37 @@ different kinds, and prefer three cheap ones over one authoritative one**,
 which is also the only version of this advice that can be followed by somebody
 who does not yet know what they are about to get wrong.
 
+**And there is a stronger form of it that is not the same thing, which several
+of this week's corrections demonstrate.** Every misattribution recorded here
+was caught by *somebody else* — a wrong cause for the ignored packs and a wrong
+cause for the stale dev server both by the user role, a wrong file name in a
+convention by the tester, a wrong hypothesis about service-worker atomicity by
+this document's author, and an approving note on a layout constant overturned
+by a sweep nobody asked for. In both directions, repeatedly, and never by the
+person who made it.
+
+**The reason is not that the others were more careful.** It is that more
+observations by the person who has just misattributed are *selected by the
+judgement that failed*. Having decided the cause was pruned filenames, the next
+thing you check is a filename. Self-redundancy is correlated with your own
+error; a second person's instrument is not chosen by your reasoning at all.
+
+That makes **redundancy of observer strictly stronger than redundancy of
+instrument**, and it is the better argument for this project keeping its roles
+apart than the one usually given. `CLAUDE.md` justifies the user role by what
+it *finds* — things invisible from inside the code. True, and this is a second
+property: its errors are uncorrelated with the tester's, which is a different
+kind of usefulness and survives both roles being equally diligent. Whether that
+belongs in `CLAUDE.md` is a process session's call, not this document's.
+
+**The caveat is what makes it fail quietly.** It works only while the second
+observer really is holding a different instrument. Two sessions reading the
+same file, or one agent asked to check another's reasoning on the evidence that
+agent supplied, are one observer wearing two names — and they will agree,
+confidently, for the same reason the trials in
+[0025](adr/0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)
+agreed.
+
 [0011](adr/0011-what-a-catalogue-owes.md) is the counter-example and shows the
 cost of getting it right is one sentence. It named its instrument — "the
 phrase planner chooses the closing cadence before a template is picked, and

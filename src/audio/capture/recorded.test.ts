@@ -149,10 +149,30 @@ describe.skipIf(found.length === 0)('a recorded piano note', () => {
 });
 
 describe.skipIf(found.length > 0)('the recorded tier', () => {
-  it('is absent, and says how to get it', () => {
+  /**
+   * Absent because the recordings are, not because nothing matched them.
+   *
+   * This case used to assert `found` was empty, which is what the gate
+   * above already decided — true by construction, and so a guard that
+   * could not fail. What it is actually worth saying is *why* the tier is
+   * absent, because the two reasons are not alike. No `fixtures/audio` is
+   * the ordinary one: the directory is gitignored, a fresh checkout has
+   * none, and the message below is the remedy.
+   *
+   * The other reason is a filter that has drifted from the files — a
+   * renamed download, a note added to the fetch script and not to `HZ` —
+   * and it is much worse, because the tier then reports itself absent on
+   * a machine that has the recordings, the remedy prints, somebody runs
+   * it, and it says absent again. The whole tier would evaporate on every
+   * machine with nothing failing anywhere.
+   */
+  it('is absent because the recordings are, not because nothing matched them', () => {
+    const wavs = existsSync(DIR) ? readdirSync(DIR).filter((f) => f.endsWith('.wav')) : [];
+    expect(wavs, `${DIR} holds recordings that no case matched — the file names `
+      + 'or the HZ table have drifted apart, and the remedy below is a lie')
+      .toEqual([]);
     // Not a silent skip: a tier nobody knows is missing is a tier that
     // stays missing. This case exists so the run says so out loud.
-    expect(found).toEqual([]);
     console.log(`\n  No recordings in ${DIR}. Run ${REMEDY} to enable the recorded-audio tests.\n`);
   });
 });

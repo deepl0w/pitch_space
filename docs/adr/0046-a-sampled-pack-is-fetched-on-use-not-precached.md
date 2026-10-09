@@ -195,3 +195,58 @@ What this asks of the configuration is one line saying the omission is
 deliberate and pointing here. An exclusion with no stated reason is the
 absent-claim problem the ADR index's sixth convention describes — nothing
 contradicts it, so it gets tidied away by someone being helpful.
+
+## Addendum, 10 October 2026 — an immutable URL is also a disappearing one
+
+This record says a changed pack is a different URL rather than a stale entry,
+and that is what makes cache-first safe. It does not say what happens to the
+*old* file. The builder deletes it, because content-addressed names accumulate
+otherwise, and the orphan sweep enforces that they are gone.
+
+**So the two properties meet, and the question raised was whether they
+conflict in production.** The hypothesis offered was that they do not: the
+index ships inside the bundle, so a client with a stale index also has a stale
+bundle, and the service worker updates atomically.
+
+**That reasoning is wrong, and wrong in the reassuring direction.** The service
+worker's atomicity versions the *client*; it does nothing about the *server*. A
+stale bundle is perfectly self-consistent and that is exactly the problem — its
+index names a pack file the deploy has deleted. **Being consistently old is
+what makes the request fail, not what prevents it.**
+
+So the case is reachable. Between a deploy and the moment the new service
+worker takes control, a page already open holds the old index and asks for a
+file that is gone.
+
+**What it costs is small and self-healing, and worth stating precisely rather
+than left as "reachable".** `vite.config.ts` sets `registerType: 'autoUpdate'`,
+so the window closes by itself without a prompt or a user action — read from
+the config and its comment; the service worker's internals are the plugin's
+documented behaviour rather than something measured here. Inside that window
+the fetch returns the SPA shell with 200 and `text/html`, `parsePack` rejects
+it on the magic, the error is swallowed, and synthesis plays. A learner hears
+the synthesised voice for part of one session and the recorded one afterwards.
+
+**The pruning stays, and the orphan sweep stays.** Keeping the previous
+release's packs would trade permanent complexity — a sweep that has to know
+which indexes are still deployed — for a transient, mild, self-correcting
+fault. That is the wrong trade today.
+
+**What the sweep actually approximates is worth writing down**, because the
+approximation is where this would first go wrong. The honest condition is *no
+pack unreferenced by any index still deployed*; the sweep checks *no pack
+unreferenced by the current index*. Those differ exactly across a deploy
+window, which is the case above. The approximation is right while the failure
+is a worse timbre for a few minutes. **It stops being right if sampled
+instruments ever become required rather than preferred** — if an exercise
+depends on a recording the synthesised voice cannot stand in for, this stops
+being a downgrade and becomes a broken exercise, and the sweep needs the real
+condition.
+
+**And it is quiet, which is this feature's third instance of the same
+pathology.** An absent pack, a faulty measurement of an absent pack, and now a
+pruned pack all present as "the synthesised voice is playing and nothing is
+wrong". The graceful floor keeps absorbing things it was not built for. That is
+not an argument against the floor; it is the standing reason this feature's
+faults are found by reproduction rather than by symptom, and the reason it cost
+two false readings before anyone reproduced it deliberately.

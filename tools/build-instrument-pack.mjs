@@ -28,7 +28,9 @@
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
+import {
+  mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, existsSync, statSync,
+} from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -254,6 +256,23 @@ mkdirSync(cacheDir, { recursive: true });
 
 const built = [];
 for (const instrument of INSTRUMENTS) built.push(await build(instrument, outDir, cacheDir));
+
+/*
+  Remove packs this run did not produce.
+
+  Content-addressed names mean a rebuilt pack is a *new* file rather than an
+  overwritten one, so without this the directory accumulates every version
+  ever built and the app ships all of them — found immediately, with two
+  piano packs on disk and the index naming one. Only files this run wrote
+  survive, which is the same claim the index makes.
+*/
+const keep = new Set(built.map((m) => m.file));
+for (const name of readdirSync(outDir)) {
+  if (name.endsWith('.pack') && !keep.has(name)) {
+    rmSync(join(outDir, name));
+    console.log(`  removed stale ${name}`);
+  }
+}
 
 /*
   The index is generated here rather than maintained by hand, and that is

@@ -1,10 +1,14 @@
 import { entryFor } from '../menu';
 import { Field, OneOf, Panel, Slider } from '../controls';
 import { INSTRUMENTS } from '../../audio/output/instruments';
+import { PACKS, hasPack } from '../../audio/output/sampled';
 import { appSynth } from '../sound';
 import { settingsStore, useSettings } from '../../state/settingsStore';
 
 const entry = entryFor('settings');
+
+/** The packs this build produced, in the order the picker shows them. */
+const RECORDED = PACKS;
 
 /**
  * The preferences that are not about a particular exercise.
@@ -123,7 +127,17 @@ export function Settings({ go }: { go(route: string): void }) {
       <Panel>
         <Field label="Instrument" group>
           <OneOf
-            options={INSTRUMENTS.map((i) => ({ id: i.id, label: i.name }))}
+            /*
+              A recorded instrument says so in its own label rather than
+              in the prose below, because the prose cannot be read while
+              you are choosing — the eye is on the row. Reading it off
+              the generated index means a pack added tomorrow labels
+              itself and nobody has to remember this line exists.
+            */
+            options={INSTRUMENTS.map((i) => ({
+              id: i.id,
+              label: hasPack(i.id) ? `${i.name} \u00b7 recorded` : i.name,
+            }))}
             chosen={appearance.instrument}
             onChange={setInstrument}
           />
@@ -167,15 +181,37 @@ export function Settings({ go }: { go(route: string): void }) {
             middle of one. Same house style; copy it rather than
             inventing a second shape.
           */}
+          {/*
+            Fourth revision, and this one is a fact changing rather than a
+            sentence being wrong: the piano is a recording now. The first
+            three are worth leaving in the comments above as a record of
+            how user-facing copy goes wrong — a false reason, an unmeasured
+            cost, and a comparison to a tier the screen did not show.
+          */}
           <p className="secondary">
-            Generated as they play rather than recorded, so they start instantly
-            and work offline. Picking one plays a note.
+            {RECORDED.length > 0
+              ? `Recorded instruments play real recordings, downloaded once and
+                 kept. The rest are generated as they play.`
+              : 'Generated as they play rather than recorded.'}
+            {' '}Picking one plays a note.
           </p>
-          <p className="secondary">
-            Recorded instruments are planned, and wait on the sample packs being
-            built. A pack will download in the background, with the generated
-            voice playing until it lands.
-          </p>
+          {/*
+            The credit, read off the generated index rather than typed.
+
+            A pack's licence may oblige the app to name its source, and
+            attribution the app does not display is attribution the app has
+            failed to make. Driving it from the index is what stops that
+            being a thing someone has to remember: a pack cannot be added
+            without its credit appearing, because the same build writes
+            both. The current one is CC0 and obliges nothing, which is
+            exactly why it is worth wiring now — the cheap case is a bad
+            time to leave the mechanism unbuilt.
+          */}
+          {RECORDED.map((pack) => (
+            <p className="secondary" key={pack.id}>
+              {pack.name}: {pack.attribution} ({pack.licence}).
+            </p>
+          ))}
         </Field>
       </Panel>
 

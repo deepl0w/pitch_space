@@ -897,9 +897,32 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    thing that will be chosen. */
 .wedge:focus-visible {
   outline: none;
-  stroke: var(--accent);
+  /*
+    `--ink`, not `--accent`, and the difference is not cosmetic.
+
+    Every wedge is some proportion of `--accent` mixed with the surface,
+    and the *selected* one is `--accent` neat — so an accent ring was
+    invisible on precisely the wedge a keyboard user meets first, in
+    both themes. Found by zooming on a focused selected wedge rather
+    than a focused ordinary one; the ring looked fine on five wedges out
+    of six and the sixth was the one that mattered.
+
+    The text colour is the one value on the page guaranteed to carry
+    against the surface and against a full-strength accent, because
+    everything written on both already uses it.
+  */
+  stroke: var(--ink);
   stroke-width: 3;
-  paint-order: stroke;
+  /*
+    No `paint-order: stroke`, which was copied in without thought and
+    halves the ring: it paints the stroke beneath the fill, so only the
+    outer half of the width survives. Default order puts it on top of
+    its own fill. Neighbouring wedges drawn later still cover the two
+    shared edges, so what shows is the outer and inner arcs — enough to
+    read as a ring, and the alternative is reordering the elements so
+    the focused one draws last, which is a lot of machinery for the two
+    edges nobody is looking at.
+  */
 }
 /* A tspan inside its key's name, so it inherits anchoring and centring and
    only has to say that it is an annotation rather than part of the name. */

@@ -907,9 +907,17 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
     than a focused ordinary one; the ring looked fine on five wedges out
     of six and the sixth was the one that mattered.
 
-    The text colour is the one value on the page guaranteed to carry
-    against the surface and against a full-strength accent, because
-    everything written on both already uses it.
+    `--ink` carries against a full-strength accent *on this wheel*,
+    which is demonstrated a few lines below: `.wedge-label` is
+    `fill: var(--ink)` and the labels sit on `.wedge-self`, which is
+    neat accent. Same two colours, same surface, already legible.
+
+    **Narrower than the first version of this comment**, which claimed
+    ink was safe because everything written on an accent uses it. That
+    is false — `.chip.on` and `.figure-play:hover` both write `--bg` on
+    a neat accent, so the app has two conventions for text on that
+    background and this is the less common one. The wide claim would
+    have been cited for some other element where it does not hold.
   */
   stroke: var(--ink);
   stroke-width: 3;

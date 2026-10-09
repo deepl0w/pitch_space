@@ -430,6 +430,27 @@ reproduce exactly.
   the reader may have changed. Before asking what a value should be,
   ask which quantity the page already has that it *is*.
 
+  **The same rule covers a threshold, not only a position, and that is
+  the easier half to miss** — a breakpoint reads as a decision about
+  layout, not as a number that has to match anything. The
+  circle-of-fifths page switched to two columns at a round `64rem`;
+  below the width where both columns actually fit, they squeezed the
+  diagram the page exists to show — 480px wide at 1920, 308px at 1200,
+  and 162px at 1024, smaller than at any width on either side of that
+  band, because one column would have given it back the full 480. The
+  breakpoint is `76rem` now, the sum of what has to fit at once: the
+  30rem circle, the 15rem key list, a 22rem minimum detail column, plus
+  gaps and the page padding.
+
+  **A wrong threshold is worse than no rule at all, which is worth
+  naming separately.** The drifting-centres example above is untidy but
+  harmless at every width. A wrong breakpoint instead produces an
+  interior band where the layout is worse than if nobody had written
+  the rule — and the band is exactly what nobody looks at: checking the
+  extremes finds both fine, and a round number reads as a tidy choice
+  rather than as a claim that owes the same derivation as any other
+  positioned value.
+
 - **A tracked document does not chase a figure the next commit can change.**
   Either the number is read out of the repository when someone asks for it
   (`tools/report-facts.sh`), or the document says which commit it describes

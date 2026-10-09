@@ -786,7 +786,29 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 /* ---- The circle of fifths ----------------------------------------------- */
 
 .circle-layout { display: grid; gap: 1.25rem; align-items: start; margin-bottom: 1.25rem; }
-@media (min-width: 46rem) { .circle-layout { grid-template-columns: minmax(0, 1fr) 15rem; } }
+/*
+  The diagram and the keys related to it are one object, so they stay
+  together rather than being pushed apart by the room available.
+
+  `main` deliberately drops its measure above 60rem and lets the screen
+  be used, which is right for the things that come in quantities. A
+  circle is not one of those: it has a size, it is capped at 30rem, and
+  a `1fr` first column simply centred it in whatever was left — at
+  1920px that put 560px of nothing between the wheel and the list of
+  keys it is about, measured, which reads as two unrelated panels
+  rather than a figure and its legend.
+
+  Sized to the content and centred as a pair instead. The page is no
+  shorter for it — the scroll on this screen is the amount of content,
+  not the layout — but the two halves are adjacent at every width that
+  can hold them.
+*/
+@media (min-width: 46rem) {
+  .circle-layout {
+    grid-template-columns: minmax(0, 30rem) 15rem;
+    justify-content: center;
+  }
+}
 
 .circle { width: 100%; max-width: 30rem; margin: 0 auto; display: block; }
 

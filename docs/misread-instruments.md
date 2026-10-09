@@ -24,6 +24,7 @@ that got this wrong twice in one day from the harness side.
 - [Three accounts of how it felt](#three-accounts-of-how-it-felt)
 - [A reproduction attempt is an instrument too](#a-reproduction-attempt-is-an-instrument-too)
 - [A check can be sound and still have no coordinate for the failure](#a-check-can-be-sound-and-still-have-no-coordinate-for-the-failure)
+- [One that is still lying, and stays open](#one-that-is-still-lying-and-stays-open)
 - [The other direction: a true finding killed](#the-other-direction-a-true-finding-killed)
 
 ## The clearest case, and it owes the convention nothing
@@ -380,6 +381,43 @@ to constrain.
 flattering, expected. Those describe what happens to a finding once it exists.
 This one asks whether the check could have produced the finding at all, which
 is a question asked earlier and answered before any of them apply.
+
+## One that is still lying, and stays open
+
+**Every entry above is a diagnosis, and that is a selection effect rather than
+a fact about instruments.** The cases that got explained are the cases that got
+written down. A catalogue made only of solved ones quietly implies that a
+misread instrument always yields a cause if you look hard enough, which is
+itself a claim nothing here supports.
+
+So one open case, recorded as open. A long-running dev server served stale
+packs; killing and restarting it fixed the symptom twice with nothing else
+changed. The obvious explanation — that the filenames had been pruned and the
+index pointed at files no longer on disk — **was offered and was wrong**: the
+user role established the filenames were current and present, and a file added
+to `public/` while a server runs was separately measured to be served.
+`docs/RUNNING-THE-APP.md` carries the practical rule — rebuild, restart,
+hard-reload before measuring packs — and says plainly that the cause is
+unidentified.
+
+**The discipline worth copying is what did not happen next.** Having had one
+mechanism disproved, the author did not reach for a second. That restraint is
+the opposite of the reflex, and the reflex is what produced the first wrong
+answer — an explanation offered immediately after one has failed is being
+selected for fitting the symptom rather than for being true, which is this
+document's subject pointed at the diagnosis instead of the measurement.
+
+**A procedure that works is not owed a mechanism.** Rebuild, restart,
+hard-reload is a real rule that someone can follow tomorrow, and it loses
+nothing by having no story attached. The project already accepts this
+elsewhere: the pitch-detection constants are measurements rather than
+explanations, and changing one means re-running the corpus rather than arguing
+from a model. An unexplained workaround is honest in the same way, and it stops
+being honest the moment someone writes a plausible cause beside it.
+
+**What would close this** is a reproduction that distinguishes mechanisms
+rather than one that merely recurs — the symptom recurring tells you it is
+real, which was never in doubt, and nothing about why.
 
 ## The other direction: a true finding killed
 

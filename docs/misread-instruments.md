@@ -87,7 +87,40 @@ Six instances, two of them in records on this list:
   records it as the discovery method without saying so. Reported by main after
   the same patch produced a *false* silence a day later, reproduced against an
   instrument that was not running at all; the differing `start` signatures are
-  the spec's, and this document has not run the patch itself.
+  the spec's. **Since confirmed in the page** — `AudioBufferSourceNode.
+  prototype.hasOwnProperty('start')` is `true` and `OscillatorNode`'s is
+  `false` — and independently in the IDL the repository ships, where
+  `lib.dom.d.ts` declares `start()` on both interfaces. Three establishments,
+  none needing the others.
+
+  **And the entry would be unfair if it stopped there, which is the more
+  useful half.** The person running that patch ran four checks, not one: a
+  200 with `text/html` and the app's own shell as the body, no `packs/` in a
+  plain build, and a 404 on the deployed site. Three of the four observed the
+  absence without depending on which node type was scheduled. **The inference
+  was right by luck; the sweep was not.** What saved the conclusion was that
+  the dud instrument was outnumbered, and `packs.test.ts` now credits the
+  three that carried it.
+
+**The sixth instance also supplies the remedy this document has been short
+of, and it is not the one the rest of it implies.** Everything above says
+*name your instrument* — state what you measured through, scope the guard,
+check the claim against the code. That works when you know which instrument
+you are holding. **It does nothing when the blindness is the thing you do not
+know about**, which is every case here by definition: nobody patched that
+prototype believing it could not see buffer sources.
+
+What works then is **more than one kind of observation**, because blindnesses
+do not coincide. Three ways of seeing an absent pack — a response body, a
+build directory, a deployed 404 — fail independently, so a dud among them is
+outnumbered rather than believed. The same shape settled the instrument's own
+behaviour afterwards: measured in the page, read from the shipped IDL, and
+argued from the spec, three establishments none of which needs the others.
+
+So the practical rule is not *distrust yourself*. It is **take observations of
+different kinds, and prefer three cheap ones over one authoritative one**,
+which is also the only version of this advice that can be followed by somebody
+who does not yet know what they are about to get wrong.
 
 [0011](adr/0011-what-a-catalogue-owes.md) is the counter-example and shows the
 cost of getting it right is one sentence. It named its instrument — "the

@@ -45,7 +45,7 @@ at the top rather than at the end.
 
 ## The catalogue
 
-Four instances, two of them in records on this list:
+Six instances, two of them in records on this list:
 
 - [0021](adr/0021-a-catalogues-top-grade-must-be-reachable.md) measured the cell
   catalogue through `SHAPE_AT`, a progression exercise's difficulty table. The
@@ -74,6 +74,20 @@ Four instances, two of them in records on this list:
   confirms the synthesis implements the catalogue and says nothing about
   whether the catalogue is right. Two readings of one quantity, not two
   witnesses.
+
+- **The sixth is the purest and it reached a true conclusion it could not
+  support.** The gitignored packs were found by patching
+  `AudioScheduledSourceNode.prototype.start` and noticing that no
+  `AudioBufferSourceNode` ever ran. The conclusion was right. But
+  `AudioBufferSourceNode` defines its own `start` — it takes an offset and a
+  duration the base class does not — so a patch on the base prototype sees
+  every oscillator and **no buffer source, ever, whether or not packs work**.
+  The observation would have been identical on a perfectly healthy app. The
+  instrument could not have produced any other reading, and `packs.test.ts`
+  records it as the discovery method without saying so. Reported by main after
+  the same patch produced a *false* silence a day later, reproduced against an
+  instrument that was not running at all; the differing `start` signatures are
+  the spec's, and this document has not run the patch itself.
 
 [0011](adr/0011-what-a-catalogue-owes.md) is the counter-example and shows the
 cost of getting it right is one sentence. It named its instrument — "the

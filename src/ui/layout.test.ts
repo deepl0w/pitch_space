@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { APP_CSS, APP_RULES, rulesFor, rulesUnder } from '../testing/stylesheet';
+import { APP_CSS, APP_RULES, rulesFor, rulesUnder, type Rule } from '../testing/stylesheet';
 
 /**
  * Layout rules asked of the stylesheet, because jsdom has no layout and the
@@ -28,6 +28,53 @@ describe('the stylesheet', () => {
   it('never uses a grid track that cannot shrink below its content', () => {
     const offenders = declarations('grid-template-columns')
       .filter((value) => /(^|\s)\d*\.?\d*fr/.test(value.replace(/minmax\([^)]*\)/g, '')));
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * A rigid track is allowed only where something guarantees the room.
+   *
+   * The `fr` case above names the defect exactly — a track that refuses to
+   * go below its content and pushes the page sideways — but `fr` was the
+   * shape it wore when it was found, not the only shape it has. A literal
+   * `30rem` is every bit as unshrinkable, and `minmax(17rem, …)` has a
+   * floor of 17rem however the rest of it is written.
+   *
+   * What makes a rigid track acceptable is not the track: it is a
+   * `min-width` query guaranteeing there is room for it. That coupling
+   * lives in two places — the query's threshold and the track list — and
+   * nothing related them, so a rule could be made rigid at every width
+   * including a phone's and the suite would have had nothing to say.
+   *
+   * **This is a lower bound and says so.** A track whose floor the
+   * stylesheet does not state — `auto`, `fr`, `min-content` — contributes
+   * zero here, because its real floor is its content and that is not in
+   * the file. So the sum below can only ever understate the room needed,
+   * and the case is sound in one direction: what it fails is certainly too
+   * wide, what it passes may still be. Said plainly because a bound
+   * mistaken for a measurement is how a guard gets trusted past what it
+   * checked.
+   */
+  it('makes a track rigid only inside a query wide enough to hold it', () => {
+    const rigid = APP_RULES
+      .map((rule) => ({ rule, tracks: trackList(rule) }))
+      .filter((found) => found.tracks !== null && floorOf(found.tracks) > 0);
+
+    // The population. Every case here is satisfied by a stylesheet with no
+    // rigid tracks in it, and the point is that this one has four.
+    expect(rigid.length, 'no rigid track anywhere, so this checks nothing')
+      .toBeGreaterThan(1);
+
+    const offenders = rigid.flatMap(({ rule, tracks }) => {
+      const needs = floorOf(tracks!);
+      const guaranteed = minWidthOf(rule.at);
+      if (guaranteed === null) {
+        return [`${rule.selectors.join(', ')}: rigid ${tracks} at every width`];
+      }
+      return guaranteed >= needs ? [] : [
+        `${rule.selectors.join(', ')}: rigid ${tracks} needs ${needs}rem inside a ${guaranteed}rem query`,
+      ];
+    });
     expect(offenders).toEqual([]);
   });
 
@@ -218,4 +265,40 @@ function sourceOf(extensions: readonly string[]): string {
   };
   walk(root);
   return out.join('\n');
+}
+
+/** The `grid-template-columns` a rule sets, if it sets one. */
+function trackList(rule: Rule): string | null {
+  const match = /grid-template-columns\s*:([^;}]+)/.exec(rule.body);
+  return match ? match[1].trim() : null;
+}
+
+/**
+ * The width a track list cannot go below, in rem, counting only the floors
+ * the stylesheet actually states.
+ *
+ * `minmax(a, b)` floors at `a`; a bare length floors at itself; everything
+ * else — `fr`, `auto`, `min-content`, `repeat` of any of those — floors at
+ * its content, which is not a thing a file can tell you, so it counts zero.
+ * Gaps are left out for the same reason and in the same direction.
+ */
+function floorOf(tracks: string): number {
+  const parts = tracks.match(/minmax\([^)]*\)|repeat\([^)]*\)|[^\s]+/g) ?? [];
+  return parts.reduce((sum, part) => {
+    const minmax = /^minmax\(\s*([^,]+),/.exec(part);
+    return sum + rem(minmax ? minmax[1] : part);
+  }, 0);
+}
+
+/** A length in rem, or zero for anything whose size the file does not state. */
+function rem(value: string): number {
+  const match = /^(\d*\.?\d+)rem$/.exec(value.trim());
+  return match ? Number(match[1]) : 0;
+}
+
+/** The `min-width` an at-rule guarantees, in rem, or null if it guarantees none. */
+function minWidthOf(at: string | null): number | null {
+  if (at === null) return null;
+  const match = /min-width:\s*(\d*\.?\d+)rem/.exec(at);
+  return match ? Number(match[1]) : null;
 }

@@ -17,9 +17,24 @@ import index from './packs.json';
  *
  * **Nothing failed.** ADR 0046 makes synthesis the floor precisely so that
  * an absent pack is not an error, which is right, and which is what made a
- * total absence look exactly like a working app. 1,245 tests saw nothing. It
- * was found by a person patching `AudioScheduledSourceNode.start` and
- * noticing that no `AudioBufferSourceNode` ever ran.
+ * total absence look exactly like a working app. 1,245 tests saw nothing.
+ *
+ * **It was found by a person looking, and the first version of this comment
+ * credited the wrong half of what they did.** It said the discovery was a
+ * patch on `AudioScheduledSourceNode.start` showing that no
+ * `AudioBufferSourceNode` ever ran. That reading was worthless:
+ * `AudioBufferSourceNode` declares its own `start` — the signature takes an
+ * offset and a duration the base class has no parameters for — so a patch on
+ * the base is shadowed and sees no buffer source **on a perfectly healthy
+ * app**. The instrument could not have returned any other answer, so it
+ * agreed with a true conclusion by luck. `docs/RUNNING-THE-APP.md` carries
+ * the general form.
+ *
+ * What actually established it was the rest of the same sweep, and all of it
+ * holds: the pack path returning 200 with `text/html` and the app's own
+ * shell as the body, no `packs/` directory in a plain `./build.sh`, and a
+ * 404 on the deployed site. Three independent observations of absence, none
+ * of which depends on knowing which node type was scheduled.
  *
  * **Why existence in the working tree is the whole claim, and git is not
  * needed to make it.** What went wrong is better described as "not

@@ -223,3 +223,140 @@ describe('a caption over several controls', () => {
     }
   });
 });
+
+/**
+ * Anything a reader can reach and act on, native or not.
+ *
+ * Wider than `INTERACTIVE` above on purpose. That list is the labelable
+ * elements, which is what a `<label>` can capture; this is what a keyboard
+ * and a screen reader meet, and the circle of fifths is the reason the two
+ * came apart — its 24 wedges are `path` elements carrying `role="button"`,
+ * which no selector of tag names will ever find.
+ */
+const CONTROLS = '[role="button"], [role="radio"], [role="checkbox"], [tabindex], '
+  + 'button, input, select, textarea, a[href]';
+
+/** Roles that take an element's subtree out of the accessibility tree with it. */
+const HIDES_ITS_CHILDREN = ['img', 'presentation', 'none'];
+
+/**
+ * What a reader would hear this control called.
+ *
+ * A deliberate simplification of the accessible name computation: the real
+ * algorithm is long and most of it concerns cases this app does not have.
+ * What it keeps is the order that matters here — an explicit `aria-label`
+ * or `aria-labelledby` over the element's own text — and it is written out
+ * rather than imported so that a case failing can be read against it.
+ */
+function accessibleName(element: Element): string {
+  const labelledBy = element.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    const target = element.ownerDocument.getElementById(labelledBy);
+    if (target?.textContent?.trim()) return target.textContent.trim();
+  }
+  const own = (element.getAttribute('aria-label')
+    ?? element.getAttribute('title')
+    ?? element.textContent
+    ?? '').trim();
+  if (own) return own;
+
+  /*
+    A form control named by a `<label>`, which is how most of them are
+    named and which the first version of this left out. It flagged the
+    calibration screen's latency input, which sits inside
+    `<Field label="Or set it by hand (ms)">` and is named perfectly well —
+    a rule that fires where there is no defect gets switched off rather
+    than obeyed, so the computation is widened instead.
+  */
+  const wrapping = element.closest('label');
+  if (wrapping?.textContent?.trim()) return wrapping.textContent.trim();
+  if (element.id) {
+    const forIt = element.ownerDocument.querySelector(`label[for="${element.id}"]`);
+    if (forIt?.textContent?.trim()) return forIt.textContent.trim();
+  }
+  return '';
+}
+
+function controlsIn(host: HTMLElement): Element[] {
+  return [...host.querySelectorAll(CONTROLS)];
+}
+
+/**
+ * The three things a control needs before anyone who is not using a mouse
+ * can use it, asked of every screen rather than of the one that failed.
+ *
+ * The circle of fifths failed all three at once and none of them showed:
+ * the wheel carried `role="img"`, which is a reasonable-looking thing to
+ * put on an SVG and which takes everything inside it out of the
+ * accessibility tree, and its wedges were bare `path` elements with no tab
+ * stop and no name. Visually perfect, and unusable without a pointer.
+ *
+ * Swept rather than written against that page, because the defect was not
+ * the page — `role="img"` over interactive content is wrong wherever it
+ * appears, and the stave is `role="img"` *correctly*, having nothing
+ * interactive inside it. So the claim is the contradiction, not the role.
+ */
+describe('a control a pointer is not required for', () => {
+  /*
+    Rendered on first use rather than when the suite is collected. The
+    shared container above is made in `beforeEach`, so a render at
+    collection time has nowhere to go — which is what the first version of
+    this block did, and it failed loudly rather than quietly, for once.
+  */
+  let screens: { file: string; controls: Element[] }[] | null = null;
+  const hosts = () => {
+    screens ??= Object.entries(SCREENS).map(([file, screen]) => {
+      const host = document.createElement('div');
+      document.body.append(host);
+      act(() => { createRoot(host).render(screen()); });
+      return { file, controls: controlsIn(host) };
+    });
+    return screens;
+  };
+
+  it('exists in numbers on the screens this is asked of', () => {
+    // The population, and it has to be the controls rather than the
+    // screens: a sweep that rendered six empty pages would satisfy every
+    // case below by finding nothing to be wrong about.
+    const total = hosts().reduce((sum, h) => sum + h.controls.length, 0);
+    expect(total, 'no controls found at all — the selector or the screens broke')
+      .toBeGreaterThan(50);
+    // And the wheel in particular, which is the one with custom controls
+    // that no tag-name selector would see.
+    const wheel = hosts().find((h) => h.file === 'screens/CircleOfFifths.tsx');
+    expect(wheel?.controls.length, 'the circle of fifths has no reachable wedges')
+      .toBeGreaterThan(20);
+  });
+
+  it('can be reached by a keyboard', () => {
+    const unreachable = hosts().flatMap(({ file, controls }) => controls
+      // Native controls are focusable by being what they are; an element
+      // given a role has to be given the tab stop as well.
+      .filter((c) => !/^(button|input|select|textarea|a)$/i.test(c.tagName))
+      .filter((c) => c.getAttribute('tabindex') === null)
+      .map((c) => `${file}: <${c.tagName.toLowerCase()} role=${c.getAttribute('role')}>`));
+    expect(unreachable, 'a control with a role and no tab stop').toEqual([]);
+  });
+
+  it('is called something', () => {
+    const nameless = hosts().flatMap(({ file, controls }) => controls
+      .filter((c) => accessibleName(c) === '')
+      .map((c) => `${file}: <${c.tagName.toLowerCase()} role=${c.getAttribute('role')}>`));
+    expect(nameless, 'a control a reader would hear announced as nothing').toEqual([]);
+  });
+
+  it('is not inside something that hides it', () => {
+    const hidden = hosts().flatMap(({ file, controls }) => controls
+      .filter((control) => {
+        for (let at = control.parentElement; at; at = at.parentElement) {
+          if (at.getAttribute('aria-hidden') === 'true') return true;
+          const role = at.getAttribute('role');
+          if (role && HIDES_ITS_CHILDREN.includes(role)) return true;
+        }
+        return false;
+      })
+      .map((c) => `${file}: ${accessibleName(c) || c.tagName.toLowerCase()}`));
+    expect(hidden, 'a control inside an element that takes it out of the tree')
+      .toEqual([]);
+  });
+});

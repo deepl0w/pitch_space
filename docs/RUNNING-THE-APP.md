@@ -105,6 +105,36 @@ This is the suite's own rule arriving from outside it. A dozen cases under
 because a guard over an empty population passes. An instrument pointed at the
 app needs the same guard and had none.
 
+### The same trap arrives from the server, and a 200 is not a yes
+
+Ask the dev server for a pack path that does not exist and it answers **200,
+`text/html`, about 620 bytes of the app's own shell** — not 404. Reproduced
+independently in two worktrees. The last line of defence is `parsePack`
+rejecting it on the magic; nothing in the response status says anything is
+wrong. So **check what came back — the content type, or the pack's own
+magic — rather than the status.**
+
+Reaching that state is easy, because a pack filename is a content hash: a
+rebuild gives every pack a new name and deletes the old ones, so a warm
+page, an un-rebuilt `dist/` or a cached module asks for a file that is
+gone.
+
+**And at least once it happened without any of those**, which is the part
+worth not tidying away. A long-running dev server served the shell for packs
+that were present on disk under exactly the names being requested, and
+killing that process and starting a new one fixed it immediately, twice,
+with no other change. That is not the stale-filename mechanism above — the
+filenames were current, and a file added to `public/` while a server is
+running *is* served, measured here. The cause is unidentified. It was first
+reported as a pack-loading bug, then attributed by this document's author to
+the stale-filename path, which the reporter then falsified from their own
+notes.
+
+So the practical rule is coarser than an explanation and does not depend on
+having one: **rebuild, then restart the dev server, then hard-reload, before
+measuring anything about packs.** A running server that has watched a pack
+rebuild is not a server to trust.
+
 ## Driving real Chrome
 
 Headless Chrome over the DevTools protocol, which needs no dependencies —

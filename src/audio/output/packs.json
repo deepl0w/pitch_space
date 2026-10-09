@@ -1,0 +1,13 @@
+[
+  {
+    "id": "piano",
+    "name": "Upright Piano",
+    "source": "https://github.com/sgossner/VCSL",
+    "licence": "CC0-1.0",
+    "attribution": "Versilian Community Sample Library — Upright Piano, Knight",
+    "bytes": 404271,
+    "file": "piano-900d6827.pack",
+    "trim": 2.524027493547712,
+    "notes": 16
+  }
+]

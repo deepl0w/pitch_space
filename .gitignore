@@ -64,3 +64,11 @@ docs/process/
 # Fetched recordings for the capture tests. See tools/fetch-test-audio.sh —
 # they are 4-6 MiB each and are a build-time input, never shipped.
 fixtures/
+
+# Built instrument packs. The recordings they are made from are tens of
+# megabytes and the packs are derived from them, so neither belongs in a
+# repository anyone has to clone. `tools/build-instrument-pack.mjs` rebuilds
+# both, and `src/audio/output/packs.json` — the index it writes, which the
+# settings screen needs to credit a pack before one is downloaded — is
+# committed precisely because it is the small part.
+public/packs/

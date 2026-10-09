@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { PracticeScreen } from './ui/screens/PracticeScreen';
 import { EXERCISE_TYPES } from './exercises/registry';
 import type { AudioOut } from './exercises/types';
+import { COMPASS, uncovered } from './audio/output/pack';
 
 /**
  * What a sample pack will have to cover, measured from the app rather than
@@ -36,14 +37,6 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-/**
- * The compass a sampled instrument can physically hold: A0 to C8, the 88
- * keys of a piano. Not a tuning choice — it is the widest thing anybody is
- * going to record, so a generator asking outside it cannot be sampled at
- * all, only synthesised.
- */
-const COMPASS = { lowest: 21, highest: 108 };
 
 /** How many rounds to draw per exercise. Each mount is a fresh seed. */
 const ROUNDS = 4;
@@ -118,29 +111,6 @@ function pitchesAsked(): Map<string, { midi: number[]; offersListening: boolean 
     byExercise.set(definition.id, { midi, offersListening });
   }
   return byExercise;
-}
-
-/**
- * Whether a pack's note table reaches everything in `asked`.
- *
- * Written now, against the field names
- * `docs/instrument-pack-format.md` fixes, so that the check waiting for the
- * builder is one line rather than a design. Returns what is missing rather
- * than a boolean: "the pack does not cover this" is not a useful failure
- * message, and the two ends come apart — a pack can be short at the bottom
- * and fine at the top.
- */
-export function uncovered(
-  notes: readonly { midi: number }[],
-  asked: readonly number[],
-): { below: number[]; above: number[] } {
-  const recorded = notes.map((n) => n.midi);
-  const lowest = Math.min(...recorded);
-  const highest = Math.max(...recorded);
-  return {
-    below: [...new Set(asked.filter((m) => m < lowest))].sort((a, b) => a - b),
-    above: [...new Set(asked.filter((m) => m > highest))].sort((a, b) => a - b),
-  };
 }
 
 describe('the range a sampled pack will have to cover', () => {

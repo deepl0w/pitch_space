@@ -724,11 +724,22 @@ describe('a sampled voice does not inherit a synthesised trim', () => {
    * reason to, and this fails the moment it does.
    */
   it('builds the sampled voice without seeing the synthesised catalogue', () => {
+    /*
+      `importsOf`, not a regex for one spelling of the specifier.
+
+      The first version matched `from './instruments'` literally, which a
+      re-export, a `../output/` path or a dynamic import all walk past —
+      and this file already has the mechanism for the question, used by
+      the vexflow and upward-import rules. A correlate of the answer is
+      not a substitute for the thing that answers it, which is this
+      project's first convention and is cheaper here than the regex was.
+    */
     const sampled = join(SRC, 'audio', 'output', 'sampled.ts');
-    expect(hits([sampled], /from '\.\/instruments'/), 'sampled.ts imports the synth catalogue')
-      .toHaveLength(0);
-    // Not idle: it does import its own source of a trim.
-    expect(hits([sampled], /from '\.\/pack'/).length).toBeGreaterThan(0);
+    const specifiers = importsOf(sampled);
+    expect(specifiers.filter((m) => /(^|\/)instruments$/.test(m)),
+      'sampled.ts reaches the synthesised catalogue').toEqual([]);
+    // Not idle: it does import its own source of a trim, by the same means.
+    expect(specifiers.filter((m) => /(^|\/)pack$/.test(m)).length).toBeGreaterThan(0);
   });
 
   /**

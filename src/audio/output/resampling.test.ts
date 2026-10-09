@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { centsOff, freqOf } from '../../theory/pitch';
+import { COMPASS, playbackRate } from './pack';
 
 /**
  * The arithmetic a sampled voice will rest on, written before the voice is.
@@ -22,13 +23,17 @@ import { centsOff, freqOf } from '../../theory/pitch';
  * frequency is, and both halves exist today.
  */
 
-/** The format's rule, as written there. */
-function playbackRate(wanted: number, nearest: number): number {
-  return 2 ** ((wanted - nearest) / 12);
-}
+/*
+  The shipped function and the shipped compass, not copies.
 
-/** The compass a piano pack would cover, as MIDI note numbers: A0 to C8. */
-const COMPASS = { lowest: 21, highest: 108 };
+  This file was written before `pack.ts` existed and restated both, which
+  made the sweep below a check on its own restatement: `playbackRate` could
+  have been written wrongly in the module and every case here would still
+  have passed. A test of arithmetic that imports its own version of the
+  arithmetic is testing nothing the module does. The claim is unchanged —
+  the rate relates a recording to a frequency `pitch.ts` independently
+  decides — and it is now about the code that runs.
+*/
 
 /** How far off is "off", in cents. A cent is about the limit of discrimination. */
 const AUDIBLE_CENTS = 1;

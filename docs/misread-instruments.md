@@ -362,6 +362,20 @@ helps, because nothing is wrong with it.
   only that distance was silent. Reading one curve against its own decay level
   catches what comparing two curves cannot. The defect was in the null space of
   the comparison.
+
+  **The shipped instance of this is better than the test one.** Four of the
+  six instrument packs went out an octave sharp, because a file called `C4`
+  means middle C under one octave convention and not under the other, and a
+  filename carries no indication of which. Every note moved together, so each
+  pack stayed internally consistent, the resampling arithmetic stayed right,
+  and nothing downstream had anything to compare against. **A translation is
+  invisible to every relative check by construction** — and this one shows a
+  second property the envelope pair did not: it arrives with a ready
+  misattribution. An instrument sounding an octave high reads as a bright or
+  odd recording, not as a wrong manifest, so the one perceptual symptom has a
+  plausible innocent explanation waiting for it. The fix is the only kind
+  available: measure the recording's own pitch and refuse a set that disagrees
+  with its labels, which is an absolute reading rather than a relative one.
 - **A medium that cannot represent the defect.** `askable: undefined` survives
   a JSON round trip by vanishing — `JSON.stringify` drops the key — and is real
   under `structuredClone`, which is what IndexedDB actually stores. A test

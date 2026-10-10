@@ -404,12 +404,17 @@ describe('how far a line has advanced', () => {
     expect(completion(l, tallies(l, { a: 999, b: 999 }))).toBe(1);
   });
 
-  it('counts what the settings can ask, so narrowing cannot flatter', () => {
+  it('divides by what the line can ask, not by what has been practised', () => {
     /*
       The defect this forbids: a learner who has practised one interval of
       five sees 20%, and would see 100% if the denominator were the items
-      with a tally rather than the items askable. Shrinking a pool is then
-      indistinguishable from having learnt it.
+      with a tally rather than the items askable.
+
+      **It is not what stops narrowing a pool flattering a learner**, which
+      is what this case claimed when it was written. That protection is
+      `lineKey` being built from the askable set, so a narrowed pool is a
+      different line and reads 0 — one level above this function, and the
+      case below is the one that actually touches it.
     */
     const wide = line(['a', 'b', 'c', 'd', 'e']);
     const practised = tallies(wide, { a: 99 });

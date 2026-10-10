@@ -43,6 +43,14 @@ cd "$(dirname "$0")/.."
 
 socks="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/cc-socks"
 
+# -x, not -f: a substring match on the full command line catches every
+# headless Chrome process this project's own tests launch, because their
+# --user-data-dir sits under this machine's /tmp/claude-<uid>/ scratch
+# path. Each counts as "stale, no socket, same cwd as the worktree" once
+# — found against the user role after a day of sweeps left fifty-odd such
+# pids in one row, a true reading of the wrong population. The exact name
+# match only ever sees a process actually called `claude`.
+
 printf '%-12s %-30s %s\n' ROLE DIR STATE
 
 # main first and separately: it is not a `claude/*` worktree branch, so the
@@ -54,7 +62,7 @@ main_dir=$(git worktree list --porcelain | awk '
 if [ -n "$main_dir" ]; then
     base=$(basename "$main_dir")
     pid=""
-    for p in $(pgrep -f claude 2>/dev/null || true); do
+    for p in $(pgrep -x claude 2>/dev/null || true); do
         cwd=$(readlink "/proc/$p/cwd" 2>/dev/null || true)
         [ "$cwd" = "$main_dir" ] || continue
         [ -S "$socks/$p.sock" ] && pid=$p
@@ -90,7 +98,7 @@ for branch in $(git for-each-ref --format='%(refname:short)' 'refs/heads/claude/
     # standing in for it.
     pid=""
     stale=""
-    for p in $(pgrep -f claude 2>/dev/null || true); do
+    for p in $(pgrep -x claude 2>/dev/null || true); do
         cwd=$(readlink "/proc/$p/cwd" 2>/dev/null || true)
         [ "$cwd" = "$dir" ] || continue
         if [ -S "$socks/$p.sock" ]; then pid=$p; else stale="$stale $p"; fi
@@ -115,7 +123,7 @@ done
 # table above because there is no worktree to match them to, and they are
 # worth naming: a session pinned to a deleted directory is the failure mode
 # that looks like a working agent right up to its first save.
-orphans=$(for p in $(pgrep -f claude 2>/dev/null || true); do
+orphans=$(for p in $(pgrep -x claude 2>/dev/null || true); do
     cwd=$(readlink "/proc/$p/cwd" 2>/dev/null || true)
     case "$cwd" in *"(deleted)"*) printf '  pid %s  %s\n' "$p" "$cwd";; esac
 done)

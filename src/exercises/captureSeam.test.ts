@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { analyse } from '../audio/capture/listen';
 import { mix, pluckedString, silence, startingAt } from '../audio/testing/signals';
 import { freqOf } from '../theory/pitch';
+import { intervalPlayed } from './interval-id/intervals';
 import type { AudioIn, PlayedNote } from './types';
 
 /**
@@ -188,5 +189,89 @@ describe('a take that was not heard', () => {
     const take = await refused.listen(3);
     if (take.heard) throw new Error('expected a refused take');
     expect(['refused', 'unavailable']).toContain(take.reason);
+  });
+});
+
+/**
+ * Two attacks at one pitch reach the exercise as two notes.
+ *
+ * `intervalPlayed` now takes **exactly** two readable notes, so what a
+ * learner is told depends on how many the chain delivers — and every unit
+ * test of that rule hands it a note list built by hand. Nothing checked
+ * that a real take produces the count those tests assume.
+ *
+ * The risk sits on top of a deliberate decision. ADR 0035 merges two
+ * attacks that agree about pitch and did not get louder, and names the
+ * hazard it accepts: *the same pitch struck twice looks exactly like a
+ * cluster*. A unison is the one interval a learner answers by doing
+ * precisely that.
+ *
+ * **What this holds, and what it does not.** Measured from 0.12s to 1.2s
+ * apart: a re-pluck is loud enough against the first note's decayed tail
+ * that assembly never merges it, so the chain delivers two notes at every
+ * spacing a learner would use. It is not a tight guard on the merge rule —
+ * `NEW_NOTE_RISE` has to go from 2 to about a thousand before this
+ * notices, because the margin is enormous. An earlier version of this
+ * comment claimed that tightening the rule would break the unison and the
+ * mutation showed it would not; the margin is the finding, and it is a
+ * better answer than the guard would have been.
+ *
+ * What it does hold is the end-to-end claim no unit test can: that a
+ * played unison arrives as two notes and answers, where every test of
+ * `intervalPlayed` is fed a note list built by hand. A change anywhere in
+ * the chain that collapsed them — a different detector, a different onset
+ * threshold, a rewritten `assemble` — fails here.
+ */
+describe('a unison answered by playing it', () => {
+  const pluck = (hz: number, at: number, seed: number) => startingAt(
+    pluckedString({ frequencyHz: hz, seconds: 0.7, sampleRate: RATE, amplitude: 0.5, seed }),
+    at, RATE,
+  );
+
+  it.each([0.12, 0.25, 0.6, 1.2])('survives assembly when the two are %ss apart', (gap) => {
+    const take = analyse(
+      mix(pluck(440, 0.2, 1), pluck(440, 0.2 + gap, 2), silence(0.2 + gap + 1, RATE)),
+      RATE,
+    );
+
+    expect(take.notes, `two strikes ${gap}s apart were merged into one`).toHaveLength(2);
+    expect(intervalPlayed(take.notes), 'a played unison did not answer').toBe(0);
+  });
+
+  /**
+   * And the hesitation is still three, which is what makes the rule above
+   * worth having rather than an artefact of the fixtures. If assembly ever
+   * merged the re-strike, refusing on a count would be guarding a case the
+   * chain no longer produces.
+   */
+  it('is not what a re-struck note arrives as', () => {
+    const take = analyse(
+      mix(pluck(440, 0.2, 1), pluck(440, 1.1, 2), pluck(554.365, 2.0, 3), silence(3, RATE)),
+      RATE,
+    );
+
+    /*
+      The durable half: the chain delivers three notes. True whatever is
+      decided about what to do with them, because it is a fact about
+      assembly rather than about grading — and it is what makes a rule
+      based on the count worth having at all. If a re-strike were merged,
+      nothing downstream would ever see the ambiguity.
+    */
+    expect(take.notes.length, 'the hesitation was merged, so no rule can see it')
+      .toBeGreaterThan(2);
+
+    /*
+      **And the half that moves.** Refusing is the current answer and not
+      the only defensible one: ignoring repeated attacks on one pitch would
+      remove the same symptom and grade the learner correctly, which is
+      friendlier, and that choice is back with the person whose call it is.
+      Under that resolution this line becomes `toBe(4)` rather than
+      `toBeNull()`, and nothing else in this file changes.
+
+      Marked rather than loosened. A test that fails loudly when the
+      behaviour moves is the point; what it should not do is make somebody
+      work out which of its assertions was the decision.
+    */
+    expect(intervalPlayed(take.notes), 'three attacks were graded anyway').toBeNull();
   });
 });

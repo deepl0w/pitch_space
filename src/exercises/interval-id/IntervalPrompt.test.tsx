@@ -337,9 +337,17 @@ describe('answering', () => {
       so a third one added later would be dropped in silence and every
       marking case would go on passing while saying nothing.
 
-      Swept over the states a chip has rather than one of them: unmarked and
-      marked, listening and reading, since `playable` only appears where a
-      marked chip has something to sound.
+      Swept over the states a chip has rather than one of them, because the
+      classes differ between them: an unmarked chip carries no verdict, and
+      `playable` only appears where a marked chip has something to sound.
+
+      **The reading state contributes nothing today and is swept anyway.**
+      Removing it fails nothing — this collects a union, and reading only
+      ever *lacks* `playable` where listening has it, so it can add no class
+      the other two did not. It is here so that a class reading alone grows
+      is seen rather than silently exempt, which is a claim about the future
+      and not evidence for the assertion below. Said outright because an
+      inert line in a sweep reads exactly like a load-bearing one.
     */
     const ex = exercise({ semitones: 7 });
     const settings: IntervalSettings = { ...INTERVAL_DEFAULTS, semitones: [3, 4, 7] };

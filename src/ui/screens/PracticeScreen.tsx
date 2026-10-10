@@ -7,9 +7,10 @@ import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registr
 import { itemLabel } from '../../exercises/itemLabel';
 import { newAttemptId, newSeed } from '../../exercises/seed';
 import type {
-  AnyExerciseDefinition, AudioOut, ExerciseBase, ItemId, Result,
+  AnyExerciseDefinition, AudioIn, AudioOut, ExerciseBase, ItemId, Result,
 } from '../../exercises/types';
 import { appSynth } from '../sound';
+import { appMicrophone } from '../microphone';
 import { settingsStore, useSettings } from '../../state/settingsStore';
 import { lineOfRound } from '../../state/line';
 import {
@@ -35,6 +36,17 @@ import { attemptFrom } from '../../state/attempt';
  * user pressed back.
  */
 const defaultSynth = appSynth;
+
+/**
+ * The app's microphone, defaulted in the same way and for the same reason.
+ *
+ * A test renders this screen under jsdom, which has no `getUserMedia`, so
+ * the real one has to be replaceable from outside — and the exercise layer
+ * must not reach for it directly, which is what `AudioIn` being declared in
+ * `exercises/types.ts` is for. `ui/microphone.ts` is the only file that
+ * knows a microphone is involved at all.
+ */
+const defaultMicrophone = appMicrophone;
 
 interface Round {
   /** Also the attempt's id, so a recorded attempt is the round it came from. */
@@ -89,7 +101,7 @@ interface Round {
 // Every other route keeps the router's, which is still the only one on the
 // page — the shell moved it, it did not add a second.
 export function PracticeScreen({
-  exerciseId, onSwitch, onBack, audio = defaultSynth,
+  exerciseId, onSwitch, onBack, audio = defaultSynth, audioIn = defaultMicrophone,
 }: {
   /**
    * Which exercise to run. The route decides, so the menu card and the URL
@@ -102,6 +114,7 @@ export function PracticeScreen({
   /** Leave for the home screen. The router owns that too. */
   onBack?: () => void;
   audio?: AudioOut;
+  audioIn?: AudioIn;
 }) {
   const lastExercise = useSettings((s) => s.doc.lastExercise);
   /**
@@ -211,6 +224,7 @@ export function PracticeScreen({
         key={definition.id}
         definition={definition}
         audio={audio}
+        audioIn={audioIn}
         tally={tally}
         settings={settings}
       />
@@ -258,9 +272,10 @@ export function PracticeScreen({
  * needs — is discarded wholesale when the type changes, because this
  * component stops existing rather than being told to tidy up.
  */
-function ExerciseRound({ definition, audio, tally, settings }: {
+function ExerciseRound({ definition, audio, audioIn, tally, settings }: {
   definition: AnyExerciseDefinition;
   audio: AudioOut;
+  audioIn: AudioIn;
   tally: Map<TallyKey, ItemTally>;
   /** Coerced once by the screen, which also renders the panel that sets it. */
   settings: unknown;
@@ -370,6 +385,7 @@ function ExerciseRound({ definition, audio, tally, settings }: {
               settings={settings}
               onRespond={respond}
               audio={audio}
+              audioIn={audioIn}
             />
           </ExerciseBoundary>
         )}
@@ -449,12 +465,13 @@ function ExerciseRound({ definition, audio, tally, settings }: {
  * from a prompt — so computing them in the parent would put the most
  * likely throw above the thing meant to catch it.
  */
-function RoundView({ definition, round, settings, onRespond, audio }: {
+function RoundView({ definition, round, settings, onRespond, audio, audioIn }: {
   definition: AnyExerciseDefinition;
   round: Round;
   settings: unknown;
   onRespond: (response: unknown) => void;
   audio: AudioOut;
+  audioIn: AudioIn;
 }) {
   /**
    * The question on the staff, for an exercise being read rather than heard.
@@ -491,6 +508,7 @@ function RoundView({ definition, round, settings, onRespond, audio }: {
         result={round.result}
         onRespond={onRespond}
         audio={audio}
+        audioIn={audioIn}
         scores={definition.promptDrawsScores ? { questionScore, answerScore } : undefined}
       />
       {!definition.promptDrawsScores && questionScore && <Score spec={questionScore} />}

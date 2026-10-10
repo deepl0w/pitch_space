@@ -160,6 +160,50 @@ export async function listen(
   return analyse(samples, source.sampleRate, options);
 }
 
+/**
+ * A take of a fixed length, which is what a live source needs and `listen`
+ * cannot give it.
+ *
+ * **`CaptureSource.start` resolves when the source has *begun*, not when it
+ * has finished** — its own documentation says so, and a microphone honours
+ * that literally: the promise settles as soon as permission is granted and
+ * the graph is wired, with every frame still to come. `listen` above treats
+ * that resolution as the end of the take, which is true only of a source
+ * that delivers a whole recording inside `start` and then returns, as
+ * `RecordedSource` does. Handed a microphone it returns an empty take
+ * immediately.
+ *
+ * So the length has to come from the caller. An exercise asking someone to
+ * play an answer knows how long it is prepared to wait; a device does not.
+ *
+ * `wait` is injected for the same reason `getMedia` is: a test that really
+ * slept for the length of every take would be a suite nobody runs.
+ */
+export async function listenFor(
+  source: CaptureSource, seconds: number, options: ListenForOptions = {},
+): Promise<ListenResult> {
+  const chunks: Float32Array[] = [];
+  // Copied for the reason `listen` copies: the source reuses the buffer.
+  await source.start((frame: CaptureFrame) => { chunks.push(new Float32Array(frame.samples)); });
+  try {
+    await (options.wait ?? sleep)(seconds);
+  } finally {
+    // In a `finally` because a source left running holds the microphone
+    // open, and the recording indicator stays on, whatever went wrong.
+    source.stop();
+  }
+  return analyse(concat(chunks), source.sampleRate, options);
+}
+
+export interface ListenForOptions extends ListenOptions {
+  /** How to pass the time. Defaults to a real timer. */
+  wait?: (seconds: number) => Promise<void>;
+}
+
+function sleep(seconds: number): Promise<void> {
+  return new Promise((resolve) => { setTimeout(resolve, seconds * 1000); });
+}
+
 /** The analysis on its own, for a caller that already has the samples. */
 export function analyse(
   samples: Float32Array, sampleRate: number, options: ListenOptions = {},

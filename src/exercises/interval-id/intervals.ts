@@ -10,7 +10,7 @@ import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
 import { presentationField } from '../types';
 import type {
-  BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
+  BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
 } from '../types';
 
 /**
@@ -348,6 +348,47 @@ export interface IntervalResponse {
   semitones: number;
   /** Milliseconds from the first playback to the tap. */
   latencyMs?: number;
+}
+
+/**
+ * The interval someone played, read off a take, or `null` when the take did
+ * not contain one.
+ *
+ * **Null is not a wrong answer and the caller must not grade it as one.**
+ * The two are easy to conflate here because both arrive as "the microphone
+ * came back and the user has not got it right" — but a take with one note
+ * in it is a take where the question was never answered, and ADR 0047's
+ * argument about a refused microphone applies with equal force to a take
+ * that was heard and said nothing: scoring it resets a streak the player
+ * never had a chance to keep.
+ *
+ * The first two pitched notes, not the loudest or the best. Someone asked
+ * to play an interval plays it from the start; later notes are a second
+ * attempt, and a second attempt is the player changing their mind rather
+ * than this function's business to arbitrate. Notes with no readable pitch
+ * are skipped rather than ending the search — a muted string or a fret
+ * buzz between the two real notes should not cost the answer.
+ *
+ * Unsigned, because `IntervalResponse.semitones` is a distance and
+ * `direction` is a separate field the question asks about separately. So
+ * playing a fifth downwards answers "fifth", which is what the buttons
+ * beside it would have answered.
+ *
+ * Not folded into an octave. A player who answers a major second by
+ * playing a major ninth has played a different interval, and quietly
+ * accepting it would teach the opposite of what the exercise is for. It
+ * comes back as 14 and grades wrong, and the prompt says what it heard so
+ * the reason is visible rather than mysterious.
+ */
+export function intervalPlayed(notes: readonly PlayedNote[]): number | null {
+  const pitched = notes.filter((note) => note.frequencyHz !== null);
+  if (pitched.length < 2) return null;
+  const [first, second] = pitched;
+  // Both are non-null by the filter; TypeScript cannot see that through it.
+  const from = first.frequencyHz as number;
+  const to = second.frequencyHz as number;
+  if (!(from > 0) || !(to > 0)) return null;
+  return Math.abs(Math.round(12 * Math.log2(to / from)));
 }
 
 /**

@@ -293,26 +293,23 @@ const MERGE_CENTS = 60;
  * rather than a weight — but it is one library's piano, which is the
  * fifth convention applied to the evidence this rests on.
  *
- * **Something outside this directory rests on it, and not with much room.**
- * A played unison is two attacks on one pitch, which is exactly what the
- * merge above accepts it may swallow; `intervalPlayed` takes exactly two
+ * **Something outside this directory rests on it, and close enough that
+ * raising it by one step has been measured to break them.** A played
+ * unison is two attacks on one pitch, which is exactly what the merge
+ * above accepts it may swallow; `intervalPlayed` takes exactly two
  * readable notes, so if this merged them, the one interval a learner
  * answers by striking the same note twice becomes the one they cannot
  * answer at all.
  *
- * **Raising this to 3 is enough to do it** for two strikes 0.12 seconds
- * apart — the closest spacing a learner would use. Widely spaced pairs
- * survive past 30, so the headroom is a property of the gap rather than
- * of the constant, and the tight end is what bounds it. An earlier reading
- * of this put the figure near a thousand, measured before the fixture
- * covered the close spacings and left standing after it did; treat any
- * number here as the reach of the test that produced it, which is one
- * synthesised pluck pair at one amplitude and not a recording of a piano.
- *
- * The reasoning is in
- * [ADR 0047](../../../docs/adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md),
- * on the depending side rather than here, and
- * `src/exercises/captureSeam.test.ts` measures the margin end to end.
+ * How much room there actually is belongs to
+ * `src/exercises/captureSeam.test.ts`, which measures it, and is not
+ * repeated here: the figure moves when that fixture's spacings change,
+ * and nothing on this side can see that happen. A number copied to here
+ * would be a sentence describing a test that no longer exists — which is
+ * how the first version of it came to be wrong by three orders of
+ * magnitude. [ADR
+ * 0047](../../../docs/adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)
+ * carries the reasoning, on the depending side rather than here.
  *
  * The pointer is written out because nothing enforces it: `audio/dsp/` and
  * this directory import nothing above themselves, which is the constraint

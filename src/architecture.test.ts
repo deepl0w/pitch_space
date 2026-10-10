@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CHORD_TYPES } from './theory/chord';
@@ -443,6 +443,73 @@ describe('the records the code cites', () => {
    * 0028", `docs/adr/0005`, `adr/0011-what-a-catalogue-owes.md` — and what
    * is checked is that the record exists, not how it was spelled.
    */
+  /**
+   * And no document points at a file that is not there.
+   *
+   * The same fault as citing a record nobody wrote, one level down: the
+   * prose names `src/audio/capture/listen.ts` or `tools/app.sh`, somebody
+   * renames it, and the citation keeps reading perfectly. Fifty-odd such
+   * paths are quoted across the documents; a rename today breaks them
+   * silently and the next reader follows a pointer to nothing.
+   *
+   * **The two gitignored directories are the exception and the reason is
+   * in `CLAUDE.md`.** `docs/findings/` and `docs/process/` are written and
+   * never committed, because the repository is public and the fleet's
+   * internal writing stays out of it — so a citation of one is citing
+   * something a reader of the public repository cannot open, which that
+   * file says outright. Excluded by prefix with the reason named, rather
+   * than by the scan quietly tolerating anything it cannot find.
+   *
+   * **What this cannot catch**, said because the episode that prompted it
+   * was exactly this: a citation naming a real thing in the wrong place. A
+   * comment pointer was attributed to `MERGE_CENTS` when it sits above
+   * `NEW_NOTE_RISE`, thirty-four lines apart in one file and governing two
+   * halves of the same decision. Both names exist, so a scan for existence
+   * passes it — and that is worse than a dangling path, which fails on
+   * sight.
+   */
+  it('points at no file that is not there', () => {
+    const UNCOMMITTED = ['docs/findings/', 'docs/process/'];
+    /*
+      Walked here rather than through `filesUnder`, which keeps only
+      `.ts`/`.tsx` — reusing it found fourteen paths instead of fifty-odd
+      and the population guard below said so on the first run, which is
+      what it is for.
+    */
+    const markdown = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
+      .flatMap((entry) => {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) return markdown(path);
+        return entry.name.endsWith('.md') ? [path] : [];
+      });
+    const documents = [
+      ...markdown(join(SRC, '..', 'docs')),
+      join(SRC, '..', 'CLAUDE.md'),
+      join(SRC, '..', 'README.md'),
+    ];
+
+    const cited = new Map<string, Set<string>>();
+    for (const file of documents) {
+      for (const match of readFileSync(file, 'utf8')
+        .matchAll(/`((?:src|tools|docs)\/[A-Za-z0-9_./-]+)`/g)) {
+        const path = match[1];
+        if (UNCOMMITTED.some((prefix) => path.startsWith(prefix))) continue;
+        const where = cited.get(path) ?? new Set<string>();
+        where.add(show(file));
+        cited.set(path, where);
+      }
+    }
+
+    // The population: a regex that stopped matching would pass this by
+    // having nothing to look for.
+    expect(cited.size, 'no source paths cited in any document').toBeGreaterThan(20);
+
+    const dangling = [...cited]
+      .filter(([path]) => !existsSync(join(SRC, '..', path)))
+      .map(([path, where]) => `${path} — cited by ${[...where].sort().join(', ')}`);
+    expect(dangling, 'cited and not there').toEqual([]);
+  });
+
   it('cites no record that was never written', () => {
     const cited = new Set<string>();
     for (const file of filesUnder(SRC)) {

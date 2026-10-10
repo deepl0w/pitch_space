@@ -75,6 +75,26 @@ export const DEVICE_OPEN_SECONDS = 0.2;
 export const CLOCKLESS_HEADROOM = DEVICE_OPEN_SECONDS + 0.05;
 
 /**
+ * How long the output has to be silent before the device is assumed shut
+ * again, and the cold headroom paid a second time.
+ *
+ * **A clock that has started is not a device that is still open.** The
+ * headroom above was keyed on `currentTime === 0`, which catches the first
+ * play of a page and nothing else; but an output stream powers down after a
+ * stretch of silence, and re-opening it costs the same wait, with the clock
+ * running the whole time. A user reported exactly the shape that implies —
+ * the first tone of a sequence missing its attack, only on the first play
+ * after a pause, with a second press straight afterwards clean.
+ *
+ * Half a second is below any gap between pressing play twice in a row and
+ * well under the pause this is about, so it does not need to be the real
+ * power-down time — which belongs to the driver and is not visible from
+ * here. Erring short costs latency on a play that did not need it; erring
+ * long costs a clipped attack, which is the defect. So it errs short.
+ */
+export const QUIET_BEFORE_COLD = 0.5;
+
+/**
  * The floor an exponential ramp fades to.
  *
  * `exponentialRampToValueAtTime` cannot reach zero — it throws — so
@@ -94,6 +114,17 @@ export class Synth {
    * told it has been superseded. Bumped by every play and by every stop.
    */
   private generation = 0;
+
+  /**
+   * The audio-clock time the last scheduled passage stops sounding.
+   *
+   * Read by {@link lay} to tell a warm device from one that has had time to
+   * shut. The end of what was *scheduled* rather than of what was heard,
+   * which is the same thing unless `stopAll` cut it short — and that sets
+   * this back, because a passage cancelled at its second note has left the
+   * device idle from then, not from where it would have ended.
+   */
+  private soundingUntil = 0;
 
   /**
    * The user's level, 0 to 1, multiplying {@link MASTER_GAIN}.
@@ -362,12 +393,23 @@ export class Synth {
       because the clock is the thing that matters: a context whose clock
       is at zero has not begun whatever the rest of the object believes.
       Late is recoverable; missing is not.
+
+      **And a clock that has started is not a device that stayed open**,
+      which is the half the first version missed. The stream shuts again
+      after a stretch of silence and costs the same wait to re-open, so
+      the same budget is paid whenever the output has been quiet —
+      reported as a first tone missing its attack, only after a pause.
+      `QUIET_BEFORE_COLD` carries why the threshold is short.
     */
-    const headroom = context.currentTime === 0 ? CLOCKLESS_HEADROOM : 0.06;
-    const now = context.currentTime + headroom;
+    const quiet = context.currentTime - this.soundingUntil;
+    const cold = context.currentTime === 0 || quiet > QUIET_BEFORE_COLD;
+    const now = context.currentTime + (cold ? CLOCKLESS_HEADROOM : 0.06);
     for (const voice of voices) {
       this.scheduleNote(context, master, voice, now + voice.start);
     }
+    this.soundingUntil = voices.reduce(
+      (end, voice) => Math.max(end, now + voice.start + voice.duration), now,
+    );
   }
 
   /**
@@ -395,6 +437,20 @@ export class Synth {
     }
     this.scheduled = [];
     this.master.gain.setValueAtTime(this.level(), now + 0.02);
+    /*
+      The device is idle from here, not from where the cancelled passage
+      would have ended. Left unset, cutting a four-second scale after its
+      first note would have `lay` believe the output was busy for the
+      remaining three — and a play well inside that would take the warm
+      headroom from a device that had been silent long enough to shut.
+
+      **Earlier only, never later**, which is the part that is easy to get
+      wrong: `play` calls this before every passage it lays, so assigning
+      `now` outright would reset the idle clock on each press and no play
+      would ever be judged cold again. A `stopAll` with nothing sounding
+      has nothing to say about when the output went quiet.
+    */
+    this.soundingUntil = Math.min(this.soundingUntil, now);
   }
 
   /** Release the audio hardware entirely. */

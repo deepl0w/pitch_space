@@ -1,4 +1,4 @@
-import type { ItemId, ItemOutcome, Presentation } from '../exercises/types';
+import type { CaptureStyle, ItemId, ItemOutcome, Presentation } from '../exercises/types';
 import { assertStepsCoverVersions, type MigrationStep, type Versioned } from './migrate';
 import { DEFAULT_INSTRUMENT_ID, isInstrumentId } from '../audio/output/instruments';
 
@@ -105,10 +105,26 @@ export interface AppearanceSettings {
    * not clip, and this scales it. One is that level and not full scale.
    */
   volume: number;
+  /**
+   * How a played answer is taken: on a press, or from a microphone left
+   * open.
+   *
+   * Here rather than in any exercise's settings, for the reason the
+   * instrument is here: it is a fact about how this person plays, not about
+   * the question being asked. It does not change what can be asked, so by
+   * ADR 0039 it is not part of a line's identity and a learner who switches
+   * keeps one history.
+   *
+   * `press` is the default, and deliberately the duller one. An open
+   * microphone is the better experience and the one more ways can go wrong
+   * — it has no press to say where an answer began — so it is chosen rather
+   * than arrived at.
+   */
+  capture: CaptureStyle;
 }
 
 export const APPEARANCE_DEFAULTS: AppearanceSettings = {
-  theme: 'system', volume: 1, instrument: DEFAULT_INSTRUMENT_ID,
+  theme: 'system', volume: 1, instrument: DEFAULT_INSTRUMENT_ID, capture: 'press',
 };
 
 /** Version 3 adds the preferences that are not about a particular exercise. */
@@ -211,7 +227,11 @@ function coerceAppearance(value: unknown): AppearanceSettings {
   */
   const instrument = isInstrumentId(a.instrument)
     ? a.instrument : APPEARANCE_DEFAULTS.instrument;
-  return { theme, volume, instrument };
+  // Repaired field by field like the rest: a document written before this
+  // existed has no key, reads as unknown, and takes the default.
+  const capture = a.capture === 'continuous' || a.capture === 'press'
+    ? a.capture : APPEARANCE_DEFAULTS.capture;
+  return { theme, volume, instrument, capture };
 }
 
 /**

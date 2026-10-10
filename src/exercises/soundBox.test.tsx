@@ -89,6 +89,35 @@ describe('when the wave runs', () => {
     show({ playedAt: 2 });
     expect(sounding(), 'a second play did not start the wave').toBe(true);
   });
+
+  it('does not end early because an earlier press was still counting down', () => {
+    /*
+      The constraint the effect's cleanup states and nothing here held: both
+      cases above let the passage finish before pressing again, so the timer
+      from the first press had already fired and there was nothing stale to
+      clear. Pressing mid-passage is the case that distinguishes them —
+      `AudioOut.play` cuts what is sounding and starts over, so the wave owes
+      the *new* passage its full length, and a timer left over from the
+      earlier press would end it partway through.
+
+      Checked by removing `clearTimeout` from the effect: the four cases that
+      were here all still passed.
+    */
+    vi.useFakeTimers();
+    show({ playedAt: 1 });
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(sounding(), 'the passage should still be sounding at 300ms of 400').toBe(true);
+
+    // Pressed again with 100ms of the first passage left to run.
+    show({ playedAt: 2 });
+    act(() => { vi.advanceTimersByTime(150); });
+    expect(sounding(), 'the first press ended the second passage').toBe(true);
+
+    // And still ends, rather than passing by never stopping at all: the
+    // second passage's own 400ms, counted from when it started.
+    act(() => { vi.advanceTimersByTime(300); });
+    expect(sounding(), 'the wave outlived the passage it was drawn for').toBe(false);
+  });
 });
 
 describe('what the wave is drawn from', () => {

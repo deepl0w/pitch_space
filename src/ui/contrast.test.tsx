@@ -265,6 +265,29 @@ describe('the focus ring on the circle of fifths', () => {
       .toBeCloseTo(7.67, 1);
   });
 
+  /**
+   * Text on a filled control is the page's own ground, and what that costs.
+   *
+   * Asked for in those terms, and the decision is the assertion: a later
+   * hand-edit that quietly mixes it back towards white to buy contrast
+   * would be reversing a choice rather than fixing a bug, so it should
+   * have to change a test that says so.
+   *
+   * The cost is the dark theme, where the ground against this red is
+   * 3.05:1 — under the 4.5 of WCAG 1.4.3 and pinned above as the
+   * `--bg`/`--accent` pair, which is now the same measurement. Recorded
+   * here rather than asserted as a floor, because a floor would be a
+   * claim this palette does not make.
+   */
+  it('takes the ground as the colour on an accent fill, in both themes', () => {
+    for (const [name, theme] of Object.entries(THEMES)) {
+      expect(
+        resolve(token('--on-accent', theme), theme),
+        `${name} draws something other than its ground on an accent fill`,
+      ).toEqual(resolve(token('--bg', theme), theme));
+    }
+  });
+
   it('clears the floor for an indicator on every wedge it can land on', () => {
     const failures: string[] = [];
     for (const [name, theme] of Object.entries(THEMES)) {

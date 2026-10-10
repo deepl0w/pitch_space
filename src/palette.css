@@ -61,12 +61,16 @@
   --line: color-mix(in oklab, var(--ink) 22%, var(--bg));
   /*
     What text takes on an accent-filled control, and the edge such a
-    control draws round itself. **The accent is one colour in both
-    themes**, which `color: var(--bg)` could not serve — a button legible
-    on a pale page was not on a dark one. Naming the pair that has to work
-    together is what makes the accent theme-independent.
+    control draws round itself.
+
+    **The page's own ground, asked for in those terms.** It was a mix
+    towards white, which bought contrast the ground itself does not have:
+    cream on this red is 4.76:1 and clears the text floor, but the dark
+    theme's brown on the same red is 3.05:1 and does not. The token stays
+    — the two themes still name it separately and the dark one is free to
+    stop being its ground the moment that matters more than the match.
   */
-  --on-accent: color-mix(in oklab, var(--bg) 70%, #ffffff);
+  --on-accent: var(--bg);
   --accent-edge: var(--accent);
   /*
     Green and red, pulled towards the ground so they belong to it. They
@@ -132,7 +136,7 @@
     --surface: oklch(from var(--bg) calc(l + 0.022) c h);
     --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
     --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
-    --on-accent: color-mix(in oklab, var(--bg) 8%, #fff6ef);
+    --on-accent: var(--bg);
     /*
       The accent's own colour, as in the light theme. It needed lightening
       while the ground was #241610, where the fill stood only 2.9:1 against
@@ -144,6 +148,9 @@
     --right: color-mix(in oklab, #6fe0a6 94%, var(--bg));
     --wrong: color-mix(in oklab, #ff9b86 94%, var(--bg));
     --score-ink: var(--ink);
+    /* ink 14.86, muted 9.21, accent on page 3.05, right 9.60, wrong 7.95.
+       on-accent 3.05, which is the ground's own contrast with the accent
+       and under the 4.5 a text colour wants — the price of the match. */
   }
 }
 
@@ -154,7 +161,7 @@
   --surface: oklch(from var(--bg) calc(l + 0.022) c h);
   --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
   --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
-  --on-accent: color-mix(in oklab, var(--bg) 8%, #fff6ef);
+  --on-accent: var(--bg);
   --accent-edge: var(--accent);
   --right: color-mix(in oklab, #6fe0a6 94%, var(--bg));
   --wrong: color-mix(in oklab, #ff9b86 94%, var(--bg));

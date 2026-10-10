@@ -345,9 +345,18 @@ describe('the scale someone played', () => {
    * notes beyond what was asked for.
    *
    * A learner who plays the scale through two octaves has demonstrated it
-   * more thoroughly than asked and is told to try again, because the run
-   * ends at 24 rather than 12. A learner who finishes the octave and then
-   * fumbles a lower note is answered, because the run already stopped.
+   * more thoroughly than asked and is told to try again. A learner who
+   * finishes the octave and then fumbles a lower note is answered, because
+   * the run has already stopped and what follows is never read.
+   *
+   * **The two-octave refusal is over-determined, which I got wrong first
+   * and a mutant corrected.** I wrote that it is refused because the run
+   * ends at 24 rather than 12; loosening that check to accept any octave
+   * multiple leaves the case green, because fourteen offsets then match no
+   * type in the table either. So accepting two octaves is a two-part
+   * change — the octave check *and* reading only the first octave of the
+   * run — and anyone who makes one of them will find this case still
+   * refusing, for the other reason.
    *
    * **Pinned as the behaviour that exists, not as a decision.** The
    * interval rule refuses a third attack outright; this one refuses extra

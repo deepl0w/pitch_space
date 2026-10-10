@@ -360,6 +360,53 @@ export interface AudioOut {
   play(voices: readonly Voice[]): void;
 }
 
+/**
+ * One note the microphone heard, as much of it as grading can use.
+ *
+ * A structural subset of `HeardNote` in `audio/capture/listen.ts`, declared
+ * here rather than imported for the same reason {@link AudioOut} is just
+ * enough of `Synth`: the exercise layer does not import the platform, so a
+ * prompt still renders under jsdom and the screen owns the one capture
+ * source rather than every exercise type opening its own microphone.
+ *
+ * The subset is the contract. A real `ListenResult` must be handable to a
+ * prompt unchanged, so anything added here has to exist there — and the
+ * adapter in the screen is the single place the two meet, which is where a
+ * drift would show.
+ */
+export interface PlayedNote {
+  /** Seconds from the start of listening. */
+  startSeconds: number;
+  /** Until the next attack, or the end of the take. */
+  durationSeconds: number;
+  /**
+   * Null when no stable pitch could be read.
+   *
+   * Not an error and not silence: a struck chord, a muted string and a
+   * cough all arrive this way. What an exercise does about it is the
+   * exercise's business, which is why this is nullable here rather than
+   * filtered out before it arrives.
+   */
+  frequencyHz: number | null;
+}
+
+/**
+ * Just enough of `listen` for a prompt to take an answer that was played.
+ *
+ * The other half of {@link AudioOut}, and the thing that makes the brief's
+ * promise — exercises answered on a real instrument — reachable from an
+ * exercise without the exercise knowing a microphone exists.
+ *
+ * `listen` resolves when the take is over. It does not reject on a refused
+ * microphone or a device that produces nothing: a prompt that has to tell
+ * a silent room from a broken one can read `notes` being empty, and a
+ * screen that wants to explain a refusal is better placed to do it than
+ * every prompt is.
+ */
+export interface AudioIn {
+  listen(seconds: number): Promise<{ notes: readonly PlayedNote[] }>;
+}
+
 export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> {
   exercise: E;
   /**

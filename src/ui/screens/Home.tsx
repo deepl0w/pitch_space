@@ -109,8 +109,16 @@ export function Home({ go }: { go: (route: string) => void }) {
  * `Math.floor` for everything above that, so `100%` means every item is
  * actually on the top rung rather than merely near it. Reaching the end
  * of a line is the one claim here worth being exact about.
+ *
+ * **Exported so the `<1%` branch is checkable, because the app can barely
+ * produce it.** One item on the first rung is a seventh of a rung, so the
+ * band needs a pool of about fifteen or more with exactly one item moved
+ * — the user role tried three pools and landed on a real figure every
+ * time. A branch that cannot be reached from outside is still reachable
+ * here, and an untestable branch nobody can observe is one nobody can
+ * tell is wrong.
  */
-function percent(fraction: number): string {
+export function percent(fraction: number): string {
   if (fraction > 0 && fraction < 0.01) return '<1%';
   return `${Math.floor(fraction * 100)}%`;
 }

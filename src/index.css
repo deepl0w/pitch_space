@@ -1,39 +1,57 @@
 :root {
   color-scheme: light dark;
   /*
-    Four colours the user chose, and the tones derived from them.
+    **Three colours are chosen and the rest are computed from them.** The
+    page's ground, the accent, and — in the dark theme — its own ground.
+    Everything else is a mix stated in terms of those, so moving a
+    background moves the ink, the panels, the hairlines and the verdict
+    colours with it, in step and in the same hue family. Picking eight
+    colours by hand is how a palette drifts out of relation with itself.
 
-      #362116  deep    #BF3B3B  red    #E89F7D  peach    #F0E2DB  cream
+    Mixed in oklab, where a halfway mix looks halfway. The same mix in
+    sRGB goes muddy through the middle, which is exactly where a muted
+    text colour and a hairline live.
 
-    Anchors rather than a closed set — they said so when asked — so a role
-    that needs a colour none of them can serve gets one, and the rest are
-    mixes of the four. Light reads deep on cream; dark inverts it, and the
-    accent crosses over: red carries an action on a pale page and would be
-    a warning on a dark one, where the peach reads as the live thing.
-
-    **Every pair a reader has to resolve is measured, not judged.** Text is
-    held to 4.5:1 and a filled control to 3:1 against the page, which is
-    WCAG 1.4.3 and 1.4.11; the figures are in the comment beside each
-    block. Two of these moved because the first attempt failed: the red is
-    darkened from #BF3B3B, which gives cream text only 4.25, and the dark
-    muted is lighter than it looks right at, because it sits on a panel as
-    well as on the page and the panel is the closer of the two.
+    Floors held, and measured against what a browser resolves rather than
+    against the arithmetic here: text 4.5:1 (WCAG 1.4.3), a control's
+    boundary 3:1 (1.4.11). The figures are below each block.
   */
   --bg: #F0E2DB;
-  --surface: #faf5f2;
-  --ink: #362116;
-  --muted: #6a574d;
-  --line: #cbbbb4;
   --accent: #b13837;
+
+  /* Ink is the ground taken almost to black, so it keeps the page's hue
+     rather than introducing a second one. */
+  --ink: color-mix(in oklab, var(--bg) 14%, #140b06);
+  /* A panel lifts off the page towards white rather than away from it. */
+  --surface: color-mix(in oklab, var(--bg) 62%, #ffffff);
+  --muted: color-mix(in oklab, var(--ink) 66%, var(--bg));
+  --line: color-mix(in oklab, var(--ink) 22%, var(--bg));
   /*
-    Green is the one role the palette cannot fill: it holds a red, and a
-    correct answer and a wrong one must not be two reds. Chosen to sit at
-    the palette's own weight rather than borrowed from the old scheme.
+    What text takes on an accent-filled control, and the edge such a
+    control draws round itself. **The accent is one colour in both
+    themes**, which `color: var(--bg)` could not serve — a button legible
+    on a pale page was not on a dark one. Naming the pair that has to work
+    together is what makes the accent theme-independent.
   */
-  --right: #2e6b45;
-  --wrong: #a63634;
-  --score-ink: #362116;
-  /* ink 11.98, muted 5.39, cream-on-accent 4.76, right 5.02, wrong 5.19 */
+  --on-accent: color-mix(in oklab, var(--bg) 70%, #ffffff);
+  --accent-edge: var(--accent);
+  /*
+    Green and red, pulled towards the ground so they belong to it. They
+    stay green and red because a verdict may not be told by hue alone and
+    these are the two hues a learner already reads that way.
+  */
+  --right: color-mix(in oklab, #115c36 94%, var(--bg));
+  /*
+    Pulled away from the accent as well as off the ground. They were both
+    dark reds within twelve of each other in sRGB, so a wrong-answer
+    verdict and a filled button read as the same colour on one screen —
+    found from outside, and invisible to a contrast check, which only ever
+    compares a colour with what is behind it.
+  */
+  --wrong: color-mix(in oklab, #6d1109 92%, var(--bg));
+  --score-ink: var(--ink);
+  /* ink 11.98, muted 5.39 (6.08 on a panel), on-accent 4.76,
+     accent on page 4.76, right 5.02, wrong 5.19 */
   /*
     How far the page's content stands off the window's edge.
 
@@ -78,30 +96,36 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #362116;
-    --surface: #453026;
-    --ink: #F0E2DB;
-    --muted: #b1a098;
-    --line: #544036;
-    --accent: #E89F7D;
-    --right: #7fc49b;
-    --wrong: #d6725f;
-    --score-ink: #F0E2DB;
-    /* ink 11.98, muted 6.03 (4.90 on a panel), deep-on-accent 6.99,
-       right 7.41, wrong 4.64 */
+    --bg: #241610;
+    --accent: #b13837;
+    --ink: color-mix(in oklab, var(--bg) 10%, #fff6ef);
+    --surface: color-mix(in oklab, var(--bg) 86%, #ffffff);
+    --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
+    --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
+    --on-accent: color-mix(in oklab, var(--bg) 8%, #fff6ef);
+    /* The fill is 2.9:1 against this ground — under what a boundary needs —
+       so the dark theme lightens the *edge* rather than the colour chosen. */
+    --accent-edge: color-mix(in oklab, var(--accent) 62%, var(--ink));
+    --right: color-mix(in oklab, #6fe0a6 94%, var(--bg));
+    --wrong: color-mix(in oklab, #ff9b86 94%, var(--bg));
+    --score-ink: var(--ink);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #362116;
-  --surface: #453026;
-  --ink: #F0E2DB;
-  --muted: #b1a098;
-  --line: #544036;
-  --accent: #E89F7D;
-  --right: #7fc49b;
-  --wrong: #d6725f;
-  --score-ink: #F0E2DB;
+  --bg: #241610;
+  --accent: #b13837;
+  --ink: color-mix(in oklab, var(--bg) 10%, #fff6ef);
+  --surface: color-mix(in oklab, var(--bg) 86%, #ffffff);
+  --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
+  --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
+  --on-accent: color-mix(in oklab, var(--bg) 8%, #fff6ef);
+  /* The fill is 2.9:1 against this ground — under what a boundary needs —
+     so the dark theme lightens the *edge* rather than the colour chosen. */
+  --accent-edge: color-mix(in oklab, var(--accent) 62%, var(--ink));
+  --right: color-mix(in oklab, #6fe0a6 94%, var(--bg));
+  --wrong: color-mix(in oklab, #ff9b86 94%, var(--bg));
+  --score-ink: var(--ink);
 }
 
 * { box-sizing: border-box; }
@@ -613,7 +637,8 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 button {
   font: inherit; font-size: 0.88rem; font-weight: 500;
   padding: 0.5rem 1rem; border-radius: 7px; cursor: pointer;
-  background: var(--accent); color: var(--bg); border: 1px solid transparent;
+  background: var(--accent); color: var(--on-accent);
+  border: 1px solid var(--accent-edge);
 }
 button:hover { filter: brightness(1.08); }
 button:active { transform: translateY(1px); }
@@ -761,7 +786,7 @@ button:active { transform: translateY(1px); }
   font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 6px;
   background: none; color: var(--accent); border: 1px solid currentColor;
 }
-.figure-play:hover { background: var(--accent); color: var(--bg); filter: none; }
+.figure-play:hover { background: var(--accent); color: var(--on-accent); filter: none; }
 /* ---- The practice screen ------------------------------------------------ */
 
 .nav { display: flex; gap: 0.6rem; align-items: center; margin: 0 0 1.25rem; flex-wrap: wrap; }
@@ -799,7 +824,7 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   cursor: pointer;
 }
 .chip:hover { color: var(--ink); filter: none; }
-.chip.on { background: var(--accent); color: var(--bg); border-color: transparent; }
+.chip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent-edge); }
 
 /* Two kinds of chip, and they have to look like two kinds of thing.
 
@@ -886,7 +911,7 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    Only here: on every other exercise the answer buttons are the one
    interactive row and there is nothing for them to be confused with. */
 .palette .choice {
-  background: var(--accent); color: var(--bg);
+  background: var(--accent); color: var(--on-accent);
   border-color: var(--accent); font-weight: 600;
 }
 .palette .choice:hover:not(:disabled) { filter: brightness(1.08); }
@@ -1170,7 +1195,16 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   no version of, which is why it works where a colour cannot.
 */
 .wedge.wedge-self:focus-visible {
-  stroke: var(--bg);
+  /*
+    `--on-accent`, not `--bg`: this ring is drawn on a wedge filled with
+    the accent, and `--on-accent` is the token that names what reads on
+    that fill. It was `--bg` and happened to pass while the two themes had
+    different accents; a palette change made the dark one 2.77:1 and the
+    ring all but disappeared. The guard below this file caught it, which
+    is the reason to prefer a token that states the relationship over one
+    that merely measured well.
+  */
+  stroke: var(--on-accent);
   stroke-width: 4;
   stroke-dasharray: 7 5;
 }

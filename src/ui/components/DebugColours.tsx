@@ -32,6 +32,47 @@ import { settingsStore, useSettings } from '../../state/settingsStore';
  * nobody could reach. Dead weight, and a hint of a thing that is not there.
  * Held here, they are removed with everything else.
  */
+/**
+ * Tokens that are one colour in both themes, so editing one edits both.
+ *
+ * Only the accent, and that is a decision rather than a convenience: the
+ * two palettes are deliberately independent — a ground, its ink and its
+ * panels belong to their own theme — and the accent is the one thing the
+ * user chose to hold constant across them. Writing it to one theme only
+ * would silently break that the first time somebody tried a new one.
+ */
+const SHARED: readonly string[] = ['--accent'];
+
+type Painted = 'light' | 'dark';
+type Overrides = Record<Painted, Record<string, string>>;
+
+/** The subset of a record named by `keys`. */
+function pick(from: Record<string, string>, keys: readonly string[]): Record<string, string> {
+  return Object.fromEntries(keys.map((key) => [key, from[key]]));
+}
+
+/**
+ * The overrides as CSS, in the shape `index.css` declares its palettes.
+ *
+ * Four blocks rather than two, because a theme is reached two ways: by the
+ * `data-theme` attribute when the reader has chosen, and by the media query
+ * when they have not. Mirroring both is what makes an override behave like
+ * part of the palette instead of on top of all of them.
+ */
+function sheetFor(overrides: Overrides): string {
+  const body = (which: Painted) => Object.entries(overrides[which])
+    .map(([name, value]) => `${name}: ${value};`)
+    .join(' ');
+  const light = body('light');
+  const dark = body('dark');
+  return [
+    light && `:root[data-theme="light"] { ${light} }`,
+    light && `@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { ${light} } }`,
+    dark && `:root[data-theme="dark"] { ${dark} }`,
+    dark && `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ${dark} } }`,
+  ].filter(Boolean).join('\n');
+}
+
 const STYLE = `
 .debug-open {
   position: fixed; inset-block-end: 1rem; inset-inline-start: 1rem;
@@ -109,6 +150,15 @@ export function DebugColours() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [typed, setTyped] = useState<Record<string, string>>({});
   const [tuning, setTuning] = useState<string | null>(null);
+  const [overrides, setOverrides] = useState<Overrides>({ light: {}, dark: {} });
+  /*
+    Which palette is on screen. `system` is not a palette — it defers to the
+    device — so an edit made under it belongs to whichever one the device is
+    actually showing, which is what the learner is looking at.
+  */
+  const showing: Painted = theme === 'system'
+    ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -125,18 +175,43 @@ export function DebugColours() {
     const frame = requestAnimationFrame(() => {
       const names = colourTokens();
       setTokens(names);
-      const current = Object.fromEntries(names.map((name) => [name, currentValue(name)]));
+      const current = Object.fromEntries(
+        names.map((name) => [name, currentValue(name) ?? '#000000']),
+      );
       setValues(current);
-      setTyped(current);
+      // The field keeps what is being typed into it; everything else
+      // follows the page.
+      setTyped((was) => ({ ...current, ...pick(was, names.filter((n) => n in was)) }));
     });
     return () => { cancelAnimationFrame(frame); };
-    // `theme` is a dependency because each palette has its own values and
-    // the swatches would otherwise show the other one's after a switch.
-  }, [open, theme]);
+    /*
+      `theme` because each palette has its own values, and `overrides`
+      because the palette is derived — changing a ground changes the ink,
+      the panels and the hairlines, and the swatches have to follow.
+    */
+  }, [open, theme, overrides]);
 
+  /**
+   * Apply an override to the theme being looked at, and re-read the rest.
+   *
+   * **Two faults this fixes, both reported.** An inline style on `:root`
+   * beats every palette block, so a colour tried in dark was also applied
+   * in light — one edit silently changing two themes that were different
+   * on purpose. And because the palette is derived, moving a ground should
+   * move the ink, the panels and the hairlines with it; the swatches showed
+   * the old values until the panel was reopened.
+   *
+   * So overrides are kept per theme and emitted as a stylesheet whose
+   * selectors mirror `index.css`, and every change re-reads every token
+   * from what the browser now paints.
+   */
   function change(name: string, value: string) {
-    document.documentElement.style.setProperty(name, value);
-    setValues((was) => ({ ...was, [name]: value }));
+    setOverrides((was) => (SHARED.includes(name)
+      ? {
+        light: { ...was.light, [name]: value },
+        dark: { ...was.dark, [name]: value },
+      }
+      : { ...was, [showing]: { ...was[showing], [name]: value } }));
     setTyped((was) => ({ ...was, [name]: value }));
   }
 
@@ -144,17 +219,11 @@ export function DebugColours() {
   function type(name: string, text: string) {
     setTyped((was) => ({ ...was, [name]: text }));
     const full = text.startsWith('#') ? text : `#${text}`;
-    if (/^#[0-9a-f]{6}$/i.test(full)) {
-      document.documentElement.style.setProperty(name, full);
-      setValues((was) => ({ ...was, [name]: full }));
-    }
+    if (/^#[0-9a-f]{6}$/i.test(full)) change(name, full);
   }
 
   function reset() {
-    for (const name of tokens) document.documentElement.style.removeProperty(name);
-    const current = Object.fromEntries(tokens.map((name) => [name, currentValue(name)]));
-    setValues(current);
-    setTyped(current);
+    setOverrides({ light: {}, dark: {} });
   }
 
   if (!open) {
@@ -171,6 +240,13 @@ export function DebugColours() {
   return (
     <div className="debug-panel">
       <style>{STYLE}</style>
+      {/*
+        The overrides, as a stylesheet whose selectors mirror `index.css`
+        rather than as inline styles on `:root`. Inline would beat every
+        palette block at once, which is how one edit came to change both
+        themes.
+      */}
+      <style>{sheetFor(overrides)}</style>
       <div className="debug-head">
         <strong>Colours</strong>
         {/*
@@ -354,20 +430,46 @@ function collect(rule: CSSRule, into: Set<string>): void {
 }
 
 function isColour(name: string): boolean {
-  const value = currentValue(name);
-  return /^#[0-9a-f]{6}$/i.test(value);
+  return currentValue(name) !== null;
 }
 
-/** The token's value now, as the `#rrggbb` a colour input needs. */
-function currentValue(name: string): string {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  if (/^#[0-9a-f]{6}$/i.test(raw)) return raw;
-  if (/^#[0-9a-f]{3}$/i.test(raw)) {
-    return `#${[...raw.slice(1)].map((c) => c + c).join('')}`;
-  }
-  const match = /^rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(raw);
-  if (match === null) return raw;
-  return `#${match.slice(1, 4).map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`;
+/**
+ * The colour a token comes out as, painted and read back, or null if it is
+ * not a colour at all.
+ *
+ * **A token's declared value stopped being the colour it is.** The palette
+ * is derived: three colours are chosen and the rest are `color-mix`
+ * expressions, several referencing another mix — so `getPropertyValue`
+ * returns `color-mix(in oklab, var(--bg) 14%, #140b06)`, and the hex test
+ * this used to do dropped every derived token. The symptom was the dark
+ * theme's accent edge simply not appearing in the panel.
+ *
+ * So the browser is asked rather than parsed: paint the token, read the
+ * computed colour — which may be `oklab(...)`, since that is what a mix in
+ * oklab resolves to — and push it through a canvas, which is the one place
+ * a browser will hand back plain sRGB bytes. That is also the honest
+ * reading: these are the numbers it actually paints.
+ */
+function currentValue(name: string): string | null {
+  const probe = document.createElement('span');
+  probe.style.color = `var(${name})`;
+  document.body.append(probe);
+  const painted = getComputedStyle(probe).color;
+  probe.remove();
+  if (painted === '' || painted === 'rgba(0, 0, 0, 0)') return null;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (ctx === null) return null;
+  // A length or a keyword leaves `fillStyle` at its default, which is how a
+  // non-colour is told from a colour without parsing anything.
+  ctx.fillStyle = '#000000';
+  ctx.fillStyle = painted;
+  ctx.fillRect(0, 0, 1, 1);
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
 async function copy(values: Record<string, string>): Promise<void> {

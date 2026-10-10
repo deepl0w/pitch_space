@@ -46,6 +46,61 @@ describe('how a line reads on its card', () => {
     expect(words.size, 'two readings share a word').toBe(4);
   });
 
+  /**
+   * The word and the colour say the same thing, which neither case above
+   * could tell.
+   *
+   * Found by mutation: reordering the bands so a line at nothing reads
+   * *steady* and one near the top reads *shaky* leaves every other case
+   * here green — four distinct words is still four, none of them says
+   * finished, and the hue is untouched. The two channels would then
+   * disagree in front of a learner, which is the exact failure the
+   * accessibility note is about: the word exists so a reader who cannot
+   * see the colour gets the same meaning, and a word that contradicts it
+   * is worse than no word at all.
+   *
+   * Asserted as agreement in direction rather than as a mapping from
+   * bands to hues, so the bands can be renamed, re-cut or added to — the
+   * comment above says four is a judgement — without this failing for
+   * anything but disagreement.
+   */
+  it('never lets the word and the colour disagree about direction', () => {
+    const order: string[] = [];
+    let previousHue = -1;
+    for (let step = 0; step <= 100; step += 1) {
+      const fraction = step / 100;
+      const word = standingWord(fraction);
+      const hue = standingHue(fraction);
+
+      // The hue never falls, which is also the monotonicity the first case
+      // samples at seven points — swept here rather than sampled.
+      expect(hue, `hue fell at ${fraction}`).toBeGreaterThanOrEqual(previousHue);
+      previousHue = hue;
+
+      if (order[order.length - 1] !== word) order.push(word);
+    }
+
+    // Each word is entered once and never returned to, so reading the
+    // scale upwards reads the words in one order.
+    expect(order.length, 'a word was returned to after the scale moved on')
+      .toBe(new Set(order).size);
+    expect(order.length, 'the whole scale reads as one word').toBeGreaterThan(1);
+  });
+
+  /**
+   * And a fraction outside the scale reads as its nearest end rather than
+   * as nothing. `completion` cannot be negative today; the clamp is in
+   * `standingHue` because a later change to its denominator could make it
+   * so, and the word has to agree with the clamp.
+   */
+  it('reads a fraction off either end as that end', () => {
+    expect(standingHue(-1), 'below the scale was not red').toBe(0);
+    expect(standingWord(-1), 'below the scale was not the lowest word')
+      .toBe(standingWord(0));
+    expect(standingWord(5), 'above the scale was not the highest word')
+      .toBe(standingWord(1));
+  });
+
   it('says nothing that means finished', () => {
     // The word scale is where a completion would sneak back in. None of
     // these is a state you stop practising from.

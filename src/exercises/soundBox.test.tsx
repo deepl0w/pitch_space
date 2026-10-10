@@ -3,7 +3,8 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SoundBox } from './SoundBox';
-import { SPECTRUM_BANDS, type Voice } from '../audio/output/synth';
+import type { Voice } from '../audio/output/synth';
+import { SPECTRUM_BANDS } from '../audio/output/spectrum';
 
 /**
  * The box that says a passage is sounding, and now draws it.

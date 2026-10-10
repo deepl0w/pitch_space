@@ -85,6 +85,25 @@ describe('how a line reads on its card', () => {
     expect(order.length, 'a word was returned to after the scale moved on')
       .toBe(new Set(order).size);
     expect(order.length, 'the whole scale reads as one word').toBeGreaterThan(1);
+
+    /*
+      **And that order is the one the words mean**, which is the half no
+      structural property can supply — found the same way, and the second
+      time today. Reordering the bands so nothing reads *steady* and the
+      top reads *shaky* satisfies everything above: four distinct words,
+      none saying finished, hue untouched, each word entered once and
+      never returned to. The sequence is still *an* order; it is the
+      wrong one, and only knowing that "shaky" is worse than "strong"
+      separates them.
+
+      So the meaning is written down here, which costs the freedom the
+      case above keeps — renaming a band now fails this. That is the
+      right trade: a rename is cosmetic and this line is one edit, where
+      a reorder tells a learner the opposite of how they are doing and
+      nothing else would notice.
+    */
+    expect(order, 'the words do not climb the way they mean')
+      .toEqual(['shaky', 'coming along', 'steady', 'strong']);
   });
 
   /**

@@ -285,3 +285,92 @@ the next commit can change*. A measurement in a comment is a tracked document
 the size of a sentence, and widening the fixture is the commit that changed
 it. The number belongs in the assertion, where broadening the fixture
 re-derives it, and nowhere a human has to remember to update it.
+
+## Addendum, 12 October 2026 — the rule generalised, and the count of refusals follows the answer's shape
+
+A scale can now be answered by playing it. It is the second exercise to use
+this seam and the first whose answer is not a pair, so it is the first test of
+whether *unambiguous enough to grade* survives a different shape of answer.
+
+**It does, and it needed three refusals where the interval needed one.**
+
+`intervalPlayed` refuses on one condition: not exactly two readable notes. A
+pair has one way to be ambiguous — how many there are.
+
+`scalePlayed` refuses on three, and together they cover the ways an ordered
+run can fail to say what it is:
+
+- **The run ends at the first non-monotonic step**, so a re-struck note stops
+  it — the same refusal and the same reason, which its comment names: two
+  attacks on one pitch do not say whether the second was a hesitation or part
+  of the answer, *"and a scale has seven chances to produce one"*.
+- **The run has to reach the octave and stop there.** A truncated run is
+  refused rather than matched, because the first four notes of Dorian and of
+  Aeolian are the same four notes. So a learner who stops short, or who
+  carries on past the octave, is told the take was unreadable rather than told
+  they played a scale they did not.
+- **Exactly one offered type may match the pattern.** Where two share it, the
+  take is refused rather than resolved by whichever the catalogue lists first
+  — which is [0044](0044-deterministic-is-not-the-same-as-seeded.md)'s lesson
+  reaching a place it was not written for: first-match-wins is a silent choice
+  wherever it appears, not only in generation.
+
+**The generalisation worth carrying to the next exercise answered by playing**
+is that the principle is shape-independent and the enumeration is not.
+*Unambiguous enough to grade* holds for any answer; **how many ways a take can
+be ambiguous is a property of the answer's shape**, and each wants its own
+refusal rather than one check standing for all of them. A pair admits one
+question, an ordered run with an endpoint and a pattern admits three. A rhythm
+or a progression will have its own list and it is worth writing before the
+grading rather than discovering by a learner being told something false.
+
+Its comment states the trade this record has been circling in one line, and
+better than the record does: *"Being strict costs a replay; guessing costs a
+learner being told they played a scale they did not."*
+
+## Addendum, 12 October 2026 — completeness may be trusted only where it cannot be reached by accident
+
+The user, asked why a fumble inside a scale is refused while one after the
+octave is forgiven: *"if the whole octave is played correctly and then there's
+something else it should be accepted, otherwise a bad note during the scale
+degrees should be refused"*.
+
+Both halves already held, so it is an endorsement. **What is worth recording is
+why the interval cannot adopt the same rule**, because the two look
+inconsistent and are not.
+
+**An answer's completeness may be trusted only where it is not reachable by
+accident.**
+
+For a scale, *complete* means a monotonic run landing exactly on the octave
+whose pattern is a type in the catalogue. A learner cannot stumble into that:
+a fumble inside breaks the run before twelve, and a run that stops short
+matches nothing. So completeness is evidence, and once it is in hand what
+follows can be ignored.
+
+For an interval, *complete* means two notes, and **any two notes are a complete
+interval**. A hesitation's first two attacks are a perfectly complete unison —
+which is the wrong answer that sent `intervalPlayed` to refusing in the first
+place. Completeness carries no information there, so there is nothing to trust
+and the only honest rule is to refuse the ambiguous take outright.
+
+**This is the reason underneath the previous addendum** rather than a second
+rule. *How many ways a take can be ambiguous is a property of the answer's
+shape* — and the shape is what decides whether completeness is informative at
+all. An answer with a defined endpoint and a pattern to match can be known
+complete; an answer that is merely a count cannot.
+
+So the question to ask of the next exercise answered by playing is not *when do
+we refuse* but **can this answer be completed by accident**. Where it can,
+extra input must be refused; where it cannot, completeness is a stopping
+condition and what follows may be discarded.
+
+**One case sits between the two and is open.** A learner who plays the scale
+through *two* octaves has demonstrated it more thoroughly than asked and is
+refused, while one who finishes the octave and fumbles a lower note is
+answered — `scales.test.ts` names these as "opposite answers to the same kind
+of input: notes beyond what was asked for" and pins the behaviour explicitly
+as existing rather than decided. The user's ruling above, read literally,
+covers the overshoot too — *the whole octave played correctly and then there's
+something else*. Whether it was meant to is theirs, and nobody has put the pin
+and the ruling side by side.

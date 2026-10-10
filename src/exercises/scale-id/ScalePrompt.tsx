@@ -20,6 +20,16 @@ import {
  */
 const TAKE_SECONDS = 8;
 
+/**
+ * How long a continuously-open microphone waits for a scale.
+ *
+ * A ceiling rather than a wait: the take ends when a complete scale has
+ * been heard, so this is only reached by a learner who did not play one.
+ * Longer than the interval's because a scale is eight notes and somebody
+ * finding them on an unfamiliar instrument is not hurrying.
+ */
+const OPEN_SECONDS = 30;
+
 /** What to say when there was no take at all, by the two reasons there are. */
 const REFUSALS: Record<'refused' | 'unavailable', string> = {
   refused:
@@ -35,7 +45,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
 }
 
 export function ScalePrompt({
-  exercise, result, onRespond, audio, audioIn,
+  exercise, result, onRespond, audio, audioIn, capture,
 }: PromptProps<ScaleSettings, ScaleExercise, ScaleResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -86,7 +96,20 @@ export function ScalePrompt({
     setListening(true);
     setAside(null);
     try {
-      const take = await audioIn.listen(TAKE_SECONDS);
+      /*
+        A continuous take ends when a whole scale has arrived, which is a
+        stronger test than the interval's count and a better one: the same
+        function that grades the answer decides there is one. So a learner
+        is answered the instant they land the octave rather than waiting
+        out a window, and a run still climbing is not mistaken for a
+        finished one.
+      */
+      const take = capture === 'continuous'
+        ? await audioIn.listenUntil(
+          (notes) => scalePlayed(notes, exercise.choices) !== null,
+          OPEN_SECONDS,
+        )
+        : await audioIn.listen(TAKE_SECONDS);
       if (!take.heard) {
         setAside(REFUSALS[take.reason]);
         return;

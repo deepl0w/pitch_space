@@ -21,7 +21,7 @@ import {
  * three pieces of state that have to be cleared in step.
  */
 export function IntervalPrompt({
-  exercise, result, onRespond, audio, audioIn,
+  exercise, result, onRespond, audio, audioIn, capture,
 }: PromptProps<IntervalSettings, IntervalExercise, IntervalResponse>) {
   const [chosen, setChosen] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
@@ -81,7 +81,24 @@ export function IntervalPrompt({
     setListening(true);
     setAside(null);
     try {
-      const take = await audioIn.listen(TAKE_SECONDS);
+      /*
+        Two ways to bound a take, and the exercise decides neither of them
+        alone. Pressing opens the microphone for a fixed window; keeping it
+        open ends the take the moment a second note arrives, which is the
+        learner's own words for what they wanted — *register a note played
+        and then take the next one as the interval group*.
+
+        `enough` is the only thing the capture layer is told about this
+        exercise, and it is a count rather than a judgement: whether those
+        two notes are a gradeable answer is `intervalPlayed`'s to say, and
+        it still says no to a take that arrives with three.
+      */
+      const take = capture === 'continuous'
+        ? await audioIn.listenUntil(
+          (notes) => readableNotes(notes).length >= 2,
+          OPEN_SECONDS,
+        )
+        : await audioIn.listen(TAKE_SECONDS);
       if (!take.heard) {
         setAside(REFUSALS[take.reason]);
         return;
@@ -151,6 +168,16 @@ export function IntervalPrompt({
  * would be felt as the app being slow rather than as being generous.
  */
 const TAKE_SECONDS = 4;
+
+/**
+ * How long a continuously-open microphone waits before giving up.
+ *
+ * Longer than a pressed take because nothing has said the learner is ready:
+ * they may still be finding the note. It is a ceiling rather than a wait —
+ * a take ends the moment two notes have arrived — so the cost of being
+ * generous is only paid by someone who played nothing at all.
+ */
+const OPEN_SECONDS = 20;
 
 /**
  * What to say when there was no take, by the only two reasons there are.

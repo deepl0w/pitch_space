@@ -7,10 +7,10 @@ import {
   generateInterval, gradeInterval, INTERVAL_DEFAULTS,
   type IntervalExercise, type IntervalResponse, type IntervalSettings,
 } from './intervals';
-import type { AudioIn, AudioOut, Result } from '../types';
+import type { AudioIn, AudioOut, CaptureStyle, Result } from '../types';
 import type { Voice } from '../../audio/output/synth';
 import { SIMPLE_INTERVAL_NAMES } from '../../theory/interval';
-import { alwaysHears, noMicrophone } from '../testing/audioIn';
+import { alwaysHears, hearsOverTime, noMicrophone } from '../testing/audioIn';
 
 /**
  * The one part of an exercise type written by hand, and therefore the one
@@ -72,11 +72,15 @@ const exercise = (over: Partial<IntervalExercise> = {}): IntervalExercise => ({
 
 function render(
   ex: IntervalExercise,
-  { result = null, settings = INTERVAL_DEFAULTS, strict = false, audioIn = deaf }: {
+  {
+    result = null, settings = INTERVAL_DEFAULTS, strict = false,
+    audioIn = deaf, capture = 'press' as CaptureStyle,
+  }: {
     result?: Result | null;
     settings?: IntervalSettings;
     strict?: boolean;
     audioIn?: AudioIn;
+    capture?: CaptureStyle;
   } = {},
 ) {
   const prompt = (
@@ -87,7 +91,7 @@ function render(
       onRespond={(r) => responses.push(r)}
       audio={audio}
       audioIn={audioIn}
-      capture="press"
+      capture={capture}
     />
   );
   act(() => root.render(strict ? <StrictMode>{prompt}</StrictMode> : prompt));
@@ -437,6 +441,38 @@ describe('answering by playing', () => {
 
     // A major ninth, deliberately not folded into the second it contains.
     expect(container.textContent).toMatch(/14 semitones/);
+  });
+
+  /**
+   * Keeping the microphone open, which is the learner's own description of
+   * what they wanted: *register a note played and then take the next one
+   * as the interval group*.
+   *
+   * The point is that the take ends **when the second note arrives**
+   * rather than when a window closes — so a learner who has finished
+   * playing is answered, instead of waiting out the rest of a timer they
+   * cannot see. The polls are counted because arriving at the right answer
+   * does not show that: a double revealing everything at once would give
+   * the same response and prove nothing about when it stopped.
+   */
+  it('answers as soon as the second note arrives, rather than waiting the take out', async () => {
+    const microphone = hearsOverTime([note(440), note(554.365, 1), note(659.255, 2)]);
+    render(exercise({ semitones: 4 }), { audioIn: microphone, capture: 'continuous' });
+    await answerByPlaying();
+
+    expect(responses).toHaveLength(1);
+    expect(responses[0].semitones, 'the third note reached the reading').toBe(4);
+    expect(microphone.polls(), 'kept listening past the answer').toBe(2);
+  });
+
+  it('presses for a fixed take when that is what was asked for', async () => {
+    // The control: the same double, the same notes, and with `press` the
+    // whole take arrives — so the reading sees three notes and refuses.
+    const microphone = hearsOverTime([note(440), note(554.365, 1), note(659.255, 2)]);
+    render(exercise({ semitones: 4 }), { audioIn: microphone, capture: 'press' });
+    await answerByPlaying();
+
+    expect(responses, 'a pressed take stopped early').toEqual([]);
   });
 
   it('takes one answer, not one per press', async () => {

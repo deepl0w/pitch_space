@@ -213,3 +213,75 @@ reasoning stands on its own and did not need the symptom to support it.
 hear two notes" was told to people who had played three. A refusal that
 misdescribes the refusal is a smaller version of the fault the whole record is
 about, which is why the prompt now distinguishes too few from too many.
+
+## Addendum, 11 October 2026 — what the exactly-two rule rests on
+
+The rule above has a dependency nobody saw when it was written, including
+this record's author.
+
+**A played unison is two attacks on one pitch**, which is precisely what
+[0035](0035-an-onset-is-an-attack-a-note-is-a-decision-about-attacks.md)
+accepts its merge rule may swallow: *"The same pitch struck twice quickly is
+exactly what the cluster looks like."* If that hazard fired, a unison would
+arrive as one readable note, `intervalPlayed` would refuse, and **the one
+answer most exposed to the merge would become the one answer a learner cannot
+give.** Refusing is the safe failure for an ambiguous take and the wrong
+failure for a correct one.
+
+**It does not fire, by a very large margin, and that margin is deliberately
+not recorded here as a bound.** Mutation puts the merge threshold several
+hundred times below where a re-pluck would collapse. But it was measured
+against one synthesised pluck, and a margin obtained from a single source is
+not a margin — 0035's own revisit list already names *a second instrument is
+recorded* as its trigger, and that is exactly the moment this figure would
+need taking again. Publishing it would invite a reader to treat it as a
+property of real playing, which nothing has established.
+
+**The dependency is what belongs in a record; the number belongs in the test
+that holds it.** The person most likely to move that constant is working in
+`audio/dsp/` on a detector question and has no reason to know that an interval
+exercise's grading rests on it — `audio/dsp/` imports nothing above itself,
+which is the constraint that makes the dependency invisible from the side that
+could break it. The test fails if the constant moves far enough; this
+paragraph is the pointer from the side that depends, and 0035 is deliberately
+left alone, since a record about onsets should not have to know what exercises
+exist.
+
+## Correction, 11 October 2026 — the margin is tight, not large
+
+The addendum above says the hazard **"does not fire, by a very large margin"**
+and puts the merge threshold "several hundred times below where a re-pluck
+would collapse". **Both are wrong, in the reassuring direction, and the
+correction reverses what a reader should take away.**
+
+Re-measured: raising `NEW_NOTE_RISE` from 2 to **3** merges a pair struck
+0.12s apart. Widely spaced pairs survive past 30, so the headroom varies
+enormously with spacing — and **at the tight end the working behaviour clears
+0035's accepted hazard by less than one and a half times.**
+
+So the dependency is **live rather than theoretical**. A played unison on a
+quick re-strike sits very near the boundary where it would arrive as one note
+and be refused, which is the failure the addendum above describes as the wrong
+one for a correct answer. Anything in that paragraph implying comfort should
+be read as withdrawn.
+
+**The ruling not to publish a bound survives and is the part that got
+stronger.** A figure that moved by three orders of magnitude inside an hour is
+exactly what should not sit on a record. And the new one inherits the same
+caveat as the old: it is one synthesised Karplus–Strong pluck pair at one
+amplitude, bounding what *that test* can see. Whether a real re-strike on a
+real piano has the same ratio is unmeasured, and 0035's revisit trigger — a
+second instrument recorded — remains where that question gets answered.
+
+**How the wrong figure arose is this project's own convention one level
+down.** It was measured against a fixture of three spacings; the fixture was
+then widened to include 0.12s and 0.25s; the number stayed. It described a
+test that no longer existed — and it sat inside a comment already correcting
+an earlier wrong claim about the same constant, which makes it the third
+version of one paragraph with two wrong in opposite directions.
+
+`CLAUDE.md` puts it for documents: *a tracked document does not chase a figure
+the next commit can change*. A measurement in a comment is a tracked document
+the size of a sentence, and widening the fixture is the commit that changed
+it. The number belongs in the assertion, where broadening the fixture
+re-derives it, and nowhere a human has to remember to update it.

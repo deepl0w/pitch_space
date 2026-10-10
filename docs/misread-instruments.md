@@ -405,6 +405,15 @@ helps, because nothing is wrong with it.
   asserting through the first medium cannot express the state the second one
   keeps. `src/state/attempt.test.ts` now checks through `structuredClone` for
   this reason.
+
+  **A worse variant: a medium that substitutes rather than drops.** CSS
+  `var()` always parses, so `color: var(--some-length)` is not a parse error —
+  a length is rejected later, at computed-value time, where `color` falls back
+  to `inherit`. **A probe that paints once and reads the result cannot tell a
+  length from a colour**: it reads whatever was inherited, which is a real
+  colour, plausible, and nothing to do with the token under test. Where JSON
+  made the bad value vanish, this makes it *become something that looks
+  right* — harder to notice, and it reads as a pass rather than as an absence.
 - **A quantity whose rightness is not structural.** A diff review's claim is
   that the code does what it says: the types line up, the branch is reachable,
   the name means what it does. Two defects in `src/audio/output/instruments.ts`

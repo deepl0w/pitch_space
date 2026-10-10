@@ -7,7 +7,7 @@ import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
 import { presentationField } from '../types';
 import type {
-  BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
+  BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
 } from '../types';
 
 /**
@@ -72,6 +72,74 @@ export interface ScaleExercise extends ExerciseBase {
   readonly direction: ScaleDirection;
   readonly clef: Clef;
   readonly choices: readonly string[];
+}
+
+/**
+ * The scale someone played, as one of the types on offer, or `null` when the
+ * take did not contain one.
+ *
+ * **Null is not a wrong answer and the caller must not grade it as one**, for
+ * the reason ADR 0047 gives: a take that cannot be read is a question nobody
+ * answered, and scoring it resets a streak the learner never had a chance to
+ * keep. Every refusal below is that, not a verdict.
+ *
+ * **Matched on the pattern, not on the pitches, which is what the question
+ * asks.** The exercise's answer is a *type* — "Dorian", never "D Dorian" —
+ * so a learner who plays it from a different root, or an octave down because
+ * that is where their instrument is comfortable, has answered correctly. Only
+ * the semitones between the notes are read.
+ *
+ * **Anchored at the lowest note, never the first.** A scale played downwards
+ * reaches this as a descending run, and reading its intervals from the note
+ * it started on gives the pattern upside down — a major scale played from its
+ * octave down to its root yields Phrygian's semitones, which is a real scale
+ * and the wrong answer. Reversing first is what makes the two directions one
+ * question.
+ */
+export function scalePlayed(
+  notes: readonly PlayedNote[],
+  choices: readonly string[],
+): string | null {
+  const heard = notes
+    .map((note) => note.frequencyHz)
+    .filter((hz): hz is number => hz !== null && hz > 0);
+  if (heard.length < 2) return null;
+
+  /*
+    The leading run, and strictly monotonic rather than merely sorted.
+
+    A repeated note ends it, which is the same refusal `intervalPlayed`
+    makes about a re-struck note and for the same reason: two attacks on
+    one pitch do not say whether the second was a hesitation or part of
+    the answer, and a scale has seven chances to produce one. Being strict
+    costs a replay; guessing costs a learner being told they played a
+    scale they did not.
+  */
+  const rising = heard[1] > heard[0];
+  const run = [heard[0]];
+  for (const hz of heard.slice(1)) {
+    const last = run[run.length - 1];
+    if (rising ? hz <= last : hz >= last) break;
+    run.push(hz);
+  }
+  const ascending = rising ? run : [...run].reverse();
+
+  const lowest = ascending[0];
+  const offsets = ascending.map((hz) => Math.round(12 * Math.log2(hz / lowest)));
+
+  /*
+    The run has to reach the octave and stop there. A scale does —
+    `scaleVoices` sounds exactly one — and a run that stops short has not
+    said which scale it is: the first four notes of Dorian and of Aeolian
+    are the same four notes.
+  */
+  if (offsets[offsets.length - 1] !== 12) return null;
+
+  const played = offsets.slice(0, -1).join(',');
+  const matches = choices.filter((id) => scaleType(id).semitones.join(',') === played);
+  // Exactly one, so a pattern two of the offered types share is refused
+  // rather than resolved by whichever the catalogue lists first.
+  return matches.length === 1 ? matches[0] : null;
 }
 
 export interface ScaleResponse {

@@ -259,19 +259,28 @@ describe('the focus ring on the circle of fifths', () => {
       expect(got, `${a} on ${b} in ${theme}`).toBeCloseTo(expected, 1);
     }
     /*
-      And a compound resolves rather than throwing, which is the other half
-      of what the claim below depends on: a mix of the accent with a panel
-      that is itself `oklch(from …)` of the ground.
+      And a compound resolves rather than throwing: a mix of the accent with
+      a panel that is itself `oklch(from …)` of the ground.
 
-      Looser than the four above on purpose. A browser reads this at 7.89
-      and the arithmetic here gives 7.84 — the error in each step compounds,
-      where a single mix agrees to two decimals. What this case is for is
-      that a nested expression resolves to roughly the right colour at all;
-      the tight agreement is the four pins above, which are single steps.
+      **This was briefly widened to ±0.5 for a reason that was wrong, and
+      the reason is worth more than the figure.** A browser appeared to read
+      7.89 against this file's 7.84, and the gap was put down to error
+      compounding through a nested expression. A second, independent
+      implementation of the same arithmetic then agreed with this file to
+      three decimals, which left the reading as the odd one out rather than
+      the maths — and so it was: the measurement went through a canvas, and
+      eight bits per channel is coarse enough down here that the same mix
+      read back as two different byte triples on two runs. Read as
+      `color(from … srgb-linear r g b)` instead, which is not quantised at
+      all, the browser says 7.857 and the gap is 0.013.
+
+      So the pin is tight again. A tolerance wide enough to absorb a
+      disagreement also absorbs the next real one, and this case earns its
+      keep precisely by two implementations agreeing closely.
     */
     const relative = resolve('color-mix(in oklab, var(--accent) 55%, var(--surface))', THEMES.dark);
     expect(contrast(resolve(token('--ink', THEMES.dark), THEMES.dark), relative))
-      .toBeCloseTo(7.89, 0);
+      .toBeCloseTo(7.86, 1);
   });
 
   /**

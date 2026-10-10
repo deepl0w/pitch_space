@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { SIMPLE_INTERVAL_NAMES } from '../../theory/interval';
+import { useCountdown } from '../countdown';
 import { namePlayed } from '../played';
 import type { PlayedNote, PromptProps } from '../types';
 import {
@@ -24,6 +25,7 @@ export function IntervalPrompt({
 }: PromptProps<IntervalSettings, IntervalExercise, IntervalResponse>) {
   const [chosen, setChosen] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
+  const secondsLeft = useCountdown(listening, TAKE_SECONDS);
   const [aside, setAside] = useState<string | null>(null);
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -110,7 +112,7 @@ export function IntervalPrompt({
           onClick={() => { void playAnswer(); }}
           disabled={answered || listening}
         >
-          {listening ? 'Listening…' : 'Play your answer'}
+          {listening ? `Listening… ${secondsLeft}s` : 'Play your answer'}
         </button>
         <span className="secondary">{PRESENTATION[exercise.direction]}</span>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { scaleType } from '../../theory/scale';
 import { pitchName } from '../../theory/pitch';
+import { useCountdown } from '../countdown';
 import { namePlayed, steadyNotes } from '../played';
 import type { PromptProps } from '../types';
 import {
@@ -40,6 +41,7 @@ export function ScalePrompt({
   const autoplayed = useRef(false);
   const [chosen, setChosen] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  const secondsLeft = useCountdown(listening, TAKE_SECONDS);
   const [aside, setAside] = useState<string | null>(null);
   const reading = exercise.presentation === 'read';
 
@@ -135,7 +137,7 @@ export function ScalePrompt({
           onClick={() => { void playAnswer(); }}
           disabled={answered || listening}
         >
-          {listening ? 'Listening…' : 'Play your answer'}
+          {listening ? `Listening… ${secondsLeft}s` : 'Play your answer'}
         </button>
       </div>
 

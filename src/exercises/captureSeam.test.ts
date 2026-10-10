@@ -200,19 +200,27 @@ describe('a take that was not heard', () => {
  * test of that rule hands it a note list built by hand. Nothing checked
  * that a real take produces the count those tests assume.
  *
- * The risk is specific and sits on top of a deliberate decision. ADR 0035
- * merges two attacks that agree about pitch and did not get louder,
- * because twenty-four flux peaks inside one struck note all report the
- * same pitch — and it names the hazard it accepts: *the same pitch struck
- * twice looks exactly like a cluster*. A unison is the one interval a
- * learner answers by doing precisely that. Tighten the merge rule for a
- * good reason tomorrow and the unison stops being answerable by playing,
- * while every test of `intervalPlayed` stays green, because they are all
- * fed fabricated notes.
+ * The risk sits on top of a deliberate decision. ADR 0035 merges two
+ * attacks that agree about pitch and did not get louder, and names the
+ * hazard it accepts: *the same pitch struck twice looks exactly like a
+ * cluster*. A unison is the one interval a learner answers by doing
+ * precisely that.
  *
- * So this goes through the detector. Measured rather than assumed: two
- * plucks at 440 Hz survive assembly at every spacing tried, and the
- * hesitation that motivated the *exactly two* rule still arrives as three.
+ * **What this holds, and what it does not.** Measured from 0.12s to 1.2s
+ * apart: a re-pluck is loud enough against the first note's decayed tail
+ * that assembly never merges it, so the chain delivers two notes at every
+ * spacing a learner would use. It is not a tight guard on the merge rule —
+ * `NEW_NOTE_RISE` has to go from 2 to about a thousand before this
+ * notices, because the margin is enormous. An earlier version of this
+ * comment claimed that tightening the rule would break the unison and the
+ * mutation showed it would not; the margin is the finding, and it is a
+ * better answer than the guard would have been.
+ *
+ * What it does hold is the end-to-end claim no unit test can: that a
+ * played unison arrives as two notes and answers, where every test of
+ * `intervalPlayed` is fed a note list built by hand. A change anywhere in
+ * the chain that collapsed them — a different detector, a different onset
+ * threshold, a rewritten `assemble` — fails here.
  */
 describe('a unison answered by playing it', () => {
   const pluck = (hz: number, at: number, seed: number) => startingAt(
@@ -220,7 +228,7 @@ describe('a unison answered by playing it', () => {
     at, RATE,
   );
 
-  it.each([0.6, 0.9, 1.2])('survives assembly when the two are %ss apart', (gap) => {
+  it.each([0.12, 0.25, 0.6, 1.2])('survives assembly when the two are %ss apart', (gap) => {
     const take = analyse(
       mix(pluck(440, 0.2, 1), pluck(440, 0.2 + gap, 2), silence(0.2 + gap + 1, RATE)),
       RATE,

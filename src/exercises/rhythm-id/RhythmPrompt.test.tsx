@@ -11,7 +11,7 @@ import {
   type RhythmExercise, type RhythmResponse, type RhythmSettings,
 } from './rhythms';
 import { drawScore } from '../render/toVexflow';
-import type { AudioOut, Result } from '../types';
+import type { AudioIn, AudioOut, Result } from '../types';
 import type { Voice } from '../../audio/output/synth';
 import type { ScoreLayout } from '../render/toVexflow';
 
@@ -42,6 +42,16 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+/**
+ * A microphone that is not there, which is the honest default for a test
+ * that is not about listening.
+ *
+ * Never `{ heard: true, notes: [] }`: that is a silent room, an answer the
+ * exercise is entitled to grade, and a test that did not mean to supply an
+ * answer would be supplying one. ADR 0047 is about keeping those two apart.
+ */
+const deaf: AudioIn = { listen: async () => ({ heard: false, reason: 'unavailable' }) };
 
 function recordingAudio(): AudioOut & { plays: Voice[][] } {
   const plays: Voice[][] = [];
@@ -88,6 +98,7 @@ function render(
       result={result}
       onRespond={(r) => responses.push(r)}
       audio={audio}
+      audioIn={deaf}
     />
   );
   act(() => root.render(strict ? <StrictMode>{prompt}</StrictMode> : prompt));

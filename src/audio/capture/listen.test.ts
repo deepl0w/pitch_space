@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyse, listen } from './listen';
+import { analyse, listen, listenFor } from './listen';
 import { RecordedSource } from './recorded';
 import { framesOf } from './source';
 import { mix, pluckSequence, pluckedString, silence, startingAt } from '../testing/signals';
@@ -286,5 +286,108 @@ describe('the rate the analysis is told', () => {
       .toBeCloseTo(TRUE_RATE / CONTEXT_RATE, 3);
     const drift = right.onsets[2].timeSeconds - wrong.onsets[2].timeSeconds;
     expect(drift, 'the last attack of a bar barely moved').toBeGreaterThan(0.1);
+  });
+});
+
+/**
+ * A take bounded by seconds, which is the only kind a live source can give.
+ *
+ * `listen` ends its take when `source.start` resolves, and that is a
+ * property of `RecordedSource` rather than of the interface: `CaptureSource`
+ * documents `start` as *beginning*, and a microphone settles its promise the
+ * moment permission is granted with every frame still to come. So `listen`
+ * handed a real device returns an empty take immediately, and the length has
+ * to come from the caller instead.
+ */
+describe('a take of a fixed length', () => {
+  const FRAME = 1024;
+
+  /**
+   * A source shaped like a microphone rather than like a recording.
+   *
+   * The difference is the whole point and it is one line: `start` keeps the
+   * callback and resolves, and frames arrive afterwards. A first version of
+   * this delivered them inside `start`, which made it a `RecordedSource` by
+   * another name — `listen` handled it perfectly well and the control case
+   * below failed, which is the test saying the double was wrong.
+   */
+  function live(samples: Float32Array) {
+    let onFrame: ((frame: { samples: Float32Array; startSeconds: number }) => void) | null = null;
+    let stopped = 0;
+    return {
+      stopped: () => stopped,
+      /** What passes while the device streams. Stands in for the clock. */
+      stream() {
+        for (const frame of framesOf(samples, FRAME, RATE)) onFrame?.(frame);
+      },
+      source: {
+        sampleRate: RATE,
+        frameSize: FRAME,
+        start(handler: (frame: { samples: Float32Array; startSeconds: number }) => void) {
+          onFrame = handler;
+          return Promise.resolve();
+        },
+        stop() {
+          stopped += 1;
+          onFrame = null;
+        },
+      },
+    };
+  }
+
+  it('hears a source whose frames arrive after its start resolves', async () => {
+    const device = live(threeNotes());
+
+    const result = await listenFor(device.source, 2, {
+      // The injected clock is where the device's time goes.
+      wait: async () => { device.stream(); },
+    });
+
+    // The same three `analyse` finds in this signal when it is handed the
+    // samples whole, which is the point: the route the audio took must not
+    // change what was heard.
+    expect(result.notes.length, 'a live-shaped source gave an empty take')
+      .toBe(analyse(threeNotes(), RATE).notes.length);
+  });
+
+  it('is the case `listen` cannot serve, which is why this exists', async () => {
+    /*
+      The control. Without it the case above is just another passing test
+      and nothing records why `listenFor` is not simply `listen`. `listen`
+      treats `start` resolving as the take being over, which for a device
+      that has only just been granted permission is a take of nothing.
+    */
+    const device = live(threeNotes());
+
+    expect((await listen(device.source)).notes, 'listen now handles a live source')
+      .toEqual([]);
+  });
+
+  it('releases the device when the take ends', async () => {
+    const device = live(threeNotes());
+
+    await listenFor(device.source, 2, { wait: async () => { device.stream(); } });
+
+    expect(device.stopped(), 'the device was left open').toBe(1);
+  });
+
+  it('releases the device even when the wait goes wrong', async () => {
+    const device = live(threeNotes());
+
+    await expect(listenFor(device.source, 2, {
+      wait: () => Promise.reject(new Error('interrupted')),
+    })).rejects.toThrow('interrupted');
+    expect(device.stopped(), 'a failed take held the microphone open').toBe(1);
+  });
+
+  it('waits the length it was given', async () => {
+    const device = live(threeNotes());
+    const asked: number[] = [];
+
+    await listenFor(device.source, 3.5, {
+      wait: (seconds) => { asked.push(seconds); device.stream(); return Promise.resolve(); },
+    });
+
+    expect(asked, 'the take did not wait, or waited for something else').toEqual([3.5]);
   });
 });

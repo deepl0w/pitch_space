@@ -173,7 +173,15 @@ describe('every declared presentation gives the user something', () => {
           // `createElement` rather than JSX so this stays a .ts file, which
           // the rest of it is.
           act(() => root.render(createElement(definition.Prompt, {
-            exercise, settings, result: null, onRespond: () => {}, audio,
+            exercise,
+            settings,
+            result: null,
+            onRespond: () => {},
+            audio,
+            // This asks what each prompt *sounds* on mount. A microphone
+            // reporting a silent room would be an answer, which is the one
+            // thing that would change what is being measured here.
+            audioIn: { listen: async () => ({ heard: false as const, reason: 'unavailable' as const }) },
           })));
           const sounded = played.some((v) => v.length > 0);
           act(() => root.unmount());

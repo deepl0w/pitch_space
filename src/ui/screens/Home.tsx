@@ -62,8 +62,8 @@ export function Home({ go }: { go: (route: string) => void }) {
         */}
         <p className="lede">
           Exercises generated on the spot, following real patterns rather than
-          random notes. For now you answer by naming what you hear or tapping
-          what you read; answering by playing is being built.
+          random notes. Answer by naming what you hear, by tapping what you
+          read, or — on intervals so far — by playing it.
         </p>
       </header>
 

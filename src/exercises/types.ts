@@ -461,6 +461,18 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
   onRespond(response: R): void;
   audio: AudioOut;
   /**
+   * The microphone, for a prompt that can be answered by playing.
+   *
+   * Required rather than optional, and beside `audio` rather than behind a
+   * capability flag, because which exercises can be answered by playing is
+   * not a fact about the plumbing — the screen can always supply one, and an
+   * exercise that has no use for it simply does not destructure it. Making
+   * it optional would mean every prompt that *does* use it has to handle the
+   * case where the screen forgot, which is a branch no user can reach and
+   * nothing can test honestly.
+   */
+  audioIn: AudioIn;
+  /**
    * Set only when the definition sets `promptDrawsScores`; see
    * {@link PromptDrawnScores}.
    */

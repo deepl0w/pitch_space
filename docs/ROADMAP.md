@@ -553,118 +553,61 @@ Three things will be the work, and none of them is the parsing:
 
 ## A wrong answer that points at a song you know
 
-From the user:
+From the user, across two messages:
 
 > a future feature i want is more helpful song recommendations for wrong
 > answers, the ones with "Think…" and they should link to a youtube video for
 > that song at the time where you can hear that note interval or chord
 > progression
 
-**What exists is twelve song titles and nothing else.** `INTERVAL_MNEMONICS`
-in `src/theory/interval.ts` maps a semitone distance to a tune — *Jaws*,
-*Somewhere Over the Rainbow* — and the interval exercise appends `Think …` to
-a wrong answer. Chords and progressions have nothing.
+> the catalogue is an internal database … it's just a list of songs+artists
+> for different intervals/chord progressions etc
 
-### It is wrong today for descending intervals, which is worth fixing first
+**So: a table shipped with the app.** Song, artist, and an optional link with
+a timestamp, keyed by interval or progression. Not a service, not fetched, and
+small enough that it goes in the bundle — which is worth one line against
+[0046](adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md), since the
+instrument packs are deliberately *not* bundled and somebody will reach for
+that precedent. A pack is megabytes and optional; this is text and is wanted at
+the moment a learner gets something wrong, which may be offline.
 
-The table is keyed on semitone distance alone and **every tune in it rises**.
-A learner who misses a *descending* major 6th is told *"Think My Bonnie"*,
-which ascends. The hint does not merely fail to help there; it points at the
-wrong contour, and contour is most of what the learner is being asked to hear.
+### It is wrong today for descending intervals
 
-That is a defect in what ships, independent of this feature, and it is the
-strongest argument for the feature: the hints are not only sparse, they are
-sometimes false.
+Worth doing first, and independent of the rest. `INTERVAL_MNEMONICS` in
+`src/theory/interval.ts` is twelve titles keyed on semitone distance alone, and
+**every tune in it rises**. A learner who misses a *descending* major 6th is
+told *"Think My Bonnie"*, which ascends. The hint does not merely fail to help
+there; it points at the wrong contour, and contour is most of what the learner
+is being asked to hear.
 
-### The links are the easy half; the claims are not
+### The shape
 
-Every entry this feature adds is a claim of the form *you can hear a minor 2nd
-at 0:42 in this recording*, and **nothing in the repository can check it**.
-That makes it the largest body of unverifiable claims the project would hold,
-arriving in the month a guard was built to make every internal citation
-checkable — which sharpens the contrast rather than excusing it.
+**Artist alongside title, because a title alone is often not findable.**
+*Take On Me* needs a-ha to be looked up with any confidence; *Jaws* does not.
+The current table has titles only.
 
-External references rot in ways a path does not. A video is deleted or made
-private; a re-upload lives at a different URL; a different edit shifts every
-timestamp in it; and the musical claim itself is a judgement no test can make.
-The suite sees none of that.
+**The title and artist are required; the link is optional.** A hint must not
+need the network to be worth having — someone practising offline is exactly
+who wants one — so a missing or dead link degrades to what ships today rather
+than to nothing.
 
-[ADR 0011](adr/0011-what-a-catalogue-owes.md) is the record that governs this,
-and applying it gives the shape:
+**Link out; do not embed.** A player pulls third-party tracking into a
+local-first MIT tool for something a learner taps perhaps once a session.
 
-- **Well-formedness** is checkable and should be: a timestamp parses, a URL is
-  a URL, every interval the exercise can ask has an entry.
-- **Stable ids** do not bite. A song reference never reaches an `Attempt`, so
-  by [0043](adr/0043-an-instrument-is-not-part-of-what-a-line-measures.md)'s
-  rule it owes stability only to convenience.
-- **Reachability** does: an entry for an interval or a progression no setting
-  can produce is dead weight, and the sweep that finds it is cheap.
-- **Claims asserted, or acknowledged as unassertable** is the whole difficulty.
-  These cannot be asserted. The obligation 0011 leaves is then the
-  acknowledgement itself — the catalogue has to say, in it, that its claims
-  are unchecked and how a reader would know one had gone bad.
+**Not `theory/`.** A song reference is pedagogy, not a fact about music, and
+the table will grow to cover chords and progressions.
 
-### The design that follows: the title is durable, the link is perishable
+### The one thing worth saying about the claims
 
-**A hint must not depend on the network to be worth having.** The app is
-offline-first and a learner practising on a train is exactly who needs the
-hint. So the title is required and the link is optional, and a dead or absent
-link degrades to what ships today rather than to nothing.
+Every row asserts that an interval is audible in a recording at a moment, and
+nothing in the repository can check that. A URL can be fetched to see whether
+it still resolves, which catches deletions and re-uploads; whether the sound is
+there at 0:42 cannot be checked by anything and never will be.
 
-That also disposes of the obvious temptation: **link out, do not embed.**
-Embedding a player pulls third-party tracking into a local-first MIT practice
-tool, for a feature whose value is a learner tapping through perhaps once a
-session. A link costs nothing, breaks honestly, and leaves the bundle alone.
-
-### Settled: an internal database, and a link rather than an embed
-
-The user: *"the catalogue is an internal database. you're right about the
-link"*.
-
-So it ships with the app rather than being fetched, is versioned with it, and
-has no runtime dependency on anything. It is a catalogue in
-[0011](adr/0011-what-a-catalogue-owes.md)'s sense and owes that record's four
-obligations.
-
-**It goes in the bundle, which is the opposite of what the instrument packs
-do, and the contrast is worth stating because the pack precedent is the one
-someone will reach for.**
-[0046](adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md) keeps a
-pack out of the precache because it is megabytes and the app works without it.
-A song table is text, it is small, and it is wanted at the exact moment a
-learner gets something wrong — which may be offline, on a train, which is
-precisely who the hint is for. Different size, different moment of need,
-opposite answer.
-
-**A home: not `theory/`.** A song reference is pedagogy, not a fact about
-music, and `theory/` is where facts live. The directory that holds it will
-grow to cover chords and progressions.
-
-### What becoming a database does to the dead-link question
-
-The question as first posed — *what happens when a link is found dead* — does
-not survive the answer, and it is worth saying why rather than leaving it
-looking open.
-
-**The app will never find one dead.** It does not fetch the video; the learner
-clicks out and leaves. So there is no runtime moment at which staleness could
-be detected and no behaviour to design for it. A link rots silently and the
-only parties who can notice are a learner who follows one and nobody tells, or
-somebody checking from outside the app.
-
-So the real question is maintenance rather than behaviour: **a catalogue of
-external claims the suite cannot check, in a project that has just made every
-internal citation checkable.** 0011's fourth obligation is the one that binds
-— claims asserted, or acknowledged as unassertable — and the acknowledgement
-has to say what a reader should do about it, since nothing else will.
-
-The cheapest honest mechanism is a check that runs outside the suite and
-outside the app: fetch each URL, report what no longer resolves, run when
-somebody remembers or on a schedule. It cannot verify the musical claim, which
-stays unassertable for good, and it would catch the deletions and the
-re-uploads that are most of the rot. **Worth building with the catalogue
-rather than after it**, since a table of links nobody can audit is the thing
-that makes the feature worse than no feature.
+[0011](adr/0011-what-a-catalogue-owes.md)'s fourth obligation is the one that
+applies — claims asserted, or acknowledged as unassertable. These are the
+second kind, and the acknowledgement belongs in the table itself so that
+nobody later mistakes an unchecked row for a checked one.
 
 ## Instruments that play like themselves
 

@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CHORD_TYPES } from './theory/chord';
@@ -52,6 +52,47 @@ const CORE_DIRS = ['theory', 'generate', 'audio/dsp', 'audio/testing'];
 
 function coreFiles(): string[] {
   return CORE_DIRS.flatMap((d) => filesUnder(join(SRC, ...d.split('/'))));
+}
+
+/**
+ * Directories written but never committed.
+ *
+ * `CLAUDE.md`: the repository is public and the fleet's internal writing
+ * stays out of it. They are excluded from the citation scans both as
+ * targets *and as sources*, and the second is the one that was missing.
+ *
+ * **A citation inside a document no public reader can open is not a claim
+ * the repository makes** — which is the same reason they are not valid
+ * targets. The practical half is sharper: their contents differ per
+ * checkout by design, so scanning them made the population depend on
+ * which worktree ran the suite. It passed here, failed in main's over a
+ * file this checkout does not have, and in CI would have scanned neither.
+ * An unstable population is worse than a narrow one, because the failure
+ * belongs to whoever happens to run it.
+ */
+const UNCOMMITTED = ['docs/findings/', 'docs/process/'];
+
+/**
+ * Every tracked document that can carry a citation.
+ *
+ * Walked rather than taken from `filesUnder`, which keeps only `.ts` and
+ * `.tsx` — reusing it found fourteen cited paths instead of fifty-odd, and
+ * the population guard said so on the first run, which is what it is for.
+ */
+function everyDocument(): string[] {
+  const markdown = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) return markdown(path);
+      return entry.name.endsWith('.md') ? [path] : [];
+    });
+  return [
+    ...markdown(join(SRC, '..', 'docs')),
+    join(SRC, '..', 'CLAUDE.md'),
+    join(SRC, '..', 'README.md'),
+  ].filter((file) => !UNCOMMITTED.some(
+    (prefix) => show(file).replace(/^\.\.\//, '').startsWith(prefix),
+  ));
 }
 
 function show(path: string): string {
@@ -443,6 +484,143 @@ describe('the records the code cites', () => {
    * 0028", `docs/adr/0005`, `adr/0011-what-a-catalogue-owes.md` — and what
    * is checked is that the record exists, not how it was spelled.
    */
+  /**
+   * And no document points at a file that is not there.
+   *
+   * The same fault as citing a record nobody wrote, one level down: the
+   * prose names `src/audio/capture/listen.ts` or `tools/app.sh`, somebody
+   * renames it, and the citation keeps reading perfectly. Fifty-odd such
+   * paths are quoted across the documents; a rename today breaks them
+   * silently and the next reader follows a pointer to nothing.
+   *
+   * **The two gitignored directories are the exception and the reason is
+   * in `CLAUDE.md`.** `docs/findings/` and `docs/process/` are written and
+   * never committed, because the repository is public and the fleet's
+   * internal writing stays out of it — so a citation of one is citing
+   * something a reader of the public repository cannot open, which that
+   * file says outright. Excluded by prefix with the reason named, rather
+   * than by the scan quietly tolerating anything it cannot find.
+   *
+   * **What this cannot catch**, said because the episode that prompted it
+   * was exactly this: a citation naming a real thing in the wrong place. A
+   * comment pointer was attributed to `MERGE_CENTS` when it sits above
+   * `NEW_NOTE_RISE`, thirty-four lines apart in one file and governing two
+   * halves of the same decision. Both names exist, so a scan for existence
+   * passes it — and that is worse than a dangling path, which fails on
+   * sight.
+   */
+  it('points at no file that is not there', () => {
+    const documents = everyDocument();
+
+    /*
+      The population is what git has, not what this checkout holds. The
+      first version scanned `docs/process/` and `docs/findings/` for
+      citations while excluding them as targets, so the set of documents
+      read differed per worktree — green here, red in main's, neither in
+      CI. Asserted rather than left to the filter staying correct.
+    */
+    const local = documents.filter((file) => UNCOMMITTED.some(
+      (prefix) => show(file).replace(/^\.\.\//, '').startsWith(prefix),
+    ));
+    expect(local, 'scanning documents this checkout happens to hold').toEqual([]);
+
+    const cited = new Map<string, Set<string>>();
+    for (const file of documents) {
+      for (const match of readFileSync(file, 'utf8')
+        .matchAll(/`((?:src|tools|docs)\/[A-Za-z0-9_./-]+)`/g)) {
+        const path = match[1];
+        if (UNCOMMITTED.some((prefix) => path.startsWith(prefix))) continue;
+        const where = cited.get(path) ?? new Set<string>();
+        where.add(show(file));
+        cited.set(path, where);
+      }
+    }
+
+    // The population: a regex that stopped matching would pass this by
+    // having nothing to look for.
+    expect(cited.size, 'no source paths cited in any document').toBeGreaterThan(20);
+
+    const dangling = [...cited]
+      .filter(([path]) => !existsSync(join(SRC, '..', path)))
+      .map(([path, where]) => `${path} — cited by ${[...where].sort().join(', ')}`);
+    expect(dangling, 'cited and not there').toEqual([]);
+  });
+
+  /**
+   * And the same for a file named without its path, which is how this
+   * repository's prose usually names one — `captureSeam.test.ts`,
+   * `tools/app.sh` spelled bare, `instruments.ts`. Fifty-odd of them,
+   * more than the full paths, and a rename breaks them the same way
+   * while reading perfectly.
+   *
+   * Matched on the basename, which is all a bare citation gives: it says
+   * a file by that name exists somewhere, not that the prose points at
+   * the right one. A weaker claim than the paths above and still the one
+   * that fails when something is renamed out from under a document.
+   *
+   * `lib.dom.d.ts` is excused because it is a dependency's file rather
+   * than this repository's — `misread-instruments.md` cites it as the
+   * thing that settles how `AudioBufferSourceNode.start` shadows its
+   * base, checkable from `node_modules` without a browser, which is the
+   * whole point of citing it. Named with its reason rather than tolerated
+   * by a scan that skips what it cannot find.
+   */
+  it('names no file that does not exist', () => {
+    const ELSEWHERE: Record<string, string> = {
+      'lib.dom.d.ts': "TypeScript's own DOM declarations, in node_modules",
+    };
+
+    /*
+      Walked rather than taken from `filesUnder`, which keeps `.ts` and
+      `.tsx` and therefore knows about no shell script at all — it reported
+      `report-facts.sh` and `fetch-test-audio.sh` as missing when both are
+      in `tools/`. Three times while writing these two cases the thing that
+      failed was my own scan rather than the documents, and each time the
+      population guard or the names in the failure said so. A guard that
+      only ever confirms what you expected is one you have not tested.
+    */
+    const basenames = new Set<string>();
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        /*
+          `.git` and `node_modules` by name, not every dotted entry: the
+          first version skipped anything beginning with a dot and so could
+          not see `.claude/scripts/fleet.sh` or `.github/workflows/`, both
+          of which a tracked document may reasonably name.
+
+          And `.claude/worktrees`, which is the same instability as the
+          one above pointed the other way. It is empty in a worktree and
+          holds every *other* worktree in the main checkout — so walking
+          it would let a file existing only in somebody else's tree count
+          as present here. Invisible from this side, which is how the
+          first version of this reached main's gate before anyone saw it.
+        */
+        if (entry.name === 'node_modules' || entry.name === '.git'
+          || entry.name === 'worktrees') continue;
+        if (entry.isDirectory()) walk(join(dir, entry.name));
+        else basenames.add(entry.name);
+      }
+    };
+    walk(join(SRC, '..'));
+
+    const named = new Map<string, Set<string>>();
+    for (const file of everyDocument()) {
+      for (const match of readFileSync(file, 'utf8')
+        .matchAll(/`([A-Za-z0-9_.-]+\.(?:ts|tsx|mjs|sh|css))`/g)) {
+        const where = named.get(match[1]) ?? new Set<string>();
+        where.add(show(file));
+        named.set(match[1], where);
+      }
+    }
+
+    expect(named.size, 'no files named in the documents at all').toBeGreaterThan(10);
+
+    const unknown = [...named]
+      .filter(([name]) => !(name in ELSEWHERE) && !basenames.has(name))
+      .map(([name, where]) => `${name} — named by ${[...where].sort().join(', ')}`);
+    expect(unknown, 'named and nowhere in the tree').toEqual([]);
+  });
+
   it('cites no record that was never written', () => {
     const cited = new Set<string>();
     for (const file of filesUnder(SRC)) {

@@ -136,3 +136,35 @@ escape clause, giving the item a different id rather than keying the line on
 the instrument, exactly as it provides for clef. That is the second time that
 clause has turned a hard question into an easy one, which is worth noting about
 0039 rather than about instruments.
+
+## Open, and with the user since 10 October
+
+**This record's Decision is the thing in question, and the question has been
+live for a day with no home but a message.**
+
+0043 rules that an instrument is a property of playback and not part of what a
+line measures, and accepts as a known cost that a learner who practises on one
+voice and switches has a reading that overstates them. Two things have since
+pressed on that:
+
+- The measured difference is larger than "a nuance". The flute suppresses its
+  second harmonic by 21.9 dB where the strings suppress theirs by 1.9, and the
+  flute's own comment says the plainness *is the point* — an easier version of
+  the ear-training question, offered deliberately.
+- The argument for recorded instruments is that **recognition transfers from
+  the timbre you have actually played**. That is a claim that timbre changes
+  the skill, which is what this record rules it does not.
+
+So the question is whether **instrument choice is cosmetic or part of what is
+being trained**, and it is the user's rather than anyone's here: one answer
+keeps a learner's progress as one line and knowingly overstates them across
+voices, the other acknowledges the voice and fragments progress six ways.
+Either has a cost a learner pays.
+
+**Why this section exists at all is the part worth keeping.** The question was
+raised with the user on 10 October, in a message, and recorded nowhere. The
+architect then reported it as outstanding four times without checking that it
+had a home — having, three days earlier, diagnosed exactly this in another
+session's work and written that *an answer existing only in a message is why
+it kept coming back*. **The same is true of a question**, and a question is
+worse: an unanswered one has nobody motivated to look for it.

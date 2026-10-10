@@ -314,9 +314,27 @@ user-facing copy may not state a cost nothing measured.
 
 ### `main` — answering by playing, starting with the seam
 
-**Branch:** `main`, starting now. **Settled:** the shape, because the
-repository already specifies it. **Not settled:** which exercise goes
-first, and nothing downstream waits on that.
+**Branch:** `main`, under way. **Settled:** the shape, the subset
+property, and — as of
+[0047](adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)
+— that the seam reports *whether it heard* as well as what. **Not
+settled:** which exercise goes first, and how a screen explains a refusal
+to a reader. Neither blocks anyone.
+
+**This entry got that wrong once, in the direction the file warns
+about.** It first called the subset property "the whole point", flatly,
+while I was asking architect in the same hour whether the seam's silent
+floor was right — and the answer to that question removed the identity
+adapter the phrase was describing. The entry read as settled because
+nothing in it said a decision was pending; tester wrote toward it, which
+is exactly what the prospective half of its job asks for, and was
+overtaken by a ruling nothing had announced.
+
+The preamble above already says an entry names what is settled and what
+is not, separately, and that a piece waiting on something says so
+plainly. The cost here was one test edit inside the hour. The reason to
+record it anyway is that the next one may be a day, and the entry would
+still have read as finished.
 
 **Why this and why now.** It is the brief's central promise — six kinds
 of practice *answered by playing them on a real instrument* — and the one
@@ -335,7 +353,8 @@ exercise", declared in `exercises/types.ts` rather than imported; the new
 one is just enough of `listen` for a prompt to take an answer, declared
 the same way, with the screen adapting the real thing to it.
 
-**For tester.** Two things become checkable before any exercise uses it.
+**For tester.** Two things become checkable before any exercise uses it,
+and the first has since been written and overtaken once — see above.
 The adapter the screen supplies must satisfy the declared interface
 structurally — that is what keeps the capture layer out of
 `exercises/` — and `PlayedNote` must stay a subset of `HeardNote`, since

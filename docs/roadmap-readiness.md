@@ -191,10 +191,15 @@ and the scheduler all read it.
 
 ## G4 — the home screen cannot say "I do not know"
 
-**Architectural half closed; the count itself is unbuilt.** G3 closing also removes the two remaining failures' blocker, since they were G3's.
+**Closed.** Each home card reports how far its line has advanced, read from
+the ladder rather than from right answers, naming its presentation, with
+loading silent, unreadable history given words and a figure only where there
+is one. The motivating case below — "home is pixel-identical to a stranger's
+first visit" — is **no longer true**, and is kept because the reasoning is why
+the fix has the shape it does.
 
 ```bash
-grep -rn 'dueCount' src/ui/ | grep -v '\.test\.'   # empty means no count has shipped
+grep -n 'completion' src/ui/screens/Home.tsx   # the figure, under whatever name
 ```
 
 The roadmap calls a due count "the whole visible surface of this feature". It
@@ -369,8 +374,18 @@ does not exist is anything committed: no browser dependency, nothing in
 `test.sh`. **The instrument is a procedure someone follows, so a visual claim
 is checked exactly when a person remembers to check it.**
 
-Four live needs are already waiting on it, which is what moves this from a
-preference to a gap:
+**The needs below are not independent, and reading them as a list is the
+hazard.** Contrast, a channel other than colour, a touch target's size and a
+legible stave are necessary conditions of one thing — that a reader can
+actually perceive what the interface is telling them. **Satisfying all of them
+does not establish it.** The focus ring proves the point: it passed the
+contrast guard at 8.16:1 and signalled focus by stroke *width alone*, the ring
+and the rest state sharing a colour token, and was reported invisible. Every
+check that existed was green and the indicator could not be seen. A guard list
+invites being read as sufficiency and is never more than a set of ways to
+fail.
+
+The live needs, which is what moves this from a preference to a gap:
 
 - **That the question does not move when the answer appears.** This was
   listed as watching a measured length, `--answer-reserve`, for drift. **The
@@ -408,8 +423,22 @@ exists, which is still no, so the gap stayed correctly open while the reason
 given for it quietly stopped being true. A per-gap check tests the gap, not
 the justification.
 
-**The colour bullet is worse, because it was not stale — it was wrong when
-written.** Nothing changed underneath it; the rule never needed a browser, and
+**And G4's command would have missed its own gap closing**, for a third
+reason: it grepped for `dueCount`, a name I guessed the solution would have.
+What shipped is `completion`, so the command reported the gap open after it
+had been filled.
+
+**That is two of three failures with one cause, and it is this project's
+first convention turned on me.** `grep dueCount` and `grep playwright` do not
+test whether the need is met; they test whether **the solution I imagined
+exists**. A correlate of the answer is not a substitute for running the
+mechanism — which I have cited at other people three times this week while
+writing commands that check for a name. A gap's command has to ask after the
+*need*, so that anything satisfying it turns the check green, including
+something nobody pictured.
+
+**The colour bullet is worse than either, because it was not stale — it was
+wrong when written.** Nothing changed underneath it; the rule never needed a browser, and
 the same session had argued days earlier that the cheap version is a test that
 each state renders differing text. A check on the justification would not have
 helped here either, since the justification was false on day one. **The thing

@@ -62,6 +62,22 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0045](0045-an-instrument-may-change-how-a-note-is-produced-never-which-note-is-correct.md) | An instrument may change how a note is produced, never which note is correct | Accepted |
 | [0046](0046-a-sampled-pack-is-fetched-on-use-not-precached.md) | A sampled pack is fetched on use, not precached | Accepted |
 
+**Ten conventions follow, in the order they were learned.** They are prose
+rather than headings because each is an argument with its instances attached,
+but that makes the run of them long — so, to find one, search its opening
+words:
+
+1. *Check a claim about the code against the code* — not the record that made it.
+2. *A description of work is not the work* — including the author's own, and most of all a description of **checking**.
+3. *Scope a guard to what can actually change the thing it guards* — and the silent half, where too narrow is blind rather than noisy.
+4. *Before deleting a test as a tautology* — ask whether it can fail for some input the test actually explores.
+5. *A comment that states a constraint is a test that cannot fail* — and its inverse, code that rounded.
+6. *State what you measured through* — not only what you measured.
+7. *A claim's altitude decides whether anything can falsify it* — a summary needs a mechanism its parts do not.
+8. *A claim about what the user wants* — the only kind nothing in the repository can contradict.
+9. *A guard must be able to fail* — a sound assertion over an empty or unlucky population is the usual way it cannot.
+10. *A reason attached to working code* — unfalsifiable because the code is right — and its dual, *a distinction the type cannot state*.
+
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in
 two days: 0012 read a description of what `audio/dsp/` is *for* as a statement
@@ -406,6 +422,38 @@ it.
 Four in one day by the author's own count, each found by a different reader
 and never by the author — who is, necessarily, the person who found the reason
 satisfying.
+
+**A distinction the type cannot state is the ninth's dual, and it is worse.**
+There the code is right and the account of it is false, so nothing disagrees.
+Here the account is right and **the world has a state the model cannot hold**,
+so nothing disagrees for the opposite reason: there is no observation that
+would differ.
+
+`Log` could not say whether what was written to it survived. An empty history
+and an unreachable one returned the same value, threw nothing, and were
+identical in every observable — so no test could have told them apart, and no
+amount of care in writing one would have helped. Not a false reason: an
+**unstateable** one.
+
+**Three of this week's defects lived there and presented identically.** An
+absent instrument pack, a pruned one, and a faulty measurement of an absent
+one all surfaced as "the synthesised voice is playing and nothing is wrong".
+[0046](0046-a-sampled-pack-is-fetched-on-use-not-precached.md) argued for that
+floor and did not notice it was also building a place for faults to hide.
+
+**The positive precedent is in the repository and was deliberate**, which is
+what makes this actionable rather than only cautionary. `ProgressStatus` is
+`'loading' | 'ready' | 'unavailable'` — three states because two would let a
+blocked store look exactly like a new profile, which
+[0006](0006-settings-in-localstorage-progress-in-indexeddb.md) foresaw and
+named.
+
+**The remedy is a different question from the ninth's**, and it is the more
+actionable of the two: ask what two different situations would *look* like,
+and notice when they look the same. The tell is that you cannot write the
+test — if you set out to assert the difference and find there is no expression
+for it, that is the finding, and the fix belongs in the type rather than in
+the suite.
 
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code

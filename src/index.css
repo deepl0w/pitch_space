@@ -578,6 +578,27 @@ button {
   border: 1px solid var(--accent-edge);
 }
 button:hover { filter: brightness(1.08); }
+/*
+ * What a press looks like, and what it must not look like.
+ *
+ * A phone paints its own translucent overlay on whatever was tapped, and
+ * that overlay is a **rectangle**: on the round Start button it flashed a
+ * blue square around the circle for a moment, which reads as the control
+ * being selected rather than pressed. Reported from a phone.
+ *
+ * Turned off rather than recoloured, because the highlight's shape is the
+ * problem and its colour is not adjustable to a circle. The press still
+ * shows — `:active` moves the control a pixel, which it already did and
+ * which follows whatever shape the button actually has — so this removes
+ * a second, wrong signal rather than the only one.
+ *
+ * Left on text inputs: there the highlight marks where a caret is about
+ * to land, which is information a press on a button does not need.
+ */
+button, a, summary, label, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
 button:active { transform: translateY(1px); }
 
 /*
@@ -1298,3 +1319,30 @@ select,
    The cog is fixed to the window's corner and the content column is
    centred and narrower than the pane, so nothing reaches it. Where a
    page's own heading is left-aligned it starts at the opposite edge. */
+
+/*
+ * A disclosure that reads as a quiet text control rather than as a heading.
+ *
+ * The marker is removed and replaced with one that follows the open state,
+ * because the native triangle sits outside the text box and would not line
+ * up with the rows above it. `list-style` on the summary is what WebKit
+ * honours; `::-webkit-details-marker` is what older Safari needs, and
+ * giving both costs two lines against a stray bullet on somebody's phone.
+ */
+.more > summary {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  cursor: pointer; width: fit-content;
+  color: var(--muted); font-size: 0.85rem;
+  padding: 0.35rem 0; margin-top: 0.25rem;
+  list-style: none;
+}
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary::before {
+  content: '\25b8'; display: inline-block;
+  transition: transform 120ms;
+}
+.more[open] > summary::before { transform: rotate(90deg); }
+.more > summary:hover { color: var(--ink); }
+.more > summary:focus-visible {
+  outline: 2px solid var(--accent-edge); outline-offset: 2px; border-radius: 4px;
+}

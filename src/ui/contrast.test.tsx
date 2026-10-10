@@ -373,6 +373,14 @@ describe('the focus ring on the circle of fifths', () => {
  * if the panel treatment changes, the floor moves with it, which is right,
  * because the floor is a statement about this palette's own scale.
  *
+ * **Checked against the instance rather than hoped at.** At `f3414f2` the
+ * light palette had `--accent: #b13837` and `--wrong: #a63634`, which is
+ * **0.024** apart, against a floor of **0.040** — so this would have caught
+ * the pair the user role reported, with room to spare. Worth knowing because
+ * a floor chosen for a good reason can still sit on the wrong side of the
+ * defect it was chosen for, and that is only answerable by measuring the
+ * defect.
+ *
  * The three tokens are named rather than derived, and the reason is the thing
  * that cannot be derived: these are the colours a reader reads *as a meaning*
  * — this is the thing, this was right, this was wrong. `--line`, `--muted`

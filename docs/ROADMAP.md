@@ -25,6 +25,7 @@ it ships or is dropped.
 - [Taking your progress with you](#taking-your-progress-with-you)
 - [Bringing your own material](#bringing-your-own-material)
 - [Instruments that play like themselves](#instruments-that-play-like-themselves)
+- [A wrong answer that points at a song you know](#a-wrong-answer-that-points-at-a-song-you-know)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 [`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
@@ -549,6 +550,80 @@ Three things will be the work, and none of them is the parsing:
   on a corpus that does not add up, which is right for data written by a
   contributor and wrong for data arriving from a file. An import needs to
   refuse an entry and say why, not take the app down.
+
+## A wrong answer that points at a song you know
+
+From the user:
+
+> a future feature i want is more helpful song recommendations for wrong
+> answers, the ones with "Think…" and they should link to a youtube video for
+> that song at the time where you can hear that note interval or chord
+> progression
+
+**What exists is twelve song titles and nothing else.** `INTERVAL_MNEMONICS`
+in `src/theory/interval.ts` maps a semitone distance to a tune — *Jaws*,
+*Somewhere Over the Rainbow* — and the interval exercise appends `Think …` to
+a wrong answer. Chords and progressions have nothing.
+
+### It is wrong today for descending intervals, which is worth fixing first
+
+The table is keyed on semitone distance alone and **every tune in it rises**.
+A learner who misses a *descending* major 6th is told *"Think My Bonnie"*,
+which ascends. The hint does not merely fail to help there; it points at the
+wrong contour, and contour is most of what the learner is being asked to hear.
+
+That is a defect in what ships, independent of this feature, and it is the
+strongest argument for the feature: the hints are not only sparse, they are
+sometimes false.
+
+### The links are the easy half; the claims are not
+
+Every entry this feature adds is a claim of the form *you can hear a minor 2nd
+at 0:42 in this recording*, and **nothing in the repository can check it**.
+That makes it the largest body of unverifiable claims the project would hold,
+arriving in the month a guard was built to make every internal citation
+checkable — which sharpens the contrast rather than excusing it.
+
+External references rot in ways a path does not. A video is deleted or made
+private; a re-upload lives at a different URL; a different edit shifts every
+timestamp in it; and the musical claim itself is a judgement no test can make.
+The suite sees none of that.
+
+[ADR 0011](adr/0011-what-a-catalogue-owes.md) is the record that governs this,
+and applying it gives the shape:
+
+- **Well-formedness** is checkable and should be: a timestamp parses, a URL is
+  a URL, every interval the exercise can ask has an entry.
+- **Stable ids** do not bite. A song reference never reaches an `Attempt`, so
+  by [0043](adr/0043-an-instrument-is-not-part-of-what-a-line-measures.md)'s
+  rule it owes stability only to convenience.
+- **Reachability** does: an entry for an interval or a progression no setting
+  can produce is dead weight, and the sweep that finds it is cheap.
+- **Claims asserted, or acknowledged as unassertable** is the whole difficulty.
+  These cannot be asserted. The obligation 0011 leaves is then the
+  acknowledgement itself — the catalogue has to say, in it, that its claims
+  are unchecked and how a reader would know one had gone bad.
+
+### The design that follows: the title is durable, the link is perishable
+
+**A hint must not depend on the network to be worth having.** The app is
+offline-first and a learner practising on a train is exactly who needs the
+hint. So the title is required and the link is optional, and a dead or absent
+link degrades to what ships today rather than to nothing.
+
+That also disposes of the obvious temptation: **link out, do not embed.**
+Embedding a player pulls third-party tracking into a local-first MIT practice
+tool, for a feature whose value is a learner tapping through perhaps once a
+session. A link costs nothing, breaks honestly, and leaves the bundle alone.
+
+### What it wants before building
+
+A decision on where the catalogue lives, because `theory/` is the wrong home
+and it is there now: a song reference is pedagogy, not a fact about music, and
+the directory holding it will grow to cover chords and progressions. And a
+decision on **what happens when a link is found dead** — silently dropping to
+the title is honest and invisible; saying so is honest and noisy. That is a
+product question and it is the user's.
 
 ## Instruments that play like themselves
 

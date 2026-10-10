@@ -74,3 +74,38 @@ rendering, for instance, which is a legitimate second context and not a
 second output. The guard counts `new Synth()` rather than contexts, so that
 case would pass it; this record is where the distinction should be argued if
 anyone needs one.
+
+## Correction, 12 October 2026 — this record quotes a document nobody can open
+
+The section above asserts a cause: *a planning document proposed an ADR 0005
+— one AudioContext, scheduled output, suppression windows instead of echo
+cancellation — and when records came to be written that number went to the
+seeds decision instead.* It gives that in quotation marks and states it
+flatly.
+
+**It is reported, not verified, and two sessions have now failed to find the
+document.** It came from main, in good faith and plausibly; this record's
+author searched the tracked tree for the quoted title and for ADR numbers
+across the repository, and a process session searched its own checkout
+including the git-ignored directories. Three hits between us, all ordinary
+citations. The quotation above is a quotation of a message, not of a plan.
+
+**What is verified and stands unchanged**: 0005 is *Seeds are minted outside
+the core* and contains `AudioContext` zero times; no record made the
+one-context claim before this one; `synth.ts` cites 0005 for it; and the
+constraint is real and guarded. None of that depends on why the number went
+wrong.
+
+**What is not**: that a planning document is the reason, what it said, and
+whether it still exists anywhere. If it is found, the Consequences section
+above can be settled; if it is not, the honest position is that the cause is
+unknown and the inherited-numbering story is the best available account
+rather than the established one.
+
+**The irony is the point and is cheaper to state than to leave for a reader
+to notice.** A record about a citation that resolves to the wrong real thing
+contains, two paragraphs later, a quotation sourced from a document nobody
+can open — written by the session that had spent the day cataloguing exactly
+that. The remedy this document arrived at was *verify a citation against what
+it points at, not against where you got it*, and the author applied it to
+0005 and not to the sentence explaining 0005.

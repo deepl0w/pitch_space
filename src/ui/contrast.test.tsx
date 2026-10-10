@@ -183,6 +183,27 @@ function resolve(value: string, theme: Map<string, string>): [number, number, nu
   if (mix) {
     return mixOklab(resolve(mix[1], theme), resolve(mix[3], theme), Number(mix[2]));
   }
+
+  /*
+    A relative colour, in the one shape the palette uses: the panels, which
+    are their ground with its lightness lifted and its hue and chroma kept.
+
+    Only `calc(l + N) c h` is understood, deliberately. A general
+    implementation of relative colour syntax would be a second browser in
+    the test suite, and what this has to resolve is one line of the
+    stylesheet. Anything else throws rather than guessing — a resolver that
+    silently returned the base colour would make a panel's contrast read as
+    its ground's and pass everything.
+  */
+  const relative = /^oklch\(\s*from\s+(.+?)\s+calc\(\s*l\s*\+\s*([\d.]+)\s*\)\s+c\s+h\s*\)$/
+    .exec(text);
+  if (relative) {
+    const [L, a, b] = toOklab(resolve(relative[1], theme));
+    return fromOklab([L + Number(relative[2]), a, b]);
+  }
+  if (/^oklch\(/.test(text)) {
+    throw new Error(`relative colour this resolver does not understand: ${text}`);
+  }
   return linearOf(text);
 }
 
@@ -224,9 +245,9 @@ describe('the focus ring on the circle of fifths', () => {
   it('computes what a browser measured', () => {
     const pairs: [keyof typeof THEMES, string, string, number][] = [
       ['light', '--ink', '--accent', 2.55],
-      ['dark', '--ink', '--accent', 4.50],
+      ['dark', '--ink', '--accent', 4.45],
       ['light', '--bg', '--accent', 4.76],
-      ['dark', '--bg', '--accent', 2.92],
+      ['dark', '--bg', '--accent', 3.05],
     ];
     for (const [theme, a, b, expected] of pairs) {
       const got = contrast(
@@ -241,7 +262,7 @@ describe('the focus ring on the circle of fifths', () => {
     // what the claim below depends on.
     const relative = resolve('color-mix(in oklab, var(--accent) 55%, var(--surface))', THEMES.dark);
     expect(contrast(resolve(token('--ink', THEMES.dark), THEMES.dark), relative))
-      .toBeCloseTo(6.28, 1);
+      .toBeCloseTo(7.67, 1);
   });
 
   it('clears the floor for an indicator on every wedge it can land on', () => {

@@ -1,131 +1,27 @@
+@import './palette.css';
+
+/*
+ * Everything that is not a colour. The palette is imported above and lives
+ * in `palette.css`, so it can be changed without reading any of this.
+ */
 :root {
   color-scheme: light dark;
   /*
-    **Three colours are chosen and the rest are computed from them.** The
-    page's ground, the accent, and — in the dark theme — its own ground.
-    Everything else is a mix stated in terms of those, so moving a
-    background moves the ink, the panels, the hairlines and the verdict
-    colours with it, in step and in the same hue family. Picking eight
-    colours by hand is how a palette drifts out of relation with itself.
-
-    Mixed in oklab, where a halfway mix looks halfway. The same mix in
-    sRGB goes muddy through the middle, which is exactly where a muted
-    text colour and a hairline live.
-
-    Floors held, and measured against what a browser resolves rather than
-    against the arithmetic here: text 4.5:1 (WCAG 1.4.3), a control's
-    boundary 3:1 (1.4.11). The figures are below each block.
-  */
-  --bg: #F0E2DB;
-  --accent: #b13837;
-
-  /* Ink is the ground taken almost to black, so it keeps the page's hue
-     rather than introducing a second one. */
-  --ink: color-mix(in oklab, var(--bg) 14%, #140b06);
-  /* A panel lifts off the page towards white rather than away from it. */
-  --surface: color-mix(in oklab, var(--bg) 62%, #ffffff);
-  --muted: color-mix(in oklab, var(--ink) 66%, var(--bg));
-  --line: color-mix(in oklab, var(--ink) 22%, var(--bg));
-  /*
-    What text takes on an accent-filled control, and the edge such a
-    control draws round itself. **The accent is one colour in both
-    themes**, which `color: var(--bg)` could not serve — a button legible
-    on a pale page was not on a dark one. Naming the pair that has to work
-    together is what makes the accent theme-independent.
-  */
-  --on-accent: color-mix(in oklab, var(--bg) 70%, #ffffff);
-  --accent-edge: var(--accent);
-  /*
-    Green and red, pulled towards the ground so they belong to it. They
-    stay green and red because a verdict may not be told by hue alone and
-    these are the two hues a learner already reads that way.
-  */
-  --right: color-mix(in oklab, #115c36 94%, var(--bg));
-  /*
-    Pulled away from the accent as well as off the ground. They were both
-    dark reds within twelve of each other in sRGB, so a wrong-answer
-    verdict and a filled button read as the same colour on one screen —
-    found from outside, and invisible to a contrast check, which only ever
-    compares a colour with what is behind it.
-  */
-  --wrong: color-mix(in oklab, #6d1109 92%, var(--bg));
-  --score-ink: var(--ink);
-  /* ink 11.98, muted 5.39 (6.08 on a panel), on-accent 4.76,
-     accent on page 4.76, right 5.02, wrong 5.19 */
-  /*
     How far the page's content stands off the window's edge.
 
-    Named so that anything which has to sit at that edge derives from
-    the same value rather than repeating a number that merely matches:
-    `main`'s padding uses it, and so does the fixed settings cog, which
-    is why the cog lines up with the text rather than approximately so.
+    Named so that anything which has to sit at that edge derives from the
+    same value rather than repeating a number that merely matches: `main`'s
+    padding uses it, and so does the fixed settings cog, which is why the
+    cog lines up with the text rather than approximately so.
 
-    Not `--gutter`, which it was briefly called and which means the
-    space *between* columns — `gap`'s job, not this one. A reader asked
-    what it was, which is the whole of the argument for the rename.
-
-    **One `rem`, not sixteen pixels.** It was written as `16px`, which
-    is a hardcoded copy of the browser's default text size and the only
-    pixel spacing in a file where every other margin and padding is in
-    `rem`. Two faults in one number: it duplicated a value the document
-    already has, and it ignored it — a reader who sets larger text got
-    bigger words crowded against the same narrow edge. Expressed in
-    `rem` it is not an independent choice at all, it is the page edge
-    standing off by the width the reader reads at.
+    **One `rem`, not sixteen pixels.** Written as `16px` it was a hardcoded
+    copy of the browser's default text size, and the only pixel spacing in
+    a file where every other margin is in `rem` — so a reader who sets
+    larger text got bigger words crowded against the same narrow edge. In
+    `rem` it is not an independent choice at all; it is the page edge
+    stated in terms of the thing the document already scales from.
   */
   --page-inset: 1rem;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-/*
- * The dark palette, twice, and the duplication is deliberate.
- *
- * The first block is the system default: dark when the reader's device says
- * dark, unless they have pinned light here. The second is the pin — a
- * reader who chooses Dark on a light machine, which the first block cannot
- * serve because it only exists inside the media query. Without it the theme
- * control set an attribute and changed no colour: live-looking and inert,
- * which is worse than not offering it.
- *
- * CSS has no way to give one declaration block two scopes, and
- * `light-dark()` would mean betting on a function this project has not
- * decided to require. So the values are written twice and
- * `src/ui/theme.test.ts` asserts the two lists are identical — the
- * duplication is checked rather than promised, because a comment saying
- * "keep these in step" is the kind of constraint that cannot fail.
- */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #241610;
-    --accent: #b13837;
-    --ink: color-mix(in oklab, var(--bg) 10%, #fff6ef);
-    --surface: color-mix(in oklab, var(--bg) 86%, #ffffff);
-    --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
-    --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
-    --on-accent: color-mix(in oklab, var(--bg) 8%, #fff6ef);
-    /* The fill is 2.9:1 against this ground — under what a boundary needs —
-       so the dark theme lightens the *edge* rather than the colour chosen. */
-    --accent-edge: color-mix(in oklab, var(--accent) 62%, var(--ink));
-    --right: color-mix(in oklab, #6fe0a6 94%, var(--bg));
-    --wrong: color-mix(in oklab, #ff9b86 94%, var(--bg));
-    --score-ink: var(--ink);
-  }
-}
-
-:root[data-theme="dark"] {
-  --bg: #241610;
-  --accent: #b13837;
-  --ink: color-mix(in oklab, var(--bg) 10%, #fff6ef);
-  --surface: color-mix(in oklab, var(--bg) 86%, #ffffff);
-  --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
-  --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
-  --on-accent: color-mix(in oklab, var(--bg) 8%, #fff6ef);
-  /* The fill is 2.9:1 against this ground — under what a boundary needs —
-     so the dark theme lightens the *edge* rather than the colour chosen. */
-  --accent-edge: color-mix(in oklab, var(--accent) 62%, var(--ink));
-  --right: color-mix(in oklab, #6fe0a6 94%, var(--bg));
-  --wrong: color-mix(in oklab, #ff9b86 94%, var(--bg));
-  --score-ink: var(--ink);
 }
 
 * { box-sizing: border-box; }

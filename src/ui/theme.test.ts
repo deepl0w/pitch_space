@@ -46,7 +46,7 @@ import { APP_RULES, customProperties, rulesFor } from '../testing/stylesheet';
  * any of these.
  */
 function isColour(value: string): boolean {
-  return /^(#|rgb|hsl|color\(|color-mix\(|var\()/i.test(value.trim());
+  return /^(#|rgb|hsl|oklch\(|oklab\(|color\(|color-mix\(|var\()/i.test(value.trim());
 }
 
 function paletteOf(selector: string): Map<string, string> {
@@ -188,6 +188,9 @@ describe('the dark palette', () => {
       */
       const alias = /^var\((--[\w-]+)\)$/.exec(value);
       if (alias && byChoice.get(name) === value) {
+        // An alias to something deliberately shared is shared too, and
+        // saying so here is cheaper than listing every alias of it.
+        if (SHARED_BY_CHOICE.has(alias[1])) continue;
         expect(byChoice.get(alias[1]), `${name} points at ${alias[1]}, which is the same in both`)
           .not.toBe(light.get(alias[1]));
         continue;

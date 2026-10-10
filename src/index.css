@@ -1,14 +1,39 @@
 :root {
   color-scheme: light dark;
-  --bg: #fbfaf8;
-  --surface: #ffffff;
-  --ink: #1a1a1a;
-  --muted: #6b6762;
-  --line: #e2ded8;
-  --accent: #7a4b2a;
-  --right: #2f7d4f;
-  --wrong: #b4442e;
-  --score-ink: #1a1a1a;
+  /*
+    Four colours the user chose, and the tones derived from them.
+
+      #362116  deep    #BF3B3B  red    #E89F7D  peach    #F0E2DB  cream
+
+    Anchors rather than a closed set — they said so when asked — so a role
+    that needs a colour none of them can serve gets one, and the rest are
+    mixes of the four. Light reads deep on cream; dark inverts it, and the
+    accent crosses over: red carries an action on a pale page and would be
+    a warning on a dark one, where the peach reads as the live thing.
+
+    **Every pair a reader has to resolve is measured, not judged.** Text is
+    held to 4.5:1 and a filled control to 3:1 against the page, which is
+    WCAG 1.4.3 and 1.4.11; the figures are in the comment beside each
+    block. Two of these moved because the first attempt failed: the red is
+    darkened from #BF3B3B, which gives cream text only 4.25, and the dark
+    muted is lighter than it looks right at, because it sits on a panel as
+    well as on the page and the panel is the closer of the two.
+  */
+  --bg: #F0E2DB;
+  --surface: #faf5f2;
+  --ink: #362116;
+  --muted: #6a574d;
+  --line: #cbbbb4;
+  --accent: #b13837;
+  /*
+    Green is the one role the palette cannot fill: it holds a red, and a
+    correct answer and a wrong one must not be two reds. Chosen to sit at
+    the palette's own weight rather than borrowed from the old scheme.
+  */
+  --right: #2e6b45;
+  --wrong: #a63634;
+  --score-ink: #362116;
+  /* ink 11.98, muted 5.39, cream-on-accent 4.76, right 5.02, wrong 5.19 */
   /*
     How far the page's content stands off the window's edge.
 
@@ -53,28 +78,30 @@
  */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #15140f;
-    --surface: #1e1c17;
-    --ink: #ece7df;
-    --muted: #9a938a;
-    --line: #322e27;
-    --accent: #d8a26a;
-    --right: #5fbf86;
-    --wrong: #e4745c;
-    --score-ink: #ece7df;
+    --bg: #362116;
+    --surface: #453026;
+    --ink: #F0E2DB;
+    --muted: #b1a098;
+    --line: #544036;
+    --accent: #E89F7D;
+    --right: #7fc49b;
+    --wrong: #d6725f;
+    --score-ink: #F0E2DB;
+    /* ink 11.98, muted 6.03 (4.90 on a panel), deep-on-accent 6.99,
+       right 7.41, wrong 4.64 */
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #15140f;
-  --surface: #1e1c17;
-  --ink: #ece7df;
-  --muted: #9a938a;
-  --line: #322e27;
-  --accent: #d8a26a;
-  --right: #5fbf86;
-  --wrong: #e4745c;
-  --score-ink: #ece7df;
+  --bg: #362116;
+  --surface: #453026;
+  --ink: #F0E2DB;
+  --muted: #b1a098;
+  --line: #544036;
+  --accent: #E89F7D;
+  --right: #7fc49b;
+  --wrong: #d6725f;
+  --score-ink: #F0E2DB;
 }
 
 * { box-sizing: border-box; }

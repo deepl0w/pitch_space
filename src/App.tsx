@@ -14,6 +14,7 @@ import { backFrom } from './ui/menu';
 import { appSynth, stopSound } from './ui/sound';
 import { useSettings } from './state/settingsStore';
 import { progressStore } from './state/progressStore';
+import { DebugColours } from './ui/components/DebugColours';
 
 /**
  * Routing, such as it is.
@@ -194,6 +195,13 @@ export default function App() {
         round would be discarded, and the reason to do the same
         elsewhere is that one control should do one thing.
       */}
+      {/*
+        A development-only colour workbench. `import.meta.env.DEV` is a
+        compile-time constant, so neither this nor the component survives a
+        production build — which is why it sits in the shell rather than
+        behind a setting: a setting would ship.
+      */}
+      {import.meta.env.DEV && <DebugColours />}
       {route !== 'settings' && !settingsOpen && (
         <button
           type="button"

@@ -490,6 +490,30 @@ export type Heard =
  */
 export interface AudioIn {
   listen(seconds: number): Promise<Heard>;
+  /**
+   * Keep listening until the exercise says it has enough, or until
+   * `limitSeconds`.
+   *
+   * **The exercise decides what "enough" is, because nothing below it
+   * can.** Two notes answer an interval; a run reaching the octave
+   * answers a scale; neither is a fact about a microphone. Handing the
+   * test down rather than the count keeps the capture layer ignorant of
+   * exercises, which is the whole point of this seam.
+   *
+   * `enough` is called repeatedly with everything heard so far, so it
+   * must be cheap and must not assume it is called once. It may be
+   * called with fewer notes than the last time it saw — the analysis
+   * runs over the whole take each poll and a reading can be revised.
+   *
+   * The limit is not a failure. A take that reaches it is still a take:
+   * a learner who played nothing has been heard playing nothing, which
+   * the exercise refuses, and that is a different outcome from a device
+   * that could not be opened.
+   */
+  listenUntil(
+    enough: (notes: readonly PlayedNote[]) => boolean,
+    limitSeconds: number,
+  ): Promise<Heard>;
 }
 
 export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> {
@@ -520,6 +544,15 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
    * nothing can test honestly.
    */
   audioIn: AudioIn;
+  /**
+   * How this learner has asked for played answers to be taken.
+   *
+   * Handed in rather than read, for the reason `audio` is: the exercise
+   * layer imports nothing from `state`, so a prompt reaching for the
+   * settings store would make the store its dependency and the prompt
+   * untestable. The screen owns the preference and passes it.
+   */
+  capture: CaptureStyle;
   /**
    * Set only when the definition sets `promptDrawsScores`; see
    * {@link PromptDrawnScores}.

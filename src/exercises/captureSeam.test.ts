@@ -4,6 +4,7 @@ import { mix, pluckedString, silence, startingAt } from '../audio/testing/signal
 import { freqOf } from '../theory/pitch';
 import { intervalPlayed } from './interval-id/intervals';
 import type { AudioIn, PlayedNote } from './types';
+import { alwaysHears } from './testing/audioIn';
 
 /**
  * The seam capture arrives through, checked before anything uses it.
@@ -64,9 +65,7 @@ function threeNotes(): Float32Array {
  * to one fails here rather than at a call site. The wrapper is one known
  * constant, visible in this line; adaptation would be the spread growing.
  */
-const microphone: AudioIn = {
-  listen: async () => ({ heard: true, ...analyse(threeNotes(), RATE) }),
-};
+const microphone: AudioIn = alwaysHears({ heard: true, ...analyse(threeNotes(), RATE) });
 
 /** The notes from a take that was heard, or a failure saying it was not. */
 async function notesFrom(audio: AudioIn): Promise<readonly PlayedNote[]> {
@@ -150,8 +149,8 @@ describe('what capture hands an exercise', () => {
  * empty take.
  */
 describe('a take that was not heard', () => {
-  const refused: AudioIn = { listen: async () => ({ heard: false, reason: 'refused' }) };
-  const silentRoom: AudioIn = { listen: async () => ({ heard: true, notes: [] }) };
+  const refused: AudioIn = alwaysHears({ heard: false, reason: 'refused' });
+  const silentRoom: AudioIn = alwaysHears({ heard: true, notes: [] });
 
   it('offers no notes to read, so it cannot be scored as a silent one', async () => {
     const take = await refused.listen(3);

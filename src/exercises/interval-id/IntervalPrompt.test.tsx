@@ -10,6 +10,7 @@ import {
 import type { AudioIn, AudioOut, Result } from '../types';
 import type { Voice } from '../../audio/output/synth';
 import { SIMPLE_INTERVAL_NAMES } from '../../theory/interval';
+import { alwaysHears, noMicrophone } from '../testing/audioIn';
 
 /**
  * The one part of an exercise type written by hand, and therefore the one
@@ -37,7 +38,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
  * exercise is entitled to grade, and a test that did not mean to supply an
  * answer would be supplying one. ADR 0047 is about keeping those two apart.
  */
-const deaf: AudioIn = { listen: async () => ({ heard: false, reason: 'unavailable' }) };
+const deaf: AudioIn = noMicrophone;
 
 function recordingAudio(): AudioOut & { plays: Voice[][] } {
   const plays: Voice[][] = [];
@@ -86,6 +87,7 @@ function render(
       onRespond={(r) => responses.push(r)}
       audio={audio}
       audioIn={audioIn}
+      capture="press"
     />
   );
   act(() => root.render(strict ? <StrictMode>{prompt}</StrictMode> : prompt));
@@ -327,7 +329,7 @@ describe('answering by playing', () => {
   );
   /** A microphone that hears exactly these notes. */
   const hearing = (...notes: { startSeconds: number; durationSeconds: number; frequencyHz: number | null }[]): AudioIn =>
-    ({ listen: async () => ({ heard: true, notes }) });
+    alwaysHears({ heard: true, notes });
 
   const playAnswer = () => [...container.querySelectorAll('.actions button')]
     .find((b) => /play your answer|listening/i.test(b.textContent ?? '')) as HTMLButtonElement;
@@ -365,7 +367,7 @@ describe('answering by playing', () => {
     ['refused', { heard: false as const, reason: 'refused' as const }],
     ['unavailable', { heard: false as const, reason: 'unavailable' as const }],
   ])('does not answer at all when the microphone was %s', async (_name, take) => {
-    render(exercise(), { audioIn: { listen: async () => take } });
+    render(exercise(), { audioIn: alwaysHears(take) });
     await answerByPlaying();
 
     expect(responses, 'a refusal was graded as an answer').toEqual([]);
@@ -414,7 +416,7 @@ describe('answering by playing', () => {
   });
 
   it('says what happened, so a silent refusal is not the only sign', async () => {
-    render(exercise(), { audioIn: { listen: async () => ({ heard: false, reason: 'refused' }) } });
+    render(exercise(), { audioIn: alwaysHears({ heard: false, reason: 'refused' }) });
     await answerByPlaying();
 
     expect(container.textContent).toMatch(/microphone/i);

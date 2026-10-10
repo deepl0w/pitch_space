@@ -7,6 +7,7 @@ import type { Voice } from '../audio/output/synth';
 import { PRESENTATION_LABELS } from './types';
 import type { AnyExerciseDefinition, Presentation } from './types';
 import { widestSettings } from '../testing/settingsSpace';
+import { noMicrophone } from './testing/audioIn';
 
 /**
  * The by-eye / by-ear axis, asked of every exercise rather than of one.
@@ -193,7 +194,8 @@ describe('every declared presentation gives the user something', () => {
             // This asks what each prompt *sounds* on mount. A microphone
             // reporting a silent room would be an answer, which is the one
             // thing that would change what is being measured here.
-            audioIn: { listen: async () => ({ heard: false as const, reason: 'unavailable' as const }) },
+            audioIn: noMicrophone,
+            capture: 'press' as const,
           })));
           const sounded = played.some((v) => v.length > 0);
           act(() => root.unmount());

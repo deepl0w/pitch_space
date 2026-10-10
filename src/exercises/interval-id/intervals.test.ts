@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  INTERVAL_DEFAULTS, INTERVAL_DIRECTIONS, INTERVAL_SLUGS, MAX_SEMITONES, WINDOW_CHOICES, generateInterval, gradeInterval, intervalItemId, intervalScoreNotes, intervalSettingsSchema, intervalVoices, pitchWindow, type IntervalDirection, type IntervalSettings,
+  INTERVAL_DEFAULTS, INTERVAL_DIRECTIONS, INTERVAL_SLUGS, MAX_SEMITONES, WINDOW_CHOICES, generateInterval, gradeInterval, intervalItemId, intervalPlayed, intervalScoreNotes, intervalSettingsSchema, intervalVoices, pitchWindow, type IntervalDirection, type IntervalSettings,
 } from './intervals';
 import { intervalBetween, intervalName, qualityOf } from '../../theory/interval';
 import { midiOf, pitchName } from '../../theory/pitch';
+import type { PlayedNote } from '../types';
 
 /**
  * Generation and grading are pure, so this is where the exercise's claims
@@ -478,5 +479,82 @@ describe('the choices a question was asked against', () => {
     */
     const settings = intervalSettingsSchema.coerce({ presentation: 'read', semitones: [0, 12] });
     expect(generateInterval({ seed: 5, settings }).choices).toEqual([0, 12]);
+  });
+});
+
+/**
+ * Reading an interval off what someone played.
+ *
+ * The arithmetic is one line and the care is all in what it refuses. Every
+ * case below where the answer is `null` is a case where the player has not
+ * answered — and the thing this must never do is hand back a number for one
+ * of those, because a number is graded, and a grade against an unanswered
+ * question resets a streak the player never got to keep (ADR 0047).
+ */
+describe('the interval someone played', () => {
+  const at = (frequencyHz: number | null, startSeconds = 0): PlayedNote => (
+    { startSeconds, durationSeconds: 0.5, frequencyHz }
+  );
+
+  it('is the distance between the first two notes with a pitch in them', () => {
+    // A4 to C#5 is four semitones however the two are spelled.
+    expect(intervalPlayed([at(440), at(554.365, 1)])).toBe(4);
+  });
+
+  it('is a distance, so playing it downwards answers the same interval', () => {
+    // The question asks about direction separately, and the buttons beside
+    // this path answer a distance; a sign here would be a second opinion.
+    expect(intervalPlayed([at(554.365), at(440, 1)])).toBe(4);
+  });
+
+  it.each([
+    ['a unison', 440, 440, 0],
+    ['a minor second', 440, 466.164, 1],
+    ['a tritone', 440, 622.254, 6],
+    ['an octave', 440, 880, 12],
+    ['a major ninth', 440, 987.767, 14],
+  ])('reads %s', (_name, from, to, semitones) => {
+    expect(intervalPlayed([at(from), at(to, 1)])).toBe(semitones);
+  });
+
+  it('does not fold a compound interval into the octave it fits inside', () => {
+    /*
+      Stated as its own case because the tempting version of this function
+      does fold, and folding would be wrong in the direction that teaches
+      the wrong thing: someone answering a major second by playing a major
+      ninth has played a different interval, and being told they were right
+      is worse than being told they were wrong.
+    */
+    expect(intervalPlayed([at(440), at(987.767, 1)])).not.toBe(2);
+  });
+
+  it('is tolerant of an instrument that is not quite in tune', () => {
+    // Thirty cents sharp is audible and is still the same interval. A
+    // player tuning up to the app would be a worse app.
+    expect(intervalPlayed([at(440), at(554.365 * 2 ** (0.3 / 12), 1)])).toBe(4);
+  });
+
+  it('steps over a note whose pitch could not be read', () => {
+    // A muted string or a fret buzz between the two real notes. Skipping it
+    // is what stops one scrape costing the answer.
+    expect(intervalPlayed([at(440), at(null, 0.5), at(554.365, 1)])).toBe(4);
+  });
+
+  it.each([
+    ['nothing at all', []],
+    ['one note', [at(440)]],
+    ['two notes, neither with a pitch', [at(null), at(null, 1)]],
+    ['two notes, only one with a pitch', [at(440), at(null, 1)]],
+  ])('refuses to read an interval from %s', (_name, notes) => {
+    expect(intervalPlayed(notes)).toBeNull();
+  });
+
+  it('refuses a frequency that cannot be a pitch', () => {
+    // Defensive rather than observed: a detector returning zero would
+    // otherwise come back as `Infinity` semitones, which grades wrong
+    // rather than refusing, and a wrong answer is the one outcome an
+    // unanswered question must not produce.
+    expect(intervalPlayed([at(0), at(440, 1)])).toBeNull();
+    expect(intervalPlayed([at(440), at(0, 1)])).toBeNull();
   });
 });

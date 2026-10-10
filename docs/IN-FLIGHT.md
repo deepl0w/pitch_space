@@ -60,7 +60,6 @@ explicitly not meant to hold. Move the field; that is the statement.
 - [`architect`, then everyone — progress is per settings combination](#architect-then-everyone--progress-is-per-settings-combination)
 - [`main`, then `architect` — recorded instruments are the aim, synthesis the floor](#main-then-architect--recorded-instruments-are-the-aim-synthesis-the-floor)
 - [`main` — answering by playing, starting with the seam](#main--answering-by-playing-starting-with-the-seam)
-- [`process` — the gate gives a verdict and keeps no evidence](#process--the-gate-gives-a-verdict-and-keeps-no-evidence)
 
 ### `architect`, then everyone — progress is per settings combination
 
@@ -315,12 +314,27 @@ user-facing copy may not state a cost nothing measured.
 
 ### `main` — answering by playing, starting with the seam
 
-**Branch:** `main`, under way. **Settled:** the shape, the subset
-property, and — as of
-[0047](adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)
-— that the seam reports *whether it heard* as well as what. **Not
-settled:** which exercise goes first, and how a screen explains a refusal
-to a reader. Neither blocks anyone.
+**Branch:** `main`, first exercise landed in `338e332`. **Settled:** the
+shape, the subset property, that the seam reports *whether it heard* as
+well as what
+([0047](adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)),
+that **interval identification went first**, and that a screen explains a
+refusal as an aside beside the choices which stay live. **Not settled:**
+which exercise is next, and whether a take that was heard but held nothing
+readable should ever be graded — it is not, today. Neither blocks anyone.
+
+**What landed.** `listenFor` in `audio/capture/listen.ts` (a take bounded
+by seconds, which `listen` cannot give because `start` resolves on
+*begun*, not on finished); `ui/microphone.ts` as the composition root's
+adapter, the only shipped file outside `audio/capture/` that knows a
+microphone exists; `audioIn: AudioIn` on `PromptProps`, threaded by
+`PracticeScreen` exactly as `audio` is; `intervalPlayed` in
+`interval-id/intervals.ts`, pure, which refuses rather than guessing; and
+the control in `IntervalPrompt`.
+
+**The home-screen lede test flipped on its own and was not edited**, which
+was the point of writing it that way. It went red the moment the adapter
+existed and green when the lede stopped calling playing unbuilt.
 
 **This entry got that wrong once, in the direction the file warns
 about.** It first called the subset property "the whole point", flatly,
@@ -374,44 +388,3 @@ flip, the wiring is not real.
 on the staff, and the latency correction G1 is about. The seam is useful
 without them and they are each their own decision.
 
-### `process` — the gate gives a verdict and keeps no evidence
-
-**Branch:** none yet. **For process**, whose file it is; written here
-because process was not running when this was found and a request nobody
-can deliver is a request that evaporates. Nothing waits on it.
-
-**What happened.** A `git commit` touching only this file was refused
-with `VERDICT: NOT GREEN`. Every run since has been green, including the
-same commit moments later. **There is no output to inspect, and not
-because anything was deleted.** `cmd_check` `eval`s `$SUITE`, which
-`.claude/fleet.conf` sets to `npm test`, so the suite's output goes
-straight to the hook's stdout — `test.sh`'s verbose log is real but the
-gate does not run `test.sh`. Traced by tester, confirmed here.
-
-**The ask, in tester's shape and four lines.** Pipe each `eval` through
-`tee` to a fixed path in the worktree, and on failure print *where the
-output went* beside the verdict rather than only the verdict. A fixed
-path so the next person finds it without being told; overwritten each
-run so it cannot accumulate. That turns a verdict into evidence, which
-is the whole difference between a data point and a story.
-
-**Four causes are already eliminated**, by architect, and are recorded
-here so nobody spends the greps again: no test draws unseeded randomness
-(both `Math.random` hits are in comments), no test reads a real clock
-(the one `Date.now()` hit is a comment explaining the clock is faked),
-nothing under `src/` writes a shared path, and the documented torn read
-of `fleet.sh` is excluded by timestamps — that file was last written
-forty hours before the refusal.
-
-**The standing hypothesis, which nobody should treat as a finding.**
-Seven test files now read the working tree and four of those scans
-landed the same day, so the suite is more sensitive than it was to the
-tree changing underneath it while other commands are in flight. **Do not
-soften those scans** — a tolerant filesystem guard is a guard that goes
-blind, which is the fault this project has spent two days on. If it
-recurs, the first question is which test failed and whether it walks the
-tree, and the log above is what answers it.
-
-**One sighting, no evidence.** This is an absence of a report rather
-than a report, and the failure mode worth guarding against is somebody
-reading it as a known flake and routing around the gate.

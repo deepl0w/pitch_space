@@ -23,7 +23,7 @@ export const intervalIdentification = defineExercise<
   // Exact: an item is a projection of a setting, so narrowing to one
   // is invertible rather than approximate. See ExerciseSpec.prefer.
   aims: 'exact',
-  description: 'Say how far apart two notes are, by ear or from the staff.',
+  description: 'Say how far apart two notes are, by ear or from the staff — or play it.',
   settings: intervalSettingsSchema,
   generate: generateInterval,
   items: intervalItems,

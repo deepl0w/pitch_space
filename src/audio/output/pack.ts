@@ -174,6 +174,29 @@ export function nearestRecorded(
 }
 
 /**
+ * How far a recording may be resampled and still sound like the instrument
+ * it came from: one octave.
+ *
+ * A limit on shifting, not on the pack. Every sampled instrument has notes it
+ * cannot play — a concert flute stops at middle C and a violin at the G below
+ * it — and a pack that stops where the instrument does is correct rather than
+ * short. What is wrong is answering a bass note with a flute recording
+ * dropped twenty semitones: the formants move with the pitch, so it is no
+ * longer a flute, and resampling that far turns a half-second sample into a
+ * slow dark growl the learner is then asked to identify.
+ *
+ * An octave because that is roughly where a shifted sample stops passing. The
+ * two semitones the note tables are spaced at are inaudible; a fifth is
+ * noticeable and still the instrument; beyond an octave it is not.
+ */
+export const FURTHEST_SHIFT = 12;
+
+/** Whether a pack has a recording close enough to sound this note honestly. */
+export function withinReach(notes: readonly PackNote[], midi: number): boolean {
+  return Math.abs(nearestRecorded(notes, midi).midi - midi) <= FURTHEST_SHIFT;
+}
+
+/**
  * How fast to play a recording to sound a different semitone.
  *
  * Computed rather than stored. Keeping it in the note table would be a

@@ -6,7 +6,7 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Community Sample Library — Upright Piano, Knight",
     "bytes": 404271,
-    "file": "piano-10c56f8f.pack",
+    "file": "piano-f97d3fe4.pack",
     "trim": 1.6806498845571072,
     "notes": 16
   },
@@ -28,7 +28,7 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Community Sample Library — Renaissance Organ, 8'",
     "bytes": 282838,
-    "file": "organ-c5cb3c77.pack",
+    "file": "organ-c37f7232.pack",
     "trim": 0.5351006708618191,
     "notes": 11
   },
@@ -39,7 +39,7 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Chamber Orchestra 2 CE — Violin Section, sustained",
     "bytes": 283198,
-    "file": "strings-f07173e9.pack",
+    "file": "strings-c0f8602f.pack",
     "trim": 2.291226471177376,
     "notes": 11
   },
@@ -61,7 +61,7 @@
     "licence": "CC0-1.0",
     "attribution": "Versilian Studios Chamber Orchestra 2 CE — Flute, sustained",
     "bytes": 258972,
-    "file": "flute-4c916fee.pack",
+    "file": "flute-ab3d00c3.pack",
     "trim": 2.4700377175496677,
     "notes": 10
   }

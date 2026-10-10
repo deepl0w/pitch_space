@@ -77,7 +77,7 @@ words:
 7. *A claim's altitude decides whether anything can falsify it* — a summary needs a mechanism its parts do not.
 8. *A claim about what the user wants* — the only kind nothing in the repository can contradict.
 9. *A guard must be able to fail* — a sound assertion over an empty or unlucky population is the usual way it cannot.
-10. *A reason attached to working code* — unfalsifiable because the code is right — and its dual, *a distinction the type cannot state*.
+10. *A reason attached to working code* — unfalsifiable because the code is right — and its dual, *a distinction the type cannot state*; with the one constructive move against both, *pin the behaviour that exists*.
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in
@@ -476,6 +476,40 @@ and notice when they look the same. The tell is that you cannot write the
 test — if you set out to assert the difference and find there is no expression
 for it, that is the finding, and the fix belongs in the type rather than in
 the suite.
+
+**There is one constructive move against both of the above, and it is the
+only one in this list: pin the behaviour that exists, with the open question
+named in the case.** The ninth and tenth describe claims nothing is positioned
+to contradict. Where the contradiction is a record and the code drifting
+apart, and resolving it is somebody else's call, the choice is not between
+fixing it and saying nothing.
+
+`completion` ignores the clock: `streak` falls on a wrong answer and never
+with elapsed time, so a line whose items all reach the top rung reads 1 for
+ever, including for a learner who stopped a year ago.
+[0040](0040-completion-replaces-the-score.md) says there is no done and argues
+a reading should drift back while nobody practises. Nothing drifts. What a
+learner should see after doing everything right and then stopping is a product
+question and open, so neither the architect nor the tester could answer it.
+
+`schedule.test.ts` now pins the drift-free behaviour and says in the case that
+**it pins the behaviour that exists, not the one that should**, citing the
+record. Simulating an answer — decaying the streak by a month's staleness —
+turns three cases red including that one.
+
+**What it buys is a reader that cannot forget.** Without the case, the day
+somebody answers the product question the change lands green and nobody
+rereads 0040. With it, the suite fails loudly and the failure message points at
+the record that has been waiting. That matters here specifically: this project
+has already had a user's ruling sit four days in a file synced into the
+worktree of the role named in it.
+
+**The counterintuitive part is that pinning behaviour you do not endorse looks
+exactly like endorsing it**, and only the comment separates them — which makes
+this the one place a comment is load-bearing rather than decorative. The fifth
+convention says a constraint worth a comment is worth a test and the comment
+should point at the test. This is that reversed: a test whose job is to point
+at a record.
 
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code

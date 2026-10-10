@@ -265,6 +265,16 @@ session's title at all. Renaming it is not a worktree session's call to
 make — it is not this checkout — so it is recorded here rather than acted
 on from one.
 
+**A working half exists until that rename happens.** `SendMessage`'s
+reservation blocks `to: "main"`, not a reply built from a message main
+already sent: copying the `from` address on an incoming cross-session
+message — the raw socket path, not the display name — reached main
+where the bare name refused, tried the same minute the refusal was
+confirmed. Main can still open a conversation nobody else can answer by
+name; whoever it writes to can answer back. Not a fix, since main still
+has to speak first, but worth using meanwhile rather than treating the
+address as dead in both directions.
+
 **`user` failed the same way the same day, and the cause is not this
 one.** `ListAgents` lists it with no `[ref]` at all, unlike every other
 role; `tools/sessions.sh` reports a socket; `SendMessage` to the bare name

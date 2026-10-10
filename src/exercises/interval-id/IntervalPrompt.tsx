@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { SIMPLE_INTERVAL_NAMES } from '../../theory/interval';
+import { SoundBox } from '../SoundBox';
 import { useCountdown } from '../countdown';
 import { namePlayed } from '../played';
 import type { PlayedNote, PromptProps } from '../types';
 import {
-  intervalPlayed, intervalVoices, readableNotes,
+  answerVoices, intervalPlayed, intervalVoices, readableNotes,
   type IntervalExercise, type IntervalResponse, type IntervalSettings,
 } from './intervals';
 
@@ -21,7 +22,7 @@ import {
  * three pieces of state that have to be cleared in step.
  */
 export function IntervalPrompt({
-  exercise, result, onRespond, audio, audioIn,
+  exercise, result, onRespond, audio, audioIn, capture, moveOn,
 }: PromptProps<IntervalSettings, IntervalExercise, IntervalResponse>) {
   const [chosen, setChosen] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
@@ -30,7 +31,12 @@ export function IntervalPrompt({
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
 
+  // Moved on every play, so the box's wave follows the sound rather than
+  // only its own button — a question sounds itself on Start.
+  const [playedAt, setPlayedAt] = useState(0);
+
   function play() {
+    setPlayedAt(Date.now());
     audio.play(intervalVoices(exercise));
     // Measured from the first hearing rather than the last. A user who needs
     // three listens has not answered quickly, and restarting the clock on
@@ -81,7 +87,24 @@ export function IntervalPrompt({
     setListening(true);
     setAside(null);
     try {
-      const take = await audioIn.listen(TAKE_SECONDS);
+      /*
+        Two ways to bound a take, and the exercise decides neither of them
+        alone. Pressing opens the microphone for a fixed window; keeping it
+        open ends the take the moment a second note arrives, which is the
+        learner's own words for what they wanted — *register a note played
+        and then take the next one as the interval group*.
+
+        `enough` is the only thing the capture layer is told about this
+        exercise, and it is a count rather than a judgement: whether those
+        two notes are a gradeable answer is `intervalPlayed`'s to say, and
+        it still says no to a take that arrives with three.
+      */
+      const take = capture === 'continuous'
+        ? await audioIn.listenUntil(
+          (notes) => readableNotes(notes).length >= 2,
+          OPEN_SECONDS,
+        )
+        : await audioIn.listen(TAKE_SECONDS);
       if (!take.heard) {
         setAside(REFUSALS[take.reason]);
         return;
@@ -105,8 +128,46 @@ export function IntervalPrompt({
 
   return (
     <div className="prompt">
+      {/*
+        After a wrong answer, the two intervals side by side.
+
+        Asked for in these words: *"for the listening exercises i want to be
+        able to play again also the wrong answer to compare between expected
+        and what i answered"*. Naming an interval you cannot hear is the
+        difficulty; being told the name of the one you missed does not teach
+        you its sound, and hearing them a second apart does.
+
+        Only when the answer was wrong, and only when it was heard rather
+        than read — there is nothing to compare when you got it right, and
+        a reading question was never about a sound.
+      */}
+      {answered && !result.correct && chosen !== null && !reading && (
+        <div className="actions compare">
+          <button type="button" onClick={() => audio.play(answerVoices(exercise, chosen))}>
+            Hear yours
+          </button>
+          <button type="button" onClick={play}>Hear the answer</button>
+        </div>
+      )}
+
+      {/*
+        The sound in a box, where a reading question puts its staff. The
+        two modes of one exercise looked like two screens otherwise — the
+        user's words were that the interface should be consistent between
+        listening and reading.
+      */}
+      {!reading && (
+        <SoundBox
+          voices={intervalVoices(exercise)}
+          onPlay={play}
+          onStop={() => { audio.stopAll(); }}
+          playedAt={playedAt}
+          label="Play it again"
+          note={PRESENTATION[exercise.direction]}
+        />
+      )}
+
       <div className="actions">
-        {!reading && <button type="button" onClick={play}>Play it again</button>}
         <button
           type="button"
           onClick={() => { void playAnswer(); }}
@@ -114,7 +175,7 @@ export function IntervalPrompt({
         >
           {listening ? `Listening… ${secondsLeft}s` : 'Play your answer'}
         </button>
-        <span className="secondary">{PRESENTATION[exercise.direction]}</span>
+        {reading && <span className="secondary">{PRESENTATION[exercise.direction]}</span>}
       </div>
 
       {aside && <p className="played-aside" role="status">{aside}</p>}
@@ -136,6 +197,7 @@ export function IntervalPrompt({
       {result && (
         <p className={result.correct ? 'verdict right' : 'verdict wrong'}>{result.feedback}</p>
       )}
+      <div className="actions">{moveOn}</div>
     </div>
   );
 }
@@ -151,6 +213,16 @@ export function IntervalPrompt({
  * would be felt as the app being slow rather than as being generous.
  */
 const TAKE_SECONDS = 4;
+
+/**
+ * How long a continuously-open microphone waits before giving up.
+ *
+ * Longer than a pressed take because nothing has said the learner is ready:
+ * they may still be finding the note. It is a ceiling rather than a wait —
+ * a take ends the moment two notes have arrived — so the cost of being
+ * generous is only paid by someone who played nothing at all.
+ */
+const OPEN_SECONDS = 20;
 
 /**
  * What to say when there was no take, by the only two reasons there are.

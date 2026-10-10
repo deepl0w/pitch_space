@@ -14,6 +14,7 @@ import { drawScore } from '../render/toVexflow';
 import type { AudioIn, AudioOut, Result } from '../types';
 import type { Voice } from '../../audio/output/synth';
 import type { ScoreLayout } from '../render/toVexflow';
+import { noMicrophone } from '../testing/audioIn';
 
 /**
  * The one prompt whose answer is a performance, and the one the screen
@@ -51,11 +52,11 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
  * exercise is entitled to grade, and a test that did not mean to supply an
  * answer would be supplying one. ADR 0047 is about keeping those two apart.
  */
-const deaf: AudioIn = { listen: async () => ({ heard: false, reason: 'unavailable' }) };
+const deaf: AudioIn = noMicrophone;
 
 function recordingAudio(): AudioOut & { plays: Voice[][] } {
   const plays: Voice[][] = [];
-  return { plays, play: (voices) => { plays.push([...voices]); } };
+  return { plays, play: (voices) => { plays.push([...voices]); }, stopAll: () => {} };
 }
 
 let container: HTMLDivElement;
@@ -99,6 +100,7 @@ function render(
       onRespond={(r) => responses.push(r)}
       audio={audio}
       audioIn={deaf}
+      capture="press"
     />
   );
   act(() => root.render(strict ? <StrictMode>{prompt}</StrictMode> : prompt));

@@ -89,6 +89,7 @@ function pitchesAsked(): Map<string, { midi: number[]; offersListening: boolean 
       const widen = round % 2 === 1;
       const audio: AudioOut = {
         play: (voices) => { for (const voice of voices) midi.push(voice.midi); },
+        stopAll: () => {},
       };
       const host = document.createElement('div');
       document.body.append(host);

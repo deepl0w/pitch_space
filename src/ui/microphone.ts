@@ -1,7 +1,7 @@
-import { listenFor } from '../audio/capture/listen';
+import { listenFor, listenUntil } from '../audio/capture/listen';
 import { MicrophoneSource } from '../audio/capture/microphone';
 import type { CaptureSource } from '../audio/capture/source';
-import type { AudioIn, Heard } from '../exercises/types';
+import type { AudioIn, Heard, PlayedNote } from '../exercises/types';
 
 /**
  * The app's microphone, as an exercise is allowed to see it.
@@ -50,7 +50,10 @@ export const LONGEST_TAKE_SECONDS = 30;
  * device — see above.
  */
 export function microphoneIn(options: MicrophoneInOptions = {}): AudioIn {
-  return { listen: (seconds: number) => take(options, seconds) };
+  return {
+    listen: (seconds: number) => take(options, seconds),
+    listenUntil: (enough, limitSeconds) => take(options, limitSeconds, enough),
+  };
 }
 
 export interface MicrophoneInOptions {
@@ -66,17 +69,33 @@ export interface MicrophoneInOptions {
    * often, which is the slow way of having no tests at all.
    */
   wait?: (seconds: number) => Promise<void>;
+  /** How often a continuous take is examined. Defaults to the capture layer's. */
+  pollSeconds?: number;
 }
 
 /** Opens a microphone, records for `seconds`, and reports what it heard. */
 export const appMicrophone: AudioIn = microphoneIn();
 
-async function take(options: MicrophoneInOptions, seconds: number): Promise<Heard> {
+async function take(
+  options: MicrophoneInOptions,
+  seconds: number,
+  enough?: (notes: readonly PlayedNote[]) => boolean,
+): Promise<Heard> {
   try {
     const source = (options.source ?? (() => new MicrophoneSource()))();
-    const result = await listenFor(source, Math.min(seconds, LONGEST_TAKE_SECONDS), {
-      wait: options.wait,
-    });
+    const bounded = Math.min(seconds, LONGEST_TAKE_SECONDS);
+    /*
+      One function for both takes, because everything around the take is
+      the same: opening a device, the ceiling on how long it may be held,
+      releasing it, and turning every failure into an outcome rather than
+      an exception. Only how it ends differs, and that is the one argument.
+    */
+    const result = enough === undefined
+      ? await listenFor(source, bounded, { wait: options.wait })
+      : await listenUntil(source, (heard) => enough(heard.notes), bounded, {
+        wait: options.wait,
+        pollSeconds: options.pollSeconds,
+      });
     /*
       Spread, not wrapped. `ListenResult` is a structural superset of what
       the `heard: true` arm carries, so the real result goes up unchanged

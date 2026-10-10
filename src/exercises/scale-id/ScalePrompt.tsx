@@ -8,6 +8,7 @@ import {
   DIRECTION_LABELS, scalePlayed, scaleVoices,
   type ScaleExercise, type ScaleResponse, type ScaleSettings,
 } from './scales';
+import { SoundBox } from '../SoundBox';
 
 /**
  * How long the microphone is open for a played scale.
@@ -19,6 +20,16 @@ import {
  * ends, so this is also how long the answer takes to come back.
  */
 const TAKE_SECONDS = 8;
+
+/**
+ * How long a continuously-open microphone waits for a scale.
+ *
+ * A ceiling rather than a wait: the take ends when a complete scale has
+ * been heard, so this is only reached by a learner who did not play one.
+ * Longer than the interval's because a scale is eight notes and somebody
+ * finding them on an unfamiliar instrument is not hurrying.
+ */
+const OPEN_SECONDS = 30;
 
 /** What to say when there was no take at all, by the two reasons there are. */
 const REFUSALS: Record<'refused' | 'unavailable', string> = {
@@ -35,7 +46,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
 }
 
 export function ScalePrompt({
-  exercise, result, onRespond, audio, audioIn,
+  exercise, result, onRespond, audio, audioIn, capture, moveOn,
 }: PromptProps<ScaleSettings, ScaleExercise, ScaleResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -45,7 +56,12 @@ export function ScalePrompt({
   const [aside, setAside] = useState<string | null>(null);
   const reading = exercise.presentation === 'read';
 
+  // Moved on every play, so the box's wave follows the sound rather than
+  // only its own button — a question sounds itself on Start.
+  const [playedAt, setPlayedAt] = useState(0);
+
   function play() {
+    setPlayedAt(Date.now());
     audio.play(scaleVoices(exercise));
     // From the first hearing, not the last: three listens is not a fast
     // answer, and restarting the clock would record that it was.
@@ -86,7 +102,20 @@ export function ScalePrompt({
     setListening(true);
     setAside(null);
     try {
-      const take = await audioIn.listen(TAKE_SECONDS);
+      /*
+        A continuous take ends when a whole scale has arrived, which is a
+        stronger test than the interval's count and a better one: the same
+        function that grades the answer decides there is one. So a learner
+        is answered the instant they land the octave rather than waiting
+        out a window, and a run still climbing is not mistaken for a
+        finished one.
+      */
+      const take = capture === 'continuous'
+        ? await audioIn.listenUntil(
+          (notes) => scalePlayed(notes, exercise.choices) !== null,
+          OPEN_SECONDS,
+        )
+        : await audioIn.listen(TAKE_SECONDS);
       if (!take.heard) {
         setAside(REFUSALS[take.reason]);
         return;
@@ -123,12 +152,14 @@ export function ScalePrompt({
       </p>
 
       {!reading && (
-        <div className="actions">
-          <button type="button" onClick={play}>Play it again</button>
-          <span className="secondary">
-            {DIRECTION_LABELS[exercise.direction].toLowerCase()}
-          </span>
-        </div>
+        <SoundBox
+          voices={scaleVoices(exercise)}
+          onPlay={play}
+          onStop={() => { audio.stopAll(); }}
+          playedAt={playedAt}
+          label="Play it again"
+          note={DIRECTION_LABELS[exercise.direction].toLowerCase()}
+        />
       )}
 
       <div className="actions">
@@ -163,6 +194,7 @@ export function ScalePrompt({
       {answered && (
         <p className={`verdict ${result.correct ? 'right' : 'wrong'}`}>{result.feedback}</p>
       )}
+      <div className="actions">{moveOn}</div>
     </div>
   );
 }

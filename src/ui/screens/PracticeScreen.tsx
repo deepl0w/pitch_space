@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
@@ -7,7 +8,7 @@ import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registr
 import { itemLabel } from '../../exercises/itemLabel';
 import { newAttemptId, newSeed } from '../../exercises/seed';
 import type {
-  AnyExerciseDefinition, AudioIn, AudioOut, ExerciseBase, ItemId, Result,
+  AnyExerciseDefinition, AudioIn, AudioOut, CaptureStyle, ExerciseBase, ItemId, Result,
 } from '../../exercises/types';
 import { appSynth } from '../sound';
 import { appMicrophone } from '../microphone';
@@ -117,6 +118,10 @@ export function PracticeScreen({
   audioIn?: AudioIn;
 }) {
   const lastExercise = useSettings((s) => s.doc.lastExercise);
+  // Subscribed rather than read once: a learner who changes how answers
+  // are taken while a round is open should have the next one taken that
+  // way, not the next session.
+  const capture = useSettings((s) => s.doc.appearance.capture);
   /**
    * The family the route names, and the member within it.
    *
@@ -225,6 +230,7 @@ export function PracticeScreen({
         definition={definition}
         audio={audio}
         audioIn={audioIn}
+        capture={capture}
         tally={tally}
         settings={settings}
       />
@@ -272,10 +278,11 @@ export function PracticeScreen({
  * needs — is discarded wholesale when the type changes, because this
  * component stops existing rather than being told to tidy up.
  */
-function ExerciseRound({ definition, audio, audioIn, tally, settings }: {
+function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }: {
   definition: AnyExerciseDefinition;
   audio: AudioOut;
   audioIn: AudioIn;
+  capture: CaptureStyle;
   tally: Map<TallyKey, ItemTally>;
   /** Coerced once by the screen, which also renders the panel that sets it. */
   settings: unknown;
@@ -319,12 +326,27 @@ function ExerciseRound({ definition, audio, audioIn, tally, settings }: {
     void progressStore.getState().record(attempt);
   }
 
+  /*
+    Before a question exists there is one thing to do, so it is the only
+    thing on the screen and it looks like it. Afterwards the same control
+    is a way past a question rather than the point of the screen, so it
+    goes into the prompt's own row of actions, at the end and quieter —
+    asked for in those terms.
+  */
+  const moveOn = (
+    <button
+      type="button"
+      className={round === null ? 'begin' : 'move-on'}
+      onClick={start}
+    >
+      {round === null ? 'Start' : round.result ? 'Next' : 'Skip'}
+    </button>
+  );
+
   return (
     <>
       <div className="actions">
-        <button type="button" onClick={start}>
-          {round === null ? 'Start' : round.result ? 'Next' : 'Skip to the next'}
-        </button>
+        {round === null && moveOn}
         {/*
           Always on the page, blank until there is a tally to put in it.
 
@@ -352,7 +374,7 @@ function ExerciseRound({ definition, audio, audioIn, tally, settings }: {
         The button stays where it is between states and the question
         centres in the room below it. Centring the whole body instead
         moved the button as content appeared under it — "Start" and
-        "Skip to the next" are the same control one press apart and
+        "Skip" are the same control one press apart and
         they landed in different places, which the user noticed before
         any of us did.
       */}
@@ -386,6 +408,8 @@ function ExerciseRound({ definition, audio, audioIn, tally, settings }: {
               onRespond={respond}
               audio={audio}
               audioIn={audioIn}
+              capture={capture}
+              moveOn={moveOn}
             />
           </ExerciseBoundary>
         )}
@@ -465,13 +489,17 @@ function ExerciseRound({ definition, audio, audioIn, tally, settings }: {
  * from a prompt — so computing them in the parent would put the most
  * likely throw above the thing meant to catch it.
  */
-function RoundView({ definition, round, settings, onRespond, audio, audioIn }: {
+function RoundView({
+  definition, round, settings, onRespond, audio, audioIn, capture, moveOn,
+}: {
   definition: AnyExerciseDefinition;
   round: Round;
   settings: unknown;
   onRespond: (response: unknown) => void;
   audio: AudioOut;
   audioIn: AudioIn;
+  capture: CaptureStyle;
+  moveOn: ReactNode;
 }) {
   /**
    * The question on the staff, for an exercise being read rather than heard.
@@ -498,6 +526,19 @@ function RoundView({ definition, round, settings, onRespond, audio, audioIn }: {
 
   return (
     <>
+      {/*
+        The staff above the prompt, where a listening question puts its
+        sound box — so the two modes of one exercise agree about where the
+        question is and where the answers are. Reported as the opposite:
+        "the listening box is above the answers, the reading one is below".
+
+        Before the prompt rather than inside it, because the prompt is the
+        exercise's own and the stave is the screen's. The exercises that do
+        want it inline set `promptDrawsScores` and get it as a prop; for
+        the rest this is the slot.
+      */}
+      {!definition.promptDrawsScores && questionScore && <Score spec={questionScore} />}
+      {!definition.promptDrawsScores && answerScore && <Score spec={answerScore} />}
       <Prompt
         // A fresh exercise is a fresh component: remounting is what clears
         // the prompt's own state without a reset path that has to be kept in
@@ -509,10 +550,10 @@ function RoundView({ definition, round, settings, onRespond, audio, audioIn }: {
         onRespond={onRespond}
         audio={audio}
         audioIn={audioIn}
+        capture={capture}
+        moveOn={moveOn}
         scores={definition.promptDrawsScores ? { questionScore, answerScore } : undefined}
       />
-      {!definition.promptDrawsScores && questionScore && <Score spec={questionScore} />}
-      {!definition.promptDrawsScores && answerScore && <Score spec={answerScore} />}
     </>
   );
 }

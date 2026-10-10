@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { Voice } from '../audio/output/synth';
 import type { ScoreSpec } from './render/toVexflow';
 import type { Key, Mode } from '../theory/key';
@@ -122,21 +122,67 @@ export const PRESENTATION_LABELS: Record<Presentation, string> = {
  * An exercise with a single presentation does not call this. A control
  * with one option cannot change the question, and this app has a rule
  * about those.
+ *
+ * **Which presentations are offered is the exercise's to say**, and the
+ * list it is given must be the same one the definition declares, which
+ * `registry.test.ts` holds rather than trusting. That was learned while a
+ * third mode briefly existed: a field hard-coding its own options offered
+ * one that two of the six exercises could not serve.
  */
-export function presentationField<S extends BaseSettings>(): SettingField<S> {
+export function presentationField<S extends BaseSettings>(
+  offered: readonly Presentation[],
+): SettingField<S> {
   return {
     kind: 'choice',
     id: 'presentation',
     label: 'Mode',
-    options: [
-      { id: 'listen', label: PRESENTATION_LABELS.listen },
-      { id: 'read', label: PRESENTATION_LABELS.read },
-    ],
+    options: offered.map((id) => ({ id, label: PRESENTATION_LABELS[id] })),
     selected: (settings) => settings.presentation,
     apply: (settings, option) => ({
-      ...settings, presentation: option === 'read' ? 'read' : 'listen',
+      ...settings,
+      // Narrowed against what this field actually offers, so a stored or
+      // stale value cannot put an exercise into a mode it cannot serve.
+      presentation: offered.includes(option as Presentation)
+        ? (option as Presentation)
+        : offered[0],
     }),
   };
+}
+
+/**
+ * How a played answer is taken, which is a preference rather than part of
+ * any question.
+ *
+ * **Press** opens the microphone when the learner asks, for a fixed take.
+ * **Continuous** leaves it open and reads an answer out of what arrives,
+ * which is what an instrument in your hands actually feels like — you play,
+ * rather than reaching for the screen first.
+ *
+ * Not part of a line's identity, by 0039's test: it changes how an answer
+ * is given and not which items the settings make askable, so a learner who
+ * switches keeps one history. Stored with the app's preferences beside the
+ * instrument rather than per exercise, for the same reason the instrument
+ * is — it is a fact about how this person plays, not about the question.
+ */
+export type CaptureStyle = 'press' | 'continuous';
+
+/**
+ * A stored presentation, narrowed to what this exercise can serve.
+ *
+ * Five exercises each wrote `raw.presentation === 'read' ? 'read' :
+ * 'listen'`, which was correct while there were two modes and silently
+ * wrong the moment there were three: a learner whose settings said
+ * `play` would have been put into Listening with no indication, and an
+ * exercise that cannot take a played answer would have accepted the
+ * value if the expression had merely been widened.
+ *
+ * Falling back to the first offered mode rather than to `listen`, since
+ * an exercise is not obliged to offer that either.
+ */
+export function coercePresentation(
+  raw: unknown, offered: readonly Presentation[],
+): Presentation {
+  return offered.find((mode) => mode === raw) ?? offered[0];
 }
 
 /**
@@ -358,6 +404,18 @@ export interface SettingsSchema<S> {
  */
 export interface AudioOut {
   play(voices: readonly Voice[]): void;
+  /**
+   * Cut whatever is sounding.
+   *
+   * Named as `Synth` names it, because the composition root hands the
+   * synth in directly and a different name here would need an adapter
+   * whose only job was renaming a method.
+   *
+   * Added when the play control became a stop control while sounding: a
+   * passage a learner has heard enough of should stop when they say so,
+   * and before this the only way to end one was to wait it out.
+   */
+  stopAll(): void;
 }
 
 /**
@@ -442,6 +500,30 @@ export type Heard =
  */
 export interface AudioIn {
   listen(seconds: number): Promise<Heard>;
+  /**
+   * Keep listening until the exercise says it has enough, or until
+   * `limitSeconds`.
+   *
+   * **The exercise decides what "enough" is, because nothing below it
+   * can.** Two notes answer an interval; a run reaching the octave
+   * answers a scale; neither is a fact about a microphone. Handing the
+   * test down rather than the count keeps the capture layer ignorant of
+   * exercises, which is the whole point of this seam.
+   *
+   * `enough` is called repeatedly with everything heard so far, so it
+   * must be cheap and must not assume it is called once. It may be
+   * called with fewer notes than the last time it saw — the analysis
+   * runs over the whole take each poll and a reading can be revised.
+   *
+   * The limit is not a failure. A take that reaches it is still a take:
+   * a learner who played nothing has been heard playing nothing, which
+   * the exercise refuses, and that is a different outcome from a device
+   * that could not be opened.
+   */
+  listenUntil(
+    enough: (notes: readonly PlayedNote[]) => boolean,
+    limitSeconds: number,
+  ): Promise<Heard>;
 }
 
 export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> {
@@ -472,6 +554,28 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
    * nothing can test honestly.
    */
   audioIn: AudioIn;
+  /**
+   * How this learner has asked for played answers to be taken.
+   *
+   * Handed in rather than read, for the reason `audio` is: the exercise
+   * layer imports nothing from `state`, so a prompt reaching for the
+   * settings store would make the store its dependency and the prompt
+   * untestable. The screen owns the preference and passes it.
+   */
+  capture: CaptureStyle;
+  /**
+   * The screen's own control for moving on, to be placed in the prompt's
+   * row of actions.
+   *
+   * **Handed down rather than rendered above, because a row is a row.** The
+   * learner asked for Skip to sit beside "Play your answer" and read as the
+   * quieter of the two; two sibling elements in different subtrees cannot
+   * share a line, however they are styled. The prompt owns its actions, so
+   * the screen passes its control in and the prompt decides where in the
+   * row it goes — which is also why this is a node and not a callback: the
+   * screen keeps the label, the wiring and the disabled state.
+   */
+  moveOn?: ReactNode;
   /**
    * Set only when the definition sets `promptDrawsScores`; see
    * {@link PromptDrawnScores}.

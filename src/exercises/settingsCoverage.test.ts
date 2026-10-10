@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { EXERCISE_TYPES } from './registry';
 import type { AnyExerciseDefinition } from './types';
 import { applyValue, valuesOf, widestSettings, type AnyField } from '../testing/settingsSpace';
+import { noMicrophone } from './testing/audioIn';
 
 /**
  * Every control does something, asked of every control there is.
@@ -85,11 +86,12 @@ function promptText(type: AnyExerciseDefinition, settings: unknown): string {
       settings,
       result: null,
       onRespond: () => {},
-      audio: { play: () => {} },
+      audio: { play: () => {}, stopAll: () => {} },
       // Not there rather than silent: this renders every exercise's prompt
       // to read its wording, and a microphone that reported a silent room
       // would be handing each of them an answer.
-      audioIn: { listen: async () => ({ heard: false as const, reason: 'unavailable' as const }) },
+      audioIn: noMicrophone,
+      capture: 'press' as const,
     })));
     return container.textContent ?? '';
   } catch (error) {

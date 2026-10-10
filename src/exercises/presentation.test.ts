@@ -4,8 +4,10 @@ import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_TYPES } from './registry';
 import type { Voice } from '../audio/output/synth';
+import { PRESENTATION_LABELS } from './types';
 import type { AnyExerciseDefinition, Presentation } from './types';
 import { widestSettings } from '../testing/settingsSpace';
+import { noMicrophone } from './testing/audioIn';
 
 /**
  * The by-eye / by-ear axis, asked of every exercise rather than of one.
@@ -15,7 +17,18 @@ import { widestSettings } from '../testing/settingsSpace';
  * does nothing on the next one.
  */
 
-const PRESENTATIONS: Presentation[] = ['read', 'listen'];
+/*
+  Derived from the labels rather than written out, because a second copy of
+  this list is a copy that goes stale: adding "Playing" left a hardcoded
+  pair here failing for the right reason and the wrong one — the exercises
+  were correct and the test's own idea of what exists was not. Every
+  presentation the UI knows how to name is a real one.
+
+  Not `STORED_PRESENTATIONS` in `state/schema.ts`, which is a different list
+  on purpose: that one is a compatibility commitment and may outlive a mode
+  the UI has dropped.
+*/
+const PRESENTATIONS = Object.keys(PRESENTATION_LABELS) as Presentation[];
 
 function withPresentation(d: AnyExerciseDefinition, presentation: Presentation) {
   return { ...d.settings.defaults, presentation };
@@ -167,7 +180,10 @@ describe('every declared presentation gives the user something', () => {
 
           const score = definition.questionScore?.(exercise) ?? null;
           const played: Voice[][] = [];
-          const audio = { play: (voices: readonly Voice[]) => { played.push([...voices]); } };
+          const audio = {
+            play: (voices: readonly Voice[]) => { played.push([...voices]); },
+            stopAll: () => {},
+          };
 
           const root = createRoot(document.createElement('div'));
           // `createElement` rather than JSX so this stays a .ts file, which
@@ -181,7 +197,8 @@ describe('every declared presentation gives the user something', () => {
             // This asks what each prompt *sounds* on mount. A microphone
             // reporting a silent room would be an answer, which is the one
             // thing that would change what is being measured here.
-            audioIn: { listen: async () => ({ heard: false as const, reason: 'unavailable' as const }) },
+            audioIn: noMicrophone,
+            capture: 'press' as const,
           })));
           const sounded = played.some((v) => v.length > 0);
           act(() => root.unmount());

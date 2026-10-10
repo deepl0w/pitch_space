@@ -9,7 +9,7 @@ import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
 import { steadyNotes } from '../played';
-import { presentationField } from '../types';
+import { coercePresentation, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
 } from '../types';
@@ -21,6 +21,9 @@ import type {
  * next door renders it and the screen records the result; the claims live
  * here, where a property test can reach them over ten thousand seeds.
  */
+
+/** The modes this exercise can serve, for its field and its coercion alike. */
+const INTERVAL_MODES = ['listen', 'read'] as const;
 
 export const INTERVAL_EXERCISE_ID = 'interval-id';
 
@@ -117,7 +120,7 @@ export const INTERVAL_DEFAULTS: IntervalSettings = {
 function coerceIntervalSettings(stored: unknown): IntervalSettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Partial<IntervalSettings>;
 
-  const presentation = raw.presentation === 'read' ? 'read' as const : 'listen' as const;
+  const presentation = coercePresentation(raw.presentation, INTERVAL_MODES);
 
   // Sorted and de-duplicated here rather than trusted, so a hand-edited or
   // older document cannot make the generator's candidate pool depend on the
@@ -149,7 +152,7 @@ export const intervalSettingsSchema: SettingsSchema<IntervalSettings> = {
   defaults: INTERVAL_DEFAULTS,
   coerce: coerceIntervalSettings,
   fields: [
-    presentationField(),
+    presentationField(INTERVAL_MODES),
     {
       kind: 'choice', id: 'window', label: 'Range',
       options: WINDOW_CHOICES.map((w) => ({ id: String(w), label: WINDOW_LABELS[w] })),
@@ -489,6 +492,35 @@ export function intervalVoices(exercise: IntervalExercise): Voice[] {
     return schedule([{ midis }], { eventGap: 0, rollGap: 0, hold: 2.2 });
   }
   return schedule(midis.map((midi) => ({ midis: [midi] })), {
+    eventGap: MELODIC_GAP, rollGap: 0, hold: 1.1,
+  });
+}
+
+/**
+ * The interval the learner answered, sounded from the same first note.
+ *
+ * **So a wrong answer can be heard against the right one**, which the
+ * learner asked for: *"I want to be able to play again also the wrong
+ * answer to compare between expected and what I answered."* Naming an
+ * interval you cannot yet hear is most of the difficulty, and being told
+ * the name of what you missed does not teach you the sound — hearing the
+ * two a second apart does.
+ *
+ * **From the same starting pitch, and in the same direction.** Those are
+ * what make it a comparison rather than two unrelated sounds: change the
+ * root and the ear has two variables to hold, which is the thing it was
+ * already failing at. Only the distance differs, which is the thing the
+ * learner got wrong.
+ */
+export function answerVoices(exercise: IntervalExercise, semitones: number): Voice[] {
+  const [from] = exercise.pitches.map(midiOf);
+  // Downwards for a descending question, so the contour matches too — a
+  // rising version of a falling interval is a different sound to compare.
+  const to = exercise.direction === 'down' ? from - semitones : from + semitones;
+  if (exercise.direction === 'harmonic') {
+    return schedule([{ midis: [from, to] }], { eventGap: 0, rollGap: 0, hold: 2.2 });
+  }
+  return schedule([{ midis: [from] }, { midis: [to] }], {
     eventGap: MELODIC_GAP, rollGap: 0, hold: 1.1,
   });
 }

@@ -7,7 +7,8 @@ import {
   SCALE_DEFAULTS, generateScale,
   type ScaleExercise, type ScaleResponse,
 } from './scales';
-import type { AudioIn, AudioOut, PlayedNote } from '../types';
+import type { AudioIn, AudioOut, Heard, PlayedNote } from '../types';
+import { alwaysHears } from '../testing/audioIn';
 
 /**
  * Answering a scale by playing it, and specifically the outcomes that are
@@ -26,20 +27,18 @@ declare global {
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-const silent: AudioOut = { play: () => {} };
+const silent: AudioOut = { play: () => {}, stopAll: () => {} };
 const RATE = 440;
 
 /** A sequence of semitone offsets, as a detector would report them. */
-const take = (...semitones: number[]): AudioIn => ({
-  listen: async () => ({
-    heard: true,
-    notes: semitones.map((semitone, i): PlayedNote => ({
-      startSeconds: i * 0.4,
-      durationSeconds: 0.35,
-      frequencyHz: RATE * 2 ** (semitone / 12),
-    })),
-  }),
-});
+const played = (semitones: readonly number[]): PlayedNote[] => semitones.map((semitone, i) => ({
+  startSeconds: i * 0.4,
+  durationSeconds: 0.35,
+  frequencyHz: RATE * 2 ** (semitone / 12),
+}));
+
+const take = (...semitones: number[]): AudioIn =>
+  alwaysHears({ heard: true, notes: played(semitones) });
 
 let container: HTMLDivElement;
 let root: Root;
@@ -75,6 +74,7 @@ function render(ex: ScaleExercise, audioIn: AudioIn) {
       onRespond={(r) => responses.push(r)}
       audio={silent}
       audioIn={audioIn}
+      capture="press"
     />,
   ));
 }
@@ -107,9 +107,11 @@ describe('answering a scale by playing it', () => {
    */
   it('says how much of the take is left while it listens', async () => {
     let resolve: (take: { heard: false; reason: 'unavailable' }) => void = () => {};
-    const slow: AudioIn = {
-      listen: () => new Promise((settle) => { resolve = settle; }),
-    };
+    // Written out rather than built from the helper, because what this
+    // case needs is a take that has not finished yet — the one thing a
+    // double answering immediately cannot provide.
+    const pending = new Promise<Heard>((settle) => { resolve = settle; });
+    const slow: AudioIn = { listen: () => pending, listenUntil: () => pending };
     render(exercise(), slow);
 
     await act(async () => { playAnswer().click(); });
@@ -133,7 +135,7 @@ describe('answering a scale by playing it', () => {
     ['refused', 'refused' as const],
     ['unavailable', 'unavailable' as const],
   ])('does not answer at all when the microphone was %s', async (_name, reason) => {
-    render(exercise(), { listen: async () => ({ heard: false, reason }) });
+    render(exercise(), alwaysHears({ heard: false, reason }));
     await answerByPlaying();
 
     expect(responses, 'a refusal was graded as an answer').toEqual([]);

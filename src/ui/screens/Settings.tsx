@@ -57,6 +57,11 @@ export function Settings({ go }: { go(route: string): void }) {
     settingsStore.getState().setAppearance({ theme });
   }
 
+  function setCapture(style: string) {
+    if (style !== 'press' && style !== 'continuous') return;
+    settingsStore.getState().setAppearance({ capture: style });
+  }
+
   function setInstrument(id: string) {
     settingsStore.getState().setAppearance({ instrument: id });
     // Stored and pushed, the same pair as the volume below: stored so it
@@ -155,6 +160,38 @@ export function Settings({ go }: { go(route: string): void }) {
             Measure it
           </button>
         </div>
+      </Panel>
+
+      <Panel>
+        <Field label="Answering by playing" group>
+          <OneOf
+            options={[
+              { id: 'press', label: 'Listen for a few seconds' },
+              { id: 'continuous', label: 'Stop when I have played' },
+            ]}
+            chosen={appearance.capture}
+            onChange={setCapture}
+          />
+          {/*
+            Named for what the learner experiences rather than for the
+            mechanism. Both open the microphone on a press; what differs
+            is when the take ends, and "continuous" and "fixed window"
+            are facts about the implementation.
+
+            The wording was about a Playing mode that no longer exists —
+            the user asked for one, then asked for it to be dropped in
+            favour of the button being available in both other modes. The
+            choice outlived the mode because it is still a real one.
+          */}
+          <p className="secondary">
+            {appearance.capture === 'press'
+              ? `After you press Play your answer, the microphone listens for a
+                 fixed few seconds and then reads what it heard.`
+              : `After you press Play your answer, the microphone stops as soon
+                 as you have played enough to answer, rather than waiting out
+                 the rest.`}
+          </p>
+        </Field>
       </Panel>
 
       <Panel>

@@ -1,4 +1,4 @@
-import type { ItemId, ItemOutcome, Presentation } from '../exercises/types';
+import type { CaptureStyle, ItemId, ItemOutcome, Presentation } from '../exercises/types';
 import { assertStepsCoverVersions, type MigrationStep, type Versioned } from './migrate';
 import { DEFAULT_INSTRUMENT_ID, isInstrumentId } from '../audio/output/instruments';
 
@@ -105,10 +105,26 @@ export interface AppearanceSettings {
    * not clip, and this scales it. One is that level and not full scale.
    */
   volume: number;
+  /**
+   * How a played answer is taken: on a press, or from a microphone left
+   * open.
+   *
+   * Here rather than in any exercise's settings, for the reason the
+   * instrument is here: it is a fact about how this person plays, not about
+   * the question being asked. It does not change what can be asked, so by
+   * ADR 0039 it is not part of a line's identity and a learner who switches
+   * keeps one history.
+   *
+   * `press` is the default, and deliberately the duller one. An open
+   * microphone is the better experience and the one more ways can go wrong
+   * — it has no press to say where an answer began — so it is chosen rather
+   * than arrived at.
+   */
+  capture: CaptureStyle;
 }
 
 export const APPEARANCE_DEFAULTS: AppearanceSettings = {
-  theme: 'system', volume: 1, instrument: DEFAULT_INSTRUMENT_ID,
+  theme: 'system', volume: 1, instrument: DEFAULT_INSTRUMENT_ID, capture: 'press',
 };
 
 /** Version 3 adds the preferences that are not about a particular exercise. */
@@ -211,7 +227,11 @@ function coerceAppearance(value: unknown): AppearanceSettings {
   */
   const instrument = isInstrumentId(a.instrument)
     ? a.instrument : APPEARANCE_DEFAULTS.instrument;
-  return { theme, volume, instrument };
+  // Repaired field by field like the rest: a document written before this
+  // existed has no key, reads as unknown, and takes the default.
+  const capture = a.capture === 'continuous' || a.capture === 'press'
+    ? a.capture : APPEARANCE_DEFAULTS.capture;
+  return { theme, volume, instrument, capture };
 }
 
 /**
@@ -422,6 +442,29 @@ function isOutcome(value: unknown): value is ItemOutcome {
 }
 
 /**
+ * Every presentation that may appear in a stored attempt.
+ *
+ * Deliberately its own list and not `PRESENTATION_LABELS`' keys: these are
+ * a compatibility commitment (ADR 0010) and the labels are not, so a mode
+ * removed from the UI must still load the history it produced. Adding to
+ * this is how a new mode becomes storable; removing from it is a migration.
+ */
+const STORED_PRESENTATIONS: readonly Presentation[] = ['read', 'listen'];
+
+/*
+  A predicate rather than a bare `includes`, so the check still narrows.
+
+  `includes` returns a boolean and leaves the field `Presentation |
+  undefined`, which the assignment below then needs a cast to accept — and a
+  cast there would make the check decorative: it would be the cast, not the
+  test, deciding what the field is. That is what the two comparisons this
+  replaced were quietly doing right.
+*/
+function isStoredPresentation(value: unknown): value is Presentation {
+  return STORED_PRESENTATIONS.includes(value as Presentation);
+}
+
+/**
  * Throws rather than repairing, unlike {@link coerceSettings}.
  *
  * This is the user's own history: a row that cannot be read is not a row
@@ -433,7 +476,16 @@ export function coerceAttempt(data: unknown): Attempt {
   const a = data as Partial<AttemptV3>;
   if (typeof a.id !== 'string' || a.id === '') throw new Error('Attempt has no id');
   if (typeof a.exerciseType !== 'string') throw new Error(`Attempt ${a.id} has no exercise type`);
-  if (a.presentation !== 'read' && a.presentation !== 'listen') {
+  /*
+    Checked against the list rather than against two names, because this is
+    the gate a *new* presentation has to pass. Written as two comparisons it
+    read as validation and behaved as an allow-list, so adding "Playing"
+    would have thrown on every attempt a learner recorded in it — a history
+    refused at load by the code that exists to preserve it. The migration
+    above is why that matters more here than elsewhere: a row this rejects
+    is not skipped, it stops the read.
+  */
+  if (!isStoredPresentation(a.presentation)) {
     throw new Error(`Attempt ${a.id} has no presentation`);
   }
   // `typeof` rather than `Number.isFinite` alone, which accepts the value but

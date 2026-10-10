@@ -18,7 +18,7 @@ import type { KeyExercise, KeyResponse, KeySettings } from './keys';
  * hear.
  */
 export function KeyPrompt({
-  exercise, result, onRespond,
+  exercise, result, onRespond, moveOn,
 }: PromptProps<KeySettings, KeyExercise, KeyResponse>) {
   const answered = result !== null;
 
@@ -47,6 +47,7 @@ export function KeyPrompt({
       {answered && (
         <p className={`verdict ${result.correct ? 'right' : 'wrong'}`}>{result.feedback}</p>
       )}
+      <div className="actions">{moveOn}</div>
     </div>
   );
 }

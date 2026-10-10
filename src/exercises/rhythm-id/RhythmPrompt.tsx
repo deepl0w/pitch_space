@@ -50,7 +50,7 @@ const TAP_KEYS = new Set([' ', 'Spacebar', 'Enter']);
 type Phase = 'ready' | 'hearing' | 'tapping' | 'done';
 
 export function RhythmPrompt({
-  exercise, result, onRespond, audio, scores,
+  exercise, result, onRespond, audio, scores, moveOn,
 }: PromptProps<RhythmSettings, RhythmExercise, RhythmResponse>) {
   const [phase, setPhase] = useState<Phase>('ready');
   const [taps, setTaps] = useState<number[]>([]);
@@ -326,6 +326,7 @@ export function RhythmPrompt({
       {answered && (
         <p className={`verdict ${result.correct ? 'right' : 'wrong'}`}>{result.feedback}</p>
       )}
+      <div className="actions">{moveOn}</div>
     </div>
   );
 }

@@ -50,8 +50,12 @@ export interface RecordedGain {
  * synthesised, and no count of oscillators alone can say so.
  */
 export interface RecordedSample {
-  /** The MIDI number of the recording that was played, from its buffer. */
-  midi: number;
+  /**
+   * The MIDI number of the recording that was played, from its buffer, or
+   * null for a buffer the engine made rather than decoded — the silence it
+   * warms the output stream with. `samples()` filters those out.
+   */
+  midi: number | null;
   /** The rate it was played at, which is how it reaches another semitone. */
   playbackRate: number;
   startedAt: number | null;
@@ -146,7 +150,22 @@ function makeOscillator() {
  * caller sets, because a fake has no decoder and the identity of the note
  * is the only property any assertion here is about.
  */
-interface FakeBuffer { midi: number; duration: number; sampleRate: number; length: number }
+/**
+ * `midi` is null for a buffer the engine made rather than decoded — the
+ * silence it warms the output with. A decoded buffer always knows which
+ * note it is, which is what makes "which voice sounded" assertable.
+ */
+interface FakeBuffer {
+  midi: number | null; duration: number; sampleRate: number; length: number;
+}
+
+/** Every buffer the engine asked this context to make, newest last. */
+const buffersMade: { channels: number; length: number; sampleRate: number }[] = [];
+
+/** What the engine allocated, for a test of the output warm-up. */
+export function buffersAllocated(): readonly { length: number; sampleRate: number }[] {
+  return buffersMade;
+}
 
 let nextDecodedMidi = 0;
 
@@ -178,7 +197,11 @@ function makeBufferSource() {
     get buffer() { return buffer; },
     set buffer(next: FakeBuffer | null) {
       buffer = next;
-      record.midi = next?.midi ?? -1;
+      // `null` is a buffer the engine made rather than decoded — the warm-up
+      // silence — and `-1` is a source that was never given one at all. The
+      // two are different states and only the first is filtered from
+      // `samples()`, so a source with no buffer still shows up as a fault.
+      record.midi = next === null ? -1 : next.midi;
     },
     playbackRate: {
       get value() { return record.playbackRate; },
@@ -206,11 +229,31 @@ class FakeAudioContext {
 
   get currentTime() { return clock; }
 
+  /*
+    A real rate, because the engine computes buffer lengths from it and a
+    missing one turns those into `NaN` — which allocates a zero-length
+    buffer and warms nothing, silently. 48 kHz is what Chrome reports on
+    the machines this was measured on.
+  */
+  readonly sampleRate = 48_000;
+
   createGain() { return makeGain(); }
 
   createOscillator() { return makeOscillator(); }
 
   createBufferSource() { return makeBufferSource(); }
+
+  /*
+    Empty rather than allocated: nothing reads these samples. The engine
+    uses it for one thing — a buffer of silence handed to the output so the
+    stream is carrying something before the first note needs it — and what
+    a test can check about that is that it was made and started, not what
+    was in it.
+  */
+  createBuffer(channels: number, length: number, sampleRate: number): FakeBuffer {
+    buffersMade.push({ channels, length, sampleRate });
+    return { midi: null, duration: length / sampleRate, sampleRate, length };
+  }
 
   /*
     No decoder: the bytes are not examined. What comes back identifies
@@ -258,6 +301,7 @@ export function resetAudio(): void {
   contexts = 0;
   startSuspended = false;
   resumeCost = 0;
+  buffersMade.length = 0;
 }
 
 /**
@@ -277,7 +321,23 @@ export function audioClock(): number {
   return clock;
 }
 
+/**
+ * The recorded notes that sounded — never the silence the engine warms the
+ * output with.
+ *
+ * That warm-up is a buffer source like any other and would be counted as a
+ * note by every case that asks what was played, which is most of them. It
+ * is told apart by having no `midi`: the engine *made* it rather than
+ * decoding it from a pack, and a decoded buffer always knows which note it
+ * is. Filtered here rather than in each case, because a test about the
+ * warm-up should be the only one that has to know it exists.
+ */
 export function samples(): RecordedSample[] {
+  return recording.samples.filter((sample) => sample.midi !== null);
+}
+
+/** Including the warm-up, for the one test that is about it. */
+export function allBufferSources(): RecordedSample[] {
   return recording.samples;
 }
 

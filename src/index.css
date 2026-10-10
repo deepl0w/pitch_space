@@ -1185,6 +1185,23 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    `.wedge-label-minor`'s `--muted`, which is worse again on that fill. */
 .wedge-label-on-fill, .wedge-label-on-fill tspan { fill: var(--bg); }
 
+/*
+ * A click leaves no ring at all.
+ *
+ * **`:focus-visible` was not enough, because a mouse click does not match
+ * it and still focuses the wedge.** Chrome then draws its own `auto` ring,
+ * which is two-tone — a white outer edge with a dark inner, so that it
+ * shows on any background — around the path's *bounding box*. On a thirty
+ * degree segment that box is mostly not the wedge, so clicking a key put a
+ * white square across the middle of the wheel. Reported as exactly that.
+ *
+ * Suppressed on `:focus` rather than only on `:focus-visible`, and nothing
+ * is lost by it: the rule below gives keyboard focus a stroke that follows
+ * the wedge's own shape, which is a better indicator than the square was
+ * and is the one a keyboard user actually gets.
+ */
+.wedge:focus { outline: none; }
+
 /* A focused wedge has to be visible on the wheel itself: the default
    outline is drawn round the path's bounding box, which for a thirty
    degree segment is a rectangle most of which is not the wedge. Drawn

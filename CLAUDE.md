@@ -209,6 +209,14 @@ the agents informed is main's job and it does not get delegated upwards —
 if the user has to carry a message, the protocol has failed, not succeeded
 by another route.
 
+**That rule is about relaying, and does not reach asking the user to act.**
+Carrying text from one session to another is plumbing; asking them to do a
+thing only they can do — rename a session they own, restart one whose
+directory is gone — is asking the actor to act, not handing them a wire.
+The distinction matters because the sentence above reads absolute enough
+to make the second look like the first, and hesitating over it would leave
+a known problem in place for the sake of a rule about something else.
+
 **Do not guess whether a role is there. Run `tools/sessions.sh`.**
 
 This is the project's first convention — when a mechanism exists to answer
@@ -237,12 +245,15 @@ running, socketed, and still unaddressable by name.** `SendMessage` reserves
 the literal string `main` for a background agent's own parent conversation,
 and that reservation wins over a cross-session peer that happens to be
 named `main` — before the `[ref]` a listing error suggests is ever
-consulted. Confirmed independently by three sessions, each re-reading
-`ListAgents` immediately before sending, all refused the same way whichever
-ref was tried. A socket is what every other role's addressability reduces
-to; main is the one role where that reduction is wrong, and `tools/
-sessions.sh` now says so explicitly rather than reading the socket and
-reporting addressable.
+consulted. Three sessions hit the same refusal, which is reproduction
+through one instrument and not by itself three witnesses — what actually
+isolates the cause is the contrast sitting beside it unremarked: messages
+to `tester` and to `architect`, from the same sessions, in the same
+sitting, went through. The failure tracks the reserved name, not the
+sender, the host, or main's session being otherwise unreachable. A socket
+is what every other role's addressability reduces to; main is the one
+role where that reduction is wrong, and `tools/sessions.sh` now says so
+explicitly rather than reading the socket and reporting addressable.
 
 **The fix is not a name this file controls.** The branch still says `main`,
 the role still says `main` — what needs to change is the session's own

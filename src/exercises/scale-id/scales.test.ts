@@ -329,6 +329,28 @@ describe('the scale someone played', () => {
     expect(scalePlayed(played(0, 2, 4, 5, 7, 9, 11, 12, 12), ALL)).toBe('major');
   });
 
+  /**
+   * The user's ruling, as the two cases it decides.
+   *
+   * *"If the whole octave is played correctly and then there's something
+   * else it should be accepted, otherwise a bad note during the scale
+   * degrees should be refused."* Both already held when it was given, which
+   * makes these an endorsement rather than a change — and worth pinning as
+   * the ruling rather than as a consequence, so that whoever revisits the
+   * run logic knows which behaviour was chosen and which merely fell out.
+   */
+  it('accepts a complete octave that something follows', () => {
+    expect(scalePlayed(played(0, 2, 4, 5, 7, 9, 11, 12, 4), ALL)).toBe('major');
+  });
+
+  it('refuses a wrong note inside the run, however it ends', () => {
+    // F sharp where F belongs: the run is still rising and still reaches
+    // the octave, but the pattern is Lydian's — so a learner is told what
+    // they played rather than what they meant, and a pattern matching no
+    // offered type is refused outright.
+    expect(scalePlayed(played(0, 2, 4, 6, 7, 9, 11, 12), ['major'])).toBeNull();
+  });
+
   it('refuses a re-struck note rather than guessing past it', () => {
     // The same refusal `intervalPlayed` makes, and for the same reason: two
     // attacks on one pitch do not say which was the answer.

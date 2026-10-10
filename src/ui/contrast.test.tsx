@@ -288,6 +288,40 @@ describe('the focus ring on the circle of fifths', () => {
     }
   });
 
+  /**
+   * And the shortfall is asserted as a shortfall, in both directions.
+   *
+   * The figure is already pinned above, so it cannot quietly get worse.
+   * What was only prose is that 3.05 is *under* a floor — and a cost
+   * recorded in a comment is the thing that has gone stale three times in
+   * this file alone.
+   *
+   * **Both sides, which is what stops a recorded cost becoming somewhere
+   * regressions hide.** A list that says "these may fail" swallows the next
+   * failure silently. This says the dark pair is below the text floor and
+   * the light pair is above it, so the day somebody buys the dark theme its
+   * contrast back, *this case fails* and the entry has to be removed on
+   * purpose. An exemption that stops being needed should be as loud as one
+   * that is violated — the same shape as excusing a method the fake does
+   * not answer, and failing when the fake grows it.
+   */
+  it('records which theme pays for that, and that the other does not', () => {
+    // WCAG 1.4.3 for ordinary text. Named here rather than inline because
+    // the claim is about a published floor rather than a number picked.
+    const TEXT_FLOOR = 4.5;
+    const onAccent = (theme: typeof THEMES.light) => contrast(
+      resolve(token('--on-accent', theme), theme),
+      resolve(token('--accent', theme), theme),
+    );
+
+    expect(onAccent(THEMES.light), 'the light theme has stopped clearing the text floor')
+      .toBeGreaterThanOrEqual(TEXT_FLOOR);
+    expect(onAccent(THEMES.dark),
+      'the dark theme now clears the text floor — delete this case rather than keeping a '
+      + 'cost the palette no longer pays')
+      .toBeLessThan(TEXT_FLOOR);
+  });
+
   it('clears the floor for an indicator on every wedge it can land on', () => {
     const failures: string[] = [];
     for (const [name, theme] of Object.entries(THEMES)) {

@@ -1183,7 +1183,8 @@ describe('ADR 0029 — the exercise layer reaches no further than the seam', () 
         if (!specifier.startsWith('.')) continue;
         const landed = landing(file, specifier);
         if (landed === null) {
-          if (!NOT_A_MODULE.test(specifier)) lost.push(`${show(file)} -> ${specifier}`);
+          const miss = unlanded(file, specifier);
+          if (miss !== null) lost.push(miss);
           continue;
         }
         if (seen.has(landed)) continue;
@@ -1192,6 +1193,20 @@ describe('ADR 0029 — the exercise layer reaches no further than the seam', () 
       }
     }
     return { seen, lost };
+  }
+
+  /**
+   * How a relative specifier that landed nowhere should be reported, if at all.
+   *
+   * Pulled out of the walk so it can be asserted rather than trusted. Left
+   * inline it was unfalsifiable: `lost` is empty on today's tree, so deleting
+   * the line that fills it changed no result — a guard whose population
+   * cannot contain the case it is about. Over a specifier it has a
+   * population, and the case below gives it one of each.
+   */
+  function unlanded(file: string, specifier: string): string | null {
+    if (NOT_A_MODULE.test(specifier)) return null;
+    return `${show(file)} -> ${specifier}`;
   }
 
   const roots = filesUnder(EXERCISES).filter((f) => !isTest(f));
@@ -1247,6 +1262,19 @@ describe('ADR 0029 — the exercise layer reaches no further than the seam', () 
       this walk reads, so a genuine miss cannot hide among them.
     */
     expect(lost, 'a relative import was followed to nothing').toEqual([]);
+
+    /*
+      And that an empty `lost` is a finding rather than a broken reporter.
+      One specifier of each kind: a module that is not there, which has to be
+      named, and the two real files this walk does not read, which must not
+      be.
+    */
+    const microphone = join(SRC, 'audio', 'capture', 'microphone.ts');
+    expect(unlanded(microphone, './nothing-is-here'), 'a missing module went unreported')
+      .not.toBeNull();
+    expect(unlanded(microphone, './capture.worklet.ts?worker&url'), 'the worklet url').toBeNull();
+    expect(unlanded(join(SRC, 'audio', 'output', 'sampled.ts'), './packs.json'), 'a data file')
+      .toBeNull();
 
     /*
       The one shape `lost` cannot speak for, because the only file writing it

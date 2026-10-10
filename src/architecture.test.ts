@@ -1,6 +1,9 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { CHORD_TYPES } from './theory/chord';
+import { SCALE_TYPES } from './theory/scale';
+import { EXERCISE_FAMILIES } from './exercises/registry';
 
 /**
  * The boundaries from docs/adr/, asked of the repository.
@@ -663,6 +666,48 @@ describe("the home screen's claim about how exercises are answered", () => {
     } else {
       expect(claimsCaptureUnbuilt(section), 'capture is unwired and the README does not say so')
         .toBe(true);
+    }
+  });
+
+  /**
+   * The counts the README quotes are the catalogues' own.
+   *
+   * "from twenty-four", "from twenty types", "six kinds of practice" — each
+   * is a fact about an array that anybody may add to, written in prose that
+   * nothing recomputes. None has rotted yet; the microphone entry above
+   * shows what happens when one does, and these are the same shape with a
+   * cheaper mechanism available.
+   *
+   * The numbers come from the code and the claims are found by phrase, so
+   * this cannot drift into a second copy of the figures. A phrase that
+   * stops appearing fails rather than passing, because a claim nobody can
+   * locate any more is exactly the state this is meant to catch.
+   */
+  const WORDS: Record<string, number> = {
+    four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    twelve: 12, fifteen: 15, sixteen: 16, eighteen: 18, twenty: 20,
+    'twenty-four': 24, 'twenty-one': 21, thirty: 30,
+  };
+
+  it('quotes the catalogues at the sizes they are', () => {
+    const readme = readFileSync(README, 'utf8').replace(/\s+/g, ' ');
+    const claims: [string, RegExp, number][] = [
+      ["a chord's qualities", /quality, from ([\w-]+),/i, CHORD_TYPES.length],
+      ['the scale types', /a scale, from ([\w-]+) types/i, SCALE_TYPES.length],
+      ['the kinds of practice', /([\w-]+) kinds of practice/i, EXERCISE_FAMILIES.length],
+    ];
+
+    for (const [what, pattern, actual] of claims) {
+      const match = pattern.exec(readme);
+      expect(match, `the README no longer states ${what} where this looks for it`)
+        .not.toBeNull();
+      const word = match![1].toLowerCase();
+      // Loudly, rather than skipping: a number this cannot read is a claim
+      // going unchecked, which is the thing being guarded against.
+      expect(WORDS, `the README writes ${what} as "${word}", which this cannot read`)
+        .toHaveProperty(word);
+      expect(WORDS[word], `the README says ${word} ${what}; there are ${actual}`)
+        .toBe(actual);
     }
   });
 

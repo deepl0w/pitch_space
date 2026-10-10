@@ -577,7 +577,12 @@ reproduce exactly.
   `NEW_NOTE_RISE` in `src/audio/capture/listen.ts` now points at
   `captureSeam.test.ts` instead of restating a number. Full account in
   [0047](docs/adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)'s
-  11 October correction.
+  11 October correction. **This entry itself first cited the wrong
+  constant** — `MERGE_CENTS`, thirty-four lines above and the other real
+  half of the same merge predicate, not a name that fails on sight. A
+  wrong citation that lands on a plausible neighbour passes inspection;
+  the reader has no reason to doubt it, which is the sharper failure and
+  the reason this is worth the sentence.
 - **Say a thing in one place.** Where this file, `.claude/fleet.conf`, a
   README and the fleet skill all explained the roles, the copies drifted —
   this file said "the three roles" over a table of four for two days. Put the

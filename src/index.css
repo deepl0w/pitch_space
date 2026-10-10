@@ -74,6 +74,14 @@ main {
     gap: 0;
     align-items: stretch;
   }
+  /*
+    Placed rather than ordered. The sidebar is second in the document so
+    that a single column opens on the exercise's title instead of on its
+    controls; here it is put back on the left by naming its track, which
+    costs nothing and leaves the reading order alone.
+  */
+  main.shell .practice-settings { grid-column: 1; grid-row: 1; }
+  main.shell .practice-main { grid-column: 2; grid-row: 1; }
   .practice-settings {
     /* `min-height: 0` is what lets a grid child scroll instead of
        stretching its track: without it the panel's content sets the row
@@ -240,11 +248,29 @@ main .practice-main .actions > .secondary {
   padding-block: 3.5rem 1rem;
 }
 
+/*
+ * A circle, asked for in those terms.
+ *
+ * Its diameter is named once and the type size is derived from it rather
+ * than chosen beside it, because the two have to stay in relation: a word
+ * set independently of the circle it sits in is a word that will one day
+ * touch the edge. At 0.21 of the diameter, "Start" takes a little over
+ * half the width, which leaves the ring reading as a ring rather than as
+ * a border around a label.
+ *
+ * `place-items` rather than padding: padding centres text only while the
+ * four sides agree, and a round button has no sides to agree.
+ */
 main .practice-main .actions > button.begin,
 .opening > button.begin {
-  font-size: 1.6rem; font-weight: 650;
-  padding: 1.1rem 3.2rem; border-radius: 12px;
-  margin-block: 0;
+  --begin-size: 8rem;
+  inline-size: var(--begin-size);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  padding: 0; margin-block: 0;
+  font-size: calc(var(--begin-size) * 0.21); font-weight: 650;
+  line-height: 1;
 }
 
 /*
@@ -481,6 +507,20 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   background: var(--accent);
   animation: sound-bar 0.9s ease-in-out infinite;
 }
+/*
+ * Once the real signal is being drawn, the keyframe has to get out of its
+ * way — an animation on `height` and a `scaleY` set per frame would
+ * otherwise both be live and the row would pulse under the picture.
+ *
+ * `transform-origin` at the centre so a bar grows both ways from its
+ * resting line, which is what reads as a waveform rather than as a bar
+ * chart standing on the floor.
+ */
+.sound-drawn .sound-wave > span {
+  animation: none;
+  transform-origin: center;
+  transition: transform 60ms linear;
+}
 @keyframes sound-bar {
   0%, 100% { height: 6px; }
   50% { height: 40px; }
@@ -552,6 +592,27 @@ button {
   border: 1px solid var(--accent-edge);
 }
 button:hover { filter: brightness(1.08); }
+/*
+ * What a press looks like, and what it must not look like.
+ *
+ * A phone paints its own translucent overlay on whatever was tapped, and
+ * that overlay is a **rectangle**: on the round Start button it flashed a
+ * blue square around the circle for a moment, which reads as the control
+ * being selected rather than pressed. Reported from a phone.
+ *
+ * Turned off rather than recoloured, because the highlight's shape is the
+ * problem and its colour is not adjustable to a circle. The press still
+ * shows — `:active` moves the control a pixel, which it already did and
+ * which follows whatever shape the button actually has — so this removes
+ * a second, wrong signal rather than the only one.
+ *
+ * Left on text inputs: there the highlight marks where a caret is about
+ * to land, which is information a press on a button does not need.
+ */
+button, a, summary, label, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
 button:active { transform: translateY(1px); }
 
 /*
@@ -1272,3 +1333,30 @@ select,
    The cog is fixed to the window's corner and the content column is
    centred and narrower than the pane, so nothing reaches it. Where a
    page's own heading is left-aligned it starts at the opposite edge. */
+
+/*
+ * A disclosure that reads as a quiet text control rather than as a heading.
+ *
+ * The marker is removed and replaced with one that follows the open state,
+ * because the native triangle sits outside the text box and would not line
+ * up with the rows above it. `list-style` on the summary is what WebKit
+ * honours; `::-webkit-details-marker` is what older Safari needs, and
+ * giving both costs two lines against a stray bullet on somebody's phone.
+ */
+.more > summary {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  cursor: pointer; width: fit-content;
+  color: var(--muted); font-size: 0.85rem;
+  padding: 0.35rem 0; margin-top: 0.25rem;
+  list-style: none;
+}
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary::before {
+  content: '\25b8'; display: inline-block;
+  transition: transform 120ms;
+}
+.more[open] > summary::before { transform: rotate(90deg); }
+.more > summary:hover { color: var(--ink); }
+.more > summary:focus-visible {
+  outline: 2px solid var(--accent-edge); outline-offset: 2px; border-radius: 4px;
+}

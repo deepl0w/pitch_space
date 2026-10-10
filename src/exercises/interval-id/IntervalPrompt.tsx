@@ -162,6 +162,7 @@ export function IntervalPrompt({
           onPlay={play}
           onStop={() => { audio.stopAll(); }}
           playedAt={playedAt}
+          spectrum={audio.spectrum?.bind(audio)}
           label="Play it again"
           note={PRESENTATION[exercise.direction]}
         />

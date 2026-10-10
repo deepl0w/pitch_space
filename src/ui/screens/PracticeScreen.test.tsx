@@ -118,7 +118,21 @@ function mount(from: string) {
      * question instead of answering it.
      */
     answer: () => {
-      for (const option of buttons().reverse().filter((b) => !b.classList.contains('move-on'))) {
+      /*
+        The question's own controls, not the settings panel's.
+
+        This reversed every button in the container, which only reached
+        the answers first because the sidebar happened to come earlier in
+        the document. The sidebar now comes after the main column — so a
+        single column opens on the exercise's title rather than on its
+        controls — and reversing then clicked settings chips until the
+        loop gave up. Scoped instead of re-reversed, because which half of
+        the screen a control belongs to is the thing meant here, and
+        source order is not a property this should be reading at all.
+      */
+      const asked = container.querySelector('.practice-main') ?? container;
+      const offered = [...asked.querySelectorAll('button')].reverse();
+      for (const option of offered.filter((b) => !b.classList.contains('move-on'))) {
         act(() => option.click());
         if ((container.textContent ?? '').includes('this session')) return true;
       }

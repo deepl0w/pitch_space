@@ -159,6 +159,40 @@ interface FakeBuffer {
   midi: number | null; duration: number; sampleRate: number; length: number;
 }
 
+/**
+ * What the next `getByteFrequencyData` will report, per band.
+ *
+ * A fake has no spectrum to compute, and what a test about the visualiser
+ * needs is that the levels the output reports are the levels that reach the
+ * drawing — so the levels are set rather than synthesised, the same
+ * reasoning as `decodeAs`.
+ */
+let bands: number[] = [];
+
+export function spectrumReads(levels: readonly number[]): void {
+  bands = [...levels];
+}
+
+/** How many times anything asked the analyser for a frame. */
+let framesRead = 0;
+
+export function spectrumFramesRead(): number {
+  return framesRead;
+}
+
+function makeAnalyser() {
+  return {
+    fftSize: 2048,
+    smoothingTimeConstant: 0,
+    get frequencyBinCount() { return this.fftSize / 2; },
+    connect: <T>(destination: T) => destination,
+    getByteFrequencyData(into: Uint8Array) {
+      framesRead += 1;
+      for (let i = 0; i < into.length; i += 1) into[i] = bands[i] ?? 0;
+    },
+  };
+}
+
 /** Every buffer the engine asked this context to make, newest last. */
 const buffersMade: { channels: number; length: number; sampleRate: number }[] = [];
 
@@ -244,6 +278,14 @@ class FakeAudioContext {
   createBufferSource() { return makeBufferSource(); }
 
   /*
+    Real enough to be wired: the engine sets `fftSize` and reads
+    `frequencyBinCount` off it, and connects it between the master and the
+    destination. A stub returning `{}` would let every one of those pass
+    and still leave the chain broken.
+  */
+  createAnalyser() { return makeAnalyser(); }
+
+  /*
     Empty rather than allocated: nothing reads these samples. The engine
     uses it for one thing — a buffer of silence handed to the output so the
     stream is carrying something before the first note needs it — and what
@@ -294,6 +336,8 @@ export function installAudioContext(): void {
 }
 
 export function resetAudio(): void {
+  bands = [];
+  framesRead = 0;
   decodeQueue = [];
   nextDecodedMidi = 0;
   recording = fresh();

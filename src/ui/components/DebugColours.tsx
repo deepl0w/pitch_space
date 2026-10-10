@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { settingsStore, useSettings } from '../../state/settingsStore';
 
 /**
@@ -95,11 +95,6 @@ function readKept(): Kept {
     // cannot remember is still a workbench.
     return NOTHING;
   }
-}
-
-/** The subset of a record named by `keys`. */
-function pick(from: Record<string, string>, keys: readonly string[]): Record<string, string> {
-  return Object.fromEntries(keys.map((key) => [key, from[key]]));
 }
 
 /** The same record without one key. */
@@ -205,7 +200,27 @@ export function DebugColours() {
   const theme = useSettings((s) => s.doc.appearance.theme);
   const [tokens, setTokens] = useState<readonly string[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
+  /**
+   * Text that is being typed and is not yet a colour, for one field.
+   *
+   * **This used to hold every token, and that is why the panel went
+   * stale.** Each re-read merged the fresh values *under* everything
+   * already in here — and since the first read put all nine tokens in,
+   * the merge preserved the old list entirely and nothing ever updated
+   * again. Three separate reports came out of that one line: the fields
+   * showed the other theme's colours after switching, editing a ground
+   * left every derived token showing its old value until a hard reload,
+   * and Reset looked like it had done nothing.
+   *
+   * A field only needs to keep what the reader is part-way through
+   * typing, which is at most one field and only while it has the cursor.
+   * Everything else follows the page, which is the whole point of a panel
+   * that reports what is painted.
+   */
   const [typed, setTyped] = useState<Record<string, string>>({});
+
+  /** Which field has the cursor, so its half-typed text is not thrown away. */
+  const editing = useRef<string | null>(null);
   const [tuning, setTuning] = useState<string | null>(null);
   /*
     The numbers the sliders are actually set to, kept per theme and token.
@@ -261,9 +276,15 @@ export function DebugColours() {
         names.map((name) => [name, currentValue(name) ?? '#000000']),
       );
       setValues(current);
-      // The field keeps what is being typed into it; everything else
-      // follows the page.
-      setTyped((was) => ({ ...current, ...pick(was, names.filter((n) => n in was)) }));
+      /*
+        Only the field with the cursor keeps its text; every other field
+        follows the page. Merging the other way round — fresh values under
+        whatever was already held — is what froze this panel, and because
+        every token reached the held list on the first read, it froze all
+        of them.
+      */
+      const held = editing.current;
+      setTyped((was) => (held !== null && held in was ? { [held]: was[held] } : {}));
     });
     return () => { cancelAnimationFrame(frame); };
     /*
@@ -387,7 +408,8 @@ export function DebugColours() {
         <button type="button" onClick={() => { setOpen(false); }}>Close</button>
       </div>
       <p className="secondary">
-        Development only. Changes are not saved and are gone on reload.
+        Development only. Changes are kept on this device and survive a
+        reload; Reset puts the palette back.
       </p>
       <ul className="debug-tokens">
         {tokens.map((name) => (
@@ -414,6 +436,16 @@ export function DebugColours() {
               className="debug-hex"
               value={typed[name] ?? values[name] ?? ''}
               spellCheck={false}
+              onFocus={() => { editing.current = name; }}
+              /*
+                Half-typed text belongs to the field only while the cursor
+                is in it. Leaving it there afterwards is what made every
+                swatch stale — see `typed`.
+              */
+              onBlur={() => {
+                if (editing.current === name) editing.current = null;
+                setTyped((was) => omit(was, name));
+              }}
               onChange={(e) => { type(name, e.target.value); }}
               aria-label={`${name} hex`}
             />

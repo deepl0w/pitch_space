@@ -175,9 +175,20 @@ function oneJoinedItem(): ItemId[] { return ['a,b'] as ItemId[]; }
  * anyway, this fails and says which field.
  */
 describe('what a line is allowed to turn on', () => {
+  /*
+    The whole settings object as the round's exercise, not a hand-built
+    `{ presentation }`.
+
+    The first version passed only the presentation, which made this blind
+    to the thing it exists to catch: adding `clef` to `lineOfRound`'s
+    return left every case green, because the fixture had no `clef` for it
+    to read. A test that builds the input narrower than production does
+    cannot see a field production would have passed through — the same
+    fault as feeding `intervalPlayed` note lists typed by hand.
+  */
   const lineFor = (type: AnyExerciseDefinition, settings: unknown) => lineOfRound(type.id, {
     askable: [...type.items(settings)] as ItemId[],
-    exercise: { presentation: (settings as { presentation: Presentation }).presentation },
+    exercise: settings as { readonly presentation: Presentation },
   });
 
   it('turns on the askable set, and on presentation by the exception 0010 names', () => {

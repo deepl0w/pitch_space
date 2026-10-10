@@ -424,6 +424,19 @@ helps, because nothing is wrong with it.
   implementation that is *nearly* the sentence is what a reasonable
   implementation of a prose sentence looks like.
 
+- **A number the suite computes and never asserts.** The contrast between
+  `--bg` and `--accent` sat among the pinned figures in `contrast.test.tsx`,
+  correctly calculated, and was attached to no reader-facing case. A palette
+  change dropped that pair to 3.05:1, under the 4.5 floor, and the suite
+  stayed green. **The mechanism existed, ran, and answered a question nobody
+  had asked it.**
+
+  That is the nastiest face of *a correlate is not the mechanism*, because
+  here the mechanism was genuinely run. A figure present in a test file reads
+  as a pair being checked, and a reader scanning for coverage finds the number
+  and stops. **A measurement with no assertion attached is a correlate of a
+  check**, and it is less visible than no measurement at all would have been.
+
 - **A double whose incompleteness is invisible at the call site.**
   `src/testing/audioContext.ts` implemented only the surface `Synth` used. When
   sampled playback arrived it needed `createBufferSource`, which the fake did
@@ -633,6 +646,18 @@ sweep's response shapes — a perfect performance, a late one, silence — could
 not construct the disagreeing case, so **it reported the absence of a case it
 could not build as agreement**, and the mutant confirmed the wiring of a
 statement nobody had checked.
+
+**A second limit, found once the palette became derived.** A mutant applied to
+an *ingredient* may not move the value under test far enough to fail. Nudging
+`--ink` barely shifts a `--muted` mixed from it, so the mutant survives — and
+survival reads as *the assertion is not load-bearing* when the truth is *the
+mutation was too small*. A false negative in the instrument rather than a
+finding about the test.
+
+The rule that follows is narrow and worth having wherever values are derived:
+**mutate the token under test, not its inputs.** This project's palette is now
+derived by design ([0048](adr/0048-one-accent-a-derived-palette-and-a-floor-it-knowingly-misses.md)),
+so the case is permanent rather than incidental.
 
 So mutation tests the connection between a test and the code. Truth needs the
 disagreeing case, and constructing one needs to know what the thing under test

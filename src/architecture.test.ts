@@ -55,7 +55,25 @@ function coreFiles(): string[] {
 }
 
 /**
- * Every document that can carry a citation.
+ * Directories written but never committed.
+ *
+ * `CLAUDE.md`: the repository is public and the fleet's internal writing
+ * stays out of it. They are excluded from the citation scans both as
+ * targets *and as sources*, and the second is the one that was missing.
+ *
+ * **A citation inside a document no public reader can open is not a claim
+ * the repository makes** — which is the same reason they are not valid
+ * targets. The practical half is sharper: their contents differ per
+ * checkout by design, so scanning them made the population depend on
+ * which worktree ran the suite. It passed here, failed in main's over a
+ * file this checkout does not have, and in CI would have scanned neither.
+ * An unstable population is worse than a narrow one, because the failure
+ * belongs to whoever happens to run it.
+ */
+const UNCOMMITTED = ['docs/findings/', 'docs/process/'];
+
+/**
+ * Every tracked document that can carry a citation.
  *
  * Walked rather than taken from `filesUnder`, which keeps only `.ts` and
  * `.tsx` — reusing it found fourteen cited paths instead of fifty-odd, and
@@ -72,7 +90,9 @@ function everyDocument(): string[] {
     ...markdown(join(SRC, '..', 'docs')),
     join(SRC, '..', 'CLAUDE.md'),
     join(SRC, '..', 'README.md'),
-  ];
+  ].filter((file) => !UNCOMMITTED.some(
+    (prefix) => show(file).replace(/^\.\.\//, '').startsWith(prefix),
+  ));
 }
 
 function show(path: string): string {
@@ -490,8 +510,19 @@ describe('the records the code cites', () => {
    * sight.
    */
   it('points at no file that is not there', () => {
-    const UNCOMMITTED = ['docs/findings/', 'docs/process/'];
     const documents = everyDocument();
+
+    /*
+      The population is what git has, not what this checkout holds. The
+      first version scanned `docs/process/` and `docs/findings/` for
+      citations while excluding them as targets, so the set of documents
+      read differed per worktree — green here, red in main's, neither in
+      CI. Asserted rather than left to the filter staying correct.
+    */
+    const local = documents.filter((file) => UNCOMMITTED.some(
+      (prefix) => show(file).replace(/^\.\.\//, '').startsWith(prefix),
+    ));
+    expect(local, 'scanning documents this checkout happens to hold').toEqual([]);
 
     const cited = new Map<string, Set<string>>();
     for (const file of documents) {
@@ -551,7 +582,21 @@ describe('the records the code cites', () => {
     const basenames = new Set<string>();
     const walk = (dir: string): void => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+        /*
+          `.git` and `node_modules` by name, not every dotted entry: the
+          first version skipped anything beginning with a dot and so could
+          not see `.claude/scripts/fleet.sh` or `.github/workflows/`, both
+          of which a tracked document may reasonably name.
+
+          And `.claude/worktrees`, which is the same instability as the
+          one above pointed the other way. It is empty in a worktree and
+          holds every *other* worktree in the main checkout — so walking
+          it would let a file existing only in somebody else's tree count
+          as present here. Invisible from this side, which is how the
+          first version of this reached main's gate before anyone saw it.
+        */
+        if (entry.name === 'node_modules' || entry.name === '.git'
+          || entry.name === 'worktrees') continue;
         if (entry.isDirectory()) walk(join(dir, entry.name));
         else basenames.add(entry.name);
       }

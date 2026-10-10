@@ -59,6 +59,7 @@ explicitly not meant to hold. Move the field; that is the statement.
 
 - [`architect`, then everyone — progress is per settings combination](#architect-then-everyone--progress-is-per-settings-combination)
 - [`main`, then `architect` — recorded instruments are the aim, synthesis the floor](#main-then-architect--recorded-instruments-are-the-aim-synthesis-the-floor)
+- [`main` — answering by playing, starting with the seam](#main--answering-by-playing-starting-with-the-seam)
 
 ### `architect`, then everyone — progress is per settings combination
 
@@ -311,3 +312,44 @@ of its own is the reversal — synthesis was chosen as the destination and
 is now the floor — together with the rule the measurement earns, that
 user-facing copy may not state a cost nothing measured.
 
+### `main` — answering by playing, starting with the seam
+
+**Branch:** `main`, starting now. **Settled:** the shape, because the
+repository already specifies it. **Not settled:** which exercise goes
+first, and nothing downstream waits on that.
+
+**Why this and why now.** It is the brief's central promise — six kinds
+of practice *answered by playing them on a real instrument* — and the one
+thing the home screen still says is being built. `audio/capture/` works
+and `audio/dsp/` works; neither has ever been joined to an exercise. G4
+is closed, so the progress figure now has something to report about, and
+this is what it will eventually be reporting about.
+
+**The shape is already decided and I am not choosing it.**
+`architecture.test.ts` spells it out in the test that currently asserts
+the lede is honest: capture arrives as an **`AudioIn` beside `AudioOut`,
+injected by the screen**, so that no file under `exercises/` imports
+anything from `audio/capture` on the day a learner can first answer by
+playing. `AudioOut` is "just enough of `Synth` for a prompt to sound its
+exercise", declared in `exercises/types.ts` rather than imported; the new
+one is just enough of `listen` for a prompt to take an answer, declared
+the same way, with the screen adapting the real thing to it.
+
+**For tester.** Two things become checkable before any exercise uses it.
+The adapter the screen supplies must satisfy the declared interface
+structurally — that is what keeps the capture layer out of
+`exercises/` — and `PlayedNote` must stay a subset of `HeardNote`, since
+the whole point is that the real result can be handed in unchanged. A
+drift between them would be found at the one call site rather than by a
+type error, because the adapter is where the two meet.
+
+**And one that is already written and will flip on its own.** The
+home-screen claim test goes green the day an exercise hands a response to
+capture rather than to a click, and its comment says so: *"the day an
+exercise does wire it, this goes green on its own and the lede is free to
+say so"*. Nobody should edit that test to make this land. If it does not
+flip, the wiring is not real.
+
+**What this does not include.** Microphone permission, the live feedback
+on the staff, and the latency correction G1 is about. The seam is useful
+without them and they are each their own decision.

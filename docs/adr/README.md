@@ -365,6 +365,48 @@ see that an assertion ran over nothing.
 fault from the instrument's side and has the longer argument; what is here is
 the rule the next sweep needs, which is not a thing a test can hold.
 
+**A reason attached to working code is a claim, and it is the one kind no test
+can falsify.** Every convention above concerns a claim something could
+contradict — the code, a guard, a measurement, a reader. This one cannot be
+contradicted by anything in the repository, because **the code is right**. The
+tests pass, the behaviour is correct, and the account of *why* it is correct is
+false. Nothing is positioned to disagree, since every prediction the comment
+makes comes true.
+
+Two instances, both caught by a reader who was not the author, and both of
+code that needed no change:
+
+- `completion`'s denominator was credited with stopping a narrowed pool from
+  flattering a learner. It does not: narrowing shrinks `askable`, which *is*
+  the denominator, so on its own the fraction would rise. What prevents it is
+  one level up — `lineKey` is built from the sorted askable set, so a narrowed
+  pool is a different line reading 0. The function was correct throughout.
+- The instrument pack's container was chosen because "the manifest and the
+  audio must not be separable". True, and it does not decide anything: both
+  candidate formats were a single file. The container is right for different
+  reasons — a base64 payload would not have avoided the slicing arithmetic and
+  would have held the audio twice, as a UTF-16 string.
+
+**This project is unusually exposed to it**, and by its own conventions rather
+than by accident: comments here explain *why* and not *what*, so the comments
+it values most are precisely the ones made of unfalsifiable material.
+
+**The cost is deferred and lands on whoever edits next.** A reader who
+preserves the stated reason can destroy the real one. Nothing in front of
+someone simplifying `tallyKey` said that a figure on the home screen depended
+on it; the comment that should have said so was busy crediting the denominator.
+
+**The remedy is a thought experiment, since a test is unavailable: ask what
+would break if the stated reason were false.** If the answer is nothing, the
+reason is not carrying the weight it claims. The denominator's account fails
+that in one step — were line identity not tied to the askable set, narrowing
+*would* inflate the figure, so the denominator cannot be the thing preventing
+it.
+
+Four in one day by the author's own count, each found by a different reader
+and never by the author — who is, necessarily, the person who found the reason
+satisfying.
+
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code
 rides on the record that made it. The second says check exactly — a guard fires
@@ -383,6 +425,9 @@ what the user asked for — where the check cannot be a mechanism and has to be
 a habit of quoting exactly. The eighth turns the whole set on the checks
 themselves: every convention above assumes that a guard which runs is a guard
 that could have failed, and that assumption is the one none of them examine.
+The ninth is the only one with nothing to check against at all — the code is
+right, so the repository agrees with a false account of it, and the fault
+surfaces years later in whoever edits on the strength of it.
 
 [`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
 0018 and 0020 as one argument, because five of them are the same rule meeting a

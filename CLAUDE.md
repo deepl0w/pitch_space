@@ -564,6 +564,20 @@ reproduce exactly.
   `901e3d6` and says so; re-pointing its dateline at HEAD is the error, not
   the staleness. Nine commits have been spent doing exactly that, which is
   why this is written down.
+
+  **A measurement written into a code comment is a tracked document the
+  size of a sentence, and widening a test fixture is the commit that
+  changes it.** A comment above `NEW_NOTE_RISE` quoted how much margin a
+  re-pluck has before the merge threshold swallows it — measured against a
+  three-spacing fixture, left standing after the fixture widened to five,
+  describing a test that no longer existed by the time anyone read it
+  again. Off by three orders of magnitude, in the reassuring direction.
+  The fix is the same remedy stated for a document: cite the test that
+  measures the margin, do not quote its figures — the comment above
+  `MERGE_CENTS` in `src/audio/capture/listen.ts` now points at
+  `captureSeam.test.ts` instead of restating a number. Full account in
+  [0047](docs/adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)'s
+  11 October correction.
 - **Say a thing in one place.** Where this file, `.claude/fleet.conf`, a
   README and the fleet skill all explained the roles, the copies drifted —
   this file said "the three roles" over a table of four for two days. Put the

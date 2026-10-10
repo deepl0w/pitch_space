@@ -9,13 +9,13 @@ import type { Voice } from '../audio/output/synth';
  *
  * Key identification, scale-degree identification and chord progressions
  * all open by putting a tonic in the ear, and each had written the same
- * thing: take `cadencePitches`, chunk the flat list back into threes, map
- * to MIDI, hand to `schedule`.
+ * thing: take a flat list of pitches, chunk it back into threes, map to
+ * MIDI, hand to `schedule`.
  *
  * **The chunking was the part worth removing.** `establishingCadence`
- * returns `Pitch[][]` — already grouped as chords — and `cadencePitches`
- * is literally `establishingCadence(key).flat()`. So each caller flattened
- * a structure and then guessed it back, and the guess was the literal `3`.
+ * returns `Pitch[][]` — already grouped as chords — and the flat list was
+ * that same call with `.flat()` on it. So each caller flattened a
+ * structure and then guessed it back, and the guess was the literal `3`.
  * `spellChord` decides how many tones a chord has; a seventh anywhere in
  * that progression would have left all three exercises playing chords that
  * do not exist, built from notes belonging to two different ones.

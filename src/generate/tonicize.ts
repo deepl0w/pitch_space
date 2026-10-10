@@ -31,8 +31,3 @@ export function establishingCadence(key: Key, octave = 4): Pitch[][] {
   return degrees.map((degree, i) =>
     spellChord(realizeNumeral({ ...key, tonic }, numeral(degree, quality[i]))));
 }
-
-/** The same cadence as one flat list, for a caller that wants to sound it. */
-export function cadencePitches(key: Key, octave = 4): Pitch[] {
-  return establishingCadence(key, octave).flat();
-}

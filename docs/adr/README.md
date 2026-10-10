@@ -489,6 +489,21 @@ Four in one day by the author's own count, each found by a different reader
 and never by the author — who is, necessarily, the person who found the reason
 satisfying.
 
+**It applies to a rule as readily as to code, which the name obscures.** A
+discriminator for when an internal may be exported — *export it when a caller
+already depends on it* — gave the right answer on both cases anyone had, and
+rested on a false fact: `pitchWindow`, the example it was built from, has no
+consumer outside its own module and was exported *for* its test, which is the
+move the rule existed to forbid.
+
+**Both that rule and its replacement land the same way on both known cases**,
+so nothing in the cases could have told them apart. What told them apart was
+this convention's own remedy run on the reason: if the ground were the call
+graph, the rule would export any internal that acquired a second caller and
+refuse a genuine claim that had not yet found one. The replacement — **export
+when the quantity is a claim, cite when it is a step** — turns on the
+quantity rather than on today's imports, and survives that question.
+
 **A distinction the type cannot state is the ninth's dual, and it is worse.**
 There the code is right and the account of it is false, so nothing disagrees.
 Here the account is right and **the world has a state the model cannot hold**,

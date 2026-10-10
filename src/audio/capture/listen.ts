@@ -293,12 +293,23 @@ const MERGE_CENTS = 60;
  * rather than a weight — but it is one library's piano, which is the
  * fifth convention applied to the evidence this rests on.
  *
- * **Something outside this directory rests on it.** A played unison is two
- * attacks on one pitch, which is exactly what the merge above accepts it
- * may swallow; `intervalPlayed` takes exactly two readable notes, so if
- * this merged them, the one interval a learner answers by striking the
- * same note twice becomes the one they cannot answer at all. The
- * reasoning is in
+ * **Something outside this directory rests on it, and not with much room.**
+ * A played unison is two attacks on one pitch, which is exactly what the
+ * merge above accepts it may swallow; `intervalPlayed` takes exactly two
+ * readable notes, so if this merged them, the one interval a learner
+ * answers by striking the same note twice becomes the one they cannot
+ * answer at all.
+ *
+ * **Raising this to 3 is enough to do it** for two strikes 0.12 seconds
+ * apart — the closest spacing a learner would use. Widely spaced pairs
+ * survive past 30, so the headroom is a property of the gap rather than
+ * of the constant, and the tight end is what bounds it. An earlier reading
+ * of this put the figure near a thousand, measured before the fixture
+ * covered the close spacings and left standing after it did; treat any
+ * number here as the reach of the test that produced it, which is one
+ * synthesised pluck pair at one amplitude and not a recording of a piano.
+ *
+ * The reasoning is in
  * [ADR 0047](../../../docs/adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md),
  * on the depending side rather than here, and
  * `src/exercises/captureSeam.test.ts` measures the margin end to end.

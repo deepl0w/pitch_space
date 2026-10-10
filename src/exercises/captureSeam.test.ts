@@ -282,3 +282,75 @@ describe('a unison answered by playing it', () => {
     expect(intervalPlayed(take.notes), 'three attacks were graded anyway').toBeNull();
   });
 });
+
+/**
+ * What capture makes of a chord today, which is the other side of the
+ * predicate that keeps a played unison answerable.
+ *
+ * `MERGE_CENTS` and `NEW_NOTE_RISE` merge two attacks that agree about
+ * pitch and did not get louder. A played unison needs them not to; **a
+ * chord is a cluster of simultaneous pitches and would need the opposite
+ * from the same code.** ADR 0035 accepts that hazard in the abstract —
+ * *the same pitch struck twice looks exactly like a cluster* — and this is
+ * what it costs once an exercise layer wants both readings.
+ *
+ * **Measured, and worse than merging.** A struck C major triad does not
+ * come back as one of its three notes: it comes back as a single reading
+ * around 66 Hz, two octaves below the root, which is the common
+ * periodicity of the cluster and a pitch nobody played. Rolled, it is
+ * three onsets of which two are unreadable and the third is that same
+ * subharmonic.
+ *
+ * So this is not a gap to be closed by relaxing the merge. Chord
+ * identification answered by playing needs a chroma feature the
+ * repository does not have — `audio/dsp/` holds five modules and none is
+ * chroma, which is itself a claim that has been got wrong five times by
+ * reading the directory tree as an inventory.
+ *
+ * **What is asserted is the safety, not the figure.** The frequency is a
+ * property of this synthesis and pinning it would pin a measurement with
+ * no ground truth. What has to hold is that nothing downstream turns this
+ * into an answer: `intervalPlayed` refuses, rather than grading a learner
+ * on a pitch the detector invented.
+ */
+describe('a chord played into a monophonic chain', () => {
+  const pluck = (hz: number, at: number, seed: number) => startingAt(
+    pluckedString({ frequencyHz: hz, seconds: 0.9, sampleRate: RATE, amplitude: 0.4, seed }),
+    at, RATE,
+  );
+  const TRIAD = [261.63, 329.63, 392.0];
+  const near = (hz: number | null) => hz !== null
+    && TRIAD.some((played) => Math.abs(1200 * Math.log2(hz / played)) < 50);
+
+  it.each([
+    ['struck together', 0],
+    ['rolled, as a guitarist would', 0.06],
+  ])('is not heard as the notes it contains when %s', (_name, spread) => {
+    const take = analyse(
+      mix(...TRIAD.map((hz, i) => pluck(hz, 0.2 + i * spread, i + 1)), silence(1.4, RATE)),
+      RATE,
+    );
+
+    const readable = take.notes.filter((note) => note.frequencyHz !== null);
+    expect(readable.length, 'the chain read every note of the chord')
+      .toBeLessThan(TRIAD.length);
+    expect(readable.filter((note) => near(note.frequencyHz)), 'a reading matched a played note')
+      .toEqual([]);
+  });
+
+  /**
+   * And the safety that matters today: nothing turns it into an answer.
+   * A chord played at an interval question is ambiguous input, and the
+   * rule that refuses a hesitation refuses this too — for the same reason
+   * and without knowing it is a chord.
+   */
+  it('is refused rather than graded on a pitch nobody played', () => {
+    for (const spread of [0, 0.06]) {
+      const take = analyse(
+        mix(...TRIAD.map((hz, i) => pluck(hz, 0.2 + i * spread, i + 1)), silence(1.4, RATE)),
+        RATE,
+      );
+      expect(intervalPlayed(take.notes), `spread ${spread}`).toBeNull();
+    }
+  });
+});

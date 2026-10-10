@@ -232,6 +232,28 @@ The command separates the three states, because the right response differs:
   is absent; whether it comes back is the user's business. `fleet.sh brief`
   prints what landed at its next start, so it is caught up rather than lost.
 
+**Main is a fourth case these three states do not cover, found 10 October:
+running, socketed, and still unaddressable by name.** `SendMessage` reserves
+the literal string `main` for a background agent's own parent conversation,
+and that reservation wins over a cross-session peer that happens to be
+named `main` — before the `[ref]` a listing error suggests is ever
+consulted. Confirmed independently by three sessions, each re-reading
+`ListAgents` immediately before sending, all refused the same way whichever
+ref was tried. A socket is what every other role's addressability reduces
+to; main is the one role where that reduction is wrong, and `tools/
+sessions.sh` now says so explicitly rather than reading the socket and
+reporting addressable.
+
+**The fix is not a name this file controls.** The branch still says `main`,
+the role still says `main` — what needs to change is the session's own
+display title, which this project has had no reason to distinguish from
+either until now. A session titled literally `main` cannot be reached by
+`SendMessage` under a host that reserves the word; one titled anything else
+can, at no cost to the branch or the role, since neither reads the
+session's title at all. Renaming it is not a worktree session's call to
+make — it is not this checkout — so it is recorded here rather than acted
+on from one.
+
 Two things that follow and are easy to get backwards. An unreachable role
 is never a reason to do nothing — there is no flag to set that makes it
 told anyway; `announce` and `status` keep showing it behind until its own

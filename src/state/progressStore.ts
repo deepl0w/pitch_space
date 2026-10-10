@@ -214,6 +214,39 @@ export function lineOf(attempt: Attempt): ProgressLine | undefined {
 }
 
 /**
+ * The line a learner last practised among a set of exercise types, if any.
+ *
+ * **The home screen's problem, and why it needs this rather than a sum.**
+ * A figure there has to name its presentation or not be shown
+ * ([0037](../../docs/adr/0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md)),
+ * because hearing a minor third and reading one are different skills kept
+ * in different lines. A card has room for one figure, so the rule is the
+ * presentation last used — which means finding it rather than summing
+ * across them, and summing is what the retired session counts did.
+ *
+ * Takes a set of types because a card is a family: the route opens
+ * `interval-id`, and the attempts underneath it may name any member.
+ *
+ * `attempts` is oldest first, so this walks backwards and stops at the
+ * first hit. Returns nothing when the learner has never practised one of
+ * these types, or practised only in ways that carry no line — untracked
+ * practice (ADR 0041) and history older than lines (ADR 0042) both reach
+ * here and neither is an error.
+ */
+export function lastLineAmong(
+  attempts: readonly Attempt[],
+  types: ReadonlySet<string>,
+): ProgressLine | undefined {
+  for (let i = attempts.length - 1; i >= 0; i -= 1) {
+    const attempt = attempts[i];
+    if (!types.has(attempt.exerciseType)) continue;
+    const line = lineOf(attempt);
+    if (line !== undefined) return line;
+  }
+  return undefined;
+}
+
+/**
  * How each item has gone, counted separately by eye and by ear.
  *
  * Summing the two was wrong and the contract already said so: reading a minor

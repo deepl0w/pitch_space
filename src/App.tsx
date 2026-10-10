@@ -13,6 +13,7 @@ import { findFamily } from './exercises/registry';
 import { backFrom } from './ui/menu';
 import { appSynth, stopSound } from './ui/sound';
 import { useSettings } from './state/settingsStore';
+import { progressStore } from './state/progressStore';
 
 /**
  * Routing, such as it is.
@@ -149,6 +150,24 @@ export default function App() {
   // screen does not stop the passage it started — it plays on over whatever
   // comes next. Silence it on every route change.
   useEffect(() => { stopSound(); }, [route]);
+
+  /*
+    Hydrate the attempt log once, here, rather than in the screen that
+    happens to need it first.
+
+    It used to be the practice screen's alone, which was true while that
+    was the only reader. The home screen now reports how far each line has
+    advanced, and with the load left where it was the figure appeared only
+    for someone who had already opened an exercise in that page session —
+    a returning learner's first sight of the app, which is the one case it
+    exists for, showed nothing. Found by reloading rather than by
+    navigating, which is why it was invisible while building it.
+
+    Once at the root also means the three-state contract holds everywhere:
+    a screen reads `loading` and then `ready`, instead of `loading`
+    forever because nobody asked.
+  */
+  useEffect(() => { void progressStore.getState().load(); }, []);
 
   return (
     /*

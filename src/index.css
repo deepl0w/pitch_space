@@ -528,6 +528,22 @@ button:active { transform: translateY(1px); }
 }
 .card:hover { border-color: var(--accent); filter: none; }
 .card-name { font-weight: 600; font-size: 0.95rem; }
+
+/* How far this line has advanced, where there is one to report.
+
+   Quiet and last: it is a fact about the reader rather than a label on
+   the thing, so it must not compete with the card's name — which is what
+   a learner is actually choosing between. Uppercase and small for the
+   same reason the panel captions are. */
+.card-progress {
+  font-size: 0.68rem; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-top: 0.15rem;
+}
+/* Not an error, and styled so it does not read as one: a history that
+   cannot be read is a fact about this device, not a fault the reader
+   caused or can fix from here. */
+.card-progress-unknown { text-transform: none; letter-spacing: 0; font-style: italic; }
 .card-blurb { font-size: 0.82rem; color: var(--muted); line-height: 1.4; }
 
 /* Unbuilt entries are listed rather than hidden, so the shape of the app is

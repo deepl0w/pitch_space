@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { lineKey, sameLine, type ProgressLine } from './line';
+import { lineKey, lineOfRound, sameLine, type ProgressLine } from './line';
 import { EXERCISE_TYPES } from '../exercises/registry';
 import { applyValue, valuesOf, widestSettings, type AnyField } from '../testing/settingsSpace';
-import type { ItemId } from '../exercises/types';
+import type { AnyExerciseDefinition, ItemId, Presentation } from '../exercises/types';
 
 /**
  * What makes two stretches of practice the same line, and what does not.
@@ -154,3 +154,96 @@ describe('the separators the key is joined with', () => {
 function twoItems(): ItemId[] { return ['a', 'b'] as ItemId[]; }
 /** The same characters with the separator inside one id. */
 function oneJoinedItem(): ItemId[] { return ['a,b'] as ItemId[]; }
+
+/**
+ * ADR 0039's rule, enforced over the settings space rather than described.
+ *
+ * *A setting is part of a line's identity if and only if it changes
+ * `items(settings)`.* The case above asserts the shape that follows —
+ * three keys, no settings blob — which is true by construction and cannot
+ * fail while nobody edits `ProgressLine`. What it does not hold is the
+ * clause: that **presentation is the only field allowed to split a line
+ * without changing what can be asked**, which is ADR 0010's exception and
+ * the one a later field is most likely to be given by analogy.
+ *
+ * Swept over every field of every exercise, so a field added tomorrow is
+ * swept tomorrow. That is the point of writing it now: a third
+ * presentation and a capture-style setting are being built, and the
+ * question of whether the capture style belongs in the identity is
+ * exactly this rule applied to a field that does not exist yet. If it
+ * does not change `items(settings)` and somebody puts it in the line
+ * anyway, this fails and says which field.
+ */
+describe('what a line is allowed to turn on', () => {
+  /*
+    The whole settings object as the round's exercise, not a hand-built
+    `{ presentation }`.
+
+    The first version passed only the presentation, which made this blind
+    to the thing it exists to catch: adding `clef` to `lineOfRound`'s
+    return left every case green, because the fixture had no `clef` for it
+    to read. A test that builds the input narrower than production does
+    cannot see a field production would have passed through — the same
+    fault as feeding `intervalPlayed` note lists typed by hand.
+  */
+  const lineFor = (type: AnyExerciseDefinition, settings: unknown) => lineOfRound(type.id, {
+    askable: [...type.items(settings)] as ItemId[],
+    exercise: settings as { readonly presentation: Presentation },
+  });
+
+  it('turns on the askable set, and on presentation by the exception 0010 names', () => {
+    let compared = 0;
+    const wrong: string[] = [];
+
+    for (const type of EXERCISE_TYPES) {
+      const base = widestSettings(type);
+      for (const field of type.settings.fields as AnyField[]) {
+        if (field.relevant?.(base) === false) continue;
+        for (const value of valuesOf(field, base)) {
+          const changed = applyValue(field, base, value);
+          const itemsMoved = [...type.items(base)].sort().join(',')
+            !== [...type.items(changed)].sort().join(',');
+          const lineMoved = lineKey(lineFor(type, base)) !== lineKey(lineFor(type, changed));
+          compared += 1;
+
+          // The identity may move only when the askable set does, with
+          // presentation as the one field 0010 exempts.
+          if (lineMoved && !itemsMoved && field.id !== 'presentation') {
+            wrong.push(`${type.id}: ${field.id} splits a line without changing what it asks`);
+          }
+          if (itemsMoved && !lineMoved) {
+            wrong.push(`${type.id}: ${field.id} changes what it asks without splitting the line`);
+          }
+        }
+      }
+    }
+
+    // The sweep's own population: a settings space that enumerated
+    // nothing would satisfy the rule by never testing it.
+    expect(compared, 'no field values compared at all').toBeGreaterThan(50);
+    expect([...new Set(wrong)]).toEqual([]);
+  });
+
+  /**
+   * And presentation really is an exception rather than a field that
+   * happens to change the askable set — otherwise the clause above is
+   * carrying nothing and would pass with the exemption removed.
+   */
+  it('exempts presentation for a reason it actually needs', () => {
+    const exempted = EXERCISE_TYPES.filter((type) => {
+      const base = widestSettings(type);
+      const field = (type.settings.fields as AnyField[]).find((f) => f.id === 'presentation');
+      if (!field) return false;
+      return valuesOf(field, base).some((value) => {
+        const changed = applyValue(field, base, value);
+        const itemsSame = [...type.items(base)].sort().join(',')
+          === [...type.items(changed)].sort().join(',');
+        return itemsSame && lineKey(lineFor(type, base)) !== lineKey(lineFor(type, changed));
+      });
+    });
+
+    expect(exempted.map((t) => t.id).length,
+      'no exercise splits a line on presentation alone, so the exemption is unused')
+      .toBeGreaterThan(0);
+  });
+});

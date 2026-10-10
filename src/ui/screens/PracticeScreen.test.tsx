@@ -129,11 +129,12 @@ function mount(from: string) {
 }
 
 let open: ReturnType<typeof mount>[] = [];
-const screen = (from: string) => {
+const screenFor = (from: string) => {
   const s = mount(from);
   open.push(s);
   return s;
 };
+const screen = screenFor;
 
 beforeEach(() => { open = []; });
 afterEach(() => { open.forEach((s) => s.dispose()); });
@@ -567,5 +568,59 @@ describe('narrowing the pool while a question is on screen', () => {
       .toBeGreaterThan(0);
     expect(answered, 'the walk ran to its bound without reaching the case')
       .toBeLessThan(BOUND);
+  });
+});
+
+/**
+ * Every prompt renders the control that leaves the question.
+ *
+ * `moveOn` is a node the screen builds and the prompt places, and it is
+ * **optional on `PromptProps`** — so a prompt that forgets to render it
+ * compiles, draws, answers and tests green, and the learner simply has no
+ * way past that exercise's question. Seven prompts were edited
+ * mechanically to add it; one of them silently not rendering it is the
+ * failure this is for.
+ *
+ * Driven per registered exercise rather than per file, so an eighth is
+ * covered without this being touched — which is the point, since the
+ * mechanical edit is exactly what a new exercise will copy.
+ *
+ * The screen's own copy before a round starts is a different control in a
+ * different place (`.begin`, alone on the page), so this looks only at
+ * what the prompt renders once a question exists.
+ */
+describe('the way past a question', () => {
+  it.each(EXERCISE_TYPES.map((type) => type.id))('is on screen for %s', (id) => {
+    // `screen`, not `mount`: only the former registers for the `afterEach`
+    // that unmounts. Calling `mount` directly left seven roots alive per
+    // run, and React then scheduled work after jsdom had gone — four
+    // "window is not defined" errors that failed the gate once and did not
+    // reproduce in six runs afterwards. A leak that only sometimes lands.
+    const screen = screenFor(id);
+    expect(screen.button('Start'), `${id} offered no way to begin`).toBeDefined();
+    act(() => { screen.button('Start')?.click(); });
+
+    const moveOn = screen.container.querySelector('.move-on');
+    expect(moveOn, `${id} renders no way past its question`).not.toBeNull();
+    // Inside the prompt's own actions rather than the screen's, which is
+    // what "the prompt decides where in the row it goes" means.
+    expect(moveOn?.closest('.actions'), `${id} puts it outside an action row`).not.toBeNull();
+    expect(moveOn?.textContent?.trim(), `${id} labels it oddly`).toBe('Skip');
+  });
+
+  /**
+   * And it says what it does: Skip before an answer, Next after one. The
+   * label is the whole difference between a control that abandons a
+   * question and one that accepts the next, and both go through the same
+   * node — so a prompt rendering a stale copy would show the wrong word.
+   */
+  it('reads as Next once the question has been answered', () => {
+    const screen = screenFor('interval-id');
+    act(() => { screen.button('Start')?.click(); });
+    const choice = screen.container.querySelector('.choice') as HTMLButtonElement | null;
+    expect(choice, 'the interval prompt offered nothing to answer with').not.toBeNull();
+    act(() => { choice?.click(); });
+
+    expect(screen.container.querySelector('.move-on')?.textContent?.trim()).toBe('Next');
   });
 });

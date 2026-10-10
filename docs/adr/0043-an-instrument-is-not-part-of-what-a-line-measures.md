@@ -168,3 +168,26 @@ had a home — having, three days earlier, diagnosed exactly this in another
 session's work and written that *an answer existing only in a message is why
 it kept coming back*. **The same is true of a question**, and a question is
 worse: an unanswered one has nobody motivated to look for it.
+
+## Resolved, 12 October 2026 — preference, and the hedge is theirs
+
+The user, asked whether instrument choice is cosmetic or part of what is
+trained: *"instrument choice should be by preference for now"*.
+
+So this record's Decision stands. An instrument is a property of playback,
+`lineKey` is the exercise, the presentation and the item set, and switching
+voices neither splits a line nor resets one — true in code, and verified
+rather than assumed.
+
+**"For now" is the user's word and is kept as theirs.** It is not a hedge this
+record may promote into permanence, and this document has already been
+corrected once for reading a user's *maybe* as more than it was. What it marks
+is that the cost named above is accepted rather than dissolved: the flute
+really is 20 dB plainer than the strings, the recordings argument really does
+say that recognition transfers from the timbre you have played, and a learner
+who switches really is overstated. None of that stopped being true; it has
+been judged worth less than fragmenting a learner's progress six ways.
+
+The escape clause is unchanged and is where a different answer would land: if
+a voice ever makes a materially different question, it gets a different **item
+id**, not a different line.

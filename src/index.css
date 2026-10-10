@@ -74,6 +74,14 @@ main {
     gap: 0;
     align-items: stretch;
   }
+  /*
+    Placed rather than ordered. The sidebar is second in the document so
+    that a single column opens on the exercise's title instead of on its
+    controls; here it is put back on the left by naming its track, which
+    costs nothing and leaves the reading order alone.
+  */
+  main.shell .practice-settings { grid-column: 1; grid-row: 1; }
+  main.shell .practice-main { grid-column: 2; grid-row: 1; }
   .practice-settings {
     /* `min-height: 0` is what lets a grid child scroll instead of
        stretching its track: without it the panel's content sets the row

@@ -919,61 +919,35 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 .wedge:focus-visible {
   outline: none;
   /*
-    Ink here, background on the selected wedge — see the scoped rule
-    below. **`src/ui/contrast.test.tsx` fails if either drops below
-    3:1 against the fill it lands on**, on every wedge and in both
-    themes, so this comment points at a check rather than making a
-    case.
-
-    That distinction is the whole history of these four lines. The
-    ring was `--accent` first, invisible on the one wedge that is neat
-    accent — found by zooming a focused *selected* wedge after a
-    focused ordinary one looked fine. Each repair then carried a
-    justification in prose, and prose was the one part nothing could
-    verify: three in a row were plausible, none was load-bearing, and
-    all three were wrong. The colours have been right since the first
-    fix; only the reasons kept failing.
-
-    The measurements, which are data rather than argument: ink runs
-    4.6:1 to 11.1:1 across the mixed fills and 1.84:1 dark, 2.38:1
-    light on the neat accent; background is the mirror, 8.2 and 7.0
-    neat, down to 1.2:1 on the palest mix. Neither token serves the
-    whole wheel.
+    Ink on the mixed wedges, background on the selected one — see the
+    scoped rule below. `src/ui/contrast.test.tsx` fails if either drops
+    below 3:1 against the fill it lands on, every wedge, both themes.
   */
   stroke: var(--ink);
   stroke-width: 3;
-  /*
-    No `paint-order: stroke`, which was copied in without thought and
-    halves the ring: it paints the stroke beneath the fill, so only the
-    outer half of the width survives. Default order puts it on top of
-    its own fill. Neighbouring wedges drawn later still cover the two
-    shared edges, so what shows is the outer and inner arcs — enough to
-    read as a ring, and the alternative is reordering the elements so
-    the focused one draws last, which is a lot of machinery for the two
-    edges nobody is looking at.
-  */
 }
 
-/* `.wedge.wedge-self` rather than `.wedge-self`, and **not for the
-   reason the first version of this comment gave.** It said a single
-   class would tie on specificity and lose on source order. It would
-   tie — both are one class and one pseudo-class — but this rule sits
-   below the one it overrides, and a tie goes to the later rule, so a
-   single class would have won. The mechanism was right and pointed
-   the wrong way round; the settings-cog trap it was recalling had the
-   override *above* its base, which is where a tie is lost.
+/*
+  `.wedge.wedge-self` beats `.wedge` on specificity (0,3,0 against 0,2,0)
+  rather than on source order, so it survives either rule being moved.
 
-   The compound earns its place on the other ground: (0,3,0) beats
-   (0,2,0) outright, so it keeps working if someone moves either rule.
-   A win that depends on being last is a win that a tidy-up can
-   silently take away.
+  **Dashed, and that is the load-bearing part.** Every wedge is already
+  stroked `--bg` at rest — that is what draws the separators — so on the
+  one wedge whose fill demands a `--bg` ring, changing the colour changes
+  nothing: a 1.5px separator becomes a 3px separator and no more. It
+  measured 8.16:1 against the fill and was invisible in light theme,
+  reported twice. A ratio against the fill cannot see that an indicator
+  is identical to the line already there.
 
-   Why it flips: this wedge is neat `--accent`, where an ink ring is
-   1.84:1 in dark and 2.38:1 in light — under the 3:1 floor for a
-   non-text indicator, on the wedge a keyboard lands on first. `--bg`
-   measures 8.2 and 7.0 here, and is the wrong choice on every other
-   wedge, which is why it is scoped to this one. */
-.wedge.wedge-self:focus-visible { stroke: var(--bg); }
+  So the signal is the dash, which the rest state has no form of, and the
+  colour stays the one that actually carries on neat accent. The two
+  together are a change in kind rather than in degree.
+*/
+.wedge.wedge-self:focus-visible {
+  stroke: var(--bg);
+  stroke-width: 4;
+  stroke-dasharray: 7 5;
+}
 /* A tspan inside its key's name, so it inherits anchoring and centring and
    only has to say that it is an annotation rather than part of the name. */
 .wedge-signature { fill: var(--muted); font-weight: 500; }

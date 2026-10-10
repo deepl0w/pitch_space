@@ -574,6 +574,20 @@ reproduce exactly.
   not `git merge-base`; telling one agent is not `fleet.sh announce`. The
   reasoning is in `docs/process/2026-10-04-a-proxy-is-not-the-mechanism.md`,
   which is on disk and deliberately not in the repository — see below.
+- **A safeguard that only fires for someone already inclined to look is not
+  a safeguard.** It protects the case that did not need it and misses the
+  one that did, because the person who most needs stopping is exactly the
+  one who was not going to check. Two independent instances: the commit
+  gate existed as `fleet.sh check` for a session to run by hand, and a
+  failing check still reached a commit three times by three different
+  command shapes before the git hooks made it fire regardless of whether
+  anyone meant to look; `docs/ARCHITECTURE.md`'s "What is not built"
+  addressed its warning to the *reader*, who was never the one who made
+  the list stale — the builder was, and had no reason to open the file —
+  so three of four entries went false twice before each claim carried its
+  own check instead of a comment asking to be read. Bind the claim to a
+  fact a command can verify; a warning that depends on diligence will be
+  skipped by precisely the diligence it needed.
 - **A document over about a hundred lines opens with a contents block**, as
   links, so an agent can find the one section it needs and read that. Write
   headings that say what is under them rather than gesturing at it, and keep

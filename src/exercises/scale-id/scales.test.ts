@@ -301,6 +301,34 @@ describe('the scale someone played', () => {
     expect(scalePlayed(played(...semitones), ALL)).toBeNull();
   });
 
+  /**
+   * The octave is the end of the run, and a run that goes past it is not a
+   * scale this can read.
+   *
+   * Isolated deliberately. The neighbouring case — a run that overshoots —
+   * also refuses with this check removed, because `0,2,4,5,7,9,11,12` is
+   * not a pattern any type has, so it passes for the wrong reason. Here
+   * the pattern below the final note *is* major, so the only thing
+   * refusing is the requirement that the run stop at twelve.
+   */
+  it('refuses a run that carries on past the octave', () => {
+    expect(scalePlayed(played(0, 2, 4, 5, 7, 9, 11, 13), ALL)).toBeNull();
+  });
+
+  /**
+   * And a note struck again once the octave is reached is not a second
+   * chance to change the answer.
+   *
+   * The run ends at the octave, so what follows is not part of it — a
+   * learner who lands on the top note and plays it again has still played
+   * the scale. This is also what tells the monotonic check from a looser
+   * one: with repeats merely tolerated rather than ending the run, this
+   * take reads `0,2,4,5,7,9,11,12` as the pattern and matches nothing.
+   */
+  it('answers a scale whose last note was struck twice', () => {
+    expect(scalePlayed(played(0, 2, 4, 5, 7, 9, 11, 12, 12), ALL)).toBe('major');
+  });
+
   it('refuses a re-struck note rather than guessing past it', () => {
     // The same refusal `intervalPlayed` makes, and for the same reason: two
     // attacks on one pitch do not say which was the answer.

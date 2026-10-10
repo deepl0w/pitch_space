@@ -445,6 +445,23 @@ input[type="number"] { text-align: right; }
 input::placeholder { color: var(--muted); opacity: 1; }
 input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+/*
+ * How wide the *contents* of a question box may get.
+ *
+ * Not the box. The box keeps the column's full width in both modes, so
+ * that it is the same box whether it is holding a wave or a stave — the
+ * listening question and the answered one must not change shape under the
+ * reader, which is what makes the two modes of one exercise read as one
+ * screen. The first attempt at this capped the boxes themselves and got
+ * that backwards.
+ *
+ * What a landscape window actually spoils is the row inside: stretched
+ * across sixty rem the bars keep their height and gain nothing but
+ * distance from each other, so the thing the box exists to show reads
+ * worse the more room it is given.
+ */
+:root { --question-measure: 30rem; }
+
 .score {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 10px; padding: 0.5rem; overflow-x: auto;
@@ -489,6 +506,9 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   display: flex; align-items: center;
   gap: 1rem;
   inline-size: 100%;
+  /* Capped and centred inside a box that is not — see `--question-measure`. */
+  max-inline-size: var(--question-measure);
+  margin-inline: auto;
 }
 /* The wave takes the room; the control sits at the end of it. `min-width: 0`
    because a flex item's content floor would otherwise stop the row ever
@@ -932,6 +952,28 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    only a hue is no verdict at all to a colour-blind user. */
 .choice.right { border-color: var(--right); color: var(--right); opacity: 1; font-weight: 650; }
 .choice.wrong { border-color: var(--wrong); color: var(--wrong); opacity: 1; font-weight: 650; }
+
+/*
+ * A marked chip that will play its interval when pressed.
+ *
+ * The two controls that used to say "Hear yours" and "Hear the answer" are
+ * these, so the chips have to look pressable where the other ten do not —
+ * an affordance a word was carrying before and nothing is now. A small
+ * triangle rather than a word: the chip already says which interval it is
+ * and the row is tight enough that a second word per chip would wrap it.
+ *
+ * `::after` rather than markup, because this is a hint about a control
+ * whose accessible name already says `Hear <interval>` — a screen reader
+ * gains nothing from a second glyph and a sighted reader gains the only
+ * sign that the chip still does something.
+ */
+.choice.playable { cursor: pointer; }
+.choice.playable::after {
+  content: '\25b8';
+  margin-inline-start: 0.4rem;
+  opacity: 0.75;
+}
+.choice.playable:hover { filter: brightness(1.12); }
 .verdict { font-size: 0.9rem; margin: 0.9rem 0 0; }
 
 /* The sample credits.

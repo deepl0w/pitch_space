@@ -129,28 +129,6 @@ export function IntervalPrompt({
   return (
     <div className="prompt">
       {/*
-        After a wrong answer, the two intervals side by side.
-
-        Asked for in these words: *"for the listening exercises i want to be
-        able to play again also the wrong answer to compare between expected
-        and what i answered"*. Naming an interval you cannot hear is the
-        difficulty; being told the name of the one you missed does not teach
-        you its sound, and hearing them a second apart does.
-
-        Only when the answer was wrong, and only when it was heard rather
-        than read — there is nothing to compare when you got it right, and
-        a reading question was never about a sound.
-      */}
-      {answered && !result.correct && chosen !== null && !reading && (
-        <div className="actions compare">
-          <button type="button" onClick={() => audio.play(answerVoices(exercise, chosen))}>
-            Hear yours
-          </button>
-          <button type="button" onClick={play}>Hear the answer</button>
-        </div>
-      )}
-
-      {/*
         The sound in a box, where a reading question puts its staff. The
         two modes of one exercise looked like two screens otherwise — the
         user's words were that the interface should be consistent between
@@ -181,18 +159,53 @@ export function IntervalPrompt({
 
       {aside && <p className="played-aside" role="status">{aside}</p>}
 
+      {/*
+        The chips answer the question, and afterwards they play it.
+
+        **Comparing the two intervals was a pair of extra buttons and is
+        now the marked chips themselves.** The pair said "Hear yours" and
+        "Hear the answer", which is two more controls naming two things
+        already on the screen and marked as right and wrong — the learner's
+        words were that they should be able to click the answer buttons to
+        hear them instead.
+
+        Only the two that mean something: the one that was right and the
+        one that was chosen. Making every chip playable would turn the row
+        into a keyboard and invite working the answer out by ear after the
+        fact, which is the opposite of what the exercise is for. Hearing
+        the one you missed against the one you picked is the comparison
+        that teaches; hearing all twelve is a different activity.
+
+        A reading question is left alone — it was never about a sound.
+      */}
       <div className="choices" role="group" aria-label="Which interval was that?">
-        {exercise.choices.map((semitones) => (
-          <button
-            key={semitones}
-            type="button"
-            className={choiceClass(semitones, exercise.semitones, chosen, answered)}
-            disabled={answered}
-            onClick={() => answer(semitones)}
-          >
-            {SIMPLE_INTERVAL_NAMES[semitones]}
-          </button>
-        ))}
+        {exercise.choices.map((semitones) => {
+          const marked = semitones === exercise.semitones || semitones === chosen;
+          const playable = answered && !reading && marked;
+          return (
+            <button
+              key={semitones}
+              type="button"
+              className={choiceClass(semitones, exercise.semitones, chosen, answered)
+                + (playable ? ' playable' : '')}
+              /*
+                Still disabled when there is nothing to hear, so a chip that
+                does nothing cannot be pressed — the unmarked ten after an
+                answer, and every chip on a reading question.
+              */
+              disabled={answered && !playable}
+              aria-label={playable
+                ? `Hear ${SIMPLE_INTERVAL_NAMES[semitones]}`
+                : undefined}
+              onClick={() => {
+                if (!answered) { answer(semitones); return; }
+                audio.play(answerVoices(exercise, semitones));
+              }}
+            >
+              {SIMPLE_INTERVAL_NAMES[semitones]}
+            </button>
+          );
+        })}
       </div>
 
       {result && (

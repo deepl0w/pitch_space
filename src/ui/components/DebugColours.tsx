@@ -54,6 +54,49 @@ const SHARED: readonly string[] = [];
 type Painted = 'light' | 'dark';
 type Overrides = Record<Painted, Record<string, string>>;
 
+/**
+ * What the workbench has been set to, kept across reloads.
+ *
+ * **Everything was React state, so every edit died at the next reload** —
+ * and because the sliders are seeded from whatever colour the page is
+ * painting, what came back was not the palette's defaults announcing
+ * themselves but three plausible numbers near the ones that had been set.
+ * The learner reads that as a picker inventing values, which is exactly
+ * how it was reported: "i set some hsl values and when i click again there
+ * are others". A tool for trying colours out that cannot survive the
+ * reload you do to look at them is not usable for the thing it is for.
+ *
+ * Both halves are kept, and they are different things: `overrides` is what
+ * the page should paint, `dialled` is where the sliders stand. The second
+ * cannot be recovered from the first — eight bits per channel does not
+ * round-trip an HSL triple, which is the drift this already had to fix
+ * once inside a single session.
+ */
+const KEPT = 'pitch-space.debug-colours';
+
+interface Kept { overrides: Overrides; dialled: Record<string, Hsl> }
+
+const NOTHING: Kept = { overrides: { light: {}, dark: {} }, dialled: {} };
+
+function readKept(): Kept {
+  try {
+    const raw = localStorage.getItem(KEPT);
+    if (raw === null) return NOTHING;
+    const got = JSON.parse(raw) as Partial<Kept>;
+    return {
+      overrides: {
+        light: got.overrides?.light ?? {},
+        dark: got.overrides?.dark ?? {},
+      },
+      dialled: got.dialled ?? {},
+    };
+  } catch {
+    // Private windows and blocked site data both throw; a workbench that
+    // cannot remember is still a workbench.
+    return NOTHING;
+  }
+}
+
 /** The subset of a record named by `keys`. */
 function pick(from: Record<string, string>, keys: readonly string[]): Record<string, string> {
   return Object.fromEntries(keys.map((key) => [key, from[key]]));
@@ -180,8 +223,16 @@ export function DebugColours() {
     is opened, and dropped when the hex field is typed into, so typing a
     colour still moves the sliders to it.
   */
-  const [dialled, setDialled] = useState<Record<string, Hsl>>({});
-  const [overrides, setOverrides] = useState<Overrides>({ light: {}, dark: {} });
+  const [dialled, setDialled] = useState<Record<string, Hsl>>(() => readKept().dialled);
+  const [overrides, setOverrides] = useState<Overrides>(() => readKept().overrides);
+
+  // Written on every change rather than on close, because the reload that
+  // loses them is often the one you did not mean to do.
+  useEffect(() => {
+    try {
+      localStorage.setItem(KEPT, JSON.stringify({ overrides, dialled }));
+    } catch { /* see `readKept` */ }
+  }, [overrides, dialled]);
   /*
     Which palette is on screen. `system` is not a palette — it defers to the
     device — so an edit made under it belongs to whichever one the device is
@@ -277,12 +328,23 @@ export function DebugColours() {
   function reset() {
     setOverrides({ light: {}, dark: {} });
     setDialled({});
+    try { localStorage.removeItem(KEPT); } catch { /* see `readKept` */ }
   }
 
   if (!open) {
     return (
       <>
         <style>{STYLE}</style>
+        {/*
+          The overrides are painted whether the panel is open or not.
+
+          They used to be rendered only in the open branch, so closing the
+          panel silently put every colour back — which reads as the edits
+          having been thrown away, and is the same complaint as losing them
+          on reload arriving by a second route. Closing a panel is not
+          undoing what was done in it.
+        */}
+        <style>{sheetFor(overrides)}</style>
         <button type="button" className="debug-open" onClick={() => { setOpen(true); }}>
           Colours
         </button>

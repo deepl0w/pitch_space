@@ -269,36 +269,35 @@ socket is what every other role's addressability reduces to; main is the
 one role where that reduction is wrong, and `tools/sessions.sh` now says so
 explicitly rather than reading the socket and reporting addressable.
 
-**The channel runs one way, and the cost is narrower than "main is cut
-off."** Main's own messages reach every role normally; nothing reaches
-main by name. Work is not stranded — `announce` and `status` read each
-role's own branch directly, so main's tooling still shows a branch moved
-without anyone telling it. What is lost is the fast path and the reasoning
-behind it: main learns *that* something changed and not *why*, and
-reconstructs from commit messages what a message would have said outright.
-The measured cost is main asking more than once for an answer the
-repository already held, including one already committed and merged days
-earlier.
+**The name is unusable; the session is not.** `SendMessage`'s reservation
+blocks `to: "main"` and every ref tried against it — it does not block a
+reply built from a message main already sent. Copying the `from` address
+on an incoming cross-session message — the raw socket path, not the
+display name — reached main where the bare name refused, tried the same
+minute the refusal was confirmed, by more than one session since. **Put
+the other way round, so it cannot be misread as "main is cut off":**
+main's own messages reach every role normally, and whoever it writes to
+can answer back on that same thread. What the name collision actually
+costs is narrower than a severed link — it is main having to speak first,
+every time, rather than being reachable cold the way every other role is.
+
+Work is not stranded either way — `announce` and `status` read each role's
+own branch directly, so main's tooling still shows a branch moved without
+anyone telling it. What is lost is the fast path and the reasoning behind
+it: main learns *that* something changed and not *why*, and reconstructs
+from commit messages what a message would have said outright. The
+measured cost is main asking more than once for an answer the repository
+already held, including one already committed and merged days earlier.
 
 **The fix is not a name this file controls.** The branch still says `main`,
 the role still says `main` — what needs to change is the session's own
 display title, which this project has had no reason to distinguish from
-either until now. A session titled literally `main` cannot be reached by
-`SendMessage` under a host that reserves the word; one titled anything else
-can, at no cost to the branch or the role, since neither reads the
+either until now. A session titled literally `main` cannot be reached cold
+by `SendMessage` under a host that reserves the word; one titled anything
+else can, at no cost to the branch or the role, since neither reads the
 session's title at all. Renaming it is not a worktree session's call to
 make — it is not this checkout — so it is recorded here rather than acted
 on from one.
-
-**A working half exists until that rename happens.** `SendMessage`'s
-reservation blocks `to: "main"`, not a reply built from a message main
-already sent: copying the `from` address on an incoming cross-session
-message — the raw socket path, not the display name — reached main
-where the bare name refused, tried the same minute the refusal was
-confirmed. Main can still open a conversation nobody else can answer by
-name; whoever it writes to can answer back. Not a fix, since main still
-has to speak first, but worth using meanwhile rather than treating the
-address as dead in both directions.
 
 **`user` failed the same way the same day, and the cause is not this
 one.** `ListAgents` lists it with no `[ref]` at all, unlike every other

@@ -1,3 +1,5 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
 import { localStorageSlot, memoryLog, memorySlot } from './persistence';
@@ -142,5 +144,79 @@ describe('a log in memory', () => {
     const log = memoryLog(initial);
     await log.append(record('b', 2));
     expect(initial).toHaveLength(1);
+  });
+});
+
+/**
+ * `memoryLog` is two different things and the caller has to say which.
+ *
+ * As a test double it stands in for working storage: what is under test
+ * is everything except the storage, so it claims to be durable and the
+ * default suits the dozens of call sites that mean exactly that. As the
+ * production fallback for a device that refuses IndexedDB it is
+ * genuinely volatile, and a volatile log that claims durability is the
+ * defect that shipped — every progress figure gone, the status still
+ * `ready`, because nothing failed and `all()` honestly answered `[]`.
+ *
+ * **The default is the dangerous one, which is a deliberate trade and
+ * therefore worth a guard rather than an argument.** Defaulting to
+ * volatile would make forgetting the flag loud, at the cost of touching
+ * every double in the suite; defaulting to durable keeps those quiet and
+ * makes forgetting it silent *in production*, which is the only place it
+ * costs anything. So the check is not on the default — it is that no
+ * shipped module ever takes it.
+ *
+ * Derived from the filesystem rather than from a list, so the second
+ * fallback somebody writes is covered without this file being touched.
+ * That matters more than it looks: all three of this project's
+ * silent-degradation defects were invisible precisely because nobody had
+ * noticed the code path was a fallback, so a hand-written list of
+ * fallbacks can only ever cover the ones already found.
+ */
+describe('the volatile log in production', () => {
+  const shipped = () => {
+    const root = join(process.cwd(), 'src');
+    const out: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) walk(path);
+        else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+          out.push(path);
+        }
+      }
+    };
+    walk(root);
+    return out;
+  };
+
+  /**
+   * A *call*, not the declaration — which the first version of this
+   * counted, so `persistence.ts` exporting `memoryLog<T>` satisfied it
+   * and the guard below could have been scanning nothing at all. Found
+   * by a mutant that removed the only real caller and left this green.
+   */
+  const CALL = /(?<!function\s)\bmemoryLog\s*<[^>]*>\s*\(/g;
+
+  it('is constructed somewhere, or the check below scans nothing', () => {
+    const callers = shipped().filter((file) => CALL.test(readFileSync(file, 'utf8')));
+    CALL.lastIndex = 0;
+    expect(callers.length, 'no shipped module builds one at all').toBeGreaterThan(0);
+  });
+
+  it('never claims to be durable', () => {
+    const offenders: string[] = [];
+    for (const file of shipped()) {
+      const source = readFileSync(file, 'utf8');
+      for (const call of source.matchAll(
+        /(?<!function\s)\bmemoryLog\s*<[^>]*>\s*\(([^;]*?)\)\s*[;,)]/gs,
+      )) {
+        const args = call[1];
+        if (!/durable\s*:\s*false/.test(args)) {
+          offenders.push(`${relative(process.cwd(), file)}: memoryLog(${args.trim()})`);
+        }
+      }
+    }
+    expect(offenders, 'a shipped fallback that does not admit it is volatile').toEqual([]);
   });
 });

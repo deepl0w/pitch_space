@@ -7,7 +7,7 @@ import {
   generateInterval, gradeInterval, INTERVAL_DEFAULTS,
   type IntervalExercise, type IntervalResponse, type IntervalSettings,
 } from './intervals';
-import type { AudioOut, Result } from '../types';
+import type { AudioIn, AudioOut, Result } from '../types';
 import type { Voice } from '../../audio/output/synth';
 import { SIMPLE_INTERVAL_NAMES } from '../../theory/interval';
 
@@ -29,6 +29,16 @@ declare global {
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 /** An audio out that records rather than sounds. */
+/**
+ * A microphone that is not there, which is the honest default for a test
+ * that is not about listening.
+ *
+ * Never `{ heard: true, notes: [] }`: that is a silent room, an answer the
+ * exercise is entitled to grade, and a test that did not mean to supply an
+ * answer would be supplying one. ADR 0047 is about keeping those two apart.
+ */
+const deaf: AudioIn = { listen: async () => ({ heard: false, reason: 'unavailable' }) };
+
 function recordingAudio(): AudioOut & { plays: Voice[][] } {
   const plays: Voice[][] = [];
   return { plays, play: (voices) => { plays.push([...voices]); } };
@@ -61,8 +71,11 @@ const exercise = (over: Partial<IntervalExercise> = {}): IntervalExercise => ({
 
 function render(
   ex: IntervalExercise,
-  { result = null, settings = INTERVAL_DEFAULTS, strict = false }: {
-    result?: Result | null; settings?: IntervalSettings; strict?: boolean;
+  { result = null, settings = INTERVAL_DEFAULTS, strict = false, audioIn = deaf }: {
+    result?: Result | null;
+    settings?: IntervalSettings;
+    strict?: boolean;
+    audioIn?: AudioIn;
   } = {},
 ) {
   const prompt = (
@@ -72,6 +85,7 @@ function render(
       result={result}
       onRespond={(r) => responses.push(r)}
       audio={audio}
+      audioIn={audioIn}
     />
   );
   act(() => root.render(strict ? <StrictMode>{prompt}</StrictMode> : prompt));
@@ -81,7 +95,15 @@ const choices = () => [...container.querySelectorAll('.choices button')] as HTML
 /** The button offering a given semitone distance, named as the user sees it. */
 const choiceFor = (semitones: number) =>
   choices().find((b) => b.textContent === SIMPLE_INTERVAL_NAMES[semitones])!;
-const replay = () => container.querySelector('.actions button') as HTMLButtonElement;
+/*
+  Named rather than "the first button in `.actions`", which is what this was
+  until a second control moved in beside it. The case below asserts that a
+  read interval offers no replay, and the positional selector made that case
+  pass or fail on the order of two unrelated buttons — it went red for
+  finding "Play your answer", which is a control that should be there.
+*/
+const replay = () => ([...container.querySelectorAll('.actions button')]
+  .find((b) => /play it again/i.test(b.textContent ?? '')) ?? null) as HTMLButtonElement;
 const click = (button: HTMLElement) => act(() => { button.click(); });
 
 describe('sounding the interval', () => {
@@ -283,5 +305,115 @@ describe('answering', () => {
     const before = audio.plays.length;
     click(replay());
     expect(audio.plays).toHaveLength(before + 1);
+  });
+});
+
+/**
+ * Answering by playing, which is the brief's central promise and the one
+ * path where "the user got it wrong" and "the user never answered" arrive
+ * through the same function.
+ *
+ * ADR 0047 is the whole of the care here. A refused microphone, a device
+ * that is not there, and a take with nothing readable in it are not wrong
+ * answers: grading them resets the item's streak, drops it down the review
+ * ladder, and drags the figure on the home card, for a question the player
+ * was never able to answer. So every case below that is not a real reading
+ * asserts that **nothing was responded**, not merely that the response was
+ * sensible.
+ */
+describe('answering by playing', () => {
+  const note = (frequencyHz: number | null, startSeconds = 0) => (
+    { startSeconds, durationSeconds: 0.5, frequencyHz }
+  );
+  /** A microphone that hears exactly these notes. */
+  const hearing = (...notes: { startSeconds: number; durationSeconds: number; frequencyHz: number | null }[]): AudioIn =>
+    ({ listen: async () => ({ heard: true, notes }) });
+
+  const playAnswer = () => [...container.querySelectorAll('.actions button')]
+    .find((b) => /play your answer|listening/i.test(b.textContent ?? '')) as HTMLButtonElement;
+
+  /** Press it and let the promise it started settle. */
+  const answerByPlaying = async () => {
+    await act(async () => { playAnswer().click(); });
+  };
+
+  it('offers the control at all', () => {
+    // The guard on every case below: all of them pass against a prompt with
+    // no such button, by finding nothing and responding nothing.
+    render(exercise());
+    expect(playAnswer(), 'no control for answering by playing').toBeTruthy();
+  });
+
+  it('answers with the interval that was played', async () => {
+    // A4 then C#5: a major third, whatever the exercise was asking.
+    render(exercise({ semitones: 4 }), { audioIn: hearing(note(440), note(554.365, 1)) });
+    await answerByPlaying();
+
+    expect(responses).toHaveLength(1);
+    expect(responses[0].semitones).toBe(4);
+  });
+
+  it('answers wrongly when the wrong interval was played, rather than helpfully', async () => {
+    render(exercise({ semitones: 4 }), { audioIn: hearing(note(440), note(659.255, 1)) });
+    await answerByPlaying();
+
+    expect(responses).toHaveLength(1);
+    expect(responses[0].semitones).toBe(7);
+  });
+
+  it.each([
+    ['refused', { heard: false as const, reason: 'refused' as const }],
+    ['unavailable', { heard: false as const, reason: 'unavailable' as const }],
+  ])('does not answer at all when the microphone was %s', async (_name, take) => {
+    render(exercise(), { audioIn: { listen: async () => take } });
+    await answerByPlaying();
+
+    expect(responses, 'a refusal was graded as an answer').toEqual([]);
+  });
+
+  it('does not answer when the take held no notes', async () => {
+    render(exercise(), { audioIn: hearing() });
+    await answerByPlaying();
+
+    expect(responses, 'a silent take was graded as an answer').toEqual([]);
+  });
+
+  it('does not answer when only one note could be read', async () => {
+    render(exercise(), { audioIn: hearing(note(440), note(null, 1)) });
+    await answerByPlaying();
+
+    expect(responses, 'half a take was graded as an answer').toEqual([]);
+  });
+
+  it('says what happened, so a silent refusal is not the only sign', async () => {
+    render(exercise(), { audioIn: { listen: async () => ({ heard: false, reason: 'refused' }) } });
+    await answerByPlaying();
+
+    expect(container.textContent).toMatch(/microphone/i);
+  });
+
+  it('leaves the question answerable after a take that said nothing', async () => {
+    render(exercise({ semitones: 4 }), { audioIn: hearing() });
+    await answerByPlaying();
+    click(choiceFor(4));
+
+    expect(responses, 'the buttons stopped working after a failed take')
+      .toEqual([{ semitones: 4, latencyMs: expect.any(Number) }]);
+  });
+
+  it('says what it heard, so a wrong reading is visible rather than mysterious', async () => {
+    render(exercise({ semitones: 2 }), { audioIn: hearing(note(440), note(987.767, 1)) });
+    await answerByPlaying();
+
+    // A major ninth, deliberately not folded into the second it contains.
+    expect(container.textContent).toMatch(/14 semitones/);
+  });
+
+  it('takes one answer, not one per press', async () => {
+    render(exercise({ semitones: 4 }), { audioIn: hearing(note(440), note(554.365, 1)) });
+    await answerByPlaying();
+    await answerByPlaying();
+
+    expect(responses, 'a second take answered the same question again').toHaveLength(1);
   });
 });

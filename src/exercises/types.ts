@@ -91,7 +91,7 @@ export interface Result {
  * `read` means the question is on the staff and nothing sounds. `listen`
  * means it sounds and the staff stays empty until the answer is given.
  */
-export type Presentation = 'read' | 'listen' | 'play';
+export type Presentation = 'read' | 'listen';
 
 /**
  * What the two senses are called on screen.
@@ -108,7 +108,6 @@ export type Presentation = 'read' | 'listen' | 'play';
 export const PRESENTATION_LABELS: Record<Presentation, string> = {
   listen: 'Listening',
   read: 'Reading',
-  play: 'Playing',
 };
 
 /**
@@ -124,12 +123,11 @@ export const PRESENTATION_LABELS: Record<Presentation, string> = {
  * with one option cannot change the question, and this app has a rule
  * about those.
  *
- * **Which presentations are offered is the exercise's to say**, since
- * "Playing" is only honest where the exercise can actually take an answer
- * from an instrument. Passing the list rather than hard-coding it is what
- * stopped this field offering a mode two of the six could not serve — and
- * the list it is given must be the same one the definition declares, which
- * `registry.test.ts` holds rather than trusting.
+ * **Which presentations are offered is the exercise's to say**, and the
+ * list it is given must be the same one the definition declares, which
+ * `registry.test.ts` holds rather than trusting. That was learned while a
+ * third mode briefly existed: a field hard-coding its own options offered
+ * one that two of the six exercises could not serve.
  */
 export function presentationField<S extends BaseSettings>(
   offered: readonly Presentation[],

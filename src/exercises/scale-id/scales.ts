@@ -27,7 +27,7 @@ import type {
  */
 
 /** The modes this exercise can serve, for its field and its coercion alike. */
-const SCALE_MODES = ['listen', 'read', 'play'] as const;
+const SCALE_MODES = ['listen', 'read'] as const;
 
 export const SCALE_EXERCISE_ID = 'scale-id';
 

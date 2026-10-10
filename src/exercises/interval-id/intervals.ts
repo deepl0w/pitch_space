@@ -23,7 +23,7 @@ import type {
  */
 
 /** The modes this exercise can serve, for its field and its coercion alike. */
-const INTERVAL_MODES = ['listen', 'read', 'play'] as const;
+const INTERVAL_MODES = ['listen', 'read'] as const;
 
 export const INTERVAL_EXERCISE_ID = 'interval-id';
 
@@ -492,6 +492,35 @@ export function intervalVoices(exercise: IntervalExercise): Voice[] {
     return schedule([{ midis }], { eventGap: 0, rollGap: 0, hold: 2.2 });
   }
   return schedule(midis.map((midi) => ({ midis: [midi] })), {
+    eventGap: MELODIC_GAP, rollGap: 0, hold: 1.1,
+  });
+}
+
+/**
+ * The interval the learner answered, sounded from the same first note.
+ *
+ * **So a wrong answer can be heard against the right one**, which the
+ * learner asked for: *"I want to be able to play again also the wrong
+ * answer to compare between expected and what I answered."* Naming an
+ * interval you cannot yet hear is most of the difficulty, and being told
+ * the name of what you missed does not teach you the sound — hearing the
+ * two a second apart does.
+ *
+ * **From the same starting pitch, and in the same direction.** Those are
+ * what make it a comparison rather than two unrelated sounds: change the
+ * root and the ear has two variables to hold, which is the thing it was
+ * already failing at. Only the distance differs, which is the thing the
+ * learner got wrong.
+ */
+export function answerVoices(exercise: IntervalExercise, semitones: number): Voice[] {
+  const [from] = exercise.pitches.map(midiOf);
+  // Downwards for a descending question, so the contour matches too — a
+  // rising version of a falling interval is a different sound to compare.
+  const to = exercise.direction === 'down' ? from - semitones : from + semitones;
+  if (exercise.direction === 'harmonic') {
+    return schedule([{ midis: [from, to] }], { eventGap: 0, rollGap: 0, hold: 2.2 });
+  }
+  return schedule([{ midis: [from] }, { midis: [to] }], {
     eventGap: MELODIC_GAP, rollGap: 0, hold: 1.1,
   });
 }

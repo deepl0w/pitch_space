@@ -4,7 +4,7 @@ import { useCountdown } from '../countdown';
 import { namePlayed } from '../played';
 import type { PlayedNote, PromptProps } from '../types';
 import {
-  intervalPlayed, intervalVoices, readableNotes,
+  answerVoices, intervalPlayed, intervalVoices, readableNotes,
   type IntervalExercise, type IntervalResponse, type IntervalSettings,
 } from './intervals';
 
@@ -122,6 +122,28 @@ export function IntervalPrompt({
 
   return (
     <div className="prompt">
+      {/*
+        After a wrong answer, the two intervals side by side.
+
+        Asked for in these words: *"for the listening exercises i want to be
+        able to play again also the wrong answer to compare between expected
+        and what i answered"*. Naming an interval you cannot hear is the
+        difficulty; being told the name of the one you missed does not teach
+        you its sound, and hearing them a second apart does.
+
+        Only when the answer was wrong, and only when it was heard rather
+        than read — there is nothing to compare when you got it right, and
+        a reading question was never about a sound.
+      */}
+      {answered && !result.correct && chosen !== null && !reading && (
+        <div className="actions compare">
+          <button type="button" onClick={() => audio.play(answerVoices(exercise, chosen))}>
+            Hear yours
+          </button>
+          <button type="button" onClick={play}>Hear the answer</button>
+        </div>
+      )}
+
       <div className="actions">
         {!reading && <button type="button" onClick={play}>Play it again</button>}
         <button

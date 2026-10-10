@@ -449,7 +449,7 @@ function isOutcome(value: unknown): value is ItemOutcome {
  * removed from the UI must still load the history it produced. Adding to
  * this is how a new mode becomes storable; removing from it is a migration.
  */
-const STORED_PRESENTATIONS: readonly Presentation[] = ['read', 'listen', 'play'];
+const STORED_PRESENTATIONS: readonly Presentation[] = ['read', 'listen'];
 
 /*
   A predicate rather than a bare `includes`, so the check still narrows.

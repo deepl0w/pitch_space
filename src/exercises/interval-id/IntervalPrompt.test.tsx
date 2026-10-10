@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IntervalPrompt } from './IntervalPrompt';
 import {
-  generateInterval, gradeInterval, INTERVAL_DEFAULTS,
+  generateInterval, gradeInterval, INTERVAL_DEFAULTS, intervalSettingsSchema,
   type IntervalExercise, type IntervalResponse, type IntervalSettings,
 } from './intervals';
 import type { AudioIn, AudioOut, CaptureStyle, Result } from '../types';
@@ -327,6 +327,91 @@ describe('answering', () => {
  * asserts that **nothing was responded**, not merely that the response was
  * sensible.
  */
+/**
+ * Hearing a wrong answer against the right one.
+ *
+ * Asked for directly: *"for the listening exercises i want to be able to
+ * play again also the wrong answer to compare between expected and what i
+ * answered"*. The claim worth holding is not that two buttons exist — it is
+ * that they sound **different intervals from the same note**, which is what
+ * makes it a comparison rather than two unrelated sounds.
+ */
+describe('comparing a wrong answer with the right one', () => {
+  const compareButtons = () => [...container.querySelectorAll('.compare button')] as HTMLButtonElement[];
+
+  function answerWrongly(ex: IntervalExercise) {
+    render(ex);
+    const wrong = ex.choices.find((c) => c !== ex.semitones)!;
+    click(choiceFor(wrong));
+    render(ex, { result: gradeInterval(ex, { semitones: wrong }) });
+    return wrong;
+  }
+
+  it('offers both after a wrong answer', () => {
+    answerWrongly(exercise());
+    expect(compareButtons(), 'no way to compare the two').toHaveLength(2);
+  });
+
+  it('offers neither after a right one', () => {
+    const ex = exercise();
+    render(ex);
+    click(choiceFor(ex.semitones));
+    render(ex, { result: gradeInterval(ex, { semitones: ex.semitones }) });
+    expect(compareButtons(), 'offered a comparison with nothing to compare').toHaveLength(0);
+  });
+
+  /*
+    Driven from a generated exercise rather than one with fields overridden
+    onto it: `semitones` and `pitches` are two views of one fact, and
+    setting the first alone makes a fixture that cannot occur — which is
+    how the first version of this case came to expect an interval the
+    exercise was never asking about.
+  */
+  const ascending = () => {
+    for (let seed = 1; seed < 400; seed += 1) {
+      const drawn = generateInterval({ seed, settings: INTERVAL_DEFAULTS });
+      if (drawn.direction === 'up' && drawn.choices.length > 1) return drawn;
+    }
+    throw new Error('no seed in range gave an ascending interval');
+  };
+
+  it('sounds the two from the same note, differing only in the distance', () => {
+    const ex = ascending();
+    const wrong = answerWrongly(ex);
+    audio.plays.length = 0;
+
+    for (const button of compareButtons()) click(button);
+    expect(audio.plays, 'one of the two did not sound').toHaveLength(2);
+
+    const [mine, theirs] = audio.plays.map((voices) => voices.map((v) => v.midi));
+    expect(mine[0], 'the two started from different notes').toBe(theirs[0]);
+    expect(mine[1] - mine[0], 'mine was not the interval I answered').toBe(wrong);
+    expect(theirs[1] - theirs[0], 'theirs was not the interval asked about')
+      .toBe(ex.semitones);
+    expect(wrong, 'the fixture answered correctly, so nothing was compared')
+      .not.toBe(ex.semitones);
+  });
+
+  it('keeps the contour when the question descended', () => {
+    // A rising version of a falling interval is a different sound, and the
+    // comparison is about the distance rather than the direction.
+    const settings = intervalSettingsSchema.coerce({
+      presentation: 'listen', directions: ['down'],
+    });
+    let descending = generateInterval({ seed: 1, settings });
+    for (let seed = 1; seed < 400 && descending.direction !== 'down'; seed += 1) {
+      descending = generateInterval({ seed, settings });
+    }
+    expect(descending.direction, 'no descending fixture').toBe('down');
+
+    const wrong = answerWrongly(descending);
+    audio.plays.length = 0;
+    click(compareButtons()[0]);
+    const mine = audio.plays[0].map((v) => v.midi);
+    expect(mine[1] - mine[0], 'answered downwards and sounded upwards').toBe(-wrong);
+  });
+});
+
 describe('answering by playing', () => {
   const note = (frequencyHz: number | null, startSeconds = 0) => (
     { startSeconds, durationSeconds: 0.5, frequencyHz }

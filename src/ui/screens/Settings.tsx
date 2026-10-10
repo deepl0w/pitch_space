@@ -166,26 +166,30 @@ export function Settings({ go }: { go(route: string): void }) {
         <Field label="Answering by playing" group>
           <OneOf
             options={[
-              { id: 'press', label: 'Press to play' },
-              { id: 'continuous', label: 'Keep listening' },
+              { id: 'press', label: 'Listen for a few seconds' },
+              { id: 'continuous', label: 'Stop when I have played' },
             ]}
             chosen={appearance.capture}
             onChange={setCapture}
           />
           {/*
-            Named for what each does rather than for how it works. "Press
-            to play" and "Keep listening" are both things the learner
-            does or does not have to do; "manual" and "continuous" are
-            facts about the implementation, and the panel is read by
-            somebody deciding how they want to answer.
+            Named for what the learner experiences rather than for the
+            mechanism. Both open the microphone on a press; what differs
+            is when the take ends, and "continuous" and "fixed window"
+            are facts about the implementation.
+
+            The wording was about a Playing mode that no longer exists —
+            the user asked for one, then asked for it to be dropped in
+            favour of the button being available in both other modes. The
+            choice outlived the mode because it is still a real one.
           */}
           <p className="secondary">
             {appearance.capture === 'press'
-              ? `Exercises that can be answered by playing open the microphone
-                 when you ask, and listen for a few seconds.`
-              : `The microphone stays open while you practise, and your answer
-                 is taken from what you play. Nothing is recorded or sent
-                 anywhere.`}
+              ? `After you press Play your answer, the microphone listens for a
+                 fixed few seconds and then reads what it heard.`
+              : `After you press Play your answer, the microphone stops as soon
+                 as you have played enough to answer, rather than waiting out
+                 the rest.`}
           </p>
         </Field>
       </Panel>

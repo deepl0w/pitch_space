@@ -262,9 +262,17 @@ main .practice-main .actions > .secondary {
   margin-top: 0.2rem;
 }
 
-/* The one button there is before a question exists. It is the whole of
-   what the screen is asking you to do, so it says so. */
-main .practice-main .actions > button:first-child {
+/* The one button there is, when there is one. It is the whole of what the
+   screen is asking you to do, so it says so.
+
+   `:only-of-type`, not `:first-child`, and the difference is a reported
+   bug: written positionally it emphasised whichever button happened to be
+   first, so when a second control moved into the row — "Play your answer"
+   beside "Play it again" — one of the pair came out bold and the other did
+   not, for no reason a reader could see. The rule was never about position.
+   Of-type rather than only-child because the row also holds the sentence
+   under it, which is a sibling and not a button. */
+main .practice-main .actions > button:only-of-type {
   font-size: 1rem; font-weight: 650; padding: 0.6rem 1.5rem;
 }
 

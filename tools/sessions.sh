@@ -43,13 +43,13 @@ cd "$(dirname "$0")/.."
 
 socks="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/cc-socks"
 
-# -x, not -f: a substring match on the full command line catches every
-# headless Chrome process this project's own tests launch, because their
-# --user-data-dir sits under this machine's /tmp/claude-<uid>/ scratch
-# path. Each counts as "stale, no socket, same cwd as the worktree" once
-# — found against the user role after a day of sweeps left fifty-odd such
-# pids in one row, a true reading of the wrong population. The exact name
-# match only ever sees a process actually called `claude`.
+# -x, not -f: a substring match on the full command line catches any
+# headless Chrome process launched from this machine's /tmp/claude-<uid>/
+# scratch path, whatever session started it and whichever worktree its
+# cwd happens to match. Each counts as "stale, no socket, same cwd as the
+# worktree" once — found against the user role's row after fifty-odd such
+# pids accumulated there, a true reading of the wrong population. The
+# exact name match only ever sees a process actually called `claude`.
 
 printf '%-12s %-30s %s\n' ROLE DIR STATE
 

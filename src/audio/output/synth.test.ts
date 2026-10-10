@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DEVICE_OPEN_SECONDS, QUIET_BEFORE_COLD, Synth, type Voice } from './synth';
 import {
   advanceAudioClock, audioClock, audioClosed, contextCount, gains, installAudioContext,
-  attackTimes, decodeAs, masterGain, oscillators, resetAudio, samples, soundingAfter,
-  suspendUntilResumed,
+  allBufferSources, attackTimes, buffersAllocated, decodeAs, masterGain, oscillators,
+  resetAudio, samples, soundingAfter, suspendUntilResumed,
 } from '../../testing/audioContext';
 
 /**
@@ -386,6 +386,45 @@ describe('a passage waiting on a cold context', () => {
  * exactly 0 at construction. The guard was written for the right hazard
  * and watched the wrong signal.
  */
+/**
+ * Something carried by the output stream before the first note needs it.
+ *
+ * Scheduling a note late is not the same as the device being open. A
+ * context built inside a click opens its stream then, and the first buffers
+ * an OS hands a freshly opened device are where a fade-in or a dropped
+ * block lives — so the first thing the app plays is what pays for them,
+ * however far ahead it was scheduled. Reported as the first note after a
+ * refresh "not catching the attack".
+ */
+describe('opening the output before anything is played', () => {
+  it('hands the device silence to carry, as soon as there is a device', () => {
+    synth.play(notes(1));
+    const made = buffersAllocated();
+    expect(made.length, 'nothing was handed to the output to warm it').toBe(1);
+    expect(made[0].length / made[0].sampleRate,
+      'the silence is shorter than the device takes to open')
+      .toBeGreaterThanOrEqual(DEVICE_OPEN_SECONDS);
+  });
+
+  it('starts it, rather than only building it', () => {
+    // A buffer nobody plays warms nothing. Told from the notes by having no
+    // decoded pitch, which is what `samples()` filters on.
+    synth.play(notes(1));
+    const warmUp = allBufferSources().filter((sample) => sample.midi === null);
+    expect(warmUp, 'the silence was built and never played').toHaveLength(1);
+    expect(warmUp[0].startedAt, 'started at no particular time').not.toBeNull();
+  });
+
+  it('does it once per context, not once per passage', () => {
+    // It is about opening the stream, which happens once. One per press
+    // would be an allocation on every note a learner hears.
+    synth.play(notes(1));
+    advanceAudioClock(5);
+    synth.play(notes(1));
+    expect(buffersAllocated()).toHaveLength(1);
+  });
+});
+
 describe('the first play, before the audio clock has started', () => {
   it('schedules clear of a device that is still opening', () => {
     /*

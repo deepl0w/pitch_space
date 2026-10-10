@@ -179,6 +179,27 @@ that *three sessions confirming through the same tool is reproducibility, not
 corroboration*, while their own three attempts had the identical shape one
 level down. The rule was applied to the fleet and not to the hand holding it.
 
+**And agreement establishes the reading, not the instrument** — which is a
+second caveat, distinct from the first and found on this document's own
+advice being followed correctly.
+
+The focus ring's contrast was settled by two genuinely independent means, a
+canvas pixel read and the arithmetic in `contrast.test.tsx`, **agreeing to two
+decimals**. That agreement was real. It was also silent about the canvas
+read's range: eight bits per channel is coarse enough below roughly 5%
+lightness that the same colour came back as two different byte triples on
+consecutive runs, which surfaced later on a darker pair where the two means
+disagreed by 0.03. The technique that holds is
+`color(from <expr> srgb-linear r g b)`, which the browser computes without
+quantising.
+
+So two instruments agreeing tells you **they agree on that input**. It does
+not tell you either is sound, and it says nothing at all about the inputs you
+have not tried — the agreement happened on colours light enough for the
+quantisation not to bite. The remedy above still holds and wants this beside
+it: redundancy of kind protects against a blind instrument, and nothing
+protects against a *narrow* one except finding its edge.
+
 **The caveat is what makes it fail quietly.** It works only while the second
 observer really is holding a different instrument. Two sessions reading the
 same file, or one agent asked to check another's reasoning on the evidence that

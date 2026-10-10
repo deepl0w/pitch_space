@@ -107,11 +107,11 @@ is not something a test can see.
 
 Stated plainly, because the brief promises some of it.
 
-- **The microphone.** The brief says exercises are answered by *playing*
-  them, and capture is not wired — the pitch detector, onset detector and
-  rhythm alignment all exist and are tested, with nothing feeding them.
-  Rhythm is answered by tapping, which is a real way to practise rhythm
-  and is not the same thing.
+- **The microphone, for five of the six.** Intervals can be answered by
+  playing them: the capture chain runs from a real device through the
+  detectors to the grader. The other five still take a click, and rhythm
+  is answered by tapping, which is a real way to practise rhythm and is
+  not the same thing.
 - **Sight reading**, which wants the melody generator to develop a motif
   rather than only obey constraints. Legal and characterless is the
   failure mode here, not illegal.

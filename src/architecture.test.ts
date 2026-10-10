@@ -1,6 +1,9 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { CHORD_TYPES } from './theory/chord';
+import { SCALE_TYPES } from './theory/scale';
+import { EXERCISE_FAMILIES } from './exercises/registry';
 
 /**
  * The boundaries from docs/adr/, asked of the repository.
@@ -604,6 +607,110 @@ describe("the home screen's claim about how exercises are answered", () => {
    * surrounding rule needs to be: a disclaimer anywhere outside this one
    * paragraph should not be able to launder a bare claim inside it.
    */
+  /**
+   * The README makes the same claim and nothing was watching it.
+   *
+   * `appIsWiredToCapture` already decides this for the home screen's lede,
+   * and the lede flipped on its own the day the adapter landed. The README
+   * says it too — "capture is not wired ... with nothing feeding them" — in
+   * a section whose whole job is to be honest about what is missing, and it
+   * went on saying it, because the mechanism was pointed at one file.
+   *
+   * That is the shape of the gap rather than one instance of it: the claim
+   * with a test behind it stayed true while the prose claims rotted. The
+   * same predicate costs nothing to point at a second place.
+   *
+   * Scoped to the section that lists what is missing, for the lede's
+   * reason: the README discusses the microphone elsewhere — in the brief,
+   * and in what the exercises are for — and a sentence there should not be
+   * able to fail a claim about what is built.
+   *
+   * **The scoping is not enough on its own, which this found immediately.**
+   * The first corrected bullet explained its own history — *this entry said
+   * capture was not wired for a session after it was* — and that sentence
+   * trips the predicate, because a report of a past false claim is shaped
+   * exactly like the claim. The lede test hit the same thing with the
+   * comment describing it. So the section stays factual and the history
+   * lives here, where no scan is looking.
+   */
+  const README = join(SRC, '..', 'README.md');
+
+  function notBuiltSection(source: string): string {
+    const start = source.indexOf('## What is not built yet');
+    if (start === -1) throw new Error('could not find the "not built" section in README.md');
+    const next = source.indexOf('\n## ', start + 1);
+    return source.slice(start, next === -1 ? undefined : next);
+  }
+
+  /**
+   * A sentence saying capture is absent, with nothing in it disclaiming
+   * that as partial. Sentence-scoped for the lede's reason — a qualifier
+   * in one sentence must not launder a bare claim in another.
+   */
+  function claimsCaptureUnbuilt(text: string): boolean {
+    const sentences = text.replace(/\s+/g, ' ').match(/[^.]+\./g) ?? [];
+    return sentences.some((sentence) =>
+      /\b(capture|microphone)\b/i.test(sentence)
+      && /\b(not wired|not built|nothing feeding|is not|are not)\b/i.test(sentence)
+      && !/\b(intervals?|so far|only|partly|one exercise)\b/i.test(sentence));
+  }
+
+  it('does not tell a reader capture is missing once it is wired', () => {
+    const section = notBuiltSection(readFileSync(README, 'utf8'));
+    // Not idle: the section exists and still lists something.
+    expect(section.length, 'the "not built" section is empty').toBeGreaterThan(200);
+
+    if (appIsWiredToCapture()) {
+      expect(claimsCaptureUnbuilt(section), 'README says capture is not wired, and it is')
+        .toBe(false);
+    } else {
+      expect(claimsCaptureUnbuilt(section), 'capture is unwired and the README does not say so')
+        .toBe(true);
+    }
+  });
+
+  /**
+   * The counts the README quotes are the catalogues' own.
+   *
+   * "from twenty-four", "from twenty types", "six kinds of practice" — each
+   * is a fact about an array that anybody may add to, written in prose that
+   * nothing recomputes. None has rotted yet; the microphone entry above
+   * shows what happens when one does, and these are the same shape with a
+   * cheaper mechanism available.
+   *
+   * The numbers come from the code and the claims are found by phrase, so
+   * this cannot drift into a second copy of the figures. A phrase that
+   * stops appearing fails rather than passing, because a claim nobody can
+   * locate any more is exactly the state this is meant to catch.
+   */
+  const WORDS: Record<string, number> = {
+    four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    twelve: 12, fifteen: 15, sixteen: 16, eighteen: 18, twenty: 20,
+    'twenty-four': 24, 'twenty-one': 21, thirty: 30,
+  };
+
+  it('quotes the catalogues at the sizes they are', () => {
+    const readme = readFileSync(README, 'utf8').replace(/\s+/g, ' ');
+    const claims: [string, RegExp, number][] = [
+      ["a chord's qualities", /quality, from ([\w-]+),/i, CHORD_TYPES.length],
+      ['the scale types', /a scale, from ([\w-]+) types/i, SCALE_TYPES.length],
+      ['the kinds of practice', /([\w-]+) kinds of practice/i, EXERCISE_FAMILIES.length],
+    ];
+
+    for (const [what, pattern, actual] of claims) {
+      const match = pattern.exec(readme);
+      expect(match, `the README no longer states ${what} where this looks for it`)
+        .not.toBeNull();
+      const word = match![1].toLowerCase();
+      // Loudly, rather than skipping: a number this cannot read is a claim
+      // going unchecked, which is the thing being guarded against.
+      expect(WORDS, `the README writes ${what} as "${word}", which this cannot read`)
+        .toHaveProperty(word);
+      expect(WORDS[word], `the README says ${word} ${what}; there are ${actual}`)
+        .toBe(actual);
+    }
+  });
+
   function ledeText(source: string): string {
     const match = source.match(/<p className="lede">([\s\S]*?)<\/p>/);
     if (!match) throw new Error('could not find the lede paragraph in Home.tsx');

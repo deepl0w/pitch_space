@@ -382,20 +382,40 @@ preference to a gap:
   that nothing checks, and the coupling can be reintroduced by any later
   change. What is wanted is the property, not the figure, and it still has
   nowhere to live.
-- **The colour rule.** `src/index.css` states that a verdict which is only a
-  hue is no verdict to a colour-blind reader. It is kept everywhere and
-  enforced nowhere, and the proposed red-to-green progress reading is the first
-  case that would strain it.
+- **Colour contrast against what a thing is painted on.** An indicator lands
+  on whatever is behind it, which is geometry, and geometry is a browser.
+  `src/ui/contrast.test.tsx` does the circle of fifths without one *only*
+  because `.wedge` and `.wedge-self` are two classes on one element, so the
+  pairing is readable from the DOM; its own comment says plainly that the
+  general version is not computable that way. Still open.
+- **~~The colour rule~~ — this was filed here wrongly and does not need a
+  harness.** `src/index.css` states that a verdict which is only a hue is no
+  verdict to a colour-blind reader. Whether colour is the *sole* channel is a
+  DOM question, not a geometry one: render each state a component can be in
+  and check the text differs. jsdom answers that, and `src/testing/stylesheet.ts`
+  now parses the app's CSS and resolves the cascade in-test, so even the
+  stylesheet half is reachable. **No such check exists**, and listing it here
+  as blocked is the likeliest reason nobody has written it — this document
+  said it needed something it does not.
 - **Touch targets.** The reason the preview harness is distrusted at all.
 - **Notation rendering.** `Score` redraws at the measured width; whether the
   result is legible at phone widths is not a thing jsdom can answer.
 
-**One thing this gap has already demonstrated about itself.** The first
-bullet above went stale within a day of being written, and **G7's own command
-could not catch it** — that command asks whether a harness exists, which is
-still no, so the gap stayed correctly open while the reason given for it
-quietly stopped being true. A per-gap check tests the gap, not the
-justification, and a justification is a claim like any other.
+**Two things this gap has demonstrated about itself, and they are different
+faults.** The first bullet went stale within a day of being written, and
+**G7's own command could not catch it** — that command asks whether a harness
+exists, which is still no, so the gap stayed correctly open while the reason
+given for it quietly stopped being true. A per-gap check tests the gap, not
+the justification.
+
+**The colour bullet is worse, because it was not stale — it was wrong when
+written.** Nothing changed underneath it; the rule never needed a browser, and
+the same session had argued days earlier that the cheap version is a test that
+each state renders differing text. A check on the justification would not have
+helped here either, since the justification was false on day one. **The thing
+that catches this is a reader who is not the author**, which is the remedy
+`misread-instruments.md` arrives at by another route, and the reason a gap
+list should be read by someone other than whoever keeps it.
 
 **The cost is why this has not happened and should be stated with the gap.** A
 browser harness is slow, flaky and a maintenance burden, and this project has

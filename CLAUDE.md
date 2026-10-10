@@ -265,6 +265,23 @@ session's title at all. Renaming it is not a worktree session's call to
 make — it is not this checkout — so it is recorded here rather than acted
 on from one.
 
+**`user` failed the same way the same day, and the cause is not this
+one.** `ListAgents` lists it with no `[ref]` at all, unlike every other
+role; `tools/sessions.sh` reports a socket; `SendMessage` to the bare name
+still refuses with "No agent named 'user' is reachable" — from main twice,
+ten minutes apart, and from this session once more immediately after a
+fresh `ListAgents`. That rules out a stale read and rules out the sender:
+two different roles failed identically. It does not confirm a mechanism —
+main's error named the reservation outright, this one does not, and `user`
+is not on `SendMessage`'s documented reserved-word list the way `main` is.
+One guess worth naming and not yet checked: chat protocols commonly use
+`user` as a role token the way this one uses `main` for a parent
+conversation, which would make this the same *shape* of collision under a
+different reservation. **Recorded as open rather than attributed**, on
+this file's own standard: an explanation reached for immediately after one
+mechanism is confirmed is selected for fitting the symptom, not for being
+true, and this one has a real alternative sitting right next to it.
+
 Two things that follow and are easy to get backwards. An unreachable role
 is never a reason to do nothing — there is no flag to set that makes it
 told anyway; `announce` and `status` keep showing it behind until its own

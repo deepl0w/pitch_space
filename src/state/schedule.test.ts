@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  INTERVALS_MS, dueAt, dueCount, overdueRatio, schedule,
+  INTERVALS_MS, completion, dueAt, dueCount, overdueRatio, schedule,
 } from './schedule';
 import { tallyItems, tallyKey, type ItemTally, type TallyKey } from './progressStore';
 import type { ProgressLine } from './line';
@@ -354,5 +354,74 @@ describe('an item the settings cannot currently ask', () => {
     */
     const rows = schedule(lineOver(['a', 'b'] as ItemId[], 'read'), new Map(), NOW);
     expect(rows.every((r) => r.reachable)).toBe(true);
+  });
+});
+
+/**
+ * Completion, which is a claim about the ladder rather than about answers.
+ *
+ * Asserted as relations — unseen is lower than practised, a narrowed pool
+ * cannot flatter a learner, the top rung is reachable only from the top
+ * rung — rather than against figures. The ladder is eight rungs today and
+ * the comment above it says plainly that the numbers are not validated
+ * against retention data, so a test that pinned 0.428 would be pinning a
+ * tuning decision and making it unchangeable.
+ */
+describe('how far a line has advanced', () => {
+  const line = (askable: readonly string[]) => ({
+    exercise: 'interval-id', presentation: 'listen' as const, askable,
+  } as never as Parameters<typeof completion>[0]);
+
+  const at = (streak: number) => ({
+    seen: streak, correct: streak, streak, lastSeenAt: 0,
+  } as never as ItemTally);
+
+  const tallies = (line: Parameters<typeof completion>[0], by: Record<string, number>) =>
+    new Map(Object.entries(by).map(([item, streak]) =>
+      [tallyKey(line, item as never), at(streak)] as const));
+
+  it('is nothing at all for a line that can ask nothing', () => {
+    // Not zero: an empty pool is a fact about the settings, and reporting it
+    // as a figure about the learner is the thing ADR 0037 forbids.
+    expect(completion(line([]), new Map())).toBeNull();
+  });
+
+  it('is zero when nothing has been practised, and not null', () => {
+    const l = line(['a', 'b']);
+    expect(completion(l, new Map())).toBe(0);
+  });
+
+  it('rises as items climb the ladder and never passes one', () => {
+    const l = line(['a', 'b']);
+    const none = completion(l, new Map())!;
+    const some = completion(l, tallies(l, { a: 1 }))!;
+    const more = completion(l, tallies(l, { a: 3 }))!;
+    const full = completion(l, tallies(l, { a: 99, b: 99 }))!;
+    expect(some).toBeGreaterThan(none);
+    expect(more).toBeGreaterThan(some);
+    expect(full).toBe(1);
+    // A streak past the top rung is still the top rung, not more than full.
+    expect(completion(l, tallies(l, { a: 999, b: 999 }))).toBe(1);
+  });
+
+  it('counts what the settings can ask, so narrowing cannot flatter', () => {
+    /*
+      The defect this forbids: a learner who has practised one interval of
+      five sees 20%, and would see 100% if the denominator were the items
+      with a tally rather than the items askable. Shrinking a pool is then
+      indistinguishable from having learnt it.
+    */
+    const wide = line(['a', 'b', 'c', 'd', 'e']);
+    const practised = tallies(wide, { a: 99 });
+    expect(completion(wide, practised)).toBeCloseTo(0.2, 10);
+  });
+
+  it('does not count an item practised under another presentation', () => {
+    // Reading a third and hearing one are different skills and different
+    // lines; `tallyKey` keys on both, and this is what proves completion
+    // inherits that rather than summing across them.
+    const heard = line(['a']);
+    const read = { ...heard, presentation: 'read' } as typeof heard;
+    expect(completion(read, tallies(heard, { a: 99 }))).toBe(0);
   });
 });

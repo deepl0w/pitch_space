@@ -210,6 +210,46 @@ export function schedule(
  * reachable*, and a single number cannot, which is 0037's argument for
  * why a figure that cannot name what it covers should not be shown.
  */
+/**
+ * How far a line has advanced, from 0 to 1, or `null` if it asks nothing.
+ *
+ * **Not a score, and deliberately not derived from one.** ADR 0040 settles
+ * that a line's grade is a function of how far its items have moved along
+ * the ladder rather than of how many answers were right: the interval is
+ * the progress, and a right answer is the thing that lengthens it. So this
+ * reads `streak` — the same value `dueAt` uses to pick an interval — and
+ * asks how far up the ladder each item has climbed.
+ *
+ * **An unseen item is 0, not absent.** The denominator is everything the
+ * settings can ask, so narrowing a pool cannot raise the figure by hiding
+ * the items a learner has not reached. That is the same reason `dueCount`
+ * counts over `line.askable` rather than over the tallies it was given.
+ *
+ * **It cannot reach 1 by being lucky once.** The top rung is a fortnight's
+ * interval, which an item arrives at only by being right repeatedly across
+ * real elapsed time, so a full line is a claim about weeks rather than
+ * about a session. A line with one item still reaches 1 — that is true and
+ * visibly small, which 0040 prefers to a number inflated to look larger.
+ *
+ * `null` rather than 0 for a line that asks nothing: no items is not no
+ * progress, and a caller showing "0%" for a pool the settings emptied
+ * would be reporting a fact about the settings as a fact about the
+ * learner.
+ */
+export function completion(
+  line: ProgressLine,
+  tallies: ReadonlyMap<TallyKey, ItemTally>,
+): number | null {
+  if (line.askable.length === 0) return null;
+  const top = INTERVALS_MS.length - 1;
+  let climbed = 0;
+  for (const item of line.askable) {
+    const tally = tallies.get(tallyKey(line, item));
+    if (tally !== undefined) climbed += Math.min(tally.streak, top) / top;
+  }
+  return climbed / line.askable.length;
+}
+
 export function dueCount(
   line: ProgressLine,
   tallies: ReadonlyMap<TallyKey, ItemTally>,

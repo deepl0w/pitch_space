@@ -5,6 +5,7 @@ import {
   degreeLabelFor, degreeVoices,
   type DegreeExercise, type DegreeResponse, type DegreeSettings,
 } from './degrees';
+import { SoundBox } from '../SoundBox';
 
 /** Out of the component, so the clock is not read where a render could. */
 function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
@@ -16,7 +17,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
  * fresh question is a fresh component.
  */
 export function DegreePrompt({
-  exercise, settings, result, onRespond, audio,
+  exercise, settings, result, onRespond, audio, moveOn,
 }: PromptProps<DegreeSettings, DegreeExercise, DegreeResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -24,7 +25,12 @@ export function DegreePrompt({
   const reading = exercise.presentation === 'read';
   const key = ALL_KEYS.find((k) => keyId(k) === exercise.keyId)!;
 
+  // Moved on every play, so the box's wave follows the sound rather than
+  // only its own button — a question sounds itself on Start.
+  const [playedAt, setPlayedAt] = useState(0);
+
   function play() {
+    setPlayedAt(Date.now());
     audio.play(degreeVoices(exercise));
     // From the first hearing, not the last: someone who needed three listens
     // has not answered quickly, and restarting the clock would record that
@@ -59,13 +65,17 @@ export function DegreePrompt({
       </p>
 
       {!reading && (
-        <div className="actions">
-          <button type="button" onClick={play}>Play it again</button>
-          <span className="secondary">
-            {exercise.context.length > 0 ? 'cadence, then the note' : 'the note alone'}
-          </span>
-        </div>
+        <SoundBox
+          voices={degreeVoices(exercise)}
+          onPlay={play}
+          onStop={() => { audio.stopAll(); }}
+          playedAt={playedAt}
+          label="Play it again"
+          note={exercise.context.length > 0 ? 'cadence, then the note' : 'the note alone'}
+        />
       )}
+
+      <div className="actions">{moveOn}</div>
 
       <div className="choices" role="group" aria-label="Which degree was that?">
         {exercise.choices.map((degree) => {

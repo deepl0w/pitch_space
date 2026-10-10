@@ -8,6 +8,7 @@ import {
   DIRECTION_LABELS, scalePlayed, scaleVoices,
   type ScaleExercise, type ScaleResponse, type ScaleSettings,
 } from './scales';
+import { SoundBox } from '../SoundBox';
 
 /**
  * How long the microphone is open for a played scale.
@@ -45,7 +46,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
 }
 
 export function ScalePrompt({
-  exercise, result, onRespond, audio, audioIn, capture,
+  exercise, result, onRespond, audio, audioIn, capture, moveOn,
 }: PromptProps<ScaleSettings, ScaleExercise, ScaleResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -55,7 +56,12 @@ export function ScalePrompt({
   const [aside, setAside] = useState<string | null>(null);
   const reading = exercise.presentation === 'read';
 
+  // Moved on every play, so the box's wave follows the sound rather than
+  // only its own button — a question sounds itself on Start.
+  const [playedAt, setPlayedAt] = useState(0);
+
   function play() {
+    setPlayedAt(Date.now());
     audio.play(scaleVoices(exercise));
     // From the first hearing, not the last: three listens is not a fast
     // answer, and restarting the clock would record that it was.
@@ -146,12 +152,14 @@ export function ScalePrompt({
       </p>
 
       {!reading && (
-        <div className="actions">
-          <button type="button" onClick={play}>Play it again</button>
-          <span className="secondary">
-            {DIRECTION_LABELS[exercise.direction].toLowerCase()}
-          </span>
-        </div>
+        <SoundBox
+          voices={scaleVoices(exercise)}
+          onPlay={play}
+          onStop={() => { audio.stopAll(); }}
+          playedAt={playedAt}
+          label="Play it again"
+          note={DIRECTION_LABELS[exercise.direction].toLowerCase()}
+        />
       )}
 
       <div className="actions">
@@ -186,6 +194,7 @@ export function ScalePrompt({
       {answered && (
         <p className={`verdict ${result.correct ? 'right' : 'wrong'}`}>{result.feedback}</p>
       )}
+      <div className="actions">{moveOn}</div>
     </div>
   );
 }

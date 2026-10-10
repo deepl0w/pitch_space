@@ -60,7 +60,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const INTERACTIVE = 'button, input, select, textarea';
 
 /** Silent, so a practice round can start without an AudioContext. */
-const silent: AudioOut = { play: () => {} };
+const silent: AudioOut = { play: () => {}, stopAll: () => {} };
 
 /**
  * Every screen this rule is asked of, by the file it lives in.

@@ -75,6 +75,42 @@ export const DEVICE_OPEN_SECONDS = 0.2;
 export const CLOCKLESS_HEADROOM = DEVICE_OPEN_SECONDS + 0.05;
 
 /**
+ * Give the output stream something to carry before the first note needs it.
+ *
+ * **Scheduling late is not the same as the device being open**, which is
+ * what the headroom below assumed. A context built inside a click opens its
+ * stream then, and the first buffers an OS hands to a freshly opened device
+ * are where a fade-in, a dropped block or a resampler settling live — so
+ * the first thing the app plays is the thing those cost, however far ahead
+ * it was scheduled. A learner reported it as the first note after a refresh
+ * "not catching the attack", which is what a swallowed opening block sounds
+ * like on a struck note and would not sound like on a sustained one.
+ *
+ * Silence rather than a quiet tone: the point is to make the stream carry
+ * *something* through the window, and anything audible would be a click at
+ * the start of every session. Disconnected and collected when it ends.
+ *
+ * Costs one buffer of a few thousand zeroes, once per page.
+ */
+function warmUp(context: AudioContext): void {
+  try {
+    const frames = Math.max(1, Math.ceil(DEVICE_OPEN_SECONDS * context.sampleRate));
+    const silence = context.createBuffer(1, frames, context.sampleRate);
+    const source = context.createBufferSource();
+    source.buffer = silence;
+    source.connect(context.destination);
+    source.start();
+  } catch {
+    /*
+      Swallowed deliberately. This is an optimisation for how the first note
+      sounds, and an environment that cannot do it — a stub in a test, a
+      browser refusing a zero-length buffer — must still get its audio. A
+      throw here would take out the whole engine for a warm-up.
+    */
+  }
+}
+
+/**
  * How long the output has to be silent before the device is assumed shut
  * again, and the cold headroom paid a second time.
  *
@@ -259,6 +295,7 @@ export class Synth {
       this.master = this.context.createGain();
       this.master.gain.value = this.level();
       this.master.connect(this.context.destination);
+      warmUp(this.context);
     }
     /*
       Handed back rather than dropped. `currentTime` does not move while a

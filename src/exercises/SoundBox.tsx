@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Voice } from '../audio/output/synth';
 // From the leaf that holds the contract, not from the module that owns the
 // `AudioContext`: `import type` is erased and a value import is not.
@@ -28,7 +28,7 @@ import { SPECTRUM_BANDS } from '../audio/output/spectrum';
  * than one that shows a flat line while sound is audible.
  */
 export function SoundBox({
-  voices, onPlay, onStop, playedAt, spectrum, label = 'Play it', note,
+  voices, onPlay, onStop, playedAt, spectrum, staff, label = 'Play it', note,
 }: {
   /** The passage about to sound, read only for how long it lasts. */
   voices: readonly Voice[];
@@ -45,6 +45,16 @@ export function SoundBox({
    * only thing that sees them all.
    */
   playedAt: number;
+  /**
+   * The answer's stave, once there is one, shown instead of the wave.
+   *
+   * **The same box, not a second one.** The screen used to put the revealed
+   * stave in its own panel above this, so answering a listening question
+   * added a box to the page and left this one animating a wave for a
+   * passage nobody was going to play again. The box is the place the
+   * question lives; what is in it changes when the question is answered.
+   */
+  staff?: ReactNode;
   /**
    * Fills an array with the output's band levels, or says it cannot.
    *
@@ -194,6 +204,17 @@ export function SoundBox({
 
   return (
     <div className={`sound${playing ? ' sound-playing' : ''}${drawn ? ' sound-drawn' : ''}`}>
+      {/*
+        The stave takes the box over once the answer is in it.
+
+        Rendered *instead of* the row rather than above it: the question is
+        answered, so a wave nobody is going to set going again is a control
+        that has stopped meaning anything, and leaving it there is what made
+        the page grow a second box in the first place. The box stays the
+        size it was, which is what keeps answering from shifting everything
+        under it.
+      */}
+      {staff ?? (
       <div className="sound-row">
         <div className="sound-wave" ref={wave} aria-hidden="true">
           {/* Enough bars to read as a wave across a full-width box, each
@@ -231,6 +252,7 @@ export function SoundBox({
           </svg>
         </button>
       </div>
+      )}
       {note !== undefined && <span className="secondary">{note}</span>}
     </div>
   );

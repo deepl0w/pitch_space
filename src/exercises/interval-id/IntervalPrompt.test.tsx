@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { StrictMode, act } from 'react';
+import { StrictMode, act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IntervalPrompt } from './IntervalPrompt';
@@ -80,12 +80,21 @@ function render(
   {
     result = null, settings = INTERVAL_DEFAULTS, strict = false,
     audioIn = deaf, capture = 'press' as CaptureStyle,
+    answerStaff,
   }: {
     result?: Result | null;
     settings?: IntervalSettings;
     strict?: boolean;
     audioIn?: AudioIn;
     capture?: CaptureStyle;
+    /**
+     * Stands in for the drawn stave the screen hands down.
+     *
+     * A sentinel rather than a real `Score`: what these cases are about is
+     * *where it is put*, and drawing notation under jsdom would make them
+     * about vexflow instead.
+     */
+    answerStaff?: ReactNode;
   } = {},
 ) {
   const prompt = (
@@ -97,6 +106,14 @@ function render(
       audio={audio}
       audioIn={audioIn}
       capture={capture}
+      /*
+        Only once there is an answer, which is when the screen hands one
+        down — `answerScore` is null until the question has been graded.
+        Defaulting it to a node regardless put a stave in the sound box on
+        unanswered questions and took the replay control off three cases
+        that had nothing to do with staves.
+      */
+      answerStaff={answerStaff ?? (result ? <div data-testid="staff" /> : undefined)}
     />
   );
   act(() => root.render(strict ? <StrictMode>{prompt}</StrictMode> : prompt));
@@ -364,15 +381,32 @@ describe('answering', () => {
     expect(responses).toHaveLength(1);
   });
 
-  it('can still be replayed after it has been answered', () => {
-    // Hearing it again next to the right answer is how the ear learns the
-    // interval it just got wrong.
+  it('can still be heard again after it has been answered', () => {
+    /*
+      Hearing it again next to the right answer is how the ear learns the
+      interval it just got wrong, and that has to survive the stave taking
+      the sound box over.
+
+      **It is a different control now and the capability is the claim.**
+      The box's own replay is gone — once the question is answered the box
+      holds the stave instead of the wave — so the question is heard again
+      by pressing the chip that names it, which is the control the learner
+      was pointed at for exactly this. Asserting the chip rather than the
+      box is what keeps this case about the learner being able to hear it
+      rather than about which button does it.
+    */
     const ex = exercise();
     render(ex, { result: gradeInterval(ex, { semitones: 0 }) });
     afterItHasPlayed();
+    expect(replay(), 'the box kept a replay it no longer has room for').toBeFalsy();
+
     const before = audio.plays.length;
-    click(replay());
-    expect(audio.plays).toHaveLength(before + 1);
+    click(choiceFor(ex.semitones));
+    expect(audio.plays, 'no way left to hear the interval again')
+      .toHaveLength(before + 1);
+    const heard = audio.plays.at(-1)!.map((v) => v.midi);
+    expect(heard[1] - heard[0], 'what sounded was not the interval asked about')
+      .toBe(ex.semitones);
   });
 });
 
@@ -662,5 +696,46 @@ describe('answering by playing', () => {
     await answerByPlaying();
 
     expect(responses, 'a second take answered the same question again').toHaveLength(1);
+  });
+});
+
+
+/**
+ * Where the revealed stave lands, which is different in the two modes.
+ *
+ * **Written because changing it broke the other mode in silence.** Moving
+ * the answer's stave into the sound box, so a listening question stops
+ * growing a second panel when it is answered, took it off a *reading*
+ * question altogether — the question's own stave goes null the moment it is
+ * answered and `answerScore` is what replaces it, so diverting that to a box
+ * reading mode does not render left nothing at all. Every test passed. It
+ * was found by looking at the page.
+ *
+ * So both modes are asserted, and the listening case asserts containment
+ * rather than presence: "a stave is on the screen" was true throughout the
+ * defect this is about, because the screen was drawing it in its own box.
+ */
+describe('the revealed stave', () => {
+  const staff = () => container.querySelector('[data-testid="staff"]');
+
+  it('is inside the sound box when the question was heard', () => {
+    const ex = exercise();
+    render(ex, { result: gradeInterval(ex, { semitones: ex.semitones }) });
+    expect(staff(), 'no stave at all').not.toBeNull();
+    expect(container.querySelector('.sound [data-testid="staff"]'),
+      'the stave is on the page but not in the box the question lives in')
+      .not.toBeNull();
+  });
+
+  it('is still shown when the question was read', () => {
+    /*
+      The regression, stated as its own case. A reading question has no
+      sound box, so a stave that only ever goes inside one disappears the
+      moment the question is answered.
+    */
+    const read = { ...INTERVAL_DEFAULTS, presentation: 'read' as const };
+    const ex = generateInterval({ seed: 1, settings: read });
+    render(ex, { settings: read, result: gradeInterval(ex, { semitones: ex.semitones }) });
+    expect(staff(), 'answering a reading question took its stave away').not.toBeNull();
   });
 });

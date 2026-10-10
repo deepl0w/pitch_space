@@ -46,7 +46,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
 }
 
 export function ScalePrompt({
-  exercise, result, onRespond, audio, audioIn, capture, moveOn,
+  exercise, result, onRespond, audio, audioIn, capture, moveOn, answerStaff,
 }: PromptProps<ScaleSettings, ScaleExercise, ScaleResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -151,12 +151,22 @@ export function ScalePrompt({
           : <>A scale, from <strong>{pitchName(exercise.root, false)}</strong>. Which one?</>}
       </p>
 
+      {/*
+        A reading question has no sound box, and its stave still has to land.
+
+        The question's own stave goes null the moment it is answered and
+        `answerScore` takes over — so diverting that to the sound box took
+        the stave off a reading question altogether, which is what this
+        line is here to stop happening again.
+      */}
+      {reading && answerStaff}
       {!reading && (
         <SoundBox
           voices={scaleVoices(exercise)}
           onPlay={play}
           onStop={() => { audio.stopAll(); }}
           playedAt={playedAt}
+          staff={answerStaff}
           spectrum={audio.spectrum?.bind(audio)}
           label="Play it again"
           note={DIRECTION_LABELS[exercise.direction].toLowerCase()}

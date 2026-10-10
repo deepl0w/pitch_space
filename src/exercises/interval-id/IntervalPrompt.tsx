@@ -22,7 +22,7 @@ import {
  * three pieces of state that have to be cleared in step.
  */
 export function IntervalPrompt({
-  exercise, result, onRespond, audio, audioIn, capture, moveOn,
+  exercise, result, onRespond, audio, audioIn, capture, moveOn, answerStaff,
 }: PromptProps<IntervalSettings, IntervalExercise, IntervalResponse>) {
   const [chosen, setChosen] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
@@ -134,12 +134,22 @@ export function IntervalPrompt({
         user's words were that the interface should be consistent between
         listening and reading.
       */}
+      {/*
+        A reading question has no sound box, and its stave still has to land.
+
+        The question's own stave goes null the moment it is answered and
+        `answerScore` takes over — so diverting that to the sound box took
+        the stave off a reading question altogether, which is what this
+        line is here to stop happening again.
+      */}
+      {reading && answerStaff}
       {!reading && (
         <SoundBox
           voices={intervalVoices(exercise)}
           onPlay={play}
           onStop={() => { audio.stopAll(); }}
           playedAt={playedAt}
+          staff={answerStaff}
           spectrum={audio.spectrum?.bind(audio)}
           label="Play it again"
           note={PRESENTATION[exercise.direction]}

@@ -32,7 +32,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
  * fresh question is a fresh component.
  */
 export function ProgressionPrompt({
-  exercise, result, onRespond, audio, moveOn,
+  exercise, result, onRespond, audio, moveOn, answerStaff,
 }: PromptProps<ProgressionSettings, ProgressionExercise, ProgressionResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -99,12 +99,22 @@ export function ProgressionPrompt({
         exercise, a cadence and then four chords, so it is the one where
         seeing that something is still playing is worth the most.
       */}
+      {/*
+        A reading question has no sound box, and its stave still has to land.
+
+        The question's own stave goes null the moment it is answered and
+        `answerScore` takes over — so diverting that to the sound box took
+        the stave off a reading question altogether, which is what this
+        line is here to stop happening again.
+      */}
+      {reading && answerStaff}
       {!reading && (
         <SoundBox
           voices={progressionVoices(exercise)}
           onPlay={play}
           onStop={() => { audio.stopAll(); }}
           playedAt={playedAt}
+          staff={answerStaff}
           spectrum={audio.spectrum?.bind(audio)}
           label="Play it again"
           note={`cadence in ${keyName(key)}, then ${exercise.numerals.length} chords`}

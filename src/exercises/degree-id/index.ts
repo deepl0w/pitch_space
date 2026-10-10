@@ -29,6 +29,8 @@ export const degreeIdentification = defineExercise<
   grade: (exercise, response) => gradeDegree(exercise, response),
   Prompt: DegreePrompt,
   questionScore: degreeQuestionSpec,
+  // The answer's stave goes inside the sound box, in place of the wave.
+  promptDrawsAnswerStaff: true,
   answerScore: degreeScoreSpec,
 });
 

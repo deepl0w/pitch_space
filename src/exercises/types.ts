@@ -391,20 +391,57 @@ export interface PlayedNote {
 }
 
 /**
+ * What a take produced: an answer, or no hearing at all.
+ *
+ * **The two are different answers and no value may mean both**
+ * ([0047](../../docs/adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)).
+ * A learner who played nothing has answered — silence is a response, and
+ * a wrong one. A learner whose microphone was refused has not been heard,
+ * and [0041](../../docs/adr/0041-practice-that-counts-towards-nothing.md)
+ * is explicit that an outcome claims the user was asked *and that the
+ * answer counts*.
+ *
+ * The cost of conflating them is not a wrong pixel. A refusal scored as a
+ * wrong answer resets the item's streak, drops it down the ladder, and
+ * drags the figure on the home card — so one session with a blocked
+ * microphone would quietly undo a fortnight of a line's progress with
+ * nothing on screen connecting the two. The same purchase as
+ * `ProgressStatus` having three states rather than two, at the other end
+ * of the same pipeline, and that one has cost almost nothing to carry.
+ */
+export type Heard =
+  | {
+    heard: true;
+    /** Empty means a silent take, which is an answer. */
+    notes: readonly PlayedNote[];
+  }
+  | {
+    heard: false;
+    /**
+     * Why there was no hearing, for a screen to explain.
+     *
+     * The exercise layer does not branch on this — it only needs the
+     * bit above — but the screen that offered the microphone is the one
+     * placed to say what went wrong, and it cannot say it without being
+     * told.
+     */
+    reason: 'refused' | 'unavailable';
+  };
+
+/**
  * Just enough of `listen` for a prompt to take an answer that was played.
  *
  * The other half of {@link AudioOut}, and the thing that makes the brief's
  * promise — exercises answered on a real instrument — reachable from an
  * exercise without the exercise knowing a microphone exists.
  *
- * `listen` resolves when the take is over. It does not reject on a refused
- * microphone or a device that produces nothing: a prompt that has to tell
- * a silent room from a broken one can read `notes` being empty, and a
- * screen that wants to explain a refusal is better placed to do it than
- * every prompt is.
+ * Resolves when the take is over rather than rejecting, because a refused
+ * microphone is an ordinary outcome of asking for one and not an
+ * exceptional condition; what it must never do is resolve in a way that
+ * reads as a silent room.
  */
 export interface AudioIn {
-  listen(seconds: number): Promise<{ notes: readonly PlayedNote[] }>;
+  listen(seconds: number): Promise<Heard>;
 }
 
 export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> {

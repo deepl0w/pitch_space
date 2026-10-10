@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { analyse } from '../audio/capture/listen';
 import { mix, pluckedString, silence, startingAt } from '../audio/testing/signals';
 import { freqOf } from '../theory/pitch';
+import { intervalPlayed } from './interval-id/intervals';
 import type { AudioIn, PlayedNote } from './types';
 
 /**
@@ -188,5 +189,61 @@ describe('a take that was not heard', () => {
     const take = await refused.listen(3);
     if (take.heard) throw new Error('expected a refused take');
     expect(['refused', 'unavailable']).toContain(take.reason);
+  });
+});
+
+/**
+ * Two attacks at one pitch reach the exercise as two notes.
+ *
+ * `intervalPlayed` now takes **exactly** two readable notes, so what a
+ * learner is told depends on how many the chain delivers — and every unit
+ * test of that rule hands it a note list built by hand. Nothing checked
+ * that a real take produces the count those tests assume.
+ *
+ * The risk is specific and sits on top of a deliberate decision. ADR 0035
+ * merges two attacks that agree about pitch and did not get louder,
+ * because twenty-four flux peaks inside one struck note all report the
+ * same pitch — and it names the hazard it accepts: *the same pitch struck
+ * twice looks exactly like a cluster*. A unison is the one interval a
+ * learner answers by doing precisely that. Tighten the merge rule for a
+ * good reason tomorrow and the unison stops being answerable by playing,
+ * while every test of `intervalPlayed` stays green, because they are all
+ * fed fabricated notes.
+ *
+ * So this goes through the detector. Measured rather than assumed: two
+ * plucks at 440 Hz survive assembly at every spacing tried, and the
+ * hesitation that motivated the *exactly two* rule still arrives as three.
+ */
+describe('a unison answered by playing it', () => {
+  const pluck = (hz: number, at: number, seed: number) => startingAt(
+    pluckedString({ frequencyHz: hz, seconds: 0.7, sampleRate: RATE, amplitude: 0.5, seed }),
+    at, RATE,
+  );
+
+  it.each([0.6, 0.9, 1.2])('survives assembly when the two are %ss apart', (gap) => {
+    const take = analyse(
+      mix(pluck(440, 0.2, 1), pluck(440, 0.2 + gap, 2), silence(0.2 + gap + 1, RATE)),
+      RATE,
+    );
+
+    expect(take.notes, `two strikes ${gap}s apart were merged into one`).toHaveLength(2);
+    expect(intervalPlayed(take.notes), 'a played unison did not answer').toBe(0);
+  });
+
+  /**
+   * And the hesitation is still three, which is what makes the rule above
+   * worth having rather than an artefact of the fixtures. If assembly ever
+   * merged the re-strike, refusing on a count would be guarding a case the
+   * chain no longer produces.
+   */
+  it('is not what a re-struck note arrives as', () => {
+    const take = analyse(
+      mix(pluck(440, 0.2, 1), pluck(440, 1.1, 2), pluck(554.365, 2.0, 3), silence(3, RATE)),
+      RATE,
+    );
+
+    expect(take.notes.length, 'the hesitation was merged, so nothing refuses it')
+      .toBeGreaterThan(2);
+    expect(intervalPlayed(take.notes), 'three attacks were graded anyway').toBeNull();
   });
 });

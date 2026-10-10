@@ -255,8 +255,20 @@ describe('grading a performance', () => {
     // `alignRhythm` throws on an unsorted list. Sorting here rather than
     // trusting the caller is the guard belonging with the thing guarded.
     const e = generateRhythmExercise({ seed: 19, settings: settings({ bars: 1 }) });
-    const shuffled = [...e.onsets].reverse();
-    expect(gradeRhythm(e, { taps: shuffled }).correct).toBe(true);
+    /*
+      Several orders rather than the reversed one. "Any order" is what the
+      name claims and one permutation is what it used to show — a reversed
+      list is the strongest single case and still a single case, and a name
+      is the claim a reader takes without opening the file.
+    */
+    const orders = [
+      [...e.onsets].reverse(),
+      [...e.onsets].slice(1).concat(e.onsets[0]),
+      [...e.onsets].sort((a, b) => (a * 7919) % 13 - (b * 7919) % 13),
+    ];
+    for (const taps of orders) {
+      expect(gradeRhythm(e, { taps }).correct, `taps as ${taps.join(', ')}`).toBe(true);
+    }
   });
 });
 

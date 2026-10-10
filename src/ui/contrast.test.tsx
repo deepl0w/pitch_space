@@ -242,6 +242,64 @@ describe('the focus ring on the circle of fifths', () => {
   });
 
   /**
+   * A focused wedge differs from an unfocused one in something a reader
+   * can see besides the line getting thicker.
+   *
+   * **This guard passed a defect, which is why it exists.** `.wedge`
+   * already strokes `var(--bg)` at rest — that is what draws the
+   * separators between wedges — so scoping the ring on the selected
+   * wedge to `--bg` set the stroke to the colour it already was. Width
+   * changed, colour did not; it measured 8.16:1 against the fill and was
+   * invisible. The case above is sound and had nothing to say, because
+   * the comparison it makes is indicator against *fill* and the thing
+   * that went wrong was indicator against *the stroke already there*.
+   *
+   * So this is a second claim rather than a widening of the first, and
+   * it is deliberately crude: at least one property of the focused state
+   * must differ from the rest state in something other than a width. It
+   * does not judge whether the difference reads as focus — a dash, a
+   * colour or both all satisfy it — because that is a looking question
+   * and this is a structural one.
+   *
+   * What it still cannot see, said plainly: a halo, an underlying
+   * element drawn behind, anything whose effect depends on what is
+   * painted around it. Those stay with whoever is looking.
+   */
+  it('shows focus as something other than a thicker line', () => {
+    // Width alone is the failure this is about: a ring that differs from
+    // the rest state only in how heavy it is reads as nothing at all when
+    // the wedges already carry a stroke.
+    const isWidth = (property: string) => /width$/.test(property);
+    // A removal rather than a difference: `outline: none` takes the
+    // browser's own ring away and adds nothing in its place.
+    const isAbsence = (value: string) => /^(none|0)$/.test(value.trim());
+
+    const invisible: string[] = [];
+    for (const wedge of found) {
+      const properties = new Set<string>();
+      for (const rule of APP_RULES) {
+        if (!rule.selectors.some((selector) => selector.includes(':focus-visible')
+          && wedge.matches(selector.replace(/:focus-visible/g, '').trim()))) continue;
+        for (const match of rule.body.matchAll(/(?:^|;)\s*([a-z-]+)\s*:/g)) {
+          properties.add(match[1]);
+        }
+      }
+
+      const differences = [...properties].filter((property) => {
+        if (isWidth(property)) return false;
+        const focused = winning(wedge, property, true);
+        if (focused === null || isAbsence(focused)) return false;
+        return focused !== winning(wedge, property, false);
+      });
+
+      if (differences.length === 0) {
+        invisible.push(`${wedge.getAttribute('class')}: focus differs only in width`);
+      }
+    }
+    expect([...new Set(invisible)]).toEqual([]);
+  });
+
+  /**
    * And the resolution above is actually doing the work it was written
    * for. If every wedge took its ring from the same rule, the specificity
    * code would be dead and the compound override — the thing that was

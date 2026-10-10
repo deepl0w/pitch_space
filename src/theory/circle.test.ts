@@ -136,6 +136,45 @@ describe('how one key stands to another', () => {
   });
 
   /**
+   * Parallel and enharmonic are both "the same sound" and are not the
+   * same thing, which nothing above could tell apart.
+   *
+   * Found by mutation: swapping the two in the implementation left every
+   * case here green, because both are symmetric, both occur, and the
+   * inverse rule holds either way. Symmetry is a property of the pair and
+   * says nothing about which name belongs to it.
+   *
+   * The distinction is what a musician means. **Parallel** is one tonic,
+   * two modes — C major and C minor, the same note sounding major or
+   * minor. **Enharmonic** is one sound, one mode, two spellings — C♯
+   * major and D♭ major, which are the same keys on a piano and different
+   * keys on a page. So: share a pitch class and differ in mode, parallel;
+   * share a pitch class and agree in mode, enharmonic.
+   */
+  it('tells a parallel key from an enharmonic one', () => {
+    let parallels = 0;
+    let enharmonics = 0;
+    const wrong: string[] = [];
+
+    for (const [a, b] of pairs) {
+      if (keyId(a) === keyId(b)) continue;
+      if (pitchClass(a.tonic) !== pitchClass(b.tonic)) continue;
+      const relation = relationBetween(a, b);
+      // The relative of a key never shares its tonic, so nothing here is
+      // shadowed by the earlier branch.
+      const wanted = a.mode === b.mode ? 'enharmonic' : 'parallel';
+      if (wanted === 'parallel') parallels += 1; else enharmonics += 1;
+      if (relation !== wanted) {
+        wrong.push(`${keyName(a)} to ${keyName(b)} is ${relation}, not ${wanted}`);
+      }
+    }
+
+    expect(parallels, 'no pair differs only in mode').toBeGreaterThan(0);
+    expect(enharmonics, 'no pair is one sound spelled two ways').toBeGreaterThan(0);
+    expect(wrong).toEqual([]);
+  });
+
+  /**
    * The order is deliberate, because a key can answer to more than one
    * name at once — in C major, A minor is the relative *and* sits at the
    * same seat. The first match is what a musician would say.

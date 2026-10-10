@@ -301,9 +301,12 @@ describe('the focus ring on the circle of fifths', () => {
    * And the shortfall is asserted as a shortfall, in both directions.
    *
    * The figure is already pinned above, so it cannot quietly get worse.
-   * What was only prose is that 3.05 is *under* a floor — and a cost
+   * What was only prose is that it is *under* a floor — and a cost
    * recorded in a comment is the thing that has gone stale three times in
-   * this file alone.
+   * this file alone. **Four, now**: this paragraph quoted 3.05 and the
+   * palette moved to 3.12 under it, which is why it no longer quotes the
+   * number at all. The ratio has one home, in the pins above, and
+   * everything else refers to it.
    *
    * **Both sides, which is what stops a recorded cost becoming somewhere
    * regressions hide.** A list that says "these may fail" swallows the next

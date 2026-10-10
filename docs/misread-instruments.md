@@ -401,6 +401,34 @@ helps, because nothing is wrong with it.
   implementation that is *nearly* the sentence is what a reasonable
   implementation of a prose sentence looks like.
 
+- **A double whose incompleteness is invisible at the call site.**
+  `src/testing/audioContext.ts` implemented only the surface `Synth` used. When
+  sampled playback arrived it needed `createBufferSource`, which the fake did
+  not answer, so **the sampled branch could not run at all** — and
+  `withinReach` passing its own unit tests read as coverage of a path nothing
+  had executed.
+
+  **The property that makes this worse than a wrong fixture is the one worth
+  carrying: a wrong fixture *value* shows up as a wrong assertion; a missing
+  fixture *capability* shows up as a path never taken.** There is nothing in
+  the test file to read. You cannot grep for a method that is not called. A
+  wrong literal at least sits in the source where somebody can doubt it.
+
+  The remedy is derived rather than listed. `audioContext.test.ts` now
+  compares the fake against every `context.<method>(` the shipped code calls,
+  read out of the source, so a method added tomorrow is compared tomorrow —
+  and it immediately found a live one: `createMediaStreamSource` is absent, so
+  the microphone path is as untestable today as the sampled path was.
+  Recorded as **a named exception with its reason rather than a stub**,
+  because adding a method nothing exercises would declare the gap closed while
+  leaving it open, with a further case that fails if the excuse goes stale.
+  The guard also asserts its own population, its author having applied the
+  eighth convention to the thing they had just written.
+
+  Not in this family, though it was offered alongside: a sweep whose case came
+  up or did not because a draw decided. There is no double in that one — it is
+  the coin, and the closing section below already has it.
+
 The third is the one with a standing rule attached, and `instruments.ts` names
 the gap itself:
 

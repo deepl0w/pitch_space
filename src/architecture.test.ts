@@ -54,6 +54,27 @@ function coreFiles(): string[] {
   return CORE_DIRS.flatMap((d) => filesUnder(join(SRC, ...d.split('/'))));
 }
 
+/**
+ * Every document that can carry a citation.
+ *
+ * Walked rather than taken from `filesUnder`, which keeps only `.ts` and
+ * `.tsx` — reusing it found fourteen cited paths instead of fifty-odd, and
+ * the population guard said so on the first run, which is what it is for.
+ */
+function everyDocument(): string[] {
+  const markdown = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
+    .flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) return markdown(path);
+      return entry.name.endsWith('.md') ? [path] : [];
+    });
+  return [
+    ...markdown(join(SRC, '..', 'docs')),
+    join(SRC, '..', 'CLAUDE.md'),
+    join(SRC, '..', 'README.md'),
+  ];
+}
+
 function show(path: string): string {
   return relative(SRC, path).split(sep).join('/');
 }
@@ -470,23 +491,7 @@ describe('the records the code cites', () => {
    */
   it('points at no file that is not there', () => {
     const UNCOMMITTED = ['docs/findings/', 'docs/process/'];
-    /*
-      Walked here rather than through `filesUnder`, which keeps only
-      `.ts`/`.tsx` — reusing it found fourteen paths instead of fifty-odd
-      and the population guard below said so on the first run, which is
-      what it is for.
-    */
-    const markdown = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
-      .flatMap((entry) => {
-        const path = join(dir, entry.name);
-        if (entry.isDirectory()) return markdown(path);
-        return entry.name.endsWith('.md') ? [path] : [];
-      });
-    const documents = [
-      ...markdown(join(SRC, '..', 'docs')),
-      join(SRC, '..', 'CLAUDE.md'),
-      join(SRC, '..', 'README.md'),
-    ];
+    const documents = everyDocument();
 
     const cited = new Map<string, Set<string>>();
     for (const file of documents) {
@@ -508,6 +513,67 @@ describe('the records the code cites', () => {
       .filter(([path]) => !existsSync(join(SRC, '..', path)))
       .map(([path, where]) => `${path} — cited by ${[...where].sort().join(', ')}`);
     expect(dangling, 'cited and not there').toEqual([]);
+  });
+
+  /**
+   * And the same for a file named without its path, which is how this
+   * repository's prose usually names one — `captureSeam.test.ts`,
+   * `tools/app.sh` spelled bare, `instruments.ts`. Fifty-odd of them,
+   * more than the full paths, and a rename breaks them the same way
+   * while reading perfectly.
+   *
+   * Matched on the basename, which is all a bare citation gives: it says
+   * a file by that name exists somewhere, not that the prose points at
+   * the right one. A weaker claim than the paths above and still the one
+   * that fails when something is renamed out from under a document.
+   *
+   * `lib.dom.d.ts` is excused because it is a dependency's file rather
+   * than this repository's — `misread-instruments.md` cites it as the
+   * thing that settles how `AudioBufferSourceNode.start` shadows its
+   * base, checkable from `node_modules` without a browser, which is the
+   * whole point of citing it. Named with its reason rather than tolerated
+   * by a scan that skips what it cannot find.
+   */
+  it('names no file that does not exist', () => {
+    const ELSEWHERE: Record<string, string> = {
+      'lib.dom.d.ts': "TypeScript's own DOM declarations, in node_modules",
+    };
+
+    /*
+      Walked rather than taken from `filesUnder`, which keeps `.ts` and
+      `.tsx` and therefore knows about no shell script at all — it reported
+      `report-facts.sh` and `fetch-test-audio.sh` as missing when both are
+      in `tools/`. Three times while writing these two cases the thing that
+      failed was my own scan rather than the documents, and each time the
+      population guard or the names in the failure said so. A guard that
+      only ever confirms what you expected is one you have not tested.
+    */
+    const basenames = new Set<string>();
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+        if (entry.isDirectory()) walk(join(dir, entry.name));
+        else basenames.add(entry.name);
+      }
+    };
+    walk(join(SRC, '..'));
+
+    const named = new Map<string, Set<string>>();
+    for (const file of everyDocument()) {
+      for (const match of readFileSync(file, 'utf8')
+        .matchAll(/`([A-Za-z0-9_.-]+\.(?:ts|tsx|mjs|sh|css))`/g)) {
+        const where = named.get(match[1]) ?? new Set<string>();
+        where.add(show(file));
+        named.set(match[1], where);
+      }
+    }
+
+    expect(named.size, 'no files named in the documents at all').toBeGreaterThan(10);
+
+    const unknown = [...named]
+      .filter(([name]) => !(name in ELSEWHERE) && !basenames.has(name))
+      .map(([name, where]) => `${name} — named by ${[...where].sort().join(', ')}`);
+    expect(unknown, 'named and nowhere in the tree').toEqual([]);
   });
 
   it('cites no record that was never written', () => {

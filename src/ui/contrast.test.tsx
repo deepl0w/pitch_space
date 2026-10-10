@@ -353,3 +353,68 @@ describe('the focus ring on the circle of fifths', () => {
       .toBeGreaterThan(1);
   });
 });
+
+/**
+ * Two colours that mean different things have to look different from each
+ * other, which no contrast assertion can see.
+ *
+ * Contrast only ever compares a colour with what is *behind* it. `--accent`
+ * and `--wrong` are never behind one another — they are a filled button and
+ * a verdict, on the same screen, both legible against the same ground — so
+ * every contrast case in this file passed while the two converged to within
+ * about 0.013 in oklab, which is nearer than the palette's own definition of
+ * "the same surface". The user role saw it; nothing here could.
+ *
+ * **The threshold is the palette's, not mine.** `--bg` and `--surface` are
+ * deliberately nearly the same: a panel on its ground, meant to read as one
+ * surface with an edge rather than as two colours. That distance is what the
+ * palette means by *too close to tell apart*, so it is the floor a pair that
+ * must be told apart has to clear. Nothing is invented and nothing is tuned —
+ * if the panel treatment changes, the floor moves with it, which is right,
+ * because the floor is a statement about this palette's own scale.
+ *
+ * The three tokens are named rather than derived, and the reason is the thing
+ * that cannot be derived: these are the colours a reader reads *as a meaning*
+ * — this is the thing, this was right, this was wrong. `--line`, `--muted`
+ * and the rest are structure, and structure is allowed to be close.
+ */
+describe('colours that mean different things', () => {
+  /** Perceptual distance, in the space the palette is mixed in. */
+  function apart(a: [number, number, number], b: [number, number, number]): number {
+    const [x, y] = [toOklab(a), toOklab(b)];
+    return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+  }
+
+  const MEANINGS = ['--accent', '--right', '--wrong'];
+
+  it.each(Object.keys(THEMES) as (keyof typeof THEMES)[])(
+    'are further apart than the palette calls the same surface, in %s',
+    (name) => {
+      const theme = THEMES[name];
+      const resolved = (token: string) => resolve(`var(${token})`, theme);
+
+      // The floor, read out of the palette rather than chosen.
+      const sameSurface = apart(resolved('--bg'), resolved('--surface'));
+      expect(sameSurface, 'the ground and a panel on it are identical, so there is no floor')
+        .toBeGreaterThan(0);
+
+      const tooClose: string[] = [];
+      let compared = 0;
+      for (let i = 0; i < MEANINGS.length; i += 1) {
+        for (let j = i + 1; j < MEANINGS.length; j += 1) {
+          const distance = apart(resolved(MEANINGS[i]), resolved(MEANINGS[j]));
+          compared += 1;
+          if (distance <= sameSurface) {
+            tooClose.push(`${MEANINGS[i]} and ${MEANINGS[j]} are ${distance.toFixed(3)} apart, `
+              + `where a panel on its ground is ${sameSurface.toFixed(3)}`);
+          }
+        }
+      }
+
+      // The population, since a list that emptied would satisfy this by
+      // comparing nothing.
+      expect(compared, 'no pair of meanings compared').toBe(3);
+      expect(tooClose).toEqual([]);
+    },
+  );
+});

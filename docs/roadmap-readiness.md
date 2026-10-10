@@ -397,12 +397,21 @@ The live needs, which is what moves this from a preference to a gap:
   that nothing checks, and the coupling can be reintroduced by any later
   change. What is wanted is the property, not the figure, and it still has
   nowhere to live.
-- **Colour contrast against what a thing is painted on.** An indicator lands
-  on whatever is behind it, which is geometry, and geometry is a browser.
-  `src/ui/contrast.test.tsx` does the circle of fifths without one *only*
-  because `.wedge` and `.wedge-self` are two classes on one element, so the
-  pairing is readable from the DOM; its own comment says plainly that the
-  general version is not computable that way. Still open.
+- **Colour contrast against what a thing is *painted behind*, and only that.**
+  The open part is narrower than this bullet claimed on 9 October, and the
+  narrowing is worth stating because it is most of the need.
+
+  `src/ui/contrast.test.tsx` now resolves the cascade in jsdom and checks
+  rather more than the wedge it started with: a declared pair needs no
+  geometry — `body` states its background and its colour in one rule, and the
+  accent fill states the colour taken on it — and the colour-*distance* guard
+  beside it is not contrast at all, since it compares two meanings with each
+  other rather than either with a background.
+
+  **What still wants a browser is a pair whose second half is decided by
+  layout**: an indicator over whatever happens to be beneath it, a panel over
+  a panel. That is geometry, and the file's own comment says so. Still open,
+  and smaller than it was.
 - **~~The colour rule~~ — this was filed here wrongly and does not need a
   harness.** `src/index.css` states that a verdict which is only a hue is no
   verdict to a colour-blind reader. Whether colour is the *sole* channel is a
@@ -436,6 +445,13 @@ mechanism — which I have cited at other people three times this week while
 writing commands that check for a name. A gap's command has to ask after the
 *need*, so that anything satisfying it turns the check green, including
 something nobody pictured.
+
+**The contrast bullet has since gone stale too**, in the ordinary way: the
+suite grew past it while the gap stayed correctly open. Two of G7's four
+needs have now needed correcting without the gap itself changing, which is
+not a coincidence — a gap whose surrounding work is moving fastest is the one
+whose justification rots fastest, and G7 sits beside the most active part of
+the tree.
 
 **The colour bullet is worse than either, because it was not stale — it was
 wrong when written.** Nothing changed underneath it; the rule never needed a browser, and

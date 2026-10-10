@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import { EXERCISE_TYPES } from './registry';
 import type { Voice } from '../audio/output/synth';
+import { PRESENTATION_LABELS } from './types';
 import type { AnyExerciseDefinition, Presentation } from './types';
 import { widestSettings } from '../testing/settingsSpace';
 
@@ -15,7 +16,18 @@ import { widestSettings } from '../testing/settingsSpace';
  * does nothing on the next one.
  */
 
-const PRESENTATIONS: Presentation[] = ['read', 'listen'];
+/*
+  Derived from the labels rather than written out, because a second copy of
+  this list is a copy that goes stale: adding "Playing" left a hardcoded
+  pair here failing for the right reason and the wrong one — the exercises
+  were correct and the test's own idea of what exists was not. Every
+  presentation the UI knows how to name is a real one.
+
+  Not `STORED_PRESENTATIONS` in `state/schema.ts`, which is a different list
+  on purpose: that one is a compatibility commitment and may outlive a mode
+  the UI has dropped.
+*/
+const PRESENTATIONS = Object.keys(PRESENTATION_LABELS) as Presentation[];
 
 function withPresentation(d: AnyExerciseDefinition, presentation: Presentation) {
   return { ...d.settings.defaults, presentation };

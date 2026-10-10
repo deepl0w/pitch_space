@@ -22,7 +22,7 @@ export const scaleIdentification = defineExercise<
   id: SCALE_EXERCISE_ID,
   name: 'Scale identification',
   description: 'Hear or read a scale and name which one it is.',
-  presentations: ['listen', 'read'],
+  presentations: ['listen', 'read', 'play'],
   // Exact: an item is a projection of a setting, so narrowing to one
   // is invertible rather than approximate. See ExerciseSpec.prefer.
   aims: 'exact',

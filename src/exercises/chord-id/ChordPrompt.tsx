@@ -14,7 +14,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
 }
 
 export function ChordPrompt({
-  exercise, result, onRespond, audio,
+  exercise, result, onRespond, audio, moveOn,
 }: PromptProps<ChordSettings, ChordExercise, ChordResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -90,6 +90,8 @@ export function ChordPrompt({
           note={SOUNDING_LABELS[exercise.sounding].toLowerCase()}
         />
       )}
+
+      <div className="actions">{moveOn}</div>
 
       <div className="choices" role="group" aria-label="Which chord was that?">
         {exercise.choices.map((id) => {

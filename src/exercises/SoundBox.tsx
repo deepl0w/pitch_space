@@ -41,6 +41,29 @@ export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', 
 }) {
   const [playing, setPlaying] = useState(false);
   const until = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wave = useRef<HTMLDivElement | null>(null);
+  const [bars, setBars] = useState(MIN_BARS);
+
+  /*
+    As many bars as the row is wide enough for, which is what makes it a
+    wave rather than a strip: a fixed count is sparse on a desktop column
+    and crowded on a phone, and the box is used at both. Measured rather
+    than guessed from a breakpoint, because the box's width depends on the
+    column it is in and not only on the screen.
+
+    A `ResizeObserver` rather than a window listener: the row changes width
+    when the panel beside it opens, which no resize event reports.
+  */
+  useEffect(() => {
+    const element = wave.current;
+    if (element === null || typeof ResizeObserver === 'undefined') return undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width;
+      setBars(Math.max(MIN_BARS, Math.floor(width / BAR_PITCH)));
+    });
+    observer.observe(element);
+    return () => { observer.disconnect(); };
+  }, []);
 
   useEffect(() => {
     // Nothing has sounded yet on a fresh mount; `playedAt` starts at zero
@@ -67,6 +90,16 @@ export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', 
   return (
     <div className={`sound${playing ? ' sound-playing' : ''}`}>
       <div className="sound-row">
+        <div className="sound-wave" ref={wave} aria-hidden="true">
+          {/* Enough bars to read as a wave across a full-width box, each
+              flexing so the row fills whatever width it is given rather
+              than leaving a gap beside a fixed-width strip. The delays are
+              staggered so they do not rise together, which would read as a
+              bar chart. */}
+          {Array.from({ length: bars }, (_, i) => (
+            <span key={i} style={{ animationDelay: `${(i % 9) * 0.09}s` }} />
+          ))}
+        </div>
         {/*
           A play icon rather than a word, asked for in those terms, and a
           stop while it sounds — a control that does nothing when pressed
@@ -92,19 +125,24 @@ export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', 
               : <path d="M9 6.5 18 12l-9 5.5z" />}
           </svg>
         </button>
-        <div className="sound-wave" aria-hidden="true">
-          {/* Nine bars, which is enough to read as a wave and few enough to
-              stay a wave on a phone. Each is given its own delay so they do
-              not rise together, which would read as a bar chart. */}
-          {Array.from({ length: 9 }, (_, i) => (
-            <span key={i} style={{ animationDelay: `${i * 0.09}s` }} />
-          ))}
-        </div>
       </div>
       {note !== undefined && <span className="secondary">{note}</span>}
     </div>
   );
 }
+
+/**
+ * How wide one bar and its gap are, in pixels.
+ *
+ * Seven: a four-pixel bar with three of space, which is the spacing the
+ * stylesheet holds them at. Named here because the count is derived from it
+ * — a pitch written in two places is one that stops matching.
+ */
+const BAR_PITCH = 7;
+
+/** Enough to read as a wave on the narrowest phone, and the floor if the
+ *  row cannot be measured. */
+const MIN_BARS = 12;
 
 /**
  * How long the passage lasts, from the voices rather than from a guess.

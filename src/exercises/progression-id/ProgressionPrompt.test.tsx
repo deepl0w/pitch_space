@@ -113,7 +113,28 @@ const replay = () => [...container.querySelectorAll('.actions button')]
  * of them.
  */
 const check = () => [...container.querySelectorAll('.actions button')]
-  .find((b) => /^(Check|\d+ to go)$/.test(b.textContent?.trim() ?? '')) as HTMLButtonElement;
+  .find((b) => b.textContent?.trim() === 'Check') as HTMLButtonElement | undefined;
+/**
+ * The Check control, insisted upon.
+ *
+ * Most cases fill every slot first and then press it, so its absence there
+ * is a broken fixture rather than the thing under test — and a `!` would
+ * report that as "cannot read properties of undefined" several lines later.
+ */
+const mustCheck = () => {
+  const button = check();
+  if (button === undefined) throw new Error('no Check control, with every slot filled');
+  return button;
+};
+/**
+ * How many slots are left, which is a sentence rather than a control.
+ *
+ * It was the label on a disabled Check button and read as a control you
+ * cannot use — the learner said so. A count is a description of where you
+ * are; it becomes a button only when there is something to press.
+ */
+const toGo = () => [...container.querySelectorAll('.actions .secondary')]
+  .find((e) => /\d+ to go/.test(e.textContent ?? ''));
 const click = (button: HTMLElement) => act(() => { button.click(); });
 /** What each slot reads, which is what the user sees of their own answer. */
 const written = () => slots().map((b) => b.textContent);
@@ -168,12 +189,12 @@ describe('filling the slots', () => {
   it('counts down what is left, and only offers Check when nothing is', () => {
     const ex = exercise();
     render(ex);
-    expect(check().textContent).toBe('4 to go');
-    expect(check().disabled).toBe(true);
+    expect(toGo()?.textContent?.trim()).toBe('4 to go');
+    expect(check(), 'offered Check with four slots empty').toBeUndefined();
 
     for (const numeral of ex.numerals) click(choiceFor(numeral));
-    expect(check().textContent).toBe('Check');
-    expect(check().disabled).toBe(false);
+    expect(toGo(), 'still counting down with nothing left').toBeUndefined();
+    expect(check()?.disabled).toBe(false);
   });
 
   it('takes no further chord once every slot is filled', () => {
@@ -218,7 +239,7 @@ describe('answering', () => {
   it('hands up the chords that were tapped, in the order they were tapped', () => {
     render(exercise());
     for (const numeral of ['I', 'IV', 'V', 'I']) click(choiceFor(numeral));
-    click(check());
+    click(mustCheck());
     expect(responses).toEqual([
       { numerals: ['I', 'IV', 'V', 'I'], latencyMs: expect.any(Number) },
     ]);
@@ -236,7 +257,7 @@ describe('answering', () => {
     click(replay()!);
     now = 11_500;
     for (const numeral of ex.numerals) click(choiceFor(numeral));
-    click(check());
+    click(mustCheck());
 
     expect(responses[0].latencyMs).toBe(1_500);
   });
@@ -247,15 +268,23 @@ describe('answering', () => {
     const ex = exercise({ presentation: 'read' });
     render(ex);
     for (const numeral of ex.numerals) click(choiceFor(numeral));
-    click(check());
+    click(mustCheck());
     expect(responses).toEqual([{ numerals: [...ex.numerals] }]);
   });
 
-  it('refuses to hand up a half-filled answer', () => {
+  it('offers no way to hand up a half-filled answer', () => {
+    /*
+      Stronger than it was, and the change is the point. It used to press a
+      disabled Check and assert nothing was handed up; there is now no
+      Check to press until the slots are full, so the half-filled answer is
+      unreachable rather than merely refused. Both halves are asserted,
+      because a missing control that still submits by some other route
+      would pass the first on its own.
+    */
     const ex = exercise();
     render(ex);
     click(choiceFor('I'));
-    click(check());
+    expect(check(), 'a half-filled answer could be submitted').toBeUndefined();
     expect(responses).toEqual([]);
   });
 
@@ -265,7 +294,7 @@ describe('answering', () => {
     const ex = exercise();
     render(ex);
     for (const numeral of ex.numerals) click(choiceFor(numeral));
-    click(check());
+    click(mustCheck());
     render(ex, { result: gradeProgression(ex, { numerals: [...ex.numerals] }) });
 
     for (const button of [...slots(), ...choices()]) expect(button.disabled).toBe(true);
@@ -279,7 +308,7 @@ describe('answering', () => {
     const said = ['I', 'V', 'V', 'I'];
     render(ex);
     for (const numeral of said) click(choiceFor(numeral));
-    click(check());
+    click(mustCheck());
     render(ex, { result: gradeProgression(ex, { numerals: said }) });
 
     // ii was answered I; the other three were right.
@@ -298,7 +327,7 @@ describe('answering', () => {
     const ex = exercise();
     render(ex);
     for (const numeral of ex.numerals) click(choiceFor(numeral));
-    click(check());
+    click(mustCheck());
     render(ex, { result: gradeProgression(ex, { numerals: [...ex.numerals] }) });
 
     expect(slots().map((b) => b.className)).toEqual(ex.numerals.map(() => 'slot filled right'));

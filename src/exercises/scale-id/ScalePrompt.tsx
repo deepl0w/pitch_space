@@ -46,7 +46,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
 }
 
 export function ScalePrompt({
-  exercise, result, onRespond, audio, audioIn, capture,
+  exercise, result, onRespond, audio, audioIn, capture, moveOn,
 }: PromptProps<ScaleSettings, ScaleExercise, ScaleResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -194,6 +194,7 @@ export function ScalePrompt({
       {answered && (
         <p className={`verdict ${result.correct ? 'right' : 'wrong'}`}>{result.feedback}</p>
       )}
+      <div className="actions">{moveOn}</div>
     </div>
   );
 }

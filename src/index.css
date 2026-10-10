@@ -272,8 +272,51 @@ main .practice-main .actions > .secondary {
    not, for no reason a reader could see. The rule was never about position.
    Of-type rather than only-child because the row also holds the sentence
    under it, which is a sibling and not a button. */
+/*
+ * Before a question exists there is one thing to do, so it is the whole of
+ * the screen rather than a button that happens to be there. It used to be
+ * held at the size and position the later Skip control sits at, to keep the
+ * page from moving — the user asked for the opposite: let it be big and
+ * centred, because at that moment nothing is below it to be moved.
+ */
+main .practice-main .actions > button.begin {
+  font-size: 1.35rem; font-weight: 650;
+  padding: 0.9rem 2.6rem; border-radius: 10px;
+  margin-block: 2rem;
+}
+
+/*
+ * The same control after a question exists: bottom right, quiet, and in the
+ * same place on every exercise.
+ *
+ * It began beside each prompt's own action — which put it in a different
+ * place on each screen, because the prompts have different actions. The
+ * learner's words after seeing both were that they liked it bottom right
+ * and it should be the same everywhere, so it has a row of its own at the
+ * end of the prompt and `margin-inline-start: auto` holds it to the end of
+ * that row whatever else is in it.
+ *
+ * Quiet because it is a way past the question rather than the point of the
+ * screen: no accent, an outline instead.
+ */
+main .practice-main .actions > button.move-on {
+  margin-inline-start: auto;
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--line);
+  font-weight: 500;
+}
+main .practice-main .actions > button.move-on:hover {
+  color: var(--ink); filter: none;
+}
+
 main .practice-main .actions > button:only-of-type {
   font-size: 1rem; font-weight: 650; padding: 0.6rem 1.5rem;
+}
+/* ...except the move-on, which is quiet even when it is alone: a row
+   holding only a way past the question should not look like the question. */
+main .practice-main .actions > button.move-on:only-of-type {
+  font-size: 0.88rem; font-weight: 500; padding: 0.5rem 1rem;
 }
 
 /*
@@ -455,15 +498,21 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* Control and wave on one line, which is how a player reads: the thing you
    press and the thing it does, side by side rather than stacked. */
 .sound-row {
-  display: flex; align-items: center; justify-content: center;
-  gap: 1rem; flex-wrap: wrap;
+  display: flex; align-items: center;
+  gap: 1rem;
+  inline-size: 100%;
 }
+/* The wave takes the room; the control sits at the end of it. `min-width: 0`
+   because a flex item's content floor would otherwise stop the row ever
+   being narrower than 28 bars plus their gaps. */
 .sound-wave {
-  display: flex; align-items: center; justify-content: center;
-  gap: 3px; height: 48px;
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 2px; height: 48px;
 }
 .sound-wave > span {
-  display: block; width: 4px; height: 6px; border-radius: 2px;
+  display: block; flex: 1 1 2px; max-inline-size: 5px;
+  height: 6px; border-radius: 2px;
   background: color-mix(in oklab, var(--accent) 35%, var(--surface));
 }
 .sound-playing .sound-wave > span {
@@ -483,6 +532,7 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
  * finger needs without the coarse-pointer rule having to raise it.
  */
 .sound-play {
+  flex: none;
   inline-size: 3.4rem; block-size: 3.4rem;
   border-radius: 50%;
   padding: 0;
@@ -916,7 +966,10 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 .played-aside {
   font-size: 0.9rem;
   color: var(--ink);
-  margin: 0.8rem 0 0;
+  /* Room under it as well as over it: it sat hard against the answer
+     buttons, so the sentence explaining why nothing happened read as a
+     caption on the row below rather than as its own thing. */
+  margin: 0.8rem 0 1.1rem;
   padding: 0.7rem 0.85rem;
   border-radius: 0.45rem;
   border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);

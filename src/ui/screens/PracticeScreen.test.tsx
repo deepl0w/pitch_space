@@ -111,10 +111,14 @@ function mount(from: string) {
      * rather than about any one of them, so press towards the only
      * cross-exercise signal that something counted — the tally appearing.
      * Options come last on every prompt, so reverse order reaches them before
-     * the control that would skip to a new round.
+     * the control that would skip to a new round — **except that control
+     * itself**, which now sits at the very end of every prompt in a row of
+     * its own. It is excluded by name rather than by position, because
+     * position is exactly what moved: this case went red by skipping the
+     * question instead of answering it.
      */
     answer: () => {
-      for (const option of buttons().reverse()) {
+      for (const option of buttons().reverse().filter((b) => !b.classList.contains('move-on'))) {
         act(() => option.click());
         if ((container.textContent ?? '').includes('this session')) return true;
       }

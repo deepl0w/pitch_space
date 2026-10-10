@@ -22,7 +22,7 @@ import {
  * three pieces of state that have to be cleared in step.
  */
 export function IntervalPrompt({
-  exercise, result, onRespond, audio, audioIn, capture,
+  exercise, result, onRespond, audio, audioIn, capture, moveOn,
 }: PromptProps<IntervalSettings, IntervalExercise, IntervalResponse>) {
   const [chosen, setChosen] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
@@ -197,6 +197,7 @@ export function IntervalPrompt({
       {result && (
         <p className={result.correct ? 'verdict right' : 'verdict wrong'}>{result.feedback}</p>
       )}
+      <div className="actions">{moveOn}</div>
     </div>
   );
 }

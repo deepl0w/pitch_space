@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { Voice } from '../audio/output/synth';
 import type { ScoreSpec } from './render/toVexflow';
 import type { Key, Mode } from '../theory/key';
@@ -563,6 +563,19 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
    * untestable. The screen owns the preference and passes it.
    */
   capture: CaptureStyle;
+  /**
+   * The screen's own control for moving on, to be placed in the prompt's
+   * row of actions.
+   *
+   * **Handed down rather than rendered above, because a row is a row.** The
+   * learner asked for Skip to sit beside "Play your answer" and read as the
+   * quieter of the two; two sibling elements in different subtrees cannot
+   * share a line, however they are styled. The prompt owns its actions, so
+   * the screen passes its control in and the prompt decides where in the
+   * row it goes — which is also why this is a node and not a callback: the
+   * screen keeps the label, the wiring and the disabled state.
+   */
+  moveOn?: ReactNode;
   /**
    * Set only when the definition sets `promptDrawsScores`; see
    * {@link PromptDrawnScores}.

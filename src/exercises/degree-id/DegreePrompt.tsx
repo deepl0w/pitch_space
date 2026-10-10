@@ -17,7 +17,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
  * fresh question is a fresh component.
  */
 export function DegreePrompt({
-  exercise, settings, result, onRespond, audio,
+  exercise, settings, result, onRespond, audio, moveOn,
 }: PromptProps<DegreeSettings, DegreeExercise, DegreeResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -74,6 +74,8 @@ export function DegreePrompt({
           note={exercise.context.length > 0 ? 'cadence, then the note' : 'the note alone'}
         />
       )}
+
+      <div className="actions">{moveOn}</div>
 
       <div className="choices" role="group" aria-label="Which degree was that?">
         {exercise.choices.map((degree) => {

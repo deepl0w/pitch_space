@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
@@ -325,12 +326,27 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
     void progressStore.getState().record(attempt);
   }
 
+  /*
+    Before a question exists there is one thing to do, so it is the only
+    thing on the screen and it looks like it. Afterwards the same control
+    is a way past a question rather than the point of the screen, so it
+    goes into the prompt's own row of actions, at the end and quieter —
+    asked for in those terms.
+  */
+  const moveOn = (
+    <button
+      type="button"
+      className={round === null ? 'begin' : 'move-on'}
+      onClick={start}
+    >
+      {round === null ? 'Start' : round.result ? 'Next' : 'Skip'}
+    </button>
+  );
+
   return (
     <>
       <div className="actions">
-        <button type="button" onClick={start}>
-          {round === null ? 'Start' : round.result ? 'Next' : 'Skip'}
-        </button>
+        {round === null && moveOn}
         {/*
           Always on the page, blank until there is a tally to put in it.
 
@@ -393,6 +409,7 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
               audio={audio}
               audioIn={audioIn}
               capture={capture}
+              moveOn={moveOn}
             />
           </ExerciseBoundary>
         )}
@@ -472,7 +489,9 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
  * from a prompt — so computing them in the parent would put the most
  * likely throw above the thing meant to catch it.
  */
-function RoundView({ definition, round, settings, onRespond, audio, audioIn, capture }: {
+function RoundView({
+  definition, round, settings, onRespond, audio, audioIn, capture, moveOn,
+}: {
   definition: AnyExerciseDefinition;
   round: Round;
   settings: unknown;
@@ -480,6 +499,7 @@ function RoundView({ definition, round, settings, onRespond, audio, audioIn, cap
   audio: AudioOut;
   audioIn: AudioIn;
   capture: CaptureStyle;
+  moveOn: ReactNode;
 }) {
   /**
    * The question on the staff, for an exercise being read rather than heard.
@@ -531,6 +551,7 @@ function RoundView({ definition, round, settings, onRespond, audio, audioIn, cap
         audio={audio}
         audioIn={audioIn}
         capture={capture}
+        moveOn={moveOn}
         scores={definition.promptDrawsScores ? { questionScore, answerScore } : undefined}
       />
     </>

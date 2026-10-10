@@ -31,7 +31,7 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
  * fresh question is a fresh component.
  */
 export function ProgressionPrompt({
-  exercise, result, onRespond, audio,
+  exercise, result, onRespond, audio, moveOn,
 }: PromptProps<ProgressionSettings, ProgressionExercise, ProgressionResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -140,17 +140,30 @@ export function ProgressionPrompt({
 
       {!answered && (
         <div className="actions">
-          <button type="button" disabled={!complete} onClick={submit}>
-            {complete
-              ? 'Check'
-              : `${exercise.numerals.length - filled.length} to go`}
-          </button>
+          {/*
+            How many slots are left is information, not an action.
+
+            It was the label on a disabled Check button, which reads as a
+            control you cannot use rather than as a count — reported as
+            exactly that confusion. A disabled button is a promise that
+            something will become pressable; the count is a description of
+            where you are, and it becomes a button only when there is
+            something to press.
+          */}
+          {complete
+            ? <button type="button" onClick={submit}>Check</button>
+            : (
+              <span className="secondary">
+                {exercise.numerals.length - filled.length} to go
+              </span>
+            )}
         </div>
       )}
 
       {answered && (
         <p className={`verdict ${result.correct ? 'right' : 'wrong'}`}>{result.feedback}</p>
       )}
+      <div className="actions">{moveOn}</div>
     </div>
   );
 }

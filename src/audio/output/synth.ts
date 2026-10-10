@@ -118,6 +118,9 @@ export class Synth {
 
   private asked = new Set<string>();
 
+  /** In-flight pack fetches, so a preview can wait for the right voice. */
+  private loading = new Map<string, Promise<void>>();
+
   /**
    * Choose the instrument. Takes effect on the next note, not this one.
    *
@@ -152,9 +155,42 @@ export class Synth {
     const context = this.context;
     if (!context) return;
     this.asked.add(id);
-    void loadPack(id, context)
+    this.loading.set(id, loadPack(id, context)
       .then((bank) => { this.packs.set(id, bank); })
-      .catch(() => { /* synthesis is already playing; there is nothing to say */ });
+      .catch(() => { /* synthesis is already playing; there is nothing to say */ }));
+  }
+
+  /**
+   * Open the device, fetch the current voice's pack, and resolve when the
+   * next note would be the real one.
+   *
+   * For a caller whose whole purpose is to demonstrate an instrument. The
+   * ordinary path is right to play immediately and let the recording
+   * arrive behind it — a learner waiting on a download before hearing
+   * their exercise is the failure ADR 0046's floor exists to prevent. A
+   * *preview* is the opposite case: it exists to answer "what does this
+   * sound like", and answering with the synthesised voice when a recorded
+   * one is seconds away answers a question nobody asked.
+   *
+   * Measured before it was written: picking an instrument played the
+   * synthesised voice every first time, and the recording only on a
+   * second visit — so the preview was wrong exactly when someone was
+   * deciding.
+   *
+   * Resolves rather than rejects when there is no pack, when one fails,
+   * or when it is slow. A preview that hangs is worse than a preview in
+   * the wrong voice, so the wait is bounded and the caller plays either
+   * way.
+   */
+  async readyForPreview(seconds = 2): Promise<void> {
+    this.ensure();
+    this.wantPack(this.voice.id);
+    const loading = this.loading.get(this.voice.id);
+    if (!loading) return;
+    await Promise.race([
+      loading,
+      new Promise<void>((resolve) => { setTimeout(resolve, seconds * 1000); }),
+    ]);
   }
 
   /** The decoded pack for the current voice, if one has arrived. */

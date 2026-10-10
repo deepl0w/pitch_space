@@ -108,6 +108,28 @@ export function playSampled(
 
   const level = (voice.gain ?? 1) * bank.manifest.trim;
   /*
+    A few milliseconds of fade-in, to stop the first sample being a step.
+
+    **Not an aesthetic softening — a discontinuity.** A recording that
+    begins at steady-state amplitude jumps from silence to full level in
+    one sample when the gain is set instantly, and that edge is a click.
+    A user reported the electric piano and the organ as sounding "cut
+    from the beginning" and those are exactly the two the measurements
+    single out: over their first 20ms they are already at the level they
+    hold for the next half second (-30.0 against -32.0 dB, and -26.3
+    against -25.7), where strings and flute climb from far below it
+    (-63.1 to -49.5, -37.4 to -32.2). A sustained instrument sampled
+    without its attack has no ramp of its own, so one has to be supplied.
+
+    Four milliseconds: long enough that the step becomes a slope at any
+    sample rate, short enough that a struck piano's transient is still a
+    transient. The percussive packs did not need it and are not harmed by
+    it, which is why it is unconditional rather than per-instrument —
+    a flag here would be a per-pack tuning decision with nothing to
+    measure it against.
+  */
+  const ATTACK = 0.004;
+  /*
     The note ends when the passage says so or when the recording runs out,
     whichever comes first. Resampling changes how long a recording lasts —
     a note shifted down plays slower and therefore longer — so the available
@@ -117,8 +139,9 @@ export function playSampled(
   const available = buffer.duration / source.playbackRate.value;
   const ends = at + Math.min(voice.duration, available);
   const FADE = 0.03;
-  envelope.gain.setValueAtTime(level, at);
-  envelope.gain.setValueAtTime(level, Math.max(at, ends - FADE));
+  envelope.gain.setValueAtTime(0, at);
+  envelope.gain.linearRampToValueAtTime(level, Math.min(at + ATTACK, ends));
+  envelope.gain.setValueAtTime(level, Math.max(at + ATTACK, ends - FADE));
   envelope.gain.linearRampToValueAtTime(0, ends);
 
   source.start(at);

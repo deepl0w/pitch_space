@@ -10,6 +10,20 @@ const entry = entryFor('settings');
 /** The packs this build produced, in the order the picker shows them. */
 const RECORDED = PACKS;
 
+/**
+ * What picking an instrument plays: a C major triad, struck together.
+ *
+ * Together rather than rolled, because the question a listener is asking
+ * is "what does this sound like", and an arpeggio answers "what does one
+ * note sound like" three times. Slightly longer than the old single note
+ * so a sustained voice has time to show that it sustains.
+ */
+const DEMO_CHORD = [
+  { midi: 60, start: 0, duration: 1.1 },
+  { midi: 64, start: 0, duration: 1.1 },
+  { midi: 67, start: 0, duration: 1.1 },
+] as const;
+
 /** Whether every instrument on offer has a recording behind it. */
 const ALL_RECORDED = INSTRUMENTS.every((i) => hasPack(i.id));
 
@@ -54,8 +68,24 @@ export function Settings({ go }: { go(route: string): void }) {
       is already hearing something when they drag it. An instrument
       picked in silence tells you nothing, and the whole reason to pick
       one is what it sounds like — so the control demonstrates itself.
+
+      **A chord rather than the single middle C this used to play.** One
+      note is the weakest possible sample of an instrument: it carries
+      the attack and the decay and almost nothing of the character a
+      learner is choosing between, because what separates a piano from
+      an organ at this length is largely how several notes sit together.
+      It is also what the exercises mostly ask for — chord, progression
+      and scale questions all sound more than one note — so the demo now
+      resembles the thing it is previewing.
+
+      C major in root position, middle of the compass: inside every
+      pack's recorded range, so no voice demonstrates itself through a
+      note stretched from a neighbour.
     */
-    appSynth.play([{ midi: 60, start: 0, duration: 0.6 }]);
+    // Awaited so the preview is the voice you are choosing, not the one
+    // that happens to be loaded. Bounded inside `readyForPreview`, so a
+    // slow or failed download still plays rather than hanging.
+    void appSynth.readyForPreview().then(() => appSynth.play(DEMO_CHORD));
   }
 
   function setVolume(volume: number) {

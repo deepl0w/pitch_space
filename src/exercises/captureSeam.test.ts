@@ -129,3 +129,64 @@ describe('what capture hands an exercise', () => {
     expect(first.frequencyHz).toBeCloseTo(freqOf(69), -1);
   });
 });
+
+/**
+ * The distinction ADR 0047 bought, asserted rather than carried in a type.
+ *
+ * `notesFrom` narrows on `heard` and that is right, but a helper that
+ * narrows is not a claim that narrowing is *required* — it reads as
+ * defensive style, and the next helper written beside it may well cast
+ * instead. What 0047 actually bought is that a refused microphone and a
+ * silent room cannot be confused, and the way it bought it is that the
+ * refused arm has no `notes` to read at all.
+ *
+ * So the claim is stated as the thing the compiler forbids.
+ * `@ts-expect-error` fails to compile when the error it names does *not*
+ * occur, which makes it the one way to assert a negative about types in a
+ * file that has to stay green — and `npm run typecheck` is in the commit
+ * gate, so flattening `Heard` into `{ heard: boolean; notes?: ... }` would
+ * be caught here rather than by whoever later reads an absent field as an
+ * empty take.
+ */
+describe('a take that was not heard', () => {
+  const refused: AudioIn = { listen: async () => ({ heard: false, reason: 'refused' }) };
+  const silentRoom: AudioIn = { listen: async () => ({ heard: true, notes: [] }) };
+
+  it('offers no notes to read, so it cannot be scored as a silent one', async () => {
+    const take = await refused.listen(3);
+    // @ts-expect-error a take that was not heard has no notes
+    void take.notes;
+    expect(take.heard).toBe(false);
+  });
+
+  /**
+   * And the two really are different answers, which is the defect the
+   * record exists to prevent: scoring a refusal as a silent take resets
+   * the item's streak and drags the figure the home screen reports.
+   */
+  it('is not the same answer as a take that heard nothing', async () => {
+    const nothing = await silentRoom.listen(3);
+    const none = await refused.listen(3);
+
+    expect(nothing.heard).toBe(true);
+    expect(none.heard).toBe(false);
+    // The silent room has an answer — an empty one. Asserted through the
+    // same narrowing a consumer has to do, so this case fails the same way
+    // a consumer would if the bit went away.
+    if (!nothing.heard) throw new Error('a silent take should still be heard');
+    expect(nothing.notes).toEqual([]);
+    if (none.heard) throw new Error('a refused take should not be heard');
+    expect(none.reason).toBe('refused');
+  });
+
+  /**
+   * The reason is for the screen rather than for the exercise, and it is
+   * a closed set — a free-text reason would be a string nobody could
+   * branch on and every screen would spell differently.
+   */
+  it('says why, in words a screen can act on', async () => {
+    const take = await refused.listen(3);
+    if (take.heard) throw new Error('expected a refused take');
+    expect(['refused', 'unavailable']).toContain(take.reason);
+  });
+});

@@ -26,6 +26,7 @@ it ships or is dropped.
 - [Bringing your own material](#bringing-your-own-material)
 - [Instruments that play like themselves](#instruments-that-play-like-themselves)
 - [A wrong answer that points at a song you know](#a-wrong-answer-that-points-at-a-song-you-know)
+- [A way from the answer to the reference](#a-way-from-the-answer-to-the-reference)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 [`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
@@ -550,6 +551,43 @@ Three things will be the work, and none of them is the parsing:
   on a corpus that does not add up, which is right for data written by a
   contributor and wrong for data arriving from a file. An import needs to
   refuse an entry and say why, not take the app down.
+
+## A way from the answer to the reference
+
+From the user: after answering a question there should be a small button
+taking you to information on **that specific thing** in the theory reference —
+which also needs an intervals page, because there is not one.
+
+The reference today is Scales, Chords, Chords in a key, the Circle of Fifths
+and Rhythms. Intervals, the exercise most likely to want this, has no page.
+
+### Keyed on item ids, the same as the song list
+
+`scale:harmonic_minor`, `interval:m3:up`, `progression:major:V`. The exercise
+already knows the item it just asked; the button needs a map from an item id
+to a place in the reference, and nothing else. An item with no target shows no
+button rather than a broken one, which also makes the coverage question a
+one-line sweep.
+
+### The hazard: consulting the reference currently costs the answer
+
+**This is the part that would be found late.** `route` lives in `App` and is
+driven by `hashchange`; `round` and `session` are `useState` **inside**
+`PracticeScreen`. So a route change unmounts the screen, and coming back gives
+a new question and a session tally reset to zero.
+
+A learner who answers, taps through to read about the interval they just
+missed, and returns has lost the question they wanted to understand and their
+count for the session. That is worse than not having the button.
+
+**The app already has the shape that avoids it.** Settings opens over whatever
+is on screen — `settingsOpen` is state in `App`, not a route — so nothing
+unmounts and nothing is lost. A reference panel over the practice screen is
+the same move, and it keeps the answer visible beside what it explains, which
+is the point of reading it at that moment.
+
+The alternative is lifting `round` and `session` above the route, which is a
+larger change and buys the same thing less directly.
 
 ## A wrong answer that points at a song you know
 

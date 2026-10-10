@@ -292,6 +292,23 @@ const MERGE_CENTS = 60;
  * Sits in a gap between 1.52 and unbounded, so it is a measurement
  * rather than a weight — but it is one library's piano, which is the
  * fifth convention applied to the evidence this rests on.
+ *
+ * **Something outside this directory rests on it.** A played unison is two
+ * attacks on one pitch, which is exactly what the merge above accepts it
+ * may swallow; `intervalPlayed` takes exactly two readable notes, so if
+ * this merged them, the one interval a learner answers by striking the
+ * same note twice becomes the one they cannot answer at all. The
+ * reasoning is in
+ * [ADR 0047](../../../docs/adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md),
+ * on the depending side rather than here, and
+ * `src/exercises/captureSeam.test.ts` measures the margin end to end.
+ *
+ * The pointer is written out because nothing enforces it: `audio/dsp/` and
+ * this directory import nothing above themselves, which is the constraint
+ * that makes the core testable and the same constraint that hides this
+ * dependency from the only side that could break it. Whoever retunes this
+ * is here on a detector question and has no reason to know an exercise
+ * exists.
  */
 const NEW_NOTE_RISE = 2;
 

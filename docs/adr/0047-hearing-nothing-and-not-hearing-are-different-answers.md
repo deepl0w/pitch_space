@@ -213,3 +213,36 @@ reasoning stands on its own and did not need the symptom to support it.
 hear two notes" was told to people who had played three. A refusal that
 misdescribes the refusal is a smaller version of the fault the whole record is
 about, which is why the prompt now distinguishes too few from too many.
+
+## Addendum, 11 October 2026 — what the exactly-two rule rests on
+
+The rule above has a dependency nobody saw when it was written, including
+this record's author.
+
+**A played unison is two attacks on one pitch**, which is precisely what
+[0035](0035-an-onset-is-an-attack-a-note-is-a-decision-about-attacks.md)
+accepts its merge rule may swallow: *"The same pitch struck twice quickly is
+exactly what the cluster looks like."* If that hazard fired, a unison would
+arrive as one readable note, `intervalPlayed` would refuse, and **the one
+answer most exposed to the merge would become the one answer a learner cannot
+give.** Refusing is the safe failure for an ambiguous take and the wrong
+failure for a correct one.
+
+**It does not fire, by a very large margin, and that margin is deliberately
+not recorded here as a bound.** Mutation puts the merge threshold several
+hundred times below where a re-pluck would collapse. But it was measured
+against one synthesised pluck, and a margin obtained from a single source is
+not a margin — 0035's own revisit list already names *a second instrument is
+recorded* as its trigger, and that is exactly the moment this figure would
+need taking again. Publishing it would invite a reader to treat it as a
+property of real playing, which nothing has established.
+
+**The dependency is what belongs in a record; the number belongs in the test
+that holds it.** The person most likely to move that constant is working in
+`audio/dsp/` on a detector question and has no reason to know that an interval
+exercise's grading rests on it — `audio/dsp/` imports nothing above itself,
+which is the constraint that makes the dependency invisible from the side that
+could break it. The test fails if the constant moves far enough; this
+paragraph is the pointer from the side that depends, and 0035 is deliberately
+left alone, since a record about onsets should not have to know what exercises
+exist.

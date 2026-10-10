@@ -1038,3 +1038,126 @@ describe('a sampled voice does not inherit a synthesised trim', () => {
       .toHaveLength(1);
   });
 });
+
+/**
+ * ADR 0029 — what the exercise layer may pull in behind it.
+ *
+ * **The exercise layer is not a pure layer and this is not ADR 0001's rule.**
+ * It renders: its components legitimately call `setTimeout`, drive
+ * `requestAnimationFrame` and type their refs as `HTMLDivElement`. Pointing
+ * the core's `PLATFORM` regex at it fires on fifty-five lines of perfectly
+ * correct code, which is how a guard gets deleted rather than obeyed.
+ *
+ * What it may not do is *reach* the platform. `AudioOut` and `AudioIn` are
+ * declared in `exercises/types.ts` rather than imported from `audio/` for
+ * exactly this reason: a prompt is handed a thing with `play` and `spectrum`
+ * on it and never learns what an `AudioContext` is. That is what keeps every
+ * prompt renderable under jsdom and the single output owned by one module
+ * (ADR 0005).
+ *
+ * **The distinction that makes this checkable is `import type`.** Every import
+ * the exercise layer takes from `audio/output/synth` is type-only and erased
+ * at compile time — except one, briefly, which is why this exists: adding
+ * `import { SPECTRUM_BANDS }` to draw the visualiser put the module that
+ * constructs the `AudioContext` into a prompt's runtime graph. One word's
+ * difference from the line above it, no test failed, and the review that
+ * caught it was a person reading rather than anything mechanical.
+ *
+ * So this follows value imports out of `exercises/` and asks what they land
+ * on. Reaching a platform type *through* a module is the failure; naming one
+ * in a component is not.
+ */
+describe('ADR 0029 — the exercise layer reaches no further than the seam', () => {
+  const EXERCISES = join(SRC, 'exercises');
+
+  /**
+   * The audio device, and not the DOM.
+   *
+   * **Narrowed after it caught something correct**, which is worth recording
+   * because the wider version looked more principled. It also matched
+   * `ui/notation/Score.tsx`, which reads `window.matchMedia` to redraw the
+   * stave when the theme changes — and a prompt rendering a notation
+   * component is the ordinary case, not a breach. A React component below
+   * the exercise layer may touch the DOM; it still renders under jsdom and
+   * costs nothing.
+   *
+   * What ADR 0029 is actually about is the device: one `AudioContext` owned
+   * by `audio/output`, one capture source owned by the screen, and prompts
+   * that are handed `AudioOut` and `AudioIn` rather than either. So this
+   * matches the device and leaves the DOM to ADR 0001, where the rule is
+   * about purity and the directories are different.
+   */
+  const BELOW = /\b(Offline)?AudioContext\b|\bAudioWorklet\w*\b|\bMediaStream\b|\bgetUserMedia\b/;
+
+  const isTest = (file: string) => /\.test\.tsx?$|\/testing\//.test(file);
+
+  /**
+   * Value imports only — `import type` is erased and loads nothing.
+   *
+   * Matched on the statement rather than the specifier, because that is where
+   * the word sits: `import type { Voice } from '…'` loads nothing and
+   * `import { SPECTRUM_BANDS } from '…'` loads everything that module does.
+   */
+  function valueImportsOf(file: string): string[] {
+    const source = readFileSync(file, 'utf8');
+    const out: string[] = [];
+    const statement = /(?:^|\n)\s*(?:import|export)(\s+type)?\s[^;\n]*?from\s*['"]([^'"]+)['"]/g;
+    for (const m of source.matchAll(statement)) {
+      if (m[1] === undefined) out.push(m[2]);
+    }
+    return out;
+  }
+
+  /** Every file reachable from `roots` by following value imports. */
+  function reachedFrom(roots: string[]): Set<string> {
+    const seen = new Set<string>();
+    const queue = [...roots];
+    while (queue.length > 0) {
+      const file = queue.pop()!;
+      for (const specifier of valueImportsOf(file)) {
+        if (!specifier.startsWith('.')) continue;
+        const base = join(file, '..', specifier);
+        const landed = ['.ts', '.tsx', '/index.ts', '/index.tsx']
+          .map((end) => `${base}${end}`)
+          .find((candidate) => { try { return statSync(candidate).isFile(); } catch { return false; } });
+        if (landed === undefined || seen.has(landed)) continue;
+        seen.add(landed);
+        queue.push(landed);
+      }
+    }
+    return seen;
+  }
+
+  const roots = filesUnder(EXERCISES).filter((f) => !isTest(f));
+  const below = [...reachedFrom(roots)].filter((f) => !f.startsWith(EXERCISES));
+
+  it('is following something, or the case below proves nothing', () => {
+    /*
+      The failure this guards is the whole file's: an empty scan passes every
+      assertion silently. `exercises/` imports from `theory/` on nearly every
+      page, so a traversal that reaches nothing below it has broken rather
+      than found a clean tree.
+    */
+    expect(roots.length, 'no exercise sources found').toBeGreaterThan(10);
+    expect(below.length, 'the import walk reached nothing below exercises/')
+      .toBeGreaterThan(5);
+  });
+
+  it('pulls in nothing that touches the platform', () => {
+    expect(hits(below, BELOW)).toEqual([]);
+  });
+
+  it('would catch the import that prompted it', () => {
+    /*
+      The mutant, in-place: `audio/output/synth.ts` is what a value import of
+      `SPECTRUM_BANDS` used to drag in, and it is full of `AudioContext`. If
+      this stops matching, the rule above has stopped being able to fail and
+      the next convenience import goes in unseen.
+    */
+    const synth = join(SRC, 'audio', 'output', 'synth.ts');
+    expect(hits([synth], BELOW).length, 'the synth no longer looks like the platform')
+      .toBeGreaterThan(0);
+    expect(below, 'the synth is reachable again by a value import')
+      .not.toContain(synth);
+  });
+});

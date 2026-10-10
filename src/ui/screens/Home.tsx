@@ -92,6 +92,29 @@ export function Home({ go }: { go: (route: string) => void }) {
  * presentation it is about, and say so plainly when the history cannot be
  * read.* Each branch below is one of the three states a first paint has.
  */
+/**
+ * A completion as a percentage, with the two ends told apart.
+ *
+ * **`<1%` rather than `0%` for a line that has been practised.** A
+ * learner who answered a question correctly and then read "0%" reported
+ * it as "that did not count" — and they were right to, because the line
+ * had moved and the figure said it had not. A pool of thirty items
+ * advanced by one rung on one item is under half a percent, which is
+ * honestly tiny and is not nothing.
+ *
+ * Nothing at all is still what an unpractised line shows, so the three
+ * readings stay distinct: no figure means never practised, `<1%` means
+ * started, a number means measurably along.
+ *
+ * `Math.floor` for everything above that, so `100%` means every item is
+ * actually on the top rung rather than merely near it. Reaching the end
+ * of a line is the one claim here worth being exact about.
+ */
+function percent(fraction: number): string {
+  if (fraction > 0 && fraction < 0.01) return '<1%';
+  return `${Math.floor(fraction * 100)}%`;
+}
+
 function cardProgress(
   entry: MenuEntry,
   status: ProgressStatus,
@@ -153,7 +176,7 @@ function MenuCard({ entry, go, progress }: {
             is the one claim here worth being exact about.
           */
           <span className="card-progress">
-            {Math.floor(progress.fraction * 100)}% · {progress.presentation}
+            {percent(progress.fraction)} · {progress.presentation}
           </span>
         )}
         {progress?.kind === 'unavailable' && (

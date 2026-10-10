@@ -1,8 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DEVICE_OPEN_SECONDS, QUIET_BEFORE_COLD, Synth, type Voice } from './synth';
 import {
   advanceAudioClock, audioClock, audioClosed, contextCount, gains, installAudioContext,
-  attackTimes, masterGain, oscillators, resetAudio, soundingAfter, suspendUntilResumed,
+  attackTimes, decodeAs, masterGain, oscillators, resetAudio, samples, soundingAfter,
+  suspendUntilResumed,
 } from '../../testing/audioContext';
 
 /**
@@ -817,5 +818,103 @@ describe('choosing an instrument', () => {
     expect(() => synth.setInstrument('tuba')).not.toThrow();
     synth.play(notes(1));
     expect(oscillators().length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Which voice each note is actually played in, once a pack has arrived.
+ *
+ * The scheduler chooses per note — `bank && withinReach(...)` — so a passage
+ * that crosses the edge of a pack's range is partly recorded and partly
+ * synthesised. Nothing exercised that branch before: the fake context had no
+ * `createBufferSource`, so the sampled path could not run at all and the
+ * choice was pinned only by `withinReach`'s own arithmetic.
+ *
+ * It stopped being hypothetical when the octave labelling was corrected. The
+ * flute's recordings start at middle C and the app asks for notes well below
+ * it, so the fall-through now happens in ordinary use rather than at the
+ * edges of the compass.
+ *
+ * Driven through the real loading path rather than by injecting a bank:
+ * `fetch` is stubbed with the built pack's own bytes, `parsePack` reads it,
+ * and `readyForPreview` is the seam that waits — which also means this fails
+ * if the container, the index or the decode order changes under it.
+ */
+describe('a note the pack cannot reach', () => {
+  const FLUTE_NOTES = [60, 64, 69, 72, 76, 81, 84, 88, 93, 96];
+  let realFetch: typeof globalThis.fetch;
+
+  beforeEach(async () => {
+    realFetch = globalThis.fetch;
+    const { readFileSync, readdirSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const dir = join(process.cwd(), 'public', 'packs');
+    const file = readdirSync(dir).find((name) => name.startsWith('flute'))!;
+    const bytes = readFileSync(join(dir, file));
+    globalThis.fetch = (() => Promise.resolve({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(
+        bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+      ),
+    })) as unknown as typeof globalThis.fetch;
+    decodeAs(FLUTE_NOTES);
+  });
+
+  afterEach(() => { globalThis.fetch = realFetch; });
+
+  /** The flute, with its pack loaded and nothing played yet. */
+  async function withFlute(): Promise<void> {
+    synth.setInstrument('flute');
+    await synth.readyForPreview();
+  }
+
+  it('loads the pack it was given, or every case below is about synthesis', async () => {
+    await withFlute();
+    synth.play([{ midi: 72, start: 0, duration: 1 }]);
+    expect(samples().length, 'no recording played at all — the pack never loaded')
+      .toBe(1);
+    expect(samples()[0].midi, 'played the wrong recording').toBe(72);
+  });
+
+  it('plays a recording for a note inside the pack and a tone for one outside', async () => {
+    await withFlute();
+    const before = oscillators().length;
+
+    synth.play([{ midi: 72, start: 0, duration: 1 }]);
+    expect(samples()).toHaveLength(1);
+    expect(oscillators().length, 'synthesised a note the pack holds').toBe(before);
+
+    // Thirteen below the lowest recording, which is one past the reach.
+    synth.play([{ midi: FLUTE_NOTES[0] - 13, start: 0, duration: 1 }]);
+    expect(samples(), 'dragged a recording further than an octave').toHaveLength(1);
+    expect(oscillators().length, 'nothing was synthesised for the note out of reach')
+      .toBeGreaterThan(before);
+  });
+
+  /**
+   * And the choice is per note rather than per passage, which is the part a
+   * test of `withinReach` alone cannot see: one `play` call spanning the
+   * edge has to come out in two voices.
+   */
+  it('changes voice within one passage, at the note the pack stops holding', async () => {
+    await withFlute();
+    const before = oscillators().length;
+
+    synth.play([
+      { midi: FLUTE_NOTES[0] - 13, start: 0, duration: 0.5 },
+      { midi: 72, start: 0.5, duration: 0.5 },
+      { midi: 96, start: 1, duration: 0.5 },
+    ]);
+
+    expect(samples().map((s) => s.midi), 'the notes inside the pack were not recorded')
+      .toEqual([72, 96]);
+    /*
+      Grew, not grew by one: a synthesised note is a stack of partials, so
+      counting oscillators counts voicing rather than notes. The first
+      version asserted one and found four, which is the instrument's
+      business and not this case's.
+    */
+    expect(oscillators().length, 'the note outside it was not synthesised')
+      .toBeGreaterThan(before);
   });
 });

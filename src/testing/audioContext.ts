@@ -41,8 +41,27 @@ export interface RecordedGain {
   value: number;
 }
 
+/**
+ * A note played from a recording rather than synthesised.
+ *
+ * Recorded separately from oscillators because the thing worth asserting is
+ * *which* of the two sounded: the scheduler chooses per note, so a passage
+ * that crosses the edge of a pack's range is partly sampled and partly
+ * synthesised, and no count of oscillators alone can say so.
+ */
+export interface RecordedSample {
+  /** The MIDI number of the recording that was played, from its buffer. */
+  midi: number;
+  /** The rate it was played at, which is how it reaches another semitone. */
+  playbackRate: number;
+  startedAt: number | null;
+  stoppedAt: number | null;
+  end(): void;
+}
+
 interface Recording {
   oscillators: RecordedOscillator[];
+  samples: RecordedSample[];
   gains: RecordedGain[];
   closed: boolean;
   resumed: number;
@@ -55,7 +74,7 @@ let startSuspended = false;
 let resumeCost = 0;
 
 function fresh(): Recording {
-  return { oscillators: [], gains: [], closed: false, resumed: 0 };
+  return { oscillators: [], samples: [], gains: [], closed: false, resumed: 0 };
 }
 
 function makeParam(gain: RecordedGain) {
@@ -119,6 +138,63 @@ function makeOscillator() {
   };
 }
 
+/**
+ * A decoded buffer, carrying only what a test needs to recognise it.
+ *
+ * `decodeAudioData` is handed the encoded bytes of one note and returns
+ * this; the `midi` is stamped on by `decodeAudioData` from a counter the
+ * caller sets, because a fake has no decoder and the identity of the note
+ * is the only property any assertion here is about.
+ */
+interface FakeBuffer { midi: number; duration: number; sampleRate: number; length: number }
+
+let nextDecodedMidi = 0;
+
+/**
+ * What the next `decodeAudioData` will call itself.
+ *
+ * `loadPack` decodes a pack's notes in table order, so a test that sets
+ * this to the table's first MIDI number gets buffers that identify
+ * themselves correctly without the fake having to decode anything.
+ */
+export function decodeAs(midis: readonly number[]): void {
+  decodeQueue = [...midis];
+}
+
+let decodeQueue: number[] = [];
+
+function makeBufferSource() {
+  const listeners = new Set<() => void>();
+  const record: RecordedSample = {
+    midi: -1,
+    playbackRate: 1,
+    startedAt: null,
+    stoppedAt: null,
+    end() { for (const listener of [...listeners]) listener(); },
+  };
+  recording.samples.push(record);
+  let buffer: FakeBuffer | null = null;
+  return {
+    get buffer() { return buffer; },
+    set buffer(next: FakeBuffer | null) {
+      buffer = next;
+      record.midi = next?.midi ?? -1;
+    },
+    playbackRate: {
+      get value() { return record.playbackRate; },
+      set value(next: number) { record.playbackRate = next; },
+    },
+    connect: <T>(destination: T) => destination,
+    start(time: number) { record.startedAt = time; },
+    stop(time: number) {
+      record.stoppedAt = record.stoppedAt === null ? time : Math.min(record.stoppedAt, time);
+    },
+    addEventListener(_type: string, listener: () => void) { listeners.add(listener); },
+    removeEventListener(_type: string, listener: () => void) { listeners.delete(listener); },
+    set onended(listener: () => void) { listeners.add(listener); },
+  };
+}
+
 class FakeAudioContext {
   state: string;
   destination = { kind: 'destination' };
@@ -133,6 +209,20 @@ class FakeAudioContext {
   createGain() { return makeGain(); }
 
   createOscillator() { return makeOscillator(); }
+
+  createBufferSource() { return makeBufferSource(); }
+
+  /*
+    No decoder: the bytes are not examined. What comes back identifies
+    itself as the next note in the queue a test set with `decodeAs`,
+    which is the only thing an assertion about *which voice sounded*
+    needs. A fake that pretended to decode would be a second audio
+    codec in the test suite.
+  */
+  decodeAudioData(_bytes: ArrayBuffer): Promise<FakeBuffer> {
+    const midi = decodeQueue.length > 0 ? decodeQueue.shift()! : nextDecodedMidi++;
+    return Promise.resolve({ midi, duration: 3, sampleRate: 44_100, length: 132_300 });
+  }
 
   resume() {
     recording.resumed += 1;
@@ -161,6 +251,8 @@ export function installAudioContext(): void {
 }
 
 export function resetAudio(): void {
+  decodeQueue = [];
+  nextDecodedMidi = 0;
   recording = fresh();
   clock = 0;
   contexts = 0;
@@ -183,6 +275,10 @@ export function advanceAudioClock(seconds: number): void {
 
 export function audioClock(): number {
   return clock;
+}
+
+export function samples(): RecordedSample[] {
+  return recording.samples;
 }
 
 export function oscillators(): RecordedOscillator[] {

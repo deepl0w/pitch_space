@@ -41,7 +41,15 @@ import { settingsStore, useSettings } from '../../state/settingsStore';
  * user chose to hold constant across them. Writing it to one theme only
  * would silently break that the first time somebody tried a new one.
  */
-const SHARED: readonly string[] = ['--accent'];
+/*
+  Tokens an edit applies to both themes at once.
+
+  Empty, and it held `--accent` while both palettes named the same red.
+  They name a shade apart now, so editing one theme's accent must not
+  reach the other's — which is the default path, and this list is what
+  takes a token off it.
+*/
+const SHARED: readonly string[] = [];
 
 type Painted = 'light' | 'dark';
 type Overrides = Record<Painted, Record<string, string>>;
@@ -49,6 +57,12 @@ type Overrides = Record<Painted, Record<string, string>>;
 /** The subset of a record named by `keys`. */
 function pick(from: Record<string, string>, keys: readonly string[]): Record<string, string> {
   return Object.fromEntries(keys.map((key) => [key, from[key]]));
+}
+
+/** The same record without one key. */
+function omit<T>(from: Record<string, T>, key: string): Record<string, T> {
+  const { [key]: _gone, ...rest } = from;
+  return rest;
 }
 
 /**
@@ -150,6 +164,23 @@ export function DebugColours() {
   const [values, setValues] = useState<Record<string, string>>({});
   const [typed, setTyped] = useState<Record<string, string>>({});
   const [tuning, setTuning] = useState<string | null>(null);
+  /*
+    The numbers the sliders are actually set to, kept per theme and token.
+
+    **A hex cannot hold them.** Hue, saturation and lightness were read
+    back out of the hex on every render, and eight bits per channel does
+    not round-trip a triple of them: setting three sliders and reopening
+    the token showed three different numbers, and each adjustment
+    re-quantised the two sliders nobody had touched — which is also how
+    `--bg` drifted from `#1a130f` to `#1a120e` without anyone editing it.
+    Both reported.
+
+    So what the learner dialled is state, and the hex is its rendering
+    rather than its storage. Seeded from the colour the first time a token
+    is opened, and dropped when the hex field is typed into, so typing a
+    colour still moves the sliders to it.
+  */
+  const [dialled, setDialled] = useState<Record<string, Hsl>>({});
   const [overrides, setOverrides] = useState<Overrides>({ light: {}, dark: {} });
   /*
     Which palette is on screen. `system` is not a palette — it defers to the
@@ -215,15 +246,37 @@ export function DebugColours() {
     setTyped((was) => ({ ...was, [name]: value }));
   }
 
+  /** Where a token's sliders stand: what was dialled, or the colour it is. */
+  function dialOf(name: string): Hsl {
+    return dialled[`${showing}:${name}`] ?? hslOf(values[name] ?? '#000000');
+  }
+
+  /**
+   * Move one slider, keeping the other two exactly where they were.
+   *
+   * The whole triple is stored rather than recomputed, because recomputing
+   * it from the emitted hex is what made the untouched two drift.
+   */
+  function turn(name: string, part: keyof Hsl, to: number) {
+    const next = { ...dialOf(name), [part]: to };
+    setDialled((was) => ({ ...was, [`${showing}:${name}`]: next }));
+    change(name, hexOfHsl(next));
+  }
+
   /** What is in the hex field, which may not yet be a colour. */
   function type(name: string, text: string) {
     setTyped((was) => ({ ...was, [name]: text }));
     const full = text.startsWith('#') ? text : `#${text}`;
-    if (/^#[0-9a-f]{6}$/i.test(full)) change(name, full);
+    if (!/^#[0-9a-f]{6}$/i.test(full)) return;
+    // A colour typed in wins over whatever the sliders were dialled to, so
+    // they move to it rather than silently pulling it back.
+    setDialled((was) => omit(was, `${showing}:${name}`));
+    change(name, full);
   }
 
   function reset() {
     setOverrides({ light: {}, dark: {} });
+    setDialled({});
   }
 
   if (!open) {
@@ -330,13 +383,10 @@ export function DebugColours() {
                     type="range"
                     min={0}
                     max={max}
-                    value={Math.round(hslOf(values[name] ?? '#000000')[key])}
-                    onChange={(e) => {
-                      const hsl = hslOf(values[name] ?? '#000000');
-                      change(name, hexOfHsl({ ...hsl, [key]: Number(e.target.value) }));
-                    }}
+                    value={Math.round(dialOf(name)[key])}
+                    onChange={(e) => { turn(name, key, Number(e.target.value)); }}
                   />
-                  <output>{Math.round(hslOf(values[name] ?? '#000000')[key])}{unit}</output>
+                  <output>{Math.round(dialOf(name)[key])}{unit}</output>
                 </label>
               ))}
             </li>
@@ -393,10 +443,8 @@ function hexOfHsl({ h, s, l }: Hsl): string {
  * Every custom property declared on `:root` whose value is a colour.
  *
  * Walking the stylesheets rather than a list, so nothing has to be kept in
- * step. `--page-inset` and anything else that is a length is filtered by
- * trying to paint with it: a browser normalises a colour it understands to
- * `rgb(...)` and leaves anything else alone, which is a cheaper and more
- * reliable test than parsing.
+ * step, with `currentValue` deciding what counts as a colour — see the note
+ * there on why painting once cannot tell a length from one.
  *
  * Rules from another origin throw on `cssRules`, so each sheet is tried
  * separately — one inaccessible sheet must not cost the whole list.
@@ -451,12 +499,23 @@ function isColour(name: string): boolean {
  * reading: these are the numbers it actually paints.
  */
 function currentValue(name: string): string | null {
-  const probe = document.createElement('span');
-  probe.style.color = `var(${name})`;
-  document.body.append(probe);
-  const painted = getComputedStyle(probe).color;
-  probe.remove();
-  if (painted === '' || painted === 'rgba(0, 0, 0, 0)') return null;
+  /*
+    Painted twice, under two different inherited colours.
+
+    `color: var(--page-inset)` is not a parse error — `var()` always parses,
+    and `1rem` is only rejected later, at computed-value time, where an
+    inherited property falls back to *inherit*. So one probe on the page
+    read the ink it had inherited and reported a length as a colour: the
+    panel listed `--page-inset` as an editable swatch showing `#e4dcd5`.
+    Reported from the panel itself.
+
+    Two probes under grounds nothing else uses settle it without parsing
+    anything — a real colour is the same under both, an invalid one is
+    whatever it inherited and therefore differs.
+  */
+  const painted = paintedUnder(name, 'rgb(1, 2, 3)');
+  if (painted === null) return null;
+  if (painted !== paintedUnder(name, 'rgb(254, 253, 252)')) return null;
 
   const canvas = document.createElement('canvas');
   canvas.width = 1;
@@ -470,6 +529,19 @@ function currentValue(name: string): string | null {
   ctx.fillRect(0, 0, 1, 1);
   const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** What `var(name)` computes to inside a parent of the given colour. */
+function paintedUnder(name: string, inherited: string): string | null {
+  const parent = document.createElement('span');
+  parent.style.color = inherited;
+  const probe = document.createElement('span');
+  probe.style.color = `var(${name})`;
+  parent.append(probe);
+  document.body.append(parent);
+  const painted = getComputedStyle(probe).color;
+  parent.remove();
+  return painted === '' || painted === 'rgba(0, 0, 0, 0)' ? null : painted;
 }
 
 async function copy(values: Record<string, string>): Promise<void> {

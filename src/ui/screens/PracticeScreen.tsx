@@ -346,7 +346,6 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
   return (
     <>
       <div className="actions">
-        {round === null && moveOn}
         {/*
           Always on the page, blank until there is a tally to put in it.
 
@@ -382,17 +381,15 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
 
       {round === null
         /*
-          Generic, because this screen serves six exercises and the line it
-          used to carry — "two notes will sound" — was true of exactly one
-          of them. Found by the user role sweeping the text rather than the
-          behaviour, which is the only way a sentence that is merely false
-          gets noticed: nothing about it fails.
+          The button, where the sentence about it used to be.
 
-          A per-exercise line would be better still and belongs on the
-          definition beside `description`, not here. This at least does not
-          promise something the exercise will not do.
+          It read "Nothing yet — press Start for your first question." while
+          Start sat in the row above, which spends a line of prose pointing
+          at a control already on screen. The control in that place says the
+          same thing and is the thing, so the sentence is gone rather than
+          moved — asked for in those terms.
         */
-        ? <p className="lede">Nothing yet — press Start for your first question.</p>
+        ? <div className="opening">{moveOn}</div>
         : (
           /*
             Keyed by round as well as wrapped: a boundary that kept its error

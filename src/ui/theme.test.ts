@@ -106,19 +106,21 @@ describe('what a theme block is allowed to hold', () => {
 });
 
 /**
- * Tokens the two themes hold in common, by decision rather than by accident.
+ * There is no exemption list, and there was one.
  *
- * The case below refuses a dark palette that is a copy of the light one,
- * and its own comment says the remedy for a colour that genuinely suits
- * both: write it down here. This is that.
+ * It held `--accent`, from a spell when both themes named the same red.
+ * They name a shade apart now, so the list emptied — and an empty set
+ * would have left the case that reads it asserting nothing while still
+ * looking like a guard, which is the exact shape this file exists to
+ * refuse. So the mechanism is gone rather than kept at zero: the claim
+ * below is now that *every* colour differs between the themes, with
+ * nowhere for a later addition to sit quietly.
  *
- * **The accent.** Asked to keep one accent across both themes, the user
- * said so in terms. It is what makes a filled control the same colour
- * wherever you meet it, and it is why `--on-accent` and `--accent-edge`
- * exist at all — the text and the boundary move per theme so the fill does
- * not have to.
+ * If a colour genuinely has to be shared again, the remedy is to put the
+ * list back along with the case that checks each entry is still shared —
+ * both halves, so an exemption that stops being needed fails as loudly as
+ * one that is violated.
  */
-const SHARED_BY_CHOICE = new Set(['--accent']);
 
 describe('the dark palette', () => {
   const light = paletteOf(':root');
@@ -177,7 +179,6 @@ describe('the dark palette', () => {
       hide in.
     */
     for (const [name, value] of light) {
-      if (SHARED_BY_CHOICE.has(name)) continue;
       /*
         An alias is the same text in both themes *by construction* and a
         different colour all the same: `--score-ink: var(--ink)` names the
@@ -188,9 +189,6 @@ describe('the dark palette', () => {
       */
       const alias = /^var\((--[\w-]+)\)$/.exec(value);
       if (alias && byChoice.get(name) === value) {
-        // An alias to something deliberately shared is shared too, and
-        // saying so here is cheaper than listing every alias of it.
-        if (SHARED_BY_CHOICE.has(alias[1])) continue;
         expect(byChoice.get(alias[1]), `${name} points at ${alias[1]}, which is the same in both`)
           .not.toBe(light.get(alias[1]));
         continue;
@@ -199,18 +197,4 @@ describe('the dark palette', () => {
     }
   });
 
-  /**
-   * And the exemptions are real, not a list that has quietly emptied.
-   *
-   * A name left here after the colour started differing would be slack of
-   * exactly the kind the case above refuses — so each one has to still be
-   * the same in both themes, which makes the list falsifiable rather than
-   * permissive.
-   */
-  it('shares only what it says it shares', () => {
-    for (const name of SHARED_BY_CHOICE) {
-      expect(byChoice.get(name), `${name} is listed as shared and is not`)
-        .toBe(light.get(name));
-    }
-  });
 });

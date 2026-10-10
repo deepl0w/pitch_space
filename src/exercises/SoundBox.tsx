@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { SPECTRUM_BANDS, type Voice } from '../audio/output/synth';
+import type { Voice } from '../audio/output/synth';
+// From the leaf that holds the contract, not from the module that owns the
+// `AudioContext`: `import type` is erased and a value import is not.
+import { SPECTRUM_BANDS } from '../audio/output/spectrum';
 
 /**
  * The listening half of a question, in the same box the reading half uses.

@@ -1,3 +1,4 @@
+import { SPECTRUM_BANDS, SPECTRUM_SMOOTHING } from './spectrum';
 import {
   DEFAULT_INSTRUMENT_ID, instrument, isInstrumentId, type Instrument,
 } from './instruments';
@@ -130,26 +131,6 @@ function warmUp(context: AudioContext): void {
  */
 export const QUIET_BEFORE_COLD = 0.5;
 
-/**
- * How many bands the output is reported in, for anything drawing it.
- *
- * Small on purpose. This is read to draw a few dozen bars a few inches
- * wide, not to analyse anything — at 2048 bins almost all of them would
- * fall in the top four octaves, where an instrument has nothing but
- * harmonics, and the picture would be a flat line with a bump at the left
- * edge. 64 bands over a 48 kHz context puts each at about 375 Hz, which is
- * coarse for pitch and right for a shape that has to read at a glance.
- */
-export const SPECTRUM_BANDS = 64;
-
-/**
- * How fast a band may fall, as a fraction carried from the previous frame.
- *
- * The analyser's own smoothing is the thing that makes a visualiser look
- * like it is responding rather than flickering; without it a bar drawn at
- * 60 Hz from an unsmoothed FFT jitters at every frame and reads as noise.
- */
-export const SPECTRUM_SMOOTHING = 0.75;
 
 /**
  * The floor an exponential ramp fades to.

@@ -551,7 +551,18 @@ function RoundView({
         the rest this is the slot.
       */}
       {!definition.promptDrawsScores && questionScore && <Score spec={questionScore} />}
-      {!definition.promptDrawsScores && answerScore && <Score spec={answerScore} />}
+      {/*
+        The answer's stave, unless the prompt is placing it.
+
+        A listening question's answer belongs inside the sound box, in
+        place of the wave — asked for in those terms, after answering grew
+        a second panel above a box that was still showing a wave with
+        nothing left to draw. The prompt is the only thing that can put it
+        there, so a definition that says so gets it as a prop instead and
+        this slot stays empty.
+      */}
+      {!definition.promptDrawsScores && !definition.promptDrawsAnswerStaff
+        && answerScore && <Score spec={answerScore} />}
       <Prompt
         // A fresh exercise is a fresh component: remounting is what clears
         // the prompt's own state without a reset path that has to be kept in
@@ -565,6 +576,9 @@ function RoundView({
         audioIn={audioIn}
         capture={capture}
         moveOn={moveOn}
+        answerStaff={definition.promptDrawsAnswerStaff && answerScore
+          ? <Score spec={answerScore} />
+          : undefined}
         scores={definition.promptDrawsScores ? { questionScore, answerScore } : undefined}
       />
     </>

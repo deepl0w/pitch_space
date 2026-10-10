@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { StrictMode, act } from 'react';
+import { StrictMode, act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { IntervalPrompt } from './IntervalPrompt';
@@ -80,12 +80,21 @@ function render(
   {
     result = null, settings = INTERVAL_DEFAULTS, strict = false,
     audioIn = deaf, capture = 'press' as CaptureStyle,
+    answerStaff,
   }: {
     result?: Result | null;
     settings?: IntervalSettings;
     strict?: boolean;
     audioIn?: AudioIn;
     capture?: CaptureStyle;
+    /**
+     * Stands in for the drawn stave the screen hands down.
+     *
+     * A sentinel rather than a real `Score`: what these cases are about is
+     * *where it is put*, and drawing notation under jsdom would make them
+     * about vexflow instead.
+     */
+    answerStaff?: ReactNode;
   } = {},
 ) {
   const prompt = (
@@ -97,6 +106,14 @@ function render(
       audio={audio}
       audioIn={audioIn}
       capture={capture}
+      /*
+        Only once there is an answer, which is when the screen hands one
+        down — `answerScore` is null until the question has been graded.
+        Defaulting it to a node regardless put a stave in the sound box on
+        unanswered questions and took the replay control off three cases
+        that had nothing to do with staves.
+      */
+      answerStaff={answerStaff ?? (result ? <div data-testid="staff" /> : undefined)}
     />
   );
   act(() => root.render(strict ? <StrictMode>{prompt}</StrictMode> : prompt));
@@ -106,6 +123,18 @@ const choices = () => [...container.querySelectorAll('.choices button')] as HTML
 /** The button offering a given semitone distance, named as the user sees it. */
 const choiceFor = (semitones: number) =>
   choices().find((b) => b.textContent === SIMPLE_INTERVAL_NAMES[semitones])!;
+
+/**
+ * What a chip is marked as, with everything that is not a verdict removed.
+ *
+ * These cases are about the marking and nothing else. Comparing the whole
+ * `className` also pinned `playable`, which says whether the chip can be
+ * pressed to hear its interval — a different question, asserted by its own
+ * cases below, and one that made three unrelated tests fail when it was
+ * added.
+ */
+const marking = (button: HTMLButtonElement) =>
+  [...button.classList].filter((c) => c !== 'choice' && c !== 'playable').join(' ');
 /*
   Named rather than "the first button in `.actions`", which is what this was
   until a second control moved in beside it. The case below asserts that a
@@ -295,9 +324,9 @@ describe('answering', () => {
     // The screen grades and hands the result back down.
     render(ex, { settings, result: gradeInterval(ex, { semitones: 3 }) });
 
-    expect(choiceFor(7).className).toBe('choice right');
-    expect(choiceFor(3).className).toBe('choice wrong');
-    expect(choiceFor(4).className).toBe('choice');
+    expect(marking(choiceFor(7))).toBe('right');
+    expect(marking(choiceFor(3))).toBe('wrong');
+    expect(marking(choiceFor(4))).toBe('');
   });
 
   it('marks nothing wrong when the user was right', () => {
@@ -307,7 +336,7 @@ describe('answering', () => {
     click(choiceFor(7));
     render(ex, { settings, result: gradeInterval(ex, { semitones: 7 }) });
 
-    expect(choiceFor(7).className).toBe('choice right');
+    expect(marking(choiceFor(7))).toBe('right');
     expect(choices().filter((b) => b.className.includes('wrong'))).toEqual([]);
   });
 
@@ -339,20 +368,45 @@ describe('answering', () => {
     expect(responses).toHaveLength(1);
 
     render(ex, { settings, result: gradeInterval(ex, { semitones: 3 }) });
-    for (const button of choices()) expect(button.disabled).toBe(true);
+    /*
+      The marked chips are pressable now — they play their interval — so
+      "no second answer" is about what is *recorded*, not about what is
+      disabled. Pressing the right answer after answering wrongly is the
+      exact move this guards, and it is now a thing the learner is invited
+      to do.
+    */
     click(choiceFor(7));
+    expect(responses, 'hearing a chip was recorded as an answer').toHaveLength(1);
+    click(choiceFor(3));
     expect(responses).toHaveLength(1);
   });
 
-  it('can still be replayed after it has been answered', () => {
-    // Hearing it again next to the right answer is how the ear learns the
-    // interval it just got wrong.
+  it('can still be heard again after it has been answered', () => {
+    /*
+      Hearing it again next to the right answer is how the ear learns the
+      interval it just got wrong, and that has to survive the stave taking
+      the sound box over.
+
+      **It is a different control now and the capability is the claim.**
+      The box's own replay is gone — once the question is answered the box
+      holds the stave instead of the wave — so the question is heard again
+      by pressing the chip that names it, which is the control the learner
+      was pointed at for exactly this. Asserting the chip rather than the
+      box is what keeps this case about the learner being able to hear it
+      rather than about which button does it.
+    */
     const ex = exercise();
     render(ex, { result: gradeInterval(ex, { semitones: 0 }) });
     afterItHasPlayed();
+    expect(replay(), 'the box kept a replay it no longer has room for').toBeFalsy();
+
     const before = audio.plays.length;
-    click(replay());
-    expect(audio.plays).toHaveLength(before + 1);
+    click(choiceFor(ex.semitones));
+    expect(audio.plays, 'no way left to hear the interval again')
+      .toHaveLength(before + 1);
+    const heard = audio.plays.at(-1)!.map((v) => v.midi);
+    expect(heard[1] - heard[0], 'what sounded was not the interval asked about')
+      .toBe(ex.semitones);
   });
 });
 
@@ -374,12 +428,20 @@ describe('answering', () => {
  *
  * Asked for directly: *"for the listening exercises i want to be able to
  * play again also the wrong answer to compare between expected and what i
- * answered"*. The claim worth holding is not that two buttons exist — it is
+ * answered"*. The claim worth holding is not that two controls exist — it is
  * that they sound **different intervals from the same note**, which is what
  * makes it a comparison rather than two unrelated sounds.
+ *
+ * **It was a pair of extra buttons and is now the marked chips**, after
+ * *"instead of adding buttons the user should be allowed to click the answer
+ * buttons to hear them — the right and wrong ones"*. The cases below moved
+ * with it rather than being rewritten: what they assert about the sound is
+ * unchanged, because the sound is what was asked for and the buttons were
+ * only ever how it was reached.
  */
 describe('comparing a wrong answer with the right one', () => {
-  const compareButtons = () => [...container.querySelectorAll('.compare button')] as HTMLButtonElement[];
+  /** The chips that play something: the right answer and the one chosen. */
+  const compareButtons = () => choices().filter((b) => b.classList.contains('playable'));
 
   function answerWrongly(ex: IntervalExercise) {
     render(ex);
@@ -394,12 +456,38 @@ describe('comparing a wrong answer with the right one', () => {
     expect(compareButtons(), 'no way to compare the two').toHaveLength(2);
   });
 
-  it('offers neither after a right one', () => {
+  it('offers only the one after a right answer', () => {
+    /*
+      One rather than none, and that is a change. With a pair of extra
+      buttons there was nothing to offer when the answer was right — two
+      controls for one sound would have been absurd. The chip is already on
+      the screen and already marked, so making it playable costs no room,
+      and hearing the interval you just named is worth having.
+    */
     const ex = exercise();
     render(ex);
     click(choiceFor(ex.semitones));
     render(ex, { result: gradeInterval(ex, { semitones: ex.semitones }) });
-    expect(compareButtons(), 'offered a comparison with nothing to compare').toHaveLength(0);
+    expect(compareButtons().map((b) => b.textContent)).toEqual([
+      SIMPLE_INTERVAL_NAMES[ex.semitones],
+    ]);
+  });
+
+  it('leaves the chips that mean nothing unpressable', () => {
+    /*
+      The row must not become a keyboard. Every chip playable would invite
+      working the answer out by ear after the fact, which is the opposite of
+      the exercise — so only the two that carry a meaning respond, and the
+      rest stay disabled rather than silently doing nothing.
+    */
+    const ex = exercise();
+    const wrong = answerWrongly(ex);
+    for (const button of choices()) {
+      const marked = button.textContent === SIMPLE_INTERVAL_NAMES[ex.semitones]
+        || button.textContent === SIMPLE_INTERVAL_NAMES[wrong];
+      expect(button.disabled, `${button.textContent} should ${marked ? 'play' : 'not play'}`)
+        .toBe(!marked);
+    }
   });
 
   /*
@@ -608,5 +696,46 @@ describe('answering by playing', () => {
     await answerByPlaying();
 
     expect(responses, 'a second take answered the same question again').toHaveLength(1);
+  });
+});
+
+
+/**
+ * Where the revealed stave lands, which is different in the two modes.
+ *
+ * **Written because changing it broke the other mode in silence.** Moving
+ * the answer's stave into the sound box, so a listening question stops
+ * growing a second panel when it is answered, took it off a *reading*
+ * question altogether — the question's own stave goes null the moment it is
+ * answered and `answerScore` is what replaces it, so diverting that to a box
+ * reading mode does not render left nothing at all. Every test passed. It
+ * was found by looking at the page.
+ *
+ * So both modes are asserted, and the listening case asserts containment
+ * rather than presence: "a stave is on the screen" was true throughout the
+ * defect this is about, because the screen was drawing it in its own box.
+ */
+describe('the revealed stave', () => {
+  const staff = () => container.querySelector('[data-testid="staff"]');
+
+  it('is inside the sound box when the question was heard', () => {
+    const ex = exercise();
+    render(ex, { result: gradeInterval(ex, { semitones: ex.semitones }) });
+    expect(staff(), 'no stave at all').not.toBeNull();
+    expect(container.querySelector('.sound [data-testid="staff"]'),
+      'the stave is on the page but not in the box the question lives in')
+      .not.toBeNull();
+  });
+
+  it('is still shown when the question was read', () => {
+    /*
+      The regression, stated as its own case. A reading question has no
+      sound box, so a stave that only ever goes inside one disappears the
+      moment the question is answered.
+    */
+    const read = { ...INTERVAL_DEFAULTS, presentation: 'read' as const };
+    const ex = generateInterval({ seed: 1, settings: read });
+    render(ex, { settings: read, result: gradeInterval(ex, { semitones: ex.semitones }) });
+    expect(staff(), 'answering a reading question took its stave away').not.toBeNull();
   });
 });

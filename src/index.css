@@ -445,6 +445,39 @@ input[type="number"] { text-align: right; }
 input::placeholder { color: var(--muted); opacity: 1; }
 input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+/*
+ * How wide the *contents* of a question box may get.
+ *
+ * Not the box. The box keeps the column's full width in both modes, so
+ * that it is the same box whether it is holding a wave or a stave — the
+ * listening question and the answered one must not change shape under the
+ * reader, which is what makes the two modes of one exercise read as one
+ * screen. The first attempt at this capped the boxes themselves and got
+ * that backwards.
+ *
+ * What a landscape window actually spoils is the row inside: stretched
+ * across sixty rem the bars keep their height and gain nothing but
+ * distance from each other, so the thing the box exists to show reads
+ * worse the more room it is given.
+ */
+:root {
+  --question-measure: 30rem;
+  /*
+    How tall the thing being asked about is, in either mode.
+
+    One value, because the box must not change size when the question is
+    answered: a listening question shows a wave and then a stave in the
+    same box, and sizing each to its own contents made the box grow and
+    pushed every control below it down the page as the learner answered.
+    Reported as exactly that.
+
+    The stave needs this much; the wave does not, and is given it anyway.
+    The alternative — shrinking the stave to the wave's height — makes the
+    notation worse to read in order to keep a row of bars company.
+  */
+  --staff-height: 170px;
+}
+
 .score {
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 10px; padding: 0.5rem; overflow-x: auto;
@@ -489,6 +522,12 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   display: flex; align-items: center;
   gap: 1rem;
   inline-size: 100%;
+  /* Capped and centred inside a box that is not — see `--question-measure`. */
+  max-inline-size: var(--question-measure);
+  margin-inline: auto;
+  /* The stave's height, so answering does not resize the box — see
+     `--staff-height`. */
+  min-block-size: var(--staff-height);
 }
 /* The wave takes the room; the control sits at the end of it. `min-width: 0`
    because a flex item's content floor would otherwise stop the row ever
@@ -560,7 +599,7 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* --score-ink is read by Score.tsx and handed to VexFlow, which is the only
    way to colour the whole drawing: see the note there on why recolouring the
    emitted SVG from here leaves some marks black. */
-.score-host { min-height: 170px; }
+.score-host { min-height: var(--staff-height); }
 /* The playback cursor. Positioned in the SVG's own pixels, which only works
    because the stave is redrawn at the measured width rather than scaled —
    see the note in Score.tsx. `.score` is the positioning context, so the
@@ -932,6 +971,28 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    only a hue is no verdict at all to a colour-blind user. */
 .choice.right { border-color: var(--right); color: var(--right); opacity: 1; font-weight: 650; }
 .choice.wrong { border-color: var(--wrong); color: var(--wrong); opacity: 1; font-weight: 650; }
+
+/*
+ * A marked chip that will play its interval when pressed.
+ *
+ * The two controls that used to say "Hear yours" and "Hear the answer" are
+ * these, so the chips have to look pressable where the other ten do not —
+ * an affordance a word was carrying before and nothing is now. A small
+ * triangle rather than a word: the chip already says which interval it is
+ * and the row is tight enough that a second word per chip would wrap it.
+ *
+ * `::after` rather than markup, because this is a hint about a control
+ * whose accessible name already says `Hear <interval>` — a screen reader
+ * gains nothing from a second glyph and a sighted reader gains the only
+ * sign that the chip still does something.
+ */
+.choice.playable { cursor: pointer; }
+.choice.playable::after {
+  content: '\25b8';
+  margin-inline-start: 0.4rem;
+  opacity: 0.75;
+}
+.choice.playable:hover { filter: brightness(1.12); }
 .verdict { font-size: 0.9rem; margin: 0.9rem 0 0; }
 
 /* The sample credits.
@@ -1359,4 +1420,27 @@ select,
 .more > summary:hover { color: var(--ink); }
 .more > summary:focus-visible {
   outline: 2px solid var(--accent-edge); outline-offset: 2px; border-radius: 4px;
+}
+
+/*
+ * A stave inside the sound box is not a second box.
+ *
+ * `.score` carries its own ground, border and radius because it is normally
+ * a panel in its own right. Dropped into the sound box as the revealed
+ * answer it brought all three with it and the page showed a box inside a
+ * box, reported as exactly that. The box is the sound box; what is in it
+ * is a drawing.
+ */
+.sound > .score {
+  background: none; border: none; border-radius: 0; padding: 0;
+  /*
+    The full width of the box, not the wave's measure.
+    `--question-measure` keeps a row of bars from being stretched thin
+    across a landscape window — bars gain nothing from distance. A stave
+    is the opposite: the room buys space between the notes, which is what
+    makes it readable, and the reading question already draws it to the
+    full width of its box. Capping it here would have made the same
+    interval narrower to look at for having been heard rather than read.
+  */
+  inline-size: 100%;
 }

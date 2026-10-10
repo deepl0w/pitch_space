@@ -595,6 +595,20 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
    * {@link PromptDrawnScores}.
    */
   scores?: PromptDrawnScores;
+  /**
+   * The revealed answer's stave, ready to render, or null until there is one.
+   *
+   * Set only when the definition sets `promptDrawsAnswerStaff`, and handed
+   * over as a node rather than as a spec for the same reason `moveOn` is:
+   * drawing it needs `ui/notation`, and what crosses into an exercise is
+   * something already drawn.
+   *
+   * It exists because a listening question's answer belongs *in* the sound
+   * box. The screen used to put it in a second box above, so answering grew
+   * a new panel on the page and the question's own box sat underneath it
+   * still showing a wave with nothing to draw.
+   */
+  answerStaff?: ReactNode;
 }
 
 /**
@@ -794,6 +808,18 @@ export interface ExerciseDefinition<S extends BaseSettings, E extends ExerciseBa
    * passes the specs down. See {@link PromptDrawnScores}.
    */
   promptDrawsScores?: boolean;
+
+  /**
+   * The prompt places the answer's stave, rather than the screen.
+   *
+   * Narrower than `promptDrawsScores`, which hands over both staves and
+   * leaves the prompt to build them. This hands over one, already drawn,
+   * and only so it can be put somewhere the screen cannot reach — inside
+   * the sound box, in place of the wave, once the question is answered.
+   * The question's own stave stays with the screen, where a reading
+   * question still wants it.
+   */
+  promptDrawsAnswerStaff?: boolean;
   /**
    * Every item these settings make askable, whether or not it has ever
    * been asked.

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SoundBox } from '../SoundBox';
 import { keyName } from '../../theory/key';
 import type { PromptProps } from '../types';
 import {
@@ -31,17 +32,24 @@ function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
  * fresh question is a fresh component.
  */
 export function ProgressionPrompt({
-  exercise, result, onRespond, audio, moveOn,
+  exercise, result, onRespond, audio, moveOn, answerStaff,
 }: PromptProps<ProgressionSettings, ProgressionExercise, ProgressionResponse>) {
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
   const [filled, setFilled] = useState<string[]>([]);
+  /*
+    Every play, including the one the screen starts on its own — the box
+    cannot own "is it playing" because the question sounds itself before
+    the learner has touched anything. See `SoundBox`.
+  */
+  const [playedAt, setPlayedAt] = useState(0);
   const reading = exercise.presentation === 'read';
   const key = keyFor(exercise);
   const answered = result !== null;
 
   function play() {
     audio.play(progressionVoices(exercise));
+    setPlayedAt(Date.now());
     // From the first hearing, not the last: someone who needed three listens
     // has not answered quickly, and restarting the clock would record that
     // they had.
@@ -82,13 +90,35 @@ export function ProgressionPrompt({
           : <>The key is established, then the progression. Name each chord.</>}
       </p>
 
+      {/*
+        The sound in the same box every other listening exercise uses.
+
+        This was the last prompt still answering with a plain "Play it
+        again" button and no picture of the sound — reported as the
+        visualisation being missing here. It is the longest passage of any
+        exercise, a cadence and then four chords, so it is the one where
+        seeing that something is still playing is worth the most.
+      */}
+      {/*
+        A reading question has no sound box, and its stave still has to land.
+
+        The question's own stave goes null the moment it is answered and
+        `answerScore` takes over — so diverting that to the sound box took
+        the stave off a reading question altogether, which is what this
+        line is here to stop happening again.
+      */}
+      {reading && answerStaff}
       {!reading && (
-        <div className="actions">
-          <button type="button" onClick={play}>Play it again</button>
-          <span className="secondary">
-            cadence in {keyName(key)}, then {exercise.numerals.length} chords
-          </span>
-        </div>
+        <SoundBox
+          voices={progressionVoices(exercise)}
+          onPlay={play}
+          onStop={() => { audio.stopAll(); }}
+          playedAt={playedAt}
+          staff={answerStaff}
+          spectrum={audio.spectrum?.bind(audio)}
+          label="Play it again"
+          note={`cadence in ${keyName(key)}, then ${exercise.numerals.length} chords`}
+        />
       )}
 
       {/*

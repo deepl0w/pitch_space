@@ -100,8 +100,31 @@ function render(
 const slots = () => [...container.querySelectorAll('.slots button')] as HTMLButtonElement[];
 const choices = () => [...container.querySelectorAll('.choices button')] as HTMLButtonElement[];
 const choiceFor = (numeral: string) => choices().find((b) => b.textContent === numeral)!;
-const replay = () => [...container.querySelectorAll('.actions button')]
-  .find((b) => b.textContent === 'Play it again') as HTMLButtonElement | undefined;
+/**
+ * The control that sounds the progression again.
+ *
+ * Found by its accessible name rather than its text: it is the sound box's
+ * icon button now, the same as every other listening exercise, so there is
+ * no caption to match. The name is the thing a learner is promised either
+ * way — a control carrying its meaning in a glyph needs that more than one
+ * with a word in it, not less.
+ */
+const replay = () => [...container.querySelectorAll('button')]
+  .find((b) => b.getAttribute('aria-label') === 'Play it again') as HTMLButtonElement | undefined;
+
+/**
+ * The sound box's control, whichever of its two states it is in.
+ *
+ * The progression sounds itself on mount, so for as long as the passage
+ * lasts that control is a *stop* — `replay()` finds nothing, because the
+ * accessible name is the promise and the promise has changed. Driving a
+ * replay therefore means ending the passage first, which is what a learner
+ * does by waiting rather than by pressing.
+ */
+const soundControl = () => container.querySelector('.sound-play') as HTMLButtonElement | null;
+
+/** Let the passage finish, so the control is a play again. */
+const passageEnds = () => act(() => { vi.advanceTimersByTime(60_000); });
 /**
  * The control that hands the answer up; it is also the "n to go" counter.
  *
@@ -154,10 +177,42 @@ describe('sounding the progression', () => {
   });
 
   it('plays it again when asked, and no more often than asked', () => {
-    render(exercise());
-    click(replay()!);
-    click(replay()!);
-    expect(audio.plays).toHaveLength(3);
+    /*
+      The passage has to end between presses now. The replay lives in the
+      sound box, whose one control is a stop while anything is sounding —
+      so two presses without the time in between would be stop-then-play
+      and would sound the progression once, not twice.
+    */
+    vi.useFakeTimers();
+    try {
+      render(exercise());
+      passageEnds();
+      click(replay()!);
+      passageEnds();
+      click(replay()!);
+      expect(audio.plays).toHaveLength(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('offers a stop while the progression is sounding', () => {
+    /*
+      The other half, and the reason the case above needs the timers. A
+      passage a learner has heard enough of should stop when they say so —
+      and this one is the longest in the app, a cadence and then four
+      chords, so it is the one where that matters most.
+    */
+    vi.useFakeTimers();
+    try {
+      render(exercise());
+      expect(soundControl()?.getAttribute('aria-label'), 'no way to cut it short')
+        .toBe('Stop');
+      passageEnds();
+      expect(soundControl()?.getAttribute('aria-label')).toBe('Play it again');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('sounds nothing, and offers no replay, when the progression is to be read', () => {
@@ -248,18 +303,29 @@ describe('answering', () => {
   it('measures from the first hearing, not from the last replay', () => {
     // A user who needs three listens has not answered quickly, and
     // restarting the clock on each replay would record that they had.
+    vi.useFakeTimers();
+    // After the timers, so this is the clock both the prompt and the sound
+    // box read — `useFakeTimers` installs its own `Date.now` and would
+    // otherwise win.
     let now = 10_000;
     vi.spyOn(Date, 'now').mockImplementation(() => now);
 
-    const ex = exercise();
-    render(ex);
-    now = 11_000;
-    click(replay()!);
-    now = 11_500;
-    for (const numeral of ex.numerals) click(choiceFor(numeral));
-    click(mustCheck());
+    try {
+      const ex = exercise();
+      render(ex);
+      // The progression sounds itself on mount and its control is a stop
+      // until that finishes, so the replay has to be reachable first.
+      passageEnds();
+      now = 11_000;
+      click(replay()!);
+      now = 11_500;
+      for (const numeral of ex.numerals) click(choiceFor(numeral));
+      click(mustCheck());
 
-    expect(responses[0].latencyMs).toBe(1_500);
+      expect(responses[0].latencyMs).toBe(1_500);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports no latency at all when the progression was read rather than heard', () => {

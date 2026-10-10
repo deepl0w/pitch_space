@@ -41,6 +41,8 @@ export const progressionIdentification = defineExercise<
   grade: gradeProgression,
   Prompt: ProgressionPrompt,
   questionScore: progressionQuestionSpec,
+  // The answer's stave goes inside the sound box, in place of the wave.
+  promptDrawsAnswerStaff: true,
   answerScore: progressionScoreSpec,
 });
 

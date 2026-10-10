@@ -32,6 +32,8 @@ export const scaleIdentification = defineExercise<
   grade: gradeScale,
   Prompt: ScalePrompt,
   questionScore: scaleQuestionSpec,
+  // The answer's stave goes inside the sound box, in place of the wave.
+  promptDrawsAnswerStaff: true,
   answerScore: scaleScoreSpec,
 });
 

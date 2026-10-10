@@ -539,6 +539,16 @@ button:active { transform: translateY(1px); }
   font-size: 0.68rem; color: var(--muted);
   text-transform: uppercase; letter-spacing: 0.06em;
   margin-top: 0.15rem;
+  display: flex; align-items: center; gap: 0.35rem;
+}
+/* The colour half of how a line is going; `standingWord` beside it carries
+   the meaning, so this is an illustration rather than the indicator and does
+   not have to meet a contrast floor on its own. Sized from the text it sits
+   with rather than in pixels, so it keeps its proportion if that moves. */
+.card-standing {
+  inline-size: 0.6em; block-size: 0.6em;
+  border-radius: 50%;
+  flex: none;
 }
 /* Not an error, and styled so it does not read as one: a history that
    cannot be read is a fact about this device, not a fault the reader

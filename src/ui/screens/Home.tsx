@@ -93,34 +93,52 @@ export function Home({ go }: { go: (route: string) => void }) {
  * read.* Each branch below is one of the three states a first paint has.
  */
 /**
- * A completion as a percentage, with the two ends told apart.
+ * How a line is going, as a colour and a word.
  *
- * **`<1%` rather than `0%` for a line that has been practised.** A
- * learner who answered a question correctly and then read "0%" reported
- * it as "that did not count" — and they were right to, because the line
- * had moved and the figure said it had not. A pool of thirty items
- * advanced by one rung on one item is under half a percent, which is
- * honestly tiny and is not nothing.
+ * **Not a percentage, and the difference is the user's ruling rather than
+ * a presentation choice.** Asked what a line should read, they said:
+ * colours from red for bad to green for good, and *no completion*. A
+ * percentage is a completion — it has a 100 in it, and a reader who sees
+ * 97% knows what the missing 3% would mean. The previous reading said
+ * `100%` meant every item on the top rung and treated that as "the one
+ * claim worth being exact about", which was exact about a thing the app
+ * is not supposed to have.
  *
- * Nothing at all is still what an unpractised line shows, so the three
- * readings stay distinct: no figure means never practised, `<1%` means
- * started, a number means measurably along.
+ * **The scale is approached and not arrived at.** Pure green at 120° is
+ * where the eye stops reading "better" and starts reading "finished", so
+ * the best a line can show is short of it. That is the same ruling from
+ * the 7th — *a high cap is the colour ceiling* — and it is what stops a
+ * hue scale becoming a completion by another name: there is no hue that
+ * means done, because the hue that would is not on the scale.
  *
- * `Math.floor` for everything above that, so `100%` means every item is
- * actually on the top rung rather than merely near it. Reaching the end
- * of a line is the one claim here worth being exact about.
- *
- * **Exported so the `<1%` branch is checkable, because the app can barely
- * produce it.** One item on the first rung is a seventh of a rung, so the
- * band needs a pool of about fifteen or more with exactly one item moved
- * — the user role tried three pools and landed on a real figure every
- * time. A branch that cannot be reached from outside is still reachable
- * here, and an untestable branch nobody can observe is one nobody can
- * tell is wrong.
+ * **The word is not decoration.** Colour alone cannot carry a meaning
+ * (WCAG 1.4.1), and a reader with no colour vision would otherwise get a
+ * grey dot and a presentation label. The bands say how it is going and
+ * none of them says finished.
  */
-export function percent(fraction: number): string {
-  if (fraction > 0 && fraction < 0.01) return '<1%';
-  return `${Math.floor(fraction * 100)}%`;
+export const GREENEST = 108;
+
+/** Red at nothing, through to {@link GREENEST}. */
+export function standingHue(fraction: number): number {
+  return Math.max(0, Math.min(1, fraction)) * GREENEST;
+}
+
+/**
+ * The bands, lowest first, as `[upTo, word]`.
+ *
+ * Four rather than three or five because each has to be a thing a learner
+ * would recognise having been; the top one is "strong", which is a state
+ * you can be in and keep practising from, where "done" is not.
+ */
+const BANDS: readonly (readonly [number, string])[] = [
+  [0.2, 'shaky'],
+  [0.5, 'coming along'],
+  [0.8, 'steady'],
+  [Infinity, 'strong'],
+];
+
+export function standingWord(fraction: number): string {
+  return BANDS.find(([upTo]) => fraction < upTo)?.[1] ?? 'strong';
 }
 
 function cardProgress(
@@ -173,18 +191,19 @@ function MenuCard({ entry, go, progress }: {
         <span className="card-blurb">{entry.blurb}</span>
         {progress?.kind === 'advanced' && (
           /*
-            The presentation is named beside the figure because the figure
-            is only true of that one: a learner fluent by eye and lost by
-            ear has two very different numbers here, and an unlabelled one
-            would be whichever they happened to practise last.
-
-            Rounded, and never to 100 from below — `Math.floor` rather than
-            `Math.round`, so "100%" means every item is actually on the top
-            rung rather than merely close to it. Reaching the end of a line
-            is the one claim here worth being exact about.
+            The presentation is named beside the reading because the
+            reading is only true of that one: a learner fluent by eye and
+            lost by ear is in two very different places here, and an
+            unlabelled reading would be whichever they happened to
+            practise last.
           */
           <span className="card-progress">
-            {percent(progress.fraction)} · {progress.presentation}
+            <span
+              className="card-standing"
+              style={{ background: `hsl(${standingHue(progress.fraction)} 62% 42%)` }}
+              aria-hidden="true"
+            />
+            {standingWord(progress.fraction)} · {progress.presentation}
           </span>
         )}
         {progress?.kind === 'unavailable' && (

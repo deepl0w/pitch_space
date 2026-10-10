@@ -206,15 +206,22 @@ describe('a take that was not heard', () => {
  * cluster*. A unison is the one interval a learner answers by doing
  * precisely that.
  *
- * **What this holds, and what it does not.** Measured from 0.12s to 1.2s
- * apart: a re-pluck is loud enough against the first note's decayed tail
- * that assembly never merges it, so the chain delivers two notes at every
- * spacing a learner would use. It is not a tight guard on the merge rule —
- * `NEW_NOTE_RISE` has to go from 2 to about a thousand before this
- * notices, because the margin is enormous. An earlier version of this
- * comment claimed that tightening the rule would break the unison and the
- * mutation showed it would not; the margin is the finding, and it is a
- * better answer than the guard would have been.
+ * **What this holds, and how much room it has.** Measured from 0.12s to
+ * 1.2s apart: the chain delivers two notes at every spacing, so a played
+ * unison answers. The room varies enormously with spacing, and the tight
+ * end is tight — raising `NEW_NOTE_RISE` from 2 to **3** merges the pair
+ * struck 0.12s apart, while the widely spaced ones survive past 30. So
+ * this *is* a guard on the merge rule, bounded by its closest case.
+ *
+ * **Two earlier versions of this paragraph were wrong, in opposite
+ * directions, and the second is the instructive one.** The first claimed
+ * tightening the rule would break the unison; a mutation showed it did
+ * not, at the spacings then tested. The second recorded the margin as
+ * "about a thousand" — measured on that three-spacing fixture and left
+ * standing when 0.12s and 0.25s were added to it, so the figure described
+ * a test that no longer existed. A number taken before the thing it
+ * describes was changed is the shape of staleness this repository warns
+ * about, arriving inside the comment that was correcting the first error.
  *
  * What it does hold is the end-to-end claim no unit test can: that a
  * played unison arrives as two notes and answers, where every test of

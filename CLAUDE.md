@@ -209,6 +209,14 @@ the agents informed is main's job and it does not get delegated upwards —
 if the user has to carry a message, the protocol has failed, not succeeded
 by another route.
 
+**That rule is about relaying, and does not reach asking the user to act.**
+Carrying text from one session to another is plumbing; asking them to do a
+thing only they can do — rename a session they own, restart one whose
+directory is gone — is asking the actor to act, not handing them a wire.
+The distinction matters because the sentence above reads absolute enough
+to make the second look like the first, and hesitating over it would leave
+a known problem in place for the sake of a rule about something else.
+
 **Do not guess whether a role is there. Run `tools/sessions.sh`.**
 
 This is the project's first convention — when a mechanism exists to answer
@@ -231,6 +239,83 @@ The command separates the three states, because the right response differs:
 - **not running** — there is nothing to reach. Say that, not that the role
   is absent; whether it comes back is the user's business. `fleet.sh brief`
   prints what landed at its next start, so it is caught up rather than lost.
+
+**Main is a fourth case these three states do not cover, found 10 October:
+running, socketed, and still unaddressable by name.** `SendMessage` reserves
+the literal string `main` for a background agent's own parent conversation,
+and that reservation wins over a cross-session peer that happens to be
+named `main` — before the `[ref]` a listing error suggests is ever
+consulted. **Three forms were tried and they fail in two different ways,
+not one**, which costs more than a single consistent refusal would: `to:
+"main"` names the reservation outright; the ref the error then suggests
+comes back "not reachable", offering a second ref; that second ref returns
+to the reservation message. Two different refs for one session, live at
+the same moment, and the disambiguator the error itself points at is what
+gets swallowed — a reader who follows it and lands back at the first error
+can reasonably conclude they mistyped rather than that the address cannot
+be used at all.
+
+Confirmed independently by three sessions (architect, tester, this one),
+each re-reading `ListAgents` immediately before sending — reproduction
+through one instrument, which is a repeat count rather than three
+witnesses. What actually isolates the cause is the contrast sitting beside
+it: messages to `tester` and to `architect`, from the same sessions, in the
+same sittings, went through. The failure tracks the reserved name, not the
+sender, the host, or main being otherwise unreachable. `ListAgents` keeps
+listing `main` as reachable regardless, which is the sharper fact: an
+advertised route that cannot be used reads as working right up until it is
+tried, where an absent one would send someone looking for another way. A
+socket is what every other role's addressability reduces to; main is the
+one role where that reduction is wrong, and `tools/sessions.sh` now says so
+explicitly rather than reading the socket and reporting addressable.
+
+**The channel runs one way, and the cost is narrower than "main is cut
+off."** Main's own messages reach every role normally; nothing reaches
+main by name. Work is not stranded — `announce` and `status` read each
+role's own branch directly, so main's tooling still shows a branch moved
+without anyone telling it. What is lost is the fast path and the reasoning
+behind it: main learns *that* something changed and not *why*, and
+reconstructs from commit messages what a message would have said outright.
+The measured cost is main asking more than once for an answer the
+repository already held, including one already committed and merged days
+earlier.
+
+**The fix is not a name this file controls.** The branch still says `main`,
+the role still says `main` — what needs to change is the session's own
+display title, which this project has had no reason to distinguish from
+either until now. A session titled literally `main` cannot be reached by
+`SendMessage` under a host that reserves the word; one titled anything else
+can, at no cost to the branch or the role, since neither reads the
+session's title at all. Renaming it is not a worktree session's call to
+make — it is not this checkout — so it is recorded here rather than acted
+on from one.
+
+**A working half exists until that rename happens.** `SendMessage`'s
+reservation blocks `to: "main"`, not a reply built from a message main
+already sent: copying the `from` address on an incoming cross-session
+message — the raw socket path, not the display name — reached main
+where the bare name refused, tried the same minute the refusal was
+confirmed. Main can still open a conversation nobody else can answer by
+name; whoever it writes to can answer back. Not a fix, since main still
+has to speak first, but worth using meanwhile rather than treating the
+address as dead in both directions.
+
+**`user` failed the same way the same day, and the cause is not this
+one.** `ListAgents` lists it with no `[ref]` at all, unlike every other
+role; `tools/sessions.sh` reports a socket; `SendMessage` to the bare name
+still refuses with "No agent named 'user' is reachable" — from main twice,
+ten minutes apart, and from this session once more immediately after a
+fresh `ListAgents`. That rules out a stale read and rules out the sender:
+two different roles failed identically. It does not confirm a mechanism —
+main's error named the reservation outright, this one does not, and `user`
+is not on `SendMessage`'s documented reserved-word list the way `main` is.
+One guess worth naming and not yet checked: chat protocols commonly use
+`user` as a role token the way this one uses `main` for a parent
+conversation, which would make this the same *shape* of collision under a
+different reservation. **Recorded as open rather than attributed**, on
+this file's own standard: an explanation reached for immediately after one
+mechanism is confirmed is selected for fitting the symptom, not for being
+true, and this one has a real alternative sitting right next to it.
 
 Two things that follow and are easy to get backwards. An unreachable role
 is never a reason to do nothing — there is no flag to set that makes it

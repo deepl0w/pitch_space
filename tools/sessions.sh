@@ -27,12 +27,47 @@
 #                           at its next start; say so rather than calling it
 #                           absent, since whether it comes back is the
 #                           user's business and not main's reading.
+#
+# A fourth state surfaced 10 October, for main specifically, and a socket
+# check cannot see it: `SendMessage` reserves the literal string "main" for
+# a background agent's own parent conversation, and that reservation wins
+# over a cross-session peer that happens to carry the same name — before
+# the `[ref]` disambiguator a listing error suggests is ever consulted.
+# Confirmed from two independent sessions, each retrying with a freshly
+# re-read ref, both refused the same way. A role running with a live
+# socket is "addressable" by every test this script otherwise has, and
+# main is the one role for which that conclusion is wrong — reported here
+# rather than left for whoever next trusts the three-state table on faith.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 socks="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/cc-socks"
 
 printf '%-12s %-30s %s\n' ROLE DIR STATE
+
+# main first and separately: it is not a `claude/*` worktree branch, so the
+# loop below never reaches it, and its addressability does not reduce to
+# socket state the way every other role's does — see the comment at the
+# top of this file.
+main_dir=$(git worktree list --porcelain | awk '
+    /^worktree /{w=$2} $0=="branch refs/heads/main"{print w}')
+if [ -n "$main_dir" ]; then
+    base=$(basename "$main_dir")
+    pid=""
+    for p in $(pgrep -f claude 2>/dev/null || true); do
+        cwd=$(readlink "/proc/$p/cwd" 2>/dev/null || true)
+        [ "$cwd" = "$main_dir" ] || continue
+        [ -S "$socks/$p.sock" ] && pid=$p
+    done
+    if [ -n "$pid" ]; then
+        state="running, socket present (pid $pid) — but SendMessage cannot reach"
+        state="$state \"main\" by name; see the note above"
+    else
+        state='not running, or no socket — same unaddressable-by-name caveat applies either way'
+    fi
+    printf '%-12s %-30s %s\n' "main" "$base" "$state"
+fi
+
 for branch in $(git for-each-ref --format='%(refname:short)' 'refs/heads/claude/*'); do
     role=${branch#claude/}
     dir=$(git worktree list --porcelain | awk -v b="refs/heads/$branch" '

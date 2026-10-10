@@ -327,3 +327,50 @@ grading rather than discovering by a learner being told something false.
 Its comment states the trade this record has been circling in one line, and
 better than the record does: *"Being strict costs a replay; guessing costs a
 learner being told they played a scale they did not."*
+
+## Addendum, 12 October 2026 — completeness may be trusted only where it cannot be reached by accident
+
+The user, asked why a fumble inside a scale is refused while one after the
+octave is forgiven: *"if the whole octave is played correctly and then there's
+something else it should be accepted, otherwise a bad note during the scale
+degrees should be refused"*.
+
+Both halves already held, so it is an endorsement. **What is worth recording is
+why the interval cannot adopt the same rule**, because the two look
+inconsistent and are not.
+
+**An answer's completeness may be trusted only where it is not reachable by
+accident.**
+
+For a scale, *complete* means a monotonic run landing exactly on the octave
+whose pattern is a type in the catalogue. A learner cannot stumble into that:
+a fumble inside breaks the run before twelve, and a run that stops short
+matches nothing. So completeness is evidence, and once it is in hand what
+follows can be ignored.
+
+For an interval, *complete* means two notes, and **any two notes are a complete
+interval**. A hesitation's first two attacks are a perfectly complete unison —
+which is the wrong answer that sent `intervalPlayed` to refusing in the first
+place. Completeness carries no information there, so there is nothing to trust
+and the only honest rule is to refuse the ambiguous take outright.
+
+**This is the reason underneath the previous addendum** rather than a second
+rule. *How many ways a take can be ambiguous is a property of the answer's
+shape* — and the shape is what decides whether completeness is informative at
+all. An answer with a defined endpoint and a pattern to match can be known
+complete; an answer that is merely a count cannot.
+
+So the question to ask of the next exercise answered by playing is not *when do
+we refuse* but **can this answer be completed by accident**. Where it can,
+extra input must be refused; where it cannot, completeness is a stopping
+condition and what follows may be discarded.
+
+**One case sits between the two and is open.** A learner who plays the scale
+through *two* octaves has demonstrated it more thoroughly than asked and is
+refused, while one who finishes the octave and fumbles a lower note is
+answered — `scales.test.ts` names these as "opposite answers to the same kind
+of input: notes beyond what was asked for" and pins the behaviour explicitly
+as existing rather than decided. The user's ruling above, read literally,
+covers the overshoot too — *the whole octave played correctly and then there's
+something else*. Whether it was meant to is theirs, and nobody has put the pin
+and the ruling side by side.

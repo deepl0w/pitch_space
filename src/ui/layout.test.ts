@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { APP_CSS, APP_RULES, rulesFor, rulesUnder, type Rule } from '../testing/stylesheet';
+import {
+  APP_CSS, APP_RULES, customProperties, rulesFor, rulesUnder, type Rule,
+} from '../testing/stylesheet';
 
 /**
  * Layout rules asked of the stylesheet, because jsdom has no layout and the
@@ -76,6 +78,58 @@ describe('the stylesheet', () => {
       ];
     });
     expect(offenders).toEqual([]);
+  });
+
+  /**
+   * A breakpoint is a claim that everything fits, and the claim is
+   * arithmetic the stylesheet already contains.
+   *
+   * The circle page went to two columns at a round `64rem`, below the
+   * width where both of them fit, so between about 1024 and 1200 the
+   * columns squeezed the diagram the page exists to show — 162px at
+   * 1024, against 480px at the same width in one column. **A wrong
+   * threshold is worse than no rule**, because it makes the worst case
+   * out of an interior band nobody inspects: both extremes look right,
+   * and a round number reads as a tidy choice rather than as a figure
+   * that owes a derivation.
+   *
+   * So the derivation is checked rather than described. Every term is
+   * read out of the sheet, and the nesting is read out of the selector —
+   * the `>` in `.circle-page > .circle-layout` is the stylesheet saying
+   * the inner grid sits in the outer one's first track, which is what
+   * lets an `auto` column be resolved here instead of counted as zero
+   * the way the general case above has to.
+   */
+  it('opens the circle page in two columns only once both of them fit', () => {
+    const inner = ruleFor('.circle-page > .circle-layout', 'grid-template-columns');
+    const outer = ruleFor('.circle-page', 'grid-template-columns');
+    expect(inner, 'no two-column rule for the circle page').not.toBeNull();
+    expect(outer?.at, 'the two rules are not under one query').toBe(inner!.at);
+
+    const threshold = minWidthOf(inner!.at);
+    expect(threshold, 'the two-column layout is not behind a query at all').not.toBeNull();
+
+    // The inner grid: its own tracks and the gap between them.
+    const innerWidth = floorOf(inner!.value) + gapOf('.circle-layout');
+    // The outer: that grid in its `auto` track, the detail column's
+    // floor, and the gap between the two.
+    const outerWidth = innerWidth + floorOf(outer!.value) + gapOf('.circle-page', outer!.at);
+    const needed = outerWidth + pagePadding(threshold!);
+
+    expect(threshold, `two columns need ${needed}rem and open at ${threshold}rem`)
+      .toBeGreaterThanOrEqual(needed);
+
+    /*
+      And the padding came from the rule that wins at this width rather
+      than the first one declared, which is only a distinction if the two
+      differ — so that is asserted rather than assumed. `main` pads from
+      `--page-inset` and a `min-width: 60rem` rule replaces it with 2rem
+      a side; reading the base rule understates the total by half the
+      page's padding, and the slack in the current figures is enough to
+      hide it.
+    */
+    expect(pagePadding(threshold!), 'the wide page pads no more than the narrow one')
+      .toBeGreaterThan(pagePadding(0));
   });
 
   it('declares at least one multi-column grid, so the rule is not vacuous', () => {
@@ -301,4 +355,63 @@ function minWidthOf(at: string | null): number | null {
   if (at === null) return null;
   const match = /min-width:\s*(\d*\.?\d+)rem/.exec(at);
   return match ? Number(match[1]) : null;
+}
+
+/** The first declaration of a property on a rule whose whole selector is this. */
+function ruleFor(selector: string, property: string):
+{ value: string; at: string | null } | null {
+  for (const rule of APP_RULES) {
+    if (!rule.selectors.includes(selector)) continue;
+    const match = new RegExp(`(?:^|;)\\s*${property}\\s*:([^;}]+)`).exec(rule.body);
+    if (match) return { value: match[1].trim(), at: rule.at };
+  }
+  return null;
+}
+
+/** The `gap` a selector sets, in rem, under a given at-rule. */
+function gapOf(selector: string, at: string | null = null): number {
+  const rule = APP_RULES.find(
+    (r) => r.selectors.includes(selector) && r.at === at && /(?:^|;)\s*gap\s*:/.test(r.body),
+  );
+  const match = rule && /(?:^|;)\s*gap\s*:\s*([^;}]+)/.exec(rule.body);
+  return match ? rem(match[1].trim()) : 0;
+}
+
+/**
+ * The horizontal room `main` takes at a given width, in rem, from
+ * whichever rules apply there.
+ *
+ * `main` only, never `main.shell`: the practice screen sets `padding: 0`
+ * under the same query, and counting it zeroed this silently. Nothing
+ * failed, because the total stayed under the threshold either way — it
+ * was found by a mutant printing a sum 4rem short of the one the
+ * stylesheet's own comment derives.
+ */
+function pagePadding(atWidth: number): number {
+  let left = 0;
+  let right = 0;
+  for (const rule of APP_RULES) {
+    if (!rule.selectors.includes('main')) continue;
+    const min = minWidthOf(rule.at);
+    if (rule.at !== null && (min === null || min > atWidth)) continue;
+    const shorthand = /(?:^|;)\s*padding\s*:\s*([^;}]+)/.exec(rule.body);
+    if (shorthand) {
+      const parts = shorthand[1].trim().split(/\s+/);
+      left = sideWidth(parts.length > 1 ? parts[1] : parts[0]);
+      right = left;
+    }
+    const l = /(?:^|;)\s*padding-left\s*:\s*([^;}]+)/.exec(rule.body);
+    const r = /(?:^|;)\s*padding-right\s*:\s*([^;}]+)/.exec(rule.body);
+    if (l) left = sideWidth(l[1].trim());
+    if (r) right = sideWidth(r[1].trim());
+  }
+  return left + right;
+}
+
+/** A padding side, resolving the one custom property used for one. */
+function sideWidth(value: string): number {
+  const token = /^var\((--[\w-]+)\)$/.exec(value);
+  if (!token) return rem(value);
+  const declared = customProperties(rulesFor(':root').join('')).get(token[1]);
+  return declared ? rem(declared) : 0;
 }

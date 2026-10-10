@@ -42,7 +42,7 @@ const deaf: AudioIn = noMicrophone;
 
 function recordingAudio(): AudioOut & { plays: Voice[][] } {
   const plays: Voice[][] = [];
-  return { plays, play: (voices) => { plays.push([...voices]); } };
+  return { plays, play: (voices) => { plays.push([...voices]); }, stopAll: () => {} };
 }
 
 let container: HTMLDivElement;
@@ -51,6 +51,10 @@ let audio: ReturnType<typeof recordingAudio>;
 let responses: IntervalResponse[];
 
 beforeEach(() => {
+  // Faked so `afterItHasPlayed` costs nothing. The countdown on the
+  // listening control reads its first value on render, so it does not
+  // depend on a timer having fired.
+  vi.useFakeTimers({ shouldAdvanceTime: true });
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
@@ -61,6 +65,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   container.remove();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -108,8 +113,37 @@ const choiceFor = (semitones: number) =>
   pass or fail on the order of two unrelated buttons — it went red for
   finding "Play your answer", which is a control that should be there.
 */
-const replay = () => ([...container.querySelectorAll('.actions button')]
-  .find((b) => /play it again/i.test(b.textContent ?? '')) ?? null) as HTMLButtonElement;
+/*
+  Searched over the whole prompt rather than inside `.actions`, because the
+  replay control moved: a listening question now puts its sound in a box of
+  its own, the way a reading one puts its staff there. Scoping a search to
+  the container something currently sits in is the same positional
+  assumption as finding it by index, one level up.
+*/
+/*
+  Found by its accessible name rather than by its text, because it has no
+  text: the control is a play triangle. That is also the better test — it
+  fails if the icon button loses the name a screen reader needs, which is
+  the one way this control can become unusable without looking broken.
+*/
+const replay = () => ([...container.querySelectorAll('button')]
+  .find((b) => /play it again|^stop$/i.test(b.getAttribute('aria-label') ?? b.textContent ?? ''))
+  ?? null) as HTMLButtonElement;
+
+/**
+ * Let the passage the question sounds on mount finish.
+ *
+ * The one control in the sound box is a stop while a passage is sounding,
+ * so a test that presses it straight after mounting stops the question
+ * rather than replaying it. Waiting the passage out is what a learner
+ * does, and these cases are about what happens afterwards.
+ */
+const afterItHasPlayed = () => {
+  act(() => { vi.advanceTimersByTime(PASSAGE_MS); });
+};
+
+/** Longer than any passage this exercise sounds. */
+const PASSAGE_MS = 10_000;
 const click = (button: HTMLElement) => act(() => { button.click(); });
 
 describe('sounding the interval', () => {
@@ -128,7 +162,11 @@ describe('sounding the interval', () => {
 
   it('plays it again when asked, and no more often than asked', () => {
     render(exercise());
+    // Each press replays, and each replay has to be waited out before the
+    // control is a play again rather than a stop.
+    afterItHasPlayed();
     click(replay());
+    afterItHasPlayed();
     click(replay());
     expect(audio.plays).toHaveLength(3);
   });
@@ -169,7 +207,10 @@ describe('sounding the interval', () => {
       act(() => root.unmount());
       root = createRoot(container);
       render(exercise({ direction }));
-      expect(container.querySelector('.actions .secondary')?.textContent).toBe(caption);
+      // Wherever it sits: the caption follows the sound, which moved into
+      // a box of its own. What matters is that the learner is told, not
+      // which container tells them.
+      expect(container.textContent, `no caption for ${direction}`).toContain(caption);
     }
   });
 });
@@ -308,6 +349,7 @@ describe('answering', () => {
     // interval it just got wrong.
     const ex = exercise();
     render(ex, { result: gradeInterval(ex, { semitones: 0 }) });
+    afterItHasPlayed();
     const before = audio.plays.length;
     click(replay());
     expect(audio.plays).toHaveLength(before + 1);

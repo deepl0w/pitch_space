@@ -180,7 +180,10 @@ describe('every declared presentation gives the user something', () => {
 
           const score = definition.questionScore?.(exercise) ?? null;
           const played: Voice[][] = [];
-          const audio = { play: (voices: readonly Voice[]) => { played.push([...voices]); } };
+          const audio = {
+            play: (voices: readonly Voice[]) => { played.push([...voices]); },
+            stopAll: () => {},
+          };
 
           const root = createRoot(document.createElement('div'));
           // `createElement` rather than JSX so this stays a .ts file, which

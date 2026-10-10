@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { SIMPLE_INTERVAL_NAMES } from '../../theory/interval';
+import { SoundBox } from '../SoundBox';
 import { useCountdown } from '../countdown';
 import { namePlayed } from '../played';
 import type { PlayedNote, PromptProps } from '../types';
@@ -30,7 +31,12 @@ export function IntervalPrompt({
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
 
+  // Moved on every play, so the box's wave follows the sound rather than
+  // only its own button — a question sounds itself on Start.
+  const [playedAt, setPlayedAt] = useState(0);
+
   function play() {
+    setPlayedAt(Date.now());
     audio.play(intervalVoices(exercise));
     // Measured from the first hearing rather than the last. A user who needs
     // three listens has not answered quickly, and restarting the clock on
@@ -144,8 +150,24 @@ export function IntervalPrompt({
         </div>
       )}
 
+      {/*
+        The sound in a box, where a reading question puts its staff. The
+        two modes of one exercise looked like two screens otherwise — the
+        user's words were that the interface should be consistent between
+        listening and reading.
+      */}
+      {!reading && (
+        <SoundBox
+          voices={intervalVoices(exercise)}
+          onPlay={play}
+          onStop={() => { audio.stopAll(); }}
+          playedAt={playedAt}
+          label="Play it again"
+          note={PRESENTATION[exercise.direction]}
+        />
+      )}
+
       <div className="actions">
-        {!reading && <button type="button" onClick={play}>Play it again</button>}
         <button
           type="button"
           onClick={() => { void playAnswer(); }}
@@ -153,7 +175,7 @@ export function IntervalPrompt({
         >
           {listening ? `Listening… ${secondsLeft}s` : 'Play your answer'}
         </button>
-        <span className="secondary">{PRESENTATION[exercise.direction]}</span>
+        {reading && <span className="secondary">{PRESENTATION[exercise.direction]}</span>}
       </div>
 
       {aside && <p className="played-aside" role="status">{aside}</p>}

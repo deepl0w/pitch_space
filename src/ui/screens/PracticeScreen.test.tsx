@@ -39,7 +39,7 @@ declare global {
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 /** Silent, so a round can be started without an AudioContext. */
-const silent: AudioOut = { play: () => {} };
+const silent: AudioOut = { play: () => {}, stopAll: () => {} };
 
 /**
  * The route, as `App` holds it.

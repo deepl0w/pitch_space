@@ -44,7 +44,7 @@ const deaf: AudioIn = noMicrophone;
 
 function recordingAudio(): AudioOut & { plays: Voice[][] } {
   const plays: Voice[][] = [];
-  return { plays, play: (voices) => { plays.push([...voices]); } };
+  return { plays, play: (voices) => { plays.push([...voices]); }, stopAll: () => {} };
 }
 
 let container: HTMLDivElement;

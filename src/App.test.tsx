@@ -119,7 +119,7 @@ describe('settings over a running exercise', () => {
     app.press('Start');
     const first = app.question();
     expect(first, 'nothing was drawn, so nothing is being compared').not.toBeNull();
-    app.press('Skip to the next');
+    app.press('Skip');
     expect(app.question(), 'one round looks exactly like the next').not.toBe(first);
   });
 

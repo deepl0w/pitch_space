@@ -177,7 +177,7 @@ main {
     The question centres; the button that asks for one does not.
 
     Centring the whole body moved that button as content appeared
-    beneath it, so "Start" and "Skip to the next" — the same control
+    beneath it, so "Start" and "Skip" — the same control
     one press apart — sat in different places. The row keeps the top
     and the question takes the room below it.
   */
@@ -420,6 +420,85 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* Needed as well as minmax(0, 1fr) on the track: without it the flex/grid
      item's own min-content floor is the stave's width. */
   min-width: 0;
+}
+
+/*
+ * The listening question's own box, matching `.score` deliberately.
+ *
+ * The two modes of one exercise used to look like two screens: reading put
+ * its content in a bordered panel and listening put a bare button in the
+ * middle of the page. The sound is the content, so it goes where the
+ * content goes — same ground, same border, same radius, and the same
+ * minimum height as `.score-host` so switching mode does not move
+ * everything below it.
+ */
+.sound {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 0.5rem;
+  min-height: 170px; min-width: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 0.75rem;
+}
+
+/*
+ * Bars that rise while a passage sounds.
+ *
+ * **Not a picture of the signal, and the code says so too.** It runs for
+ * exactly as long as the passage does, which is the honest part; its shape
+ * is its own. Drawing the real waveform needs an analyser on the output,
+ * which an exercise cannot reach.
+ *
+ * At rest the bars sit at a low, even height rather than vanishing, so the
+ * box does not change size when sound starts — a panel that grows on press
+ * pushes the answer buttons down under the finger that just pressed.
+ */
+/* Control and wave on one line, which is how a player reads: the thing you
+   press and the thing it does, side by side rather than stacked. */
+.sound-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 1rem; flex-wrap: wrap;
+}
+.sound-wave {
+  display: flex; align-items: center; justify-content: center;
+  gap: 3px; height: 48px;
+}
+.sound-wave > span {
+  display: block; width: 4px; height: 6px; border-radius: 2px;
+  background: color-mix(in oklab, var(--accent) 35%, var(--surface));
+}
+.sound-playing .sound-wave > span {
+  background: var(--accent);
+  animation: sound-bar 0.9s ease-in-out infinite;
+}
+@keyframes sound-bar {
+  0%, 100% { height: 6px; }
+  50% { height: 40px; }
+}
+
+/*
+ * The play control: a round button with a triangle, not a word.
+ *
+ * Sized from the text it sits among rather than in pixels, so it keeps its
+ * proportion wherever the box is used, and comfortably past the 44px a
+ * finger needs without the coarse-pointer rule having to raise it.
+ */
+.sound-play {
+  inline-size: 3.4rem; block-size: 3.4rem;
+  border-radius: 50%;
+  padding: 0;
+  display: grid; place-items: center;
+}
+.sound-play > svg {
+  inline-size: 1.6rem; block-size: 1.6rem;
+  /* The glyph is the control's meaning, so it takes the button's colour
+     rather than a fill of its own. */
+  fill: currentColor;
+}
+
+/* A reader who has asked for less motion gets the colour change and no
+   movement, which still says sound is playing. */
+@media (prefers-reduced-motion: reduce) {
+  .sound-playing .sound-wave > span { animation: none; height: 22px; }
 }
 
 /* The stave is redrawn at the measured width rather than scaled, so it should

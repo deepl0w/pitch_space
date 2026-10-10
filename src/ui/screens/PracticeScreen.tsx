@@ -329,7 +329,7 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
     <>
       <div className="actions">
         <button type="button" onClick={start}>
-          {round === null ? 'Start' : round.result ? 'Next' : 'Skip to the next'}
+          {round === null ? 'Start' : round.result ? 'Next' : 'Skip'}
         </button>
         {/*
           Always on the page, blank until there is a tally to put in it.
@@ -358,7 +358,7 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
         The button stays where it is between states and the question
         centres in the room below it. Centring the whole body instead
         moved the button as content appeared under it — "Start" and
-        "Skip to the next" are the same control one press apart and
+        "Skip" are the same control one press apart and
         they landed in different places, which the user noticed before
         any of us did.
       */}
@@ -506,6 +506,19 @@ function RoundView({ definition, round, settings, onRespond, audio, audioIn, cap
 
   return (
     <>
+      {/*
+        The staff above the prompt, where a listening question puts its
+        sound box — so the two modes of one exercise agree about where the
+        question is and where the answers are. Reported as the opposite:
+        "the listening box is above the answers, the reading one is below".
+
+        Before the prompt rather than inside it, because the prompt is the
+        exercise's own and the stave is the screen's. The exercises that do
+        want it inline set `promptDrawsScores` and get it as a prop; for
+        the rest this is the slot.
+      */}
+      {!definition.promptDrawsScores && questionScore && <Score spec={questionScore} />}
+      {!definition.promptDrawsScores && answerScore && <Score spec={answerScore} />}
       <Prompt
         // A fresh exercise is a fresh component: remounting is what clears
         // the prompt's own state without a reset path that has to be kept in
@@ -520,8 +533,6 @@ function RoundView({ definition, round, settings, onRespond, audio, audioIn, cap
         capture={capture}
         scores={definition.promptDrawsScores ? { questionScore, answerScore } : undefined}
       />
-      {!definition.promptDrawsScores && questionScore && <Score spec={questionScore} />}
-      {!definition.promptDrawsScores && answerScore && <Score spec={answerScore} />}
     </>
   );
 }

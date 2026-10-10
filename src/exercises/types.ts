@@ -404,6 +404,18 @@ export interface SettingsSchema<S> {
  */
 export interface AudioOut {
   play(voices: readonly Voice[]): void;
+  /**
+   * Cut whatever is sounding.
+   *
+   * Named as `Synth` names it, because the composition root hands the
+   * synth in directly and a different name here would need an adapter
+   * whose only job was renaming a method.
+   *
+   * Added when the play control became a stop control while sounding: a
+   * passage a learner has heard enough of should stop when they say so,
+   * and before this the only way to end one was to wait it out.
+   */
+  stopAll(): void;
 }
 
 /**

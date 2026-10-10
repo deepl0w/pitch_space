@@ -27,7 +27,7 @@ declare global {
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-const silent: AudioOut = { play: () => {} };
+const silent: AudioOut = { play: () => {}, stopAll: () => {} };
 const RATE = 440;
 
 /** A sequence of semitone offsets, as a detector would report them. */

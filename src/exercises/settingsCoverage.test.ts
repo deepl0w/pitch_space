@@ -86,7 +86,7 @@ function promptText(type: AnyExerciseDefinition, settings: unknown): string {
       settings,
       result: null,
       onRespond: () => {},
-      audio: { play: () => {} },
+      audio: { play: () => {}, stopAll: () => {} },
       // Not there rather than silent: this renders every exercise's prompt
       // to read its wording, and a microphone that reported a silent room
       // would be handing each of them an answer.

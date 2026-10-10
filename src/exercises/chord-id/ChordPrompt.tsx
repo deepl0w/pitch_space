@@ -6,6 +6,7 @@ import {
   SOUNDING_LABELS, chordVoicesFor,
   type ChordExercise, type ChordResponse, type ChordSettings,
 } from './chords';
+import { SoundBox } from '../SoundBox';
 
 /** Out of the component, so the clock is not read where a render could. */
 function latencySince(firstHeardAt: number | null): { latencyMs?: number } {
@@ -22,7 +23,12 @@ export function ChordPrompt({
   const reading = exercise.presentation === 'read';
   const asking = exercise.inversionChoices.length > 0;
 
+  // Moved on every play, so the box's wave follows the sound rather than
+  // only its own button — a question sounds itself on Start.
+  const [playedAt, setPlayedAt] = useState(0);
+
   function play() {
+    setPlayedAt(Date.now());
     audio.play(chordVoicesFor(exercise));
     firstHeardAt.current ??= Date.now();
   }
@@ -75,10 +81,14 @@ export function ChordPrompt({
       </p>
 
       {!reading && (
-        <div className="actions">
-          <button type="button" onClick={play}>Play it again</button>
-          <span className="secondary">{SOUNDING_LABELS[exercise.sounding].toLowerCase()}</span>
-        </div>
+        <SoundBox
+          voices={chordVoicesFor(exercise)}
+          onPlay={play}
+          onStop={() => { audio.stopAll(); }}
+          playedAt={playedAt}
+          label="Play it again"
+          note={SOUNDING_LABELS[exercise.sounding].toLowerCase()}
+        />
       )}
 
       <div className="choices" role="group" aria-label="Which chord was that?">

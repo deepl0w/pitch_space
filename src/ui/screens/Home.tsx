@@ -18,6 +18,14 @@ import { completion } from '../../state/schedule';
  * returning learner saw a stranger's numbers. So *cannot read* is a thing
  * this says in words, and *loading* shows nothing at all rather than a
  * zero that will change under the reader.
+ *
+ * **Three states in the store, two on screen, and that is deliberate.**
+ * `silent` covers both *still loading* and *never practised*, so do not
+ * read the missing third as an oversight. The confusion 0006 exists to
+ * prevent is new-versus-unreadable, and those two are kept apart in
+ * words; loading-versus-new is collapsed because loading terminates and
+ * the card is then correct either way, so nobody is ever shown a wrong
+ * thing by the merge.
  */
 type CardProgress =
   | { kind: 'silent' }

@@ -221,9 +221,21 @@ export function schedule(
  * asks how far up the ladder each item has climbed.
  *
  * **An unseen item is 0, not absent.** The denominator is everything the
- * settings can ask, so narrowing a pool cannot raise the figure by hiding
- * the items a learner has not reached. That is the same reason `dueCount`
- * counts over `line.askable` rather than over the tallies it was given.
+ * line can ask, so an item nobody has reached drags the figure down rather
+ * than sitting outside the average. Same reason `dueCount` counts over
+ * `line.askable` rather than over the tallies it was given.
+ *
+ * **That is not what stops a narrowed pool flattering a learner**, and
+ * the first version of this comment said it was. Narrowing shrinks
+ * `askable`, which is the denominator, so on its own the fraction would
+ * rise. What prevents it is one level up: `lineKey` is built from the
+ * sorted askable set, so a narrowed pool is a *different line* with
+ * different tally keys and reads 0 rather than an inflated number.
+ *
+ * Worth knowing because the property is compositional rather than local.
+ * It holds only while line identity stays tied to the askable set — if
+ * `tallyKey` is ever simplified, this figure begins inflating and the
+ * home screen is where it will show.
  *
  * **It cannot reach 1 by being lucky once.** The top rung is a fortnight's
  * interval, which an item arrives at only by being right repeatedly across

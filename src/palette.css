@@ -28,16 +28,32 @@
 
 :root {
   /*
-    **Three colours are chosen and the rest are computed from them.** The
-    page's ground, the accent, and — in the dark theme — its own ground.
-    Everything else is a mix stated in terms of those, so moving a
-    background moves the ink, the panels, the hairlines and the verdict
-    colours with it, in step and in the same hue family. Picking eight
-    colours by hand is how a palette drifts out of relation with itself.
-    Mixed in oklab, where a halfway mix looks halfway. The same mix in
-    sRGB goes muddy through the middle, which is exactly where a muted
-    text colour and a hairline live.
-    Floors held, and measured against what a browser resolves rather than
+    **Three colours per theme are chosen, and the rest are computed from
+    them.** The ground, the panel and the accent were each picked by eye
+    and given here as they were given; ink, muted text, hairlines and the
+    verdict colours are mixes stated in terms of them, so moving a chosen
+    colour moves everything downstream of it in step and in the same hue
+    family. Mixed in oklab, where a halfway mix looks halfway — the same
+    mix in sRGB goes muddy through the middle, which is exactly where a
+    muted text colour and a hairline live.
+
+    **The panel is derived in one theme and chosen in the other**, which
+    looks like an inconsistency and is a record of what each was asked
+    for. The dark panel is the ground with its lightness lifted two
+    points — `oklch(from var(--bg) calc(l + 0.02) c h)`, which changes
+    lightness alone and carries hue and chroma through, where a mix
+    towards white drops chroma as it lifts and grows a grey panel on a
+    warm ground. The light panel is a colour that was picked by eye.
+
+    The lift is not a rule the chosen colours have to satisfy, and an
+    attempt to make it one is why this is spelled out: a panel named for
+    the dark theme earlier carried more chroma than its ground, 0.0189
+    against 0.0140, so no lift of any size reached it. A derivation that
+    cannot express a chosen value is not a tidier way of writing it down;
+    it is a different colour with an argument attached. Where a colour is
+    given, it is given.
+
+    Floors are measured against what a browser resolves rather than
     against the arithmetic here: text 4.5:1 (WCAG 1.4.3), a control's
     boundary 3:1 (1.4.11). The figures are below each block.
   */
@@ -46,17 +62,8 @@
   /* Ink is the ground taken almost to black, so it keeps the page's hue
      rather than introducing a second one. */
   --ink: color-mix(in oklab, var(--bg) 14%, #140b06);
-  /*
-    A panel is the page a little lighter — the *same* colour, not a paler
-    one. Mixing towards white was the obvious way and it is the wrong one:
-    it drops chroma as it lifts lightness, so a warm ground grew a grey
-    panel. Relative colour syntax changes the one thing that should change
-    and carries the hue and chroma through, which is what "a bit lighter"
-    means when somebody says it about a colour they chose.
-    The light theme lifts further than the dark one because the eye reads a
-    difference near white as smaller than the same difference near black.
-  */
-  --surface: oklch(from var(--bg) calc(l + 0.04) c h);
+  /* The panel, as chosen rather than lifted — see the note above. */
+  --surface: #f7f1ed;
   --muted: color-mix(in oklab, var(--ink) 66%, var(--bg));
   --line: color-mix(in oklab, var(--ink) 22%, var(--bg));
   /*
@@ -87,8 +94,8 @@
   */
   --wrong: color-mix(in oklab, #6d1109 92%, var(--bg));
   --score-ink: var(--ink);
-  /* ink 11.98, muted 5.39 (6.08 on a panel), on-accent 4.76,
-     accent on page 4.76, right 5.02, wrong 5.19 */
+  /* ink 12.12, muted 4.95 (5.60 on a panel), on-accent 4.76,
+     accent on page 4.76, right 5.59, wrong 7.89 */
   /*
     How far the page's content stands off the window's edge.
     Named so that anything which has to sit at that edge derives from
@@ -130,35 +137,37 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1a130f;
-    --accent: #b13837;
+    --bg: #15110e;
+    --accent: #b03937;
     --ink: color-mix(in oklab, var(--bg) 10%, #fff6ef);
-    --surface: oklch(from var(--bg) calc(l + 0.022) c h);
+    --surface: oklch(from var(--bg) calc(l + 0.02) c h);
     --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
     --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
     --on-accent: var(--bg);
     /*
-      The accent's own colour, as in the light theme. It needed lightening
-      while the ground was #241610, where the fill stood only 2.9:1 against
-      it — under what a boundary needs. On this darker ground the same fill
-      is 3.05:1 and carries its own edge, so the lightening can go and the
-      accent is one colour everywhere, which is what it was chosen to be.
+      The fill draws its own edge rather than a lightened one. It needed
+      lightening while the ground was #241610, where the fill stood only
+      2.9:1 against it, under what a boundary wants; on this darker ground
+      it clears 3:1 on its own.
+      The accent itself is the dark theme's own, a shade off the light
+      theme's — near enough to read as one colour across the two and not
+      the same declaration, so each theme names it.
     */
     --accent-edge: var(--accent);
     --right: color-mix(in oklab, #6fe0a6 94%, var(--bg));
     --wrong: color-mix(in oklab, #ff9b86 94%, var(--bg));
     --score-ink: var(--ink);
-    /* ink 14.86, muted 9.21, accent on page 3.05, right 9.60, wrong 7.95.
-       on-accent 3.05, which is the ground's own contrast with the accent
+    /* ink 13.86, muted 7.36, accent on page 3.12, right 10.11, wrong 8.12.
+       on-accent 3.12, which is the ground's own contrast with the accent
        and under the 4.5 a text colour wants — the price of the match. */
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #1a130f;
-  --accent: #b13837;
+  --bg: #15110e;
+  --accent: #b03937;
   --ink: color-mix(in oklab, var(--bg) 10%, #fff6ef);
-  --surface: oklch(from var(--bg) calc(l + 0.022) c h);
+  --surface: oklch(from var(--bg) calc(l + 0.02) c h);
   --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
   --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
   --on-accent: var(--bg);

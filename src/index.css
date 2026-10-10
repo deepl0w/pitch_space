@@ -226,10 +226,25 @@ main .practice-main .actions > .secondary {
  * page from moving — the user asked for the opposite: let it be big and
  * centred, because at that moment nothing is below it to be moved.
  */
-main .practice-main .actions > button.begin {
-  font-size: 1.35rem; font-weight: 650;
-  padding: 0.9rem 2.6rem; border-radius: 10px;
-  margin-block: 2rem;
+/*
+ * Before a question exists there is one thing to do, so it is the only thing
+ * in the room and it is sized like it.
+ *
+ * It sat in the actions row at the top with a sentence underneath telling
+ * the reader to press it. The sentence is gone and the button stands where
+ * it was: the one control on an otherwise empty page does not need a label
+ * elsewhere explaining that it is there.
+ */
+.opening {
+  display: flex; justify-content: center;
+  padding-block: 3.5rem 1rem;
+}
+
+main .practice-main .actions > button.begin,
+.opening > button.begin {
+  font-size: 1.6rem; font-weight: 650;
+  padding: 1.1rem 3.2rem; border-radius: 12px;
+  margin-block: 0;
 }
 
 /*

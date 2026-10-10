@@ -285,3 +285,45 @@ the next commit can change*. A measurement in a comment is a tracked document
 the size of a sentence, and widening the fixture is the commit that changed
 it. The number belongs in the assertion, where broadening the fixture
 re-derives it, and nowhere a human has to remember to update it.
+
+## Addendum, 12 October 2026 — the rule generalised, and the count of refusals follows the answer's shape
+
+A scale can now be answered by playing it. It is the second exercise to use
+this seam and the first whose answer is not a pair, so it is the first test of
+whether *unambiguous enough to grade* survives a different shape of answer.
+
+**It does, and it needed three refusals where the interval needed one.**
+
+`intervalPlayed` refuses on one condition: not exactly two readable notes. A
+pair has one way to be ambiguous — how many there are.
+
+`scalePlayed` refuses on three, and together they cover the ways an ordered
+run can fail to say what it is:
+
+- **The run ends at the first non-monotonic step**, so a re-struck note stops
+  it — the same refusal and the same reason, which its comment names: two
+  attacks on one pitch do not say whether the second was a hesitation or part
+  of the answer, *"and a scale has seven chances to produce one"*.
+- **The run has to reach the octave and stop there.** A truncated run is
+  refused rather than matched, because the first four notes of Dorian and of
+  Aeolian are the same four notes. So a learner who stops short, or who
+  carries on past the octave, is told the take was unreadable rather than told
+  they played a scale they did not.
+- **Exactly one offered type may match the pattern.** Where two share it, the
+  take is refused rather than resolved by whichever the catalogue lists first
+  — which is [0044](0044-deterministic-is-not-the-same-as-seeded.md)'s lesson
+  reaching a place it was not written for: first-match-wins is a silent choice
+  wherever it appears, not only in generation.
+
+**The generalisation worth carrying to the next exercise answered by playing**
+is that the principle is shape-independent and the enumeration is not.
+*Unambiguous enough to grade* holds for any answer; **how many ways a take can
+be ambiguous is a property of the answer's shape**, and each wants its own
+refusal rather than one check standing for all of them. A pair admits one
+question, an ordered run with an endpoint and a pattern admits three. A rhythm
+or a progression will have its own list and it is worth writing before the
+grading rather than discovering by a learner being told something false.
+
+Its comment states the trade this record has been circling in one line, and
+better than the record does: *"Being strict costs a replay; guessing costs a
+learner being told they played a scale they did not."*

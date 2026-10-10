@@ -521,10 +521,25 @@ helps, because nothing is wrong with it.
   reader has to open the thing to know**, and the reader is the one person who
   assumed the writer had.
 
-  The remedy is uniform and is the cheapest in this document: **read an
-  identifier back from the source rather than writing it from recall.** A
-  record number, a commit, a constant — all of them are a lookup, and the
-  lookup is seconds. What makes this worth a paragraph is not the cost of
+  **The remedy stated here first was "read an identifier back from the
+  source", and it is incomplete — a fourth instance, found hours later, is
+  immune to it.** `synth.ts` cites *ADR 0005 says there is one context*; 0005
+  is *Seeds are minted outside the core* and contains `AudioContext` zero
+  times, and **no record made the one-context claim at all** until
+  [0049](adr/0049-one-audiocontext-owned-by-one-module.md). That number was
+  not recalled. A planning document proposed an 0005 about one `AudioContext`;
+  when records were written the number went to the seeds decision, and nothing
+  marked the plan as having stopped being authoritative. **Reading the
+  identifier back from its source would have confirmed it.**
+
+  So the remedy is one step further out: **verify a citation against what it
+  points at, not against where you got it.** Open 0005 and see whether it says
+  this. That covers both causes — the recalled number and the inherited one —
+  and it is the first convention of the ADR index pointed at a reference
+  rather than at a claim: *check it against the thing, not against the record
+  that made it.* The record that made this one was never marked as having
+  stopped being the record, which is a thing ADRs have a mechanism for
+  (`Superseded by`) and planning documents do not. What makes this worth a paragraph is not the cost of
   being wrong but that **nothing downstream can catch it**: a wrong number
   survives review, survives the suite, and arrives at somebody planning work
   against the record it names.

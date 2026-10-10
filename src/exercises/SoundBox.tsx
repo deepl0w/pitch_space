@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Voice } from '../audio/output/synth';
+import { SPECTRUM_BANDS, type Voice } from '../audio/output/synth';
 
 /**
  * The listening half of a question, in the same box the reading half uses.
@@ -10,16 +10,23 @@ import type { Voice } from '../audio/output/synth';
  * modes of one exercise looked like two different screens. The sound is the
  * content here, and it belongs in the place the content goes.
  *
- * **The wave says that sound is playing; it is not a picture of the sound.**
- * Worth being exact about, because a waveform that is not the waveform is
- * the kind of thing a reader trusts. Drawing the real signal means an
- * `AnalyserNode` on the output, and the output lives behind `AudioOut` —
- * which an exercise is deliberately not allowed to reach past (ADR 0029).
- * What this does honestly is run for exactly as long as the passage lasts,
- * taken from the voices themselves, so it starts and stops with the sound
- * even though its shape is its own.
+ * **The wave is the sound now, where it used to be an animation shaped like
+ * one.** It was a CSS keyframe that ran for as long as the passage lasted,
+ * and the comment here said so plainly, because a waveform that is not the
+ * waveform is the kind of thing a reader trusts. Drawing the real signal
+ * needs an `AnalyserNode` on the output, and the output lives behind
+ * `AudioOut`, which an exercise may not reach past (ADR 0029) — so the
+ * output grew a method that fills an array of band levels, and nothing here
+ * knows what an `AudioContext` is.
+ *
+ * The keyframe stays as the fallback. A platform whose context has no
+ * analyser, a test double, or a passage that ends before the first frame
+ * all land there, and a box that animates honestly-but-genericly is better
+ * than one that shows a flat line while sound is audible.
  */
-export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', note }: {
+export function SoundBox({
+  voices, onPlay, onStop, playedAt, spectrum, label = 'Play it', note,
+}: {
   /** The passage about to sound, read only for how long it lasts. */
   voices: readonly Voice[];
   onPlay: () => void;
@@ -35,6 +42,14 @@ export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', 
    * only thing that sees them all.
    */
   playedAt: number;
+  /**
+   * Fills an array with the output's band levels, or says it cannot.
+   *
+   * Optional because most of what renders a prompt in a test has no audio
+   * at all, and because the box has a working fallback — passing nothing
+   * is a supported state rather than a missing dependency.
+   */
+  spectrum?: (into: Uint8Array<ArrayBuffer>) => boolean;
   label?: string;
   /** A word about the question — "ascending", "two octaves" — beside the bars. */
   note?: string;
@@ -43,6 +58,31 @@ export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', 
   const until = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wave = useRef<HTMLDivElement | null>(null);
   const [bars, setBars] = useState(MIN_BARS);
+  const [drawn, setDrawn] = useState(false);
+
+  /**
+   * The passage and the tap, read when a play happens rather than tracked.
+   *
+   * **`voices` was in the effect's dependencies and is a fresh array on
+   * every render.** Every prompt builds it inline — `intervalVoices(exercise)`
+   * and its siblings — so any re-render at all gave the effect a new
+   * identity and restarted the wave: pressing an answer button set it
+   * going with nothing sounding, which is how it was reported ("the
+   * visualisation seems to play whenever any button is pressed").
+   *
+   * A ref rather than a `useMemo` in five prompts: what the box actually
+   * needs is the passage *as it was when the play happened*, and a value
+   * read at that moment is the honest expression of that. Memoising each
+   * caller would have made the dependency stable and left the box still
+   * claiming to restart whenever the passage changes, which is not a thing
+   * it should do either.
+   */
+  const latest = useRef(voices);
+  const tap = useRef(spectrum);
+  // After the render rather than during it: nothing here is read while
+  // rendering, and writing a ref mid-render is how a component comes to
+  // depend on a value React did not know had changed.
+  useEffect(() => { latest.current = voices; tap.current = spectrum; });
 
   /*
     As many bars as the row is wide enough for, which is what makes it a
@@ -79,7 +119,69 @@ export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', 
       partway through the new one.
     */
     return () => { clearTimeout(timer); };
-  }, [playedAt, voices]);
+    // `playedAt` alone: see `latest` above for why the passage is not a
+    // dependency.
+    // oxlint-disable-next-line exhaustive-deps
+  }, [playedAt]);
+
+  /**
+   * Draw the output, one frame at a time, straight onto the bars.
+   *
+   * Through the DOM rather than through state: this runs sixty times a
+   * second and a `setState` per frame would re-render the prompt that owns
+   * this box sixty times a second with it. The element list is read once
+   * per frame from a ref, which is cheap, and nothing React owns changes.
+   *
+   * `scaleY` rather than `height`, so each frame is a composited transform
+   * rather than a layout of every bar in the row.
+   */
+  useEffect(() => {
+    const element = wave.current;
+    const read = tap.current;
+    if (!playing || element === null || read === undefined) return undefined;
+    if (typeof requestAnimationFrame !== 'function') return undefined;
+
+    const bands = new Uint8Array(SPECTRUM_BANDS);
+    let frame = 0;
+    let live = true;
+    // Flipped on the frame it changes rather than asserted every frame: a
+    // `setState` sixty times a second is a re-render of the prompt sixty
+    // times a second, even when React bails out of the second one.
+    let showing = false;
+
+    const paint = () => {
+      if (!live) return;
+      frame = requestAnimationFrame(paint);
+      if (!read(bands)) {
+        // No analyser on this platform. Hand the row back to the keyframe
+        // rather than holding every bar at whatever it last showed.
+        if (showing) { showing = false; setDrawn(false); }
+        return;
+      }
+      if (!showing) { showing = true; setDrawn(true); }
+      const spans = element.children;
+      for (let i = 0; i < spans.length; i += 1) {
+        /*
+          The row is sampled across the bands rather than mapped one to
+          one: there are as many bars as the box is wide enough for, and
+          that is a different number from the band count at every width.
+        */
+        const band = bands[Math.floor((i * SPECTRUM_BANDS) / spans.length)] ?? 0;
+        const span = spans[i] as HTMLElement;
+        span.style.transform = `scaleY(${1 + (band / 255) * (TALLEST / SHORTEST - 1)})`;
+      }
+    };
+    frame = requestAnimationFrame(paint);
+
+    return () => {
+      live = false;
+      cancelAnimationFrame(frame);
+      setDrawn(false);
+      // Left as the stylesheet draws them, or the row keeps the last frame
+      // of a passage that has stopped.
+      for (const span of [...element.children]) (span as HTMLElement).style.transform = '';
+    };
+  }, [playing, bars]);
 
   function stop() {
     onStop();
@@ -88,7 +190,7 @@ export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', 
   }
 
   return (
-    <div className={`sound${playing ? ' sound-playing' : ''}`}>
+    <div className={`sound${playing ? ' sound-playing' : ''}${drawn ? ' sound-drawn' : ''}`}>
       <div className="sound-row">
         <div className="sound-wave" ref={wave} aria-hidden="true">
           {/* Enough bars to read as a wave across a full-width box, each
@@ -130,6 +232,12 @@ export function SoundBox({ voices, onPlay, onStop, playedAt, label = 'Play it', 
     </div>
   );
 }
+
+/** The resting height of a bar, matching `.sound-wave > span` in the CSS. */
+const SHORTEST = 6;
+
+/** What a band at full scale reaches, matching the keyframe's peak. */
+const TALLEST = 40;
 
 /**
  * How wide one bar and its gap are, in pixels.

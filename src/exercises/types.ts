@@ -416,6 +416,20 @@ export interface AudioOut {
    * and before this the only way to end one was to wait it out.
    */
   stopAll(): void;
+  /**
+   * Fill `into` with the output's band levels, 0 to 255, newest first call
+   * wins; returns whether anything was read.
+   *
+   * Here so that a prompt can draw what is sounding without reaching for an
+   * `AnalyserNode` — the exercise layer does not import the platform, and
+   * the one `AudioContext` belongs to `audio/output` (ADR 0005, ADR 0029).
+   * What crosses the seam is an array of numbers.
+   *
+   * Optional, like everything a test double would otherwise have to
+   * implement for no benefit: a caller that gets `false`, or nothing at
+   * all, draws its own fallback.
+   */
+  spectrum?(into: Uint8Array<ArrayBuffer>): boolean;
 }
 
 /**

@@ -507,6 +507,20 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   background: var(--accent);
   animation: sound-bar 0.9s ease-in-out infinite;
 }
+/*
+ * Once the real signal is being drawn, the keyframe has to get out of its
+ * way — an animation on `height` and a `scaleY` set per frame would
+ * otherwise both be live and the row would pulse under the picture.
+ *
+ * `transform-origin` at the centre so a bar grows both ways from its
+ * resting line, which is what reads as a waveform rather than as a bar
+ * chart standing on the floor.
+ */
+.sound-drawn .sound-wave > span {
+  animation: none;
+  transform-origin: center;
+  transition: transform 60ms linear;
+}
 @keyframes sound-bar {
   0%, 100% { height: 6px; }
   50% { height: 40px; }

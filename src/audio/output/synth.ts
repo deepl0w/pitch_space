@@ -131,6 +131,27 @@ function warmUp(context: AudioContext): void {
 export const QUIET_BEFORE_COLD = 0.5;
 
 /**
+ * How many bands the output is reported in, for anything drawing it.
+ *
+ * Small on purpose. This is read to draw a few dozen bars a few inches
+ * wide, not to analyse anything — at 2048 bins almost all of them would
+ * fall in the top four octaves, where an instrument has nothing but
+ * harmonics, and the picture would be a flat line with a bump at the left
+ * edge. 64 bands over a 48 kHz context puts each at about 375 Hz, which is
+ * coarse for pitch and right for a shape that has to read at a glance.
+ */
+export const SPECTRUM_BANDS = 64;
+
+/**
+ * How fast a band may fall, as a fraction carried from the previous frame.
+ *
+ * The analyser's own smoothing is the thing that makes a visualiser look
+ * like it is responding rather than flickering; without it a bar drawn at
+ * 60 Hz from an unsmoothed FFT jitters at every frame and reads as noise.
+ */
+export const SPECTRUM_SMOOTHING = 0.75;
+
+/**
  * The floor an exponential ramp fades to.
  *
  * `exponentialRampToValueAtTime` cannot reach zero — it throws — so
@@ -161,6 +182,21 @@ export class Synth {
    * device idle from then, not from where it would have ended.
    */
   private soundingUntil = 0;
+
+  /**
+   * The output's own tap, for anything that draws what is sounding.
+   *
+   * An `AnalyserNode` passes its input through untouched, so it sits in the
+   * chain rather than beside it and there is no second path to keep in
+   * step. It lives here because the one `AudioContext` lives here (ADR
+   * 0005) and the exercise layer may not reach past `AudioOut` (ADR 0029) —
+   * so what a prompt gets is a method that fills an array, not a node.
+   *
+   * Null until something has played, like the context itself, and null on a
+   * platform whose context has no `createAnalyser`. A drawing that cannot
+   * be drawn is not a reason for the sound to fail.
+   */
+  private analyser: AnalyserNode | null = null;
 
   /**
    * The user's level, 0 to 1, multiplying {@link MASTER_GAIN}.
@@ -294,7 +330,13 @@ export class Synth {
       this.context = new AudioContext();
       this.master = this.context.createGain();
       this.master.gain.value = this.level();
-      this.master.connect(this.context.destination);
+      this.analyser = this.tap(this.context);
+      if (this.analyser === null) {
+        this.master.connect(this.context.destination);
+      } else {
+        this.master.connect(this.analyser);
+        this.analyser.connect(this.context.destination);
+      }
       warmUp(this.context);
     }
     /*
@@ -314,6 +356,41 @@ export class Synth {
       ? this.context.resume().catch(() => {})
       : null;
     return { context: this.context, master: this.master!, waking };
+  }
+
+  /**
+   * An analyser on the output, or null where the platform has none.
+   *
+   * Guarded rather than assumed: `createAnalyser` is missing from the test
+   * double this suite runs against, and a visualiser is not worth a
+   * `TypeError` on the path that makes sound.
+   */
+  private tap(context: AudioContext): AnalyserNode | null {
+    if (typeof context.createAnalyser !== 'function') return null;
+    const analyser = context.createAnalyser();
+    // `frequencyBinCount` is half the FFT size, and the bin count is what
+    // a caller's array has to match.
+    analyser.fftSize = SPECTRUM_BANDS * 2;
+    analyser.smoothingTimeConstant = SPECTRUM_SMOOTHING;
+    return analyser;
+  }
+
+  /**
+   * Fill `into` with the output's current spectrum, 0 to 255 per band.
+   *
+   * Returns whether anything was read, so a caller can tell "silence" from
+   * "nothing to read" — before the first play there is no context at all,
+   * and a drawing that treats those the same shows a flat line where it
+   * should show nothing.
+   *
+   * The array is the caller's and is written in place, because this is
+   * called once a frame and allocating 64 bytes sixty times a second to
+   * draw a picture is the kind of thing that shows up on a phone.
+   */
+  spectrum(into: Uint8Array<ArrayBuffer>): boolean {
+    if (this.analyser === null) return false;
+    this.analyser.getByteFrequencyData(into);
+    return true;
   }
 
   /**

@@ -269,14 +269,37 @@ export function Settings({ go }: { go(route: string): void }) {
             how user-facing copy goes wrong — a false reason, an unmeasured
             cost, and a comparison to a tier the screen did not show.
           */}
-          <p className="secondary">
-            {ALL_RECORDED
-              ? `Real recordings, downloaded once and kept. Picking one plays
-                 a chord.`
-              : `Recorded instruments play real recordings, downloaded once and
-                 kept. The rest are generated as they play. Picking one plays
-                 a chord.`}
-          </p>
+          {/*
+            Folded away, asked for in those terms.
+
+            What the row needs at a glance is the six names; the paragraph
+            and the credits are there for the reader who wants them and in
+            the way of the reader who does not. `details` rather than a
+            button and a piece of state: it is the element for exactly
+            this, it opens on Enter and Space without being told to, and
+            its contents stay in the document and reachable to a screen
+            reader rather than being conditionally rendered away.
+
+            **The credits going behind it is the part worth arguing.** A
+            pack's licence may oblige the app to name its source, and a
+            credit nobody can reach is a credit not given. One click, on a
+            control labelled for it, is still given — but it is one click
+            further than it was, so the rule is that this is as far as it
+            goes: never conditionally rendered, never collapsed by a
+            licence that demands prominence. The current pack is CC0 and
+            demands nothing, which is why this is a safe place to settle
+            where the line is rather than a reason not to have one.
+          */}
+          <details className="more">
+            <summary>Details</summary>
+            <p className="secondary">
+              {ALL_RECORDED
+                ? `Real recordings, downloaded once and kept. Picking one plays
+                   a chord.`
+                : `Recorded instruments play real recordings, downloaded once and
+                   kept. The rest are generated as they play. Picking one plays
+                   a chord.`}
+            </p>
           {/*
             The credit, read off the generated index rather than typed.
 
@@ -289,13 +312,14 @@ export function Settings({ go }: { go(route: string): void }) {
             exactly why it is worth wiring now — the cheap case is a bad
             time to leave the mechanism unbuilt.
           */}
-          <ul className="credits">
-            {RECORDED.map((pack) => (
-              <li key={pack.id}>
-                {pack.name}: {pack.attribution} ({pack.licence}).
-              </li>
-            ))}
-          </ul>
+            <ul className="credits">
+              {RECORDED.map((pack) => (
+                <li key={pack.id}>
+                  {pack.name}: {pack.attribution} ({pack.licence}).
+                </li>
+              ))}
+            </ul>
+          </details>
         </Field>
       </Panel>
 

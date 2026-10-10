@@ -168,48 +168,6 @@ export function PracticeScreen({
       own the viewport until it was noticed.
     */
     <div className="practice-layout">
-      {/*
-        The sidebar: where you are, and what you are being asked. The
-        panel is rendered here rather than inside `ExerciseRound` so the
-        column can be the height of the window — inside, it began below
-        the heading and the grid could only be as tall as what was left.
-        Both read the same store, so hoisting it drills no props.
-      */}
-      <aside className="practice-settings">
-        <button className="back" onClick={onBack}>&larr; Everything</button>
-        {/*
-          Which way to practise this family, in the sidebar with every
-          other thing you set about the exercise — and as bubbles, like
-          them. It was a dropdown under the heading, which made it look
-          like part of the title rather than a setting, and made it the
-          one control on the screen you had to open to see your options.
-
-          Hidden for a family of one: a control with a single option is a
-          label pretending to be a choice.
-        */}
-        {family.members.length > 1 && (
-          <Field label="Exercise" group>
-            <OneOf
-              options={family.members.map((type) => ({ id: type.id, label: type.name }))}
-              chosen={definition.id}
-              onChange={(id) => {
-                // Both: the route decides which exercise runs, and the
-                // stored preference is what a later visit with no route
-                // falls back to. Setting only the preference left the
-                // control snapping back to the routed id.
-                settingsStore.getState().setLastExercise(id);
-                onSwitch?.(id);
-              }}
-            />
-          </Field>
-        )}
-
-        <SettingsPanel
-          fields={definition.settings.fields}
-          settings={settings}
-          onChange={(next) => settingsStore.getState().setExerciseSettings(definition.id, next)}
-        />
-      </aside>
 
       <div className="practice-main">
       <header>
@@ -266,6 +224,64 @@ export function PracticeScreen({
       )}
       </div>
       </div>
+      {/*
+        **The question comes before the settings in the document, not only
+        on the page.** This sidebar used to be first in source order, which
+        is invisible while there are two columns and wrong the moment
+        there is one: at portrait widths the entire settings panel sat
+        above the exercise's own title, so the screen opened on its
+        controls rather than on what it is for. Reported from a
+        phone-shaped window.
+
+        Moved rather than reordered with `order`, which would have shifted
+        the picture and left a keyboard or screen-reader user meeting the
+        settings first — the same fault with nobody left to notice it.
+        Source order is the reading order; the two columns are placed by
+        `grid-column` instead, which is also why neither needs to come
+        first to sit on the left.
+      */}
+      {/*
+        The sidebar: where you are, and what you are being asked. The
+        panel is rendered here rather than inside `ExerciseRound` so the
+        column can be the height of the window — inside, it began below
+        the heading and the grid could only be as tall as what was left.
+        Both read the same store, so hoisting it drills no props.
+      */}
+      <aside className="practice-settings">
+        <button className="back" onClick={onBack}>&larr; Everything</button>
+        {/*
+          Which way to practise this family, in the sidebar with every
+          other thing you set about the exercise — and as bubbles, like
+          them. It was a dropdown under the heading, which made it look
+          like part of the title rather than a setting, and made it the
+          one control on the screen you had to open to see your options.
+
+          Hidden for a family of one: a control with a single option is a
+          label pretending to be a choice.
+        */}
+        {family.members.length > 1 && (
+          <Field label="Exercise" group>
+            <OneOf
+              options={family.members.map((type) => ({ id: type.id, label: type.name }))}
+              chosen={definition.id}
+              onChange={(id) => {
+                // Both: the route decides which exercise runs, and the
+                // stored preference is what a later visit with no route
+                // falls back to. Setting only the preference left the
+                // control snapping back to the routed id.
+                settingsStore.getState().setLastExercise(id);
+                onSwitch?.(id);
+              }}
+            />
+          </Field>
+        )}
+
+        <SettingsPanel
+          fields={definition.settings.fields}
+          settings={settings}
+          onChange={(next) => settingsStore.getState().setExerciseSettings(definition.id, next)}
+        />
+      </aside>
     </div>
   );
 }

@@ -55,7 +55,11 @@
 
     Floors are measured against what a browser resolves rather than
     against the arithmetic here: text 4.5:1 (WCAG 1.4.3), a control's
-    boundary 3:1 (1.4.11). The figures are below each block.
+    boundary 3:1 (1.4.11). The figures are below each block, read through
+    `color(from … srgb-linear r g b)` — which is exact, where painting a
+    colour and reading the pixel back is eight bits per channel and gave
+    two different answers for one colour on two consecutive runs down at
+    these lightnesses.
   */
   --bg: #F0E2DB;
   --accent: #b13837;
@@ -72,10 +76,16 @@
 
     **The page's own ground, asked for in those terms.** It was a mix
     towards white, which bought contrast the ground itself does not have:
-    cream on this red is 4.76:1 and clears the text floor, but the dark
-    theme's brown on the same red is 3.05:1 and does not. The token stays
-    — the two themes still name it separately and the dark one is free to
-    stop being its ground the moment that matters more than the match.
+    the light theme's cream on this red clears the text floor and the dark
+    theme's brown does not. The token stays — the two themes still name it
+    separately, and the dark one is free to stop being its ground the
+    moment that matters more than the match.
+
+    **The ratios are deliberately not written here.** Both pairs are
+    pinned in `src/ui/contrast.test.tsx`, which is the only place either
+    figure lives; this paragraph carried a stale 3.05 for exactly as long
+    as it took the ground to change under it. A number has one home and
+    prose refers to it.
   */
   --on-accent: var(--bg);
   --accent-edge: var(--accent);
@@ -94,8 +104,8 @@
   */
   --wrong: color-mix(in oklab, #6d1109 92%, var(--bg));
   --score-ink: var(--ink);
-  /* ink 12.12, muted 4.95 (5.60 on a panel), on-accent 4.76,
-     accent on page 4.76, right 5.59, wrong 7.89 */
+  /* ink 12.08, muted 4.99 (5.64 on a panel), on-accent 4.76,
+     accent on page 4.76, right 5.61, wrong 7.93 */
   /*
     How far the page's content stands off the window's edge.
     Named so that anything which has to sit at that edge derives from
@@ -140,7 +150,7 @@
     --bg: #15110e;
     --accent: #b03937;
     --ink: color-mix(in oklab, var(--bg) 10%, #fff6ef);
-    --surface: oklch(from var(--bg) calc(l + 0.02) c h);
+    --surface: #1f1514;
     --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
     --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
     --on-accent: var(--bg);
@@ -157,7 +167,7 @@
     --right: color-mix(in oklab, #6fe0a6 94%, var(--bg));
     --wrong: color-mix(in oklab, #ff9b86 94%, var(--bg));
     --score-ink: var(--ink);
-    /* ink 13.86, muted 7.36, accent on page 3.12, right 10.11, wrong 8.12.
+    /* ink 13.84, muted 7.33, accent on page 3.12, right 10.09, wrong 8.10.
        on-accent 3.12, which is the ground's own contrast with the accent
        and under the 4.5 a text colour wants — the price of the match. */
   }
@@ -167,7 +177,7 @@
   --bg: #15110e;
   --accent: #b03937;
   --ink: color-mix(in oklab, var(--bg) 10%, #fff6ef);
-  --surface: oklch(from var(--bg) calc(l + 0.02) c h);
+  --surface: #1f1514;
   --muted: color-mix(in oklab, var(--ink) 74%, var(--bg));
   --line: color-mix(in oklab, var(--ink) 20%, var(--bg));
   --on-accent: var(--bg);

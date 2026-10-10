@@ -70,6 +70,7 @@ export function DegreePrompt({
           onPlay={play}
           onStop={() => { audio.stopAll(); }}
           playedAt={playedAt}
+          spectrum={audio.spectrum?.bind(audio)}
           label="Play it again"
           note={exercise.context.length > 0 ? 'cadence, then the note' : 'the note alone'}
         />

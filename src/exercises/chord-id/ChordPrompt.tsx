@@ -86,6 +86,7 @@ export function ChordPrompt({
           onPlay={play}
           onStop={() => { audio.stopAll(); }}
           playedAt={playedAt}
+          spectrum={audio.spectrum?.bind(audio)}
           label="Play it again"
           note={SOUNDING_LABELS[exercise.sounding].toLowerCase()}
         />

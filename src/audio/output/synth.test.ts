@@ -3,7 +3,7 @@ import { DEVICE_OPEN_SECONDS, QUIET_BEFORE_COLD, Synth, type Voice } from './syn
 import {
   advanceAudioClock, audioClock, audioClosed, contextCount, gains, installAudioContext,
   allBufferSources, attackTimes, buffersAllocated, decodeAs, masterGain, oscillators,
-  resetAudio, samples, soundingAfter, suspendUntilResumed,
+  resetAudio, samples, soundingAfter, spectrumFramesRead, spectrumReads, suspendUntilResumed,
 } from '../../testing/audioContext';
 
 /**
@@ -955,5 +955,66 @@ describe('a note the pack cannot reach', () => {
     */
     expect(oscillators().length, 'the note outside it was not synthesised')
       .toBeGreaterThan(before);
+  });
+});
+
+
+/**
+ * The tap the visualiser draws from.
+ *
+ * It exists so a prompt can draw what is sounding without touching an
+ * `AudioContext` — the exercise layer does not import the platform — so what
+ * is worth asserting here is the seam rather than any picture: that nothing
+ * is reported before there is an output, that what the analyser holds is
+ * what the caller gets, and that asking does not disturb the sound.
+ */
+describe('the output spectrum', () => {
+  it('reports nothing before anything has played', () => {
+    // Not zeroes: a caller has to tell "silent" from "no output yet", or it
+    // draws a flat line on a page where nothing has been asked to sound.
+    expect(synth.spectrum(new Uint8Array(64))).toBe(false);
+  });
+
+  it('hands back what the analyser holds, once there is an output', () => {
+    spectrumReads([10, 200, 30]);
+    synth.play(notes(1));
+    const into = new Uint8Array(4);
+    expect(synth.spectrum(into)).toBe(true);
+    expect([...into]).toEqual([10, 200, 30, 0]);
+  });
+
+  it('writes into the caller\'s array rather than returning a new one', () => {
+    /*
+      This is called once a frame. Allocating a fresh array sixty times a
+      second to draw a few dozen bars is the kind of thing that is invisible
+      on a laptop and not on a phone, so the contract is that the caller
+      owns the buffer — which only means anything if it is actually the one
+      written to.
+    */
+    spectrumReads([7, 7, 7, 7]);
+    synth.play(notes(1));
+    const mine = new Uint8Array(4);
+    synth.spectrum(mine);
+    expect([...mine]).toEqual([7, 7, 7, 7]);
+  });
+
+  it('does not change what is scheduled to sound', () => {
+    /*
+      An analyser passes its input through, so putting one in the chain must
+      not cost a note. Asserted by playing the same passage with and without
+      anyone reading the tap and comparing what was laid down — a chain
+      broken by the analyser would show up as silence here, not as a wrong
+      picture.
+    */
+    synth.play(notes(3));
+    const laidDown = oscillators().length + samples().length;
+    const before = spectrumFramesRead();
+
+    synth.spectrum(new Uint8Array(64));
+    synth.spectrum(new Uint8Array(64));
+
+    expect(spectrumFramesRead() - before, 'the analyser was not read').toBe(2);
+    expect(oscillators().length + samples().length, 'reading changed the passage')
+      .toBe(laidDown);
   });
 });

@@ -323,6 +323,31 @@ That these four were fixed on four different days, in four different
 documents, without anyone noticing they were one fault is the convention
 demonstrating itself: each was checked locally and nothing summarised them.
 
+**The remedy has since been built and has fired, which is worth recording
+because everything above this line is a failure.** A convention illustrated
+only by things going wrong gives a reader no way to tell whether its advice
+works or is merely sensible-sounding.
+
+`src/architecture.test.ts` carries the home screen's lede — the first instance
+above — as a case. It went red when the capture adapter landed and the
+sentence had not caught up, and green when the sentence did; main reports it as
+the second such test to flip on its own rather than being edited.
+
+**The design detail is what makes it work, and it is the opposite of the
+obvious implementation.** It does not snapshot the sentence. A reworded lede
+that still claims playing as a present capability fails it, and the wording is
+free to change in every other way, because what is checked is **the fact the
+wording has to answer to** — whether any exercise actually hands a response to
+the capture layer rather than to a click. A test on the string would have been
+brittle, would have failed on every rewrite for no reason, and would have been
+deleted within a month; a test on the fact survives rewording and cannot be
+satisfied by it.
+
+It is also deliberately one-directional. It catches claiming a capability with
+nothing behind it, and lets the opposite — building something and not saying so
+— pass. That asymmetry is why going green on its own is safe rather than a
+missed alarm: a quiet app is a smaller fault than a lying one.
+
 **A claim about what the user wants is a claim too, and it is the only kind
 nothing in the repository can contradict.** Every convention above points at
 statements about the code, where a grep, a test or a second reader eventually

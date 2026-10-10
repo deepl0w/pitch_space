@@ -76,5 +76,18 @@ with a test behind it stayed true on its own.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
-## Contents
+## Nothing is in flight
 
+No entry stands, which is the rule above doing its job rather than the file
+being neglected. Every open question the last two entries carried is held
+somewhere a reader meets it — the rhythm library's entries and whether
+untracked attempts travel in an export, in
+[0041](adr/0041-practice-that-counts-towards-nothing.md); the precache
+hazard at the point of change in `vite.config.ts` and as a Consequence of
+[0046](adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md) — and
+none of them asks a role to act differently in the meantime.
+
+Both entries also carried two lines that had gone stale in the direction
+that costs most: a completed task still reading as outstanding, and a
+question the user settled on 7 October still reading as open. A reader who
+trusted either would have gone looking for work already done.

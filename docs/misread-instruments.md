@@ -119,7 +119,9 @@ behaviour afterwards: measured in the page, read from the shipped IDL, and
 argued from the spec, three establishments none of which needs the others.
 
 So the practical rule is not *distrust yourself*. It is **take observations of
-different kinds, and prefer three cheap ones over one authoritative one**,
+different kinds, and prefer three cheap ones over one authoritative one** —
+with the emphasis on *kinds*, for a reason the next paragraph had to be added
+to supply,
 which is also the only version of this advice that can be followed by somebody
 who does not yet know what they are about to get wrong.
 
@@ -155,6 +157,27 @@ run — its `fixtures/` is git-ignored and empty — and the check was moved
 outside both gates. **Neither message was wrong and neither gap was findable by
 reading the other.** It cost one `cp` and two test runs each way: the cheap
 thing was running, not reviewing.
+
+**The count is the trap, and this document's own wording set it.** "Three
+cheap ones" reads as a number, and a number is satisfiable by repetition.
+Trying to address the fleet's main session, two sessions independently sent
+to `main`, then `main [ref]`, then `main [another ref]` — three failures,
+refused identically — and both concluded the channel was impossible. **Three
+attempts of one kind read as thoroughness and were one experiment repeated.**
+The working route was the socket address from the `from=` attribute of main's
+own messages, which the tool's documentation names first, and which neither
+session tried because each had already satisfied its sense of having checked.
+
+So: **when several attempts of one kind fail, the next observation must be of
+a different kind, and the cheapest different kind is almost always to read the
+thing's own description** rather than to try a fourth variation of the thing
+that failed. Both sessions had that documentation available throughout.
+
+It is worth recording that this document's author made the error and then
+wrote the general form of it about somebody else — telling a third session
+that *three sessions confirming through the same tool is reproducibility, not
+corroboration*, while their own three attempts had the identical shape one
+level down. The rule was applied to the fleet and not to the hand holding it.
 
 **The caveat is what makes it fail quietly.** It works only while the second
 observer really is holding a different instrument. Two sessions reading the

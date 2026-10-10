@@ -63,6 +63,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0046](0046-a-sampled-pack-is-fetched-on-use-not-precached.md) | A sampled pack is fetched on use, not precached | Accepted |
 | [0047](0047-hearing-nothing-and-not-hearing-are-different-answers.md) | Hearing nothing and not hearing are different answers | Accepted |
 | [0048](0048-one-accent-a-derived-palette-and-a-floor-it-knowingly-misses.md) | One accent, a derived palette, and a floor it knowingly misses | Accepted — accent no longer shared, see its correction |
+| [0049](0049-one-audiocontext-owned-by-one-module.md) | One AudioContext, owned by one module | Accepted |
 
 **Ten conventions follow, in the order they were learned.** They are prose
 rather than headings because each is an argument with its instances attached,

@@ -124,6 +124,12 @@ const choices = () => [...container.querySelectorAll('.choices button')] as HTML
 const choiceFor = (semitones: number) =>
   choices().find((b) => b.textContent === SIMPLE_INTERVAL_NAMES[semitones])!;
 
+/** The two classes that say how a chip was marked, and the only two. */
+const VERDICTS = ['right', 'wrong'];
+
+/** Everything else a chip is known to carry, each a question of its own. */
+const NOT_A_VERDICT = ['choice', 'playable'];
+
 /**
  * What a chip is marked as, with everything that is not a verdict removed.
  *
@@ -132,9 +138,18 @@ const choiceFor = (semitones: number) =>
  * pressed to hear its interval — a different question, asserted by its own
  * cases below, and one that made three unrelated tests fail when it was
  * added.
+ *
+ * **Kept as the verdicts to keep rather than the others to drop**, which is
+ * not the same fix. Naming what to remove leaves the next class added
+ * breaking these three cases again, exactly as `playable` did — the list
+ * grows once per incident and only ever after one. Naming what to keep ends
+ * that, at the price of a new verdict passing unnoticed, which is why the
+ * case below exists: it fails the moment a chip carries a class neither list
+ * knows, so the warning arrives in the one case whose job it is instead of
+ * in three that are about something else.
  */
 const marking = (button: HTMLButtonElement) =>
-  [...button.classList].filter((c) => c !== 'choice' && c !== 'playable').join(' ');
+  [...button.classList].filter((c) => VERDICTS.includes(c)).join(' ');
 /*
   Named rather than "the first button in `.actions`", which is what this was
   until a second control moved in beside it. The case below asserts that a
@@ -314,6 +329,45 @@ describe('answering', () => {
     click(choices()[0]);
 
     expect(responses[0].latencyMs).toBe(1_500);
+  });
+
+  it('carries no chip class these cases do not know about', () => {
+    /*
+      What keeps `marking` honest. It reads the verdicts it is told to read,
+      so a third one added later would be dropped in silence and every
+      marking case would go on passing while saying nothing.
+
+      Swept over the states a chip has rather than one of them: unmarked and
+      marked, listening and reading, since `playable` only appears where a
+      marked chip has something to sound.
+    */
+    const ex = exercise({ semitones: 7 });
+    const settings: IntervalSettings = { ...INTERVAL_DEFAULTS, semitones: [3, 4, 7] };
+    const read: IntervalSettings = { ...settings, presentation: 'read' };
+    const result = gradeInterval(ex, { semitones: 3 });
+
+    const seen = new Set<string>();
+    const collect = () => {
+      for (const chip of choices()) for (const c of chip.classList) seen.add(c);
+    };
+
+    render(ex, { settings });
+    collect();
+    // `wrong` needs a chip the user actually chose, and that is the
+    // component's own state rather than anything the result carries.
+    click(choiceFor(3));
+    render(ex, { settings, result });
+    collect();
+    render(ex, { settings: read, result });
+    collect();
+
+    const known = [...VERDICTS, ...NOT_A_VERDICT];
+    expect([...seen].filter((c) => !known.includes(c)).sort(),
+      'a chip grew a class: if it is a verdict add it to VERDICTS, else to NOT_A_VERDICT')
+      .toEqual([]);
+    // And that the sweep reached the states it names, or it proves nothing.
+    expect([...seen].sort(), 'the sweep never produced a marked, playable chip')
+      .toEqual(known.sort());
   });
 
   it('marks the right answer and the wrong one the user chose', () => {

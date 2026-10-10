@@ -95,3 +95,57 @@ trade stands as written.
 **The dark theme's match to the light one matters less than its text does**,
 which is a judgement rather than an event — or when somebody measures the
 control's text and finds the large-text floor applies.
+
+## Correction, 11 October 2026 — the accent is not shared, and the better rule is the one that failed
+
+**Decision 1 above is reversed and this record's title is now wrong about it.**
+The accent is `#b13837` in the light theme and `#b03937` in the dark — a shade
+apart, two declarations rather than one. `SHARED_BY_CHOICE` is gone from
+`theme.test.ts` rather than emptied, so *every colour differs between the
+themes* is the claim again.
+
+What that record described as a decision was a decision when it was written
+and is no longer one. The rest of Decision 1 stands: `--on-accent` is still
+the ground in both themes, and the dark theme is still below WCAG 1.4.3's
+normal-text floor — **3.12:1 now rather than 3.05**.
+
+### The rule that failed is worth more than the colours
+
+The palette was built on *a panel is its ground with the lightness lifted*,
+which is a good rule, and it was briefly enforced on a colour it could not
+express. The panel named for the dark theme carried chroma **0.0189** against
+its ground's **0.0140**; a lift moves lightness and carries chroma through, so
+**no lift of any size reaches it.** Something near it was derived and called
+the value, and the user noticed.
+
+`palette.css` now states the principle, and it generalises past colour:
+
+> A derivation that cannot express a chosen value is not a tidier way of
+> writing it down; it is a different colour with an argument attached. Where a
+> colour is given, it is given.
+
+**This qualifies a convention this project pushes hard in the other
+direction.** `CLAUDE.md` says positioning derives from a named value rather
+than a repeated constant, and asks, before choosing a value, which quantity
+the page already has that it *is*. That is right, and it licenses this mistake
+exactly: a reader who has absorbed it will reach for a derivation and accept
+one that lands near. **Derivation is right when the value *is* the derived
+thing and wrong when it merely resembles it**, and the difference is invisible
+once the arithmetic is written down, because the arithmetic looks like a
+reason.
+
+So the file deriving the panel in one theme and stating it literally in the
+other is not an inconsistency to tidy. It is a record of what each was asked
+for, and tidying it would re-make the error.
+
+### What the softer text actually costs, measured from outside
+
+The user role looked at the dark theme's accent control on real screenshots at
+two widths: **readable, and a consistent step softer than the rest of the
+page, with selection carried by the fill rather than by the text colour.**
+
+So the cost is **reading speed, not wayfinding** — a learner can still tell
+what is selected, and the label takes slightly longer to read than everything
+around it. That is the honest consequence of the trade and it is narrower than
+"below the floor" sounds on its own. It is also evidence no amount of
+arithmetic here could have produced.

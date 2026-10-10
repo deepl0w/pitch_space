@@ -1092,44 +1092,126 @@ describe('ADR 0029 — the exercise layer reaches no further than the seam', () 
   const isTest = (file: string) => /\.test\.tsx?$|\/testing\//.test(file);
 
   /**
-   * Value imports only — `import type` is erased and loads nothing.
+   * Every specifier a file loads at runtime, with the erased ones dropped.
    *
-   * Matched on the statement rather than the specifier, because that is where
-   * the word sits: `import type { Voice } from '…'` loads nothing and
-   * `import { SPECTRUM_BANDS } from '…'` loads everything that module does.
+   * Over a string rather than a path, so the forms it is right and wrong
+   * about can be listed in a case below instead of argued about. A walk is
+   * the worst place to hide a parsing assumption: a missed edge does not
+   * fail, it makes the traversal quietly shorter, and everything that was
+   * behind that edge stops being checked without anything going red.
+   *
+   * **The statement may span lines, which the first version did not allow.**
+   * It ran from `import` to `from` with `[^;\n]*?`, so a wrapped import was
+   * not read as type-only — it was not seen at all. There are 69 wrapped
+   * value imports under `src/` today. Re-shipping the defect this guard
+   * exists for settles what that costs: written on one line it fails two of
+   * these cases, written across three lines it passes all of them. The same
+   * breach, the same module, and a formatter is enough to put it back.
    */
-  function valueImportsOf(file: string): string[] {
-    const source = readFileSync(file, 'utf8');
-    const out: string[] = [];
-    const statement = /(?:^|\n)\s*(?:import|export)(\s+type)?\s[^;\n]*?from\s*['"]([^'"]+)['"]/g;
+  function valueImports(source: string): string[] {
+    // `;` bounds the statement, so a lazy run to the first `from` cannot
+    // cross out of the import it started in.
+    const statement = /(?:^|\n)\s*(?:import|export)(\s+type)?\s([^;]*?)from\s*['"]([^'"]+)['"]/g;
+    // A side-effect import names no bindings and loads the whole module,
+    // which is the most complete load there is rather than the least.
+    const bare = /(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g;
+    const out = [...source.matchAll(bare)].map((m) => m[1]);
     for (const m of source.matchAll(statement)) {
-      if (m[1] === undefined) out.push(m[2]);
+      if (m[1] === undefined && !erasedPerBinding(m[2])) out.push(m[3]);
     }
     return out;
   }
 
-  /** Every file reachable from `roots` by following value imports. */
-  function reachedFrom(roots: string[]): Set<string> {
+  /**
+   * Whether every binding in the clause carries its own `type`, loading none.
+   *
+   * `import { type A, type B } from '…'` is erased exactly as
+   * `import type { A, B }` is; the word sits on each binding rather than on
+   * the statement, so matching the statement alone reads it as a value
+   * import. Raised by main against its own guard, and right: that is a false
+   * positive, the direction that gets a guard deleted rather than obeyed.
+   *
+   * A mixed clause is a value import and has to stay one — `{ type A, B }`
+   * loads the module for `B` — as does any default or namespace binding,
+   * which sits outside the braces and is why a clause that is not wholly
+   * braces answers no.
+   */
+  function erasedPerBinding(clause: string): boolean {
+    const braces = /^\s*\{([^}]*)\}\s*$/.exec(clause);
+    if (braces === null) return false;
+    const bindings = braces[1].split(',').map((b) => b.trim()).filter((b) => b !== '');
+    return bindings.length > 0 && bindings.every((b) => /^type\s/.test(b));
+  }
+
+  /** Relative specifiers that resolve to a real file this walk does not read. */
+  const NOT_A_MODULE = /\.(json|css)$|\?worker/;
+
+  /**
+   * Where a relative specifier lands, or null if nothing is there.
+   *
+   * The specifier's own spelling is tried before any ending is added to it:
+   * `main.tsx` writes `./App.tsx` with the extension on, and appending
+   * another asks for `App.tsx.tsx` and finds nothing. Outside the exercise
+   * walk today, so this is a hole rather than a miss — but it is the same
+   * hole as the one above, where a shape nobody happens to use yet makes the
+   * traversal shorter without making it fail.
+   */
+  function landing(file: string, specifier: string): string | null {
+    const base = join(file, '..', specifier);
+    const endings = ['', '.ts', '.tsx', '/index.ts', '/index.tsx'];
+    const found = endings
+      .map((end) => `${base}${end}`)
+      .find((candidate) => {
+        try { return statSync(candidate).isFile(); } catch { return false; }
+      });
+    return found ?? null;
+  }
+
+  /**
+   * Every file reachable from `roots` by following value imports.
+   *
+   * Returns what it could not land as well as what it reached, because
+   * giving up silently is how both holes above stayed invisible.
+   */
+  function reachedFrom(roots: string[]): { seen: Set<string>; lost: string[] } {
     const seen = new Set<string>();
+    const lost: string[] = [];
     const queue = [...roots];
     while (queue.length > 0) {
       const file = queue.pop()!;
-      for (const specifier of valueImportsOf(file)) {
+      for (const specifier of valueImports(readFileSync(file, 'utf8'))) {
         if (!specifier.startsWith('.')) continue;
-        const base = join(file, '..', specifier);
-        const landed = ['.ts', '.tsx', '/index.ts', '/index.tsx']
-          .map((end) => `${base}${end}`)
-          .find((candidate) => { try { return statSync(candidate).isFile(); } catch { return false; } });
-        if (landed === undefined || seen.has(landed)) continue;
+        const landed = landing(file, specifier);
+        if (landed === null) {
+          const miss = unlanded(file, specifier);
+          if (miss !== null) lost.push(miss);
+          continue;
+        }
+        if (seen.has(landed)) continue;
         seen.add(landed);
         queue.push(landed);
       }
     }
-    return seen;
+    return { seen, lost };
+  }
+
+  /**
+   * How a relative specifier that landed nowhere should be reported, if at all.
+   *
+   * Pulled out of the walk so it can be asserted rather than trusted. Left
+   * inline it was unfalsifiable: `lost` is empty on today's tree, so deleting
+   * the line that fills it changed no result — a guard whose population
+   * cannot contain the case it is about. Over a specifier it has a
+   * population, and the case below gives it one of each.
+   */
+  function unlanded(file: string, specifier: string): string | null {
+    if (NOT_A_MODULE.test(specifier)) return null;
+    return `${show(file)} -> ${specifier}`;
   }
 
   const roots = filesUnder(EXERCISES).filter((f) => !isTest(f));
-  const below = [...reachedFrom(roots)].filter((f) => !f.startsWith(EXERCISES));
+  const { seen, lost } = reachedFrom(roots);
+  const below = [...seen].filter((f) => !f.startsWith(EXERCISES));
 
   it('is following something, or the case below proves nothing', () => {
     /*
@@ -1141,6 +1223,69 @@ describe('ADR 0029 — the exercise layer reaches no further than the seam', () 
     expect(roots.length, 'no exercise sources found').toBeGreaterThan(10);
     expect(below.length, 'the import walk reached nothing below exercises/')
       .toBeGreaterThan(5);
+  });
+
+  it('follows an import however it is written', () => {
+    /*
+      The walk's own parser, over text rather than over the tree, because
+      every hole it has had is a form it did not recognise rather than a
+      judgement it got wrong — and a form is cheap to write down.
+
+      Each line is a shape this repository writes, or the one shape an edit
+      away from it. Two of them were wrong: a wrapped statement was
+      invisible, and a clause whose every binding carries its own `type` was
+      read as loading the module.
+    */
+    const followed = (source: string) => valueImports(source).length > 0;
+
+    expect(followed(`import { A } from './x';`), 'a plain value import').toBe(true);
+    expect(followed(`import A from './x';`), 'a default import').toBe(true);
+    expect(followed(`import * as A from './x';`), 'a namespace import').toBe(true);
+    expect(followed(`export { A } from './x';`), 'a re-export').toBe(true);
+    expect(followed(`import { type A, B } from './x';`), 'a mixed clause loads for B').toBe(true);
+    expect(followed(`import './x';`), 'a side-effect import loads everything').toBe(true);
+    // Wrapped, which is how 69 of the value imports under src/ are written.
+    expect(followed(`import {\n  A,\n} from './x';`), 'a wrapped value import').toBe(true);
+
+    expect(followed(`import type { A } from './x';`), 'a type-only import').toBe(false);
+    expect(followed(`import type {\n  A,\n} from './x';`), 'a wrapped type-only import').toBe(false);
+    // Erased per binding rather than per statement.
+    expect(followed(`import { type A, type B } from './x';`), 'every binding is a type').toBe(false);
+  });
+
+  it('lands every relative import it follows', () => {
+    /*
+      The resolver used to give up without saying so, which is what let a
+      specifier shape nobody had written yet shorten the walk in silence.
+      Empty today: this is the mechanism that stops it going quiet later,
+      not a catch. `NOT_A_MODULE` names the real files that are not modules
+      this walk reads, so a genuine miss cannot hide among them.
+    */
+    expect(lost, 'a relative import was followed to nothing').toEqual([]);
+
+    /*
+      And that an empty `lost` is a finding rather than a broken reporter.
+      One specifier of each kind: a module that is not there, which has to be
+      named, and the two real files this walk does not read, which must not
+      be.
+    */
+    const microphone = join(SRC, 'audio', 'capture', 'microphone.ts');
+    expect(unlanded(microphone, './nothing-is-here'), 'a missing module went unreported')
+      .not.toBeNull();
+    expect(unlanded(microphone, './capture.worklet.ts?worker&url'), 'the worklet url').toBeNull();
+    expect(unlanded(join(SRC, 'audio', 'output', 'sampled.ts'), './packs.json'), 'a data file')
+      .toBeNull();
+
+    /*
+      The one shape `lost` cannot speak for, because the only file writing it
+      is outside this walk: a specifier carrying its own extension, where
+      appending another asks for `App.tsx.tsx`. Asserted against the real
+      instance rather than a fixture, so it keeps describing the repository
+      — if `main.tsx` stops importing `./App.tsx` this wants a new example
+      rather than deleting.
+    */
+    expect(landing(join(SRC, 'main.tsx'), './App.tsx'), 'a specifier spelled with its extension')
+      .not.toBeNull();
   });
 
   it('pulls in nothing that touches the platform', () => {

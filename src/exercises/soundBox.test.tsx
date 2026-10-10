@@ -154,4 +154,75 @@ describe('what the wave is drawn from', () => {
 
     expect(asked).toBe(SPECTRUM_BANDS);
   });
+
+  /** Every bar's inline `scaleY`, which is what the drawing writes. */
+  const drawnBars = () =>
+    [...host.querySelectorAll<HTMLElement>('.sound-wave > span')]
+      .map((bar) => bar.style.transform)
+      .filter((transform) => transform !== '');
+
+  it('hands the row back to the stylesheet when the passage ends', () => {
+    /*
+      Both halves of the handover, because the drawing takes the row over in
+      two ways and has to give both back. `.sound-drawn` turns the keyframe
+      off; the inline `scaleY` on each bar is what replaces it. Leaving
+      either behind leaves a stopped box looking like a sounding one —
+      frozen on the last frame it drew, which is worse than a flat row
+      because it is a picture of a signal that is not there.
+
+      The two mutants this kills — dropping `setDrawn(false)` and dropping
+      the transform reset, both in the paint effect's cleanup — survived the
+      four cases that were here, for a reason worth naming: none of them had
+      a tap that answered, so the cleanup was never reached at all.
+    */
+    vi.useFakeTimers();
+    show({ playedAt: 1, spectrum: (into) => { into.fill(200); return true; } });
+    act(() => { vi.advanceTimersByTime(20); });
+
+    expect(host.querySelector('.sound-drawn'), 'a tap that answers should be drawn').not.toBeNull();
+    expect(drawnBars().length, 'nothing was drawn, so there is nothing to hand back').toBeGreaterThan(0);
+
+    act(() => { vi.advanceTimersByTime(2000); });
+
+    expect(sounding(), 'the wave should end with the passage').toBe(false);
+    expect(host.querySelector('.sound-drawn'), 'still claims to draw a passage that stopped').toBeNull();
+    expect(drawnBars(), 'the row froze on the last frame it drew').toEqual([]);
+  });
+
+  it('stops claiming to draw when the tap stops answering', () => {
+    /*
+      A tap that answers and then stops, which today's output cannot do —
+      `Synth.spectrum` returns false only while `analyser` is null, and that
+      field is assigned when the graph is built and never cleared. So this
+      holds the component to its own prop contract rather than to a state
+      the system can reach: `spectrum` is typed as returning a boolean every
+      frame, and a caller is entitled to say no at any of them.
+
+      Worth holding even so, because the branch is wrong if it ever becomes
+      reachable. It takes `.sound-drawn` off, which restarts the keyframe,
+      but leaves the inline `scaleY` from the last drawn frame on every bar
+      — and the keyframe animates `height`, so the two would multiply rather
+      than one replacing the other. That is the exact outcome the comment
+      above the rule in `index.css` says the class exists to prevent.
+    */
+    vi.useFakeTimers();
+    let answering = true;
+
+    show({
+      playedAt: 1,
+      spectrum: (into) => {
+        if (!answering) return false;
+        into.fill(200);
+        return true;
+      },
+    });
+    act(() => { vi.advanceTimersByTime(20); });
+    expect(host.querySelector('.sound-drawn')).not.toBeNull();
+
+    answering = false;
+    act(() => { vi.advanceTimersByTime(20); });
+
+    expect(sounding(), 'the passage should still be sounding').toBe(true);
+    expect(host.querySelector('.sound-drawn'), 'claimed to draw a signal it stopped getting').toBeNull();
+  });
 });

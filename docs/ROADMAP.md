@@ -616,14 +616,55 @@ Embedding a player pulls third-party tracking into a local-first MIT practice
 tool, for a feature whose value is a learner tapping through perhaps once a
 session. A link costs nothing, breaks honestly, and leaves the bundle alone.
 
-### What it wants before building
+### Settled: an internal database, and a link rather than an embed
 
-A decision on where the catalogue lives, because `theory/` is the wrong home
-and it is there now: a song reference is pedagogy, not a fact about music, and
-the directory holding it will grow to cover chords and progressions. And a
-decision on **what happens when a link is found dead** — silently dropping to
-the title is honest and invisible; saying so is honest and noisy. That is a
-product question and it is the user's.
+The user: *"the catalogue is an internal database. you're right about the
+link"*.
+
+So it ships with the app rather than being fetched, is versioned with it, and
+has no runtime dependency on anything. It is a catalogue in
+[0011](adr/0011-what-a-catalogue-owes.md)'s sense and owes that record's four
+obligations.
+
+**It goes in the bundle, which is the opposite of what the instrument packs
+do, and the contrast is worth stating because the pack precedent is the one
+someone will reach for.**
+[0046](adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md) keeps a
+pack out of the precache because it is megabytes and the app works without it.
+A song table is text, it is small, and it is wanted at the exact moment a
+learner gets something wrong — which may be offline, on a train, which is
+precisely who the hint is for. Different size, different moment of need,
+opposite answer.
+
+**A home: not `theory/`.** A song reference is pedagogy, not a fact about
+music, and `theory/` is where facts live. The directory that holds it will
+grow to cover chords and progressions.
+
+### What becoming a database does to the dead-link question
+
+The question as first posed — *what happens when a link is found dead* — does
+not survive the answer, and it is worth saying why rather than leaving it
+looking open.
+
+**The app will never find one dead.** It does not fetch the video; the learner
+clicks out and leaves. So there is no runtime moment at which staleness could
+be detected and no behaviour to design for it. A link rots silently and the
+only parties who can notice are a learner who follows one and nobody tells, or
+somebody checking from outside the app.
+
+So the real question is maintenance rather than behaviour: **a catalogue of
+external claims the suite cannot check, in a project that has just made every
+internal citation checkable.** 0011's fourth obligation is the one that binds
+— claims asserted, or acknowledged as unassertable — and the acknowledgement
+has to say what a reader should do about it, since nothing else will.
+
+The cheapest honest mechanism is a check that runs outside the suite and
+outside the app: fetch each URL, report what no longer resolves, run when
+somebody remembers or on a schedule. It cannot verify the musical claim, which
+stays unassertable for good, and it would catch the deletions and the
+re-uploads that are most of the rot. **Worth building with the catalogue
+rather than after it**, since a table of links nobody can audit is the thing
+that makes the feature worse than no feature.
 
 ## Instruments that play like themselves
 

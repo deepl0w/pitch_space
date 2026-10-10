@@ -574,7 +574,7 @@ reproduce exactly.
   again. Off by three orders of magnitude, in the reassuring direction.
   The fix is the same remedy stated for a document: cite the test that
   measures the margin, do not quote its figures — the comment above
-  `MERGE_CENTS` in `src/audio/capture/listen.ts` now points at
+  `NEW_NOTE_RISE` in `src/audio/capture/listen.ts` now points at
   `captureSeam.test.ts` instead of restating a number. Full account in
   [0047](docs/adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)'s
   11 October correction.

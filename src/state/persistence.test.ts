@@ -190,10 +190,17 @@ describe('the volatile log in production', () => {
     return out;
   };
 
-  it('is constructed somewhere, or this checks nothing', () => {
-    const callers = shipped().filter(
-      (file) => /\bmemoryLog\s*</.test(readFileSync(file, 'utf8')),
-    );
+  /**
+   * A *call*, not the declaration — which the first version of this
+   * counted, so `persistence.ts` exporting `memoryLog<T>` satisfied it
+   * and the guard below could have been scanning nothing at all. Found
+   * by a mutant that removed the only real caller and left this green.
+   */
+  const CALL = /(?<!function\s)\bmemoryLog\s*<[^>]*>\s*\(/g;
+
+  it('is constructed somewhere, or the check below scans nothing', () => {
+    const callers = shipped().filter((file) => CALL.test(readFileSync(file, 'utf8')));
+    CALL.lastIndex = 0;
     expect(callers.length, 'no shipped module builds one at all').toBeGreaterThan(0);
   });
 
@@ -201,7 +208,9 @@ describe('the volatile log in production', () => {
     const offenders: string[] = [];
     for (const file of shipped()) {
       const source = readFileSync(file, 'utf8');
-      for (const call of source.matchAll(/\bmemoryLog\s*<[^>]*>\s*\(([^;]*?)\)\s*[;,)]/gs)) {
+      for (const call of source.matchAll(
+        /(?<!function\s)\bmemoryLog\s*<[^>]*>\s*\(([^;]*?)\)\s*[;,)]/gs,
+      )) {
         const args = call[1];
         if (!/durable\s*:\s*false/.test(args)) {
           offenders.push(`${relative(process.cwd(), file)}: memoryLog(${args.trim()})`);

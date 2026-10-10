@@ -246,3 +246,42 @@ could break it. The test fails if the constant moves far enough; this
 paragraph is the pointer from the side that depends, and 0035 is deliberately
 left alone, since a record about onsets should not have to know what exercises
 exist.
+
+## Correction, 11 October 2026 — the margin is tight, not large
+
+The addendum above says the hazard **"does not fire, by a very large margin"**
+and puts the merge threshold "several hundred times below where a re-pluck
+would collapse". **Both are wrong, in the reassuring direction, and the
+correction reverses what a reader should take away.**
+
+Re-measured: raising `NEW_NOTE_RISE` from 2 to **3** merges a pair struck
+0.12s apart. Widely spaced pairs survive past 30, so the headroom varies
+enormously with spacing — and **at the tight end the working behaviour clears
+0035's accepted hazard by less than one and a half times.**
+
+So the dependency is **live rather than theoretical**. A played unison on a
+quick re-strike sits very near the boundary where it would arrive as one note
+and be refused, which is the failure the addendum above describes as the wrong
+one for a correct answer. Anything in that paragraph implying comfort should
+be read as withdrawn.
+
+**The ruling not to publish a bound survives and is the part that got
+stronger.** A figure that moved by three orders of magnitude inside an hour is
+exactly what should not sit on a record. And the new one inherits the same
+caveat as the old: it is one synthesised Karplus–Strong pluck pair at one
+amplitude, bounding what *that test* can see. Whether a real re-strike on a
+real piano has the same ratio is unmeasured, and 0035's revisit trigger — a
+second instrument recorded — remains where that question gets answered.
+
+**How the wrong figure arose is this project's own convention one level
+down.** It was measured against a fixture of three spacings; the fixture was
+then widened to include 0.12s and 0.25s; the number stayed. It described a
+test that no longer existed — and it sat inside a comment already correcting
+an earlier wrong claim about the same constant, which makes it the third
+version of one paragraph with two wrong in opposite directions.
+
+`CLAUDE.md` puts it for documents: *a tracked document does not chase a figure
+the next commit can change*. A measurement in a comment is a tracked document
+the size of a sentence, and widening the fixture is the commit that changed
+it. The number belongs in the assertion, where broadening the fixture
+re-derives it, and nowhere a human has to remember to update it.

@@ -419,6 +419,51 @@ describe('the focus ring on the circle of fifths', () => {
   });
 
   /**
+   * The browser's own ring is suppressed in the state a mouse click leaves.
+   *
+   * **The other half of the rule above, and the one that was unheld.** The
+   * case before it asks whether a focused wedge is drawn differently, and it
+   * does hold that: deleting `.wedge:focus-visible`, or just its stroke,
+   * fails it. What nothing asked was whether the *default* outline had been
+   * taken away — the whole suite passed with `.wedge:focus { outline: none }`
+   * removed.
+   *
+   * That rule is the fix for a reported defect rather than a tidying. A
+   * wedge is an SVG path with `tabIndex`, an outline on a path is drawn
+   * round its bounding box, and for a thirty degree segment that box is
+   * mostly not the wedge — so Chrome's two-tone `auto` ring put a white
+   * square across the middle of the wheel. **`:focus-visible` did not cover
+   * it, because a mouse click focuses the wedge without matching that
+   * pseudo-class**, which is exactly why the shaped stroke already written
+   * for it never appeared on a click.
+   *
+   * So this asks for a suppression that applies in the state a click
+   * reaches: `:focus` without `:focus-visible`. Scoping it back to
+   * `:focus-visible` fails here while leaving the case above green, which is
+   * the pair of mutants that separates the two claims.
+   *
+   * What it cannot see is whether the square is actually gone — that is a
+   * looking question, and the rendering is the browser's own. It holds the
+   * declaration that was shown to remove it, not the removal.
+   */
+  it('suppresses the browser ring in the state a mouse click reaches', () => {
+    const clickFocused = (selector: string) =>
+      selector.includes(':focus') && !selector.includes(':focus-visible');
+
+    const unsuppressed: string[] = [];
+    for (const wedge of found) {
+      const suppressed = APP_RULES.some((rule) =>
+        /outline\s*:\s*(none|0)\b/.test(rule.body)
+        && rule.selectors.some((selector) => clickFocused(selector)
+          && wedge.matches(selector.replace(/:focus/g, '').trim())));
+      if (!suppressed) {
+        unsuppressed.push(`${wedge.getAttribute('class')}: a click leaves the default outline`);
+      }
+    }
+    expect([...new Set(unsuppressed)]).toEqual([]);
+  });
+
+  /**
    * And the resolution above is actually doing the work it was written
    * for. If every wedge took its ring from the same rule, the specificity
    * code would be dead and the compound override — the thing that was

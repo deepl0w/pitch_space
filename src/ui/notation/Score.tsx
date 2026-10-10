@@ -44,10 +44,27 @@ export function Score({ spec, height, onLayout, cursorX }: {
   // Reading it at draw time means a theme change has to force a redraw, which
   // is what `scheme` counts.
   useEffect(() => {
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
     const bump = () => setScheme((n) => n + 1);
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
     media.addEventListener('change', bump);
-    return () => media.removeEventListener('change', bump);
+    /*
+      The device's preference is only one of the two ways the palette
+      moves. The other is the reader choosing Light or Dark, which sets
+      `data-theme` on the root and changes no media query at all — so the
+      stave kept the ink it was drawn with and a reader who switched theme
+      had black noteheads on a dark page until something else forced a
+      redraw. Watching the attribute covers the choice the same way the
+      query covers the default.
+    */
+    const root = new MutationObserver(bump);
+    root.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+    return () => {
+      media.removeEventListener('change', bump);
+      root.disconnect();
+    };
   }, []);
 
   // Notation does not reflow like text, so it is redrawn at the measured width

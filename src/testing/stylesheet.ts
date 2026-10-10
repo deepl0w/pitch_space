@@ -60,7 +60,8 @@ export function parseRules(css: string, at: string | null = null): Rule[] {
 }
 
 /**
- * `index.css`, with comments stripped so prose cannot match a selector.
+ * The app's stylesheets, with comments stripped so prose cannot match a
+ * selector.
  *
  * From the working directory rather than from `import.meta.url`, which
  * this used and which breaks the moment a jsdom-environment test imports
@@ -71,9 +72,21 @@ export function parseRules(css: string, at: string | null = null): Rule[] {
  * already reads `fixtures/audio` the same way, so this is the convention
  * here rather than a shortcut.
  */
-export const APP_CSS = readFileSync(
-  join(process.cwd(), 'src', 'index.css'), 'utf8',
-).replace(/\/\*[\s\S]*?\*\//g, '');
+/*
+  Both files, because the palette moved into one of its own.
+
+  `index.css` imports `palette.css` and a browser resolves that into a
+  single stylesheet; a test reading only the first would find no `:root`
+  colours at all and every palette case would pass by scanning nothing.
+  Concatenated in import order, which is the order a browser applies them
+  — so a later rule still wins here for the same reason it wins there.
+*/
+export const APP_CSS = ['palette.css', 'index.css']
+  .map((file) => readFileSync(join(process.cwd(), 'src', file), 'utf8'))
+  .join('\n')
+  .replace(/\/\*[\s\S]*?\*\//g, '')
+  // The import itself is not a rule and would otherwise be parsed as one.
+  .replace(/@import\s+[^;]+;/g, '');
 
 export const APP_RULES = parseRules(APP_CSS);
 

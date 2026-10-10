@@ -32,8 +32,21 @@ import { APP_RULES, customProperties, rulesFor } from '../testing/stylesheet';
  * colours and compared every custom property, which agreed only while
  * the palette was all there was.
  */
+/**
+ * Whether a declaration is a colour rather than a length or a keyword.
+ *
+ * `color-mix` and `var` joined the list when the palette became derived:
+ * three colours are chosen per theme and the rest are stated in terms of
+ * them, so most of a theme block is now mixes and references. A predicate
+ * that only knew literals called those non-colours and reported the whole
+ * palette as an intruder.
+ *
+ * Still a shape test rather than a parse. What it has to separate is a
+ * colour from `--page-inset`, and nothing that names a length begins with
+ * any of these.
+ */
 function isColour(value: string): boolean {
-  return /^(#|rgb|hsl|color\()/i.test(value.trim());
+  return /^(#|rgb|hsl|oklch\(|oklab\(|color\(|color-mix\(|var\()/i.test(value.trim());
 }
 
 function paletteOf(selector: string): Map<string, string> {
@@ -92,6 +105,21 @@ describe('what a theme block is allowed to hold', () => {
   });
 });
 
+/**
+ * Tokens the two themes hold in common, by decision rather than by accident.
+ *
+ * The case below refuses a dark palette that is a copy of the light one,
+ * and its own comment says the remedy for a colour that genuinely suits
+ * both: write it down here. This is that.
+ *
+ * **The accent.** Asked to keep one accent across both themes, the user
+ * said so in terms. It is what makes a filled control the same colour
+ * wherever you meet it, and it is why `--on-accent` and `--accent-edge`
+ * exist at all — the text and the boundary move per theme so the fill does
+ * not have to.
+ */
+const SHARED_BY_CHOICE = new Set(['--accent']);
+
 describe('the dark palette', () => {
   const light = paletteOf(':root');
   const bySystem = paletteOf(':root:not([data-theme="light"])');
@@ -149,7 +177,40 @@ describe('the dark palette', () => {
       hide in.
     */
     for (const [name, value] of light) {
+      if (SHARED_BY_CHOICE.has(name)) continue;
+      /*
+        An alias is the same text in both themes *by construction* and a
+        different colour all the same: `--score-ink: var(--ink)` names the
+        ink, and the ink differs. Comparing declarations cannot see that,
+        so an alias is checked through what it points at instead — which
+        is the stronger claim anyway, since an alias to a token that did
+        not differ would be caught by that token's own case.
+      */
+      const alias = /^var\((--[\w-]+)\)$/.exec(value);
+      if (alias && byChoice.get(name) === value) {
+        // An alias to something deliberately shared is shared too, and
+        // saying so here is cheaper than listing every alias of it.
+        if (SHARED_BY_CHOICE.has(alias[1])) continue;
+        expect(byChoice.get(alias[1]), `${name} points at ${alias[1]}, which is the same in both`)
+          .not.toBe(light.get(alias[1]));
+        continue;
+      }
       expect(byChoice.get(name), `${name} is the same in both themes`).not.toBe(value);
+    }
+  });
+
+  /**
+   * And the exemptions are real, not a list that has quietly emptied.
+   *
+   * A name left here after the colour started differing would be slack of
+   * exactly the kind the case above refuses — so each one has to still be
+   * the same in both themes, which makes the list falsifiable rather than
+   * permissive.
+   */
+  it('shares only what it says it shares', () => {
+    for (const name of SHARED_BY_CHOICE) {
+      expect(byChoice.get(name), `${name} is listed as shared and is not`)
+        .toBe(light.get(name));
     }
   });
 });

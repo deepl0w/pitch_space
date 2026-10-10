@@ -1,107 +1,27 @@
+@import './palette.css';
+
+/*
+ * Everything that is not a colour. The palette is imported above and lives
+ * in `palette.css`, so it can be changed without reading any of this.
+ */
 :root {
   color-scheme: light dark;
   /*
-    Four colours the user chose, and the tones derived from them.
-
-      #362116  deep    #BF3B3B  red    #E89F7D  peach    #F0E2DB  cream
-
-    Anchors rather than a closed set — they said so when asked — so a role
-    that needs a colour none of them can serve gets one, and the rest are
-    mixes of the four. Light reads deep on cream; dark inverts it, and the
-    accent crosses over: red carries an action on a pale page and would be
-    a warning on a dark one, where the peach reads as the live thing.
-
-    **Every pair a reader has to resolve is measured, not judged.** Text is
-    held to 4.5:1 and a filled control to 3:1 against the page, which is
-    WCAG 1.4.3 and 1.4.11; the figures are in the comment beside each
-    block. Two of these moved because the first attempt failed: the red is
-    darkened from #BF3B3B, which gives cream text only 4.25, and the dark
-    muted is lighter than it looks right at, because it sits on a panel as
-    well as on the page and the panel is the closer of the two.
-  */
-  --bg: #F0E2DB;
-  --surface: #faf5f2;
-  --ink: #362116;
-  --muted: #6a574d;
-  --line: #cbbbb4;
-  --accent: #b13837;
-  /*
-    Green is the one role the palette cannot fill: it holds a red, and a
-    correct answer and a wrong one must not be two reds. Chosen to sit at
-    the palette's own weight rather than borrowed from the old scheme.
-  */
-  --right: #2e6b45;
-  --wrong: #a63634;
-  --score-ink: #362116;
-  /* ink 11.98, muted 5.39, cream-on-accent 4.76, right 5.02, wrong 5.19 */
-  /*
     How far the page's content stands off the window's edge.
 
-    Named so that anything which has to sit at that edge derives from
-    the same value rather than repeating a number that merely matches:
-    `main`'s padding uses it, and so does the fixed settings cog, which
-    is why the cog lines up with the text rather than approximately so.
+    Named so that anything which has to sit at that edge derives from the
+    same value rather than repeating a number that merely matches: `main`'s
+    padding uses it, and so does the fixed settings cog, which is why the
+    cog lines up with the text rather than approximately so.
 
-    Not `--gutter`, which it was briefly called and which means the
-    space *between* columns — `gap`'s job, not this one. A reader asked
-    what it was, which is the whole of the argument for the rename.
-
-    **One `rem`, not sixteen pixels.** It was written as `16px`, which
-    is a hardcoded copy of the browser's default text size and the only
-    pixel spacing in a file where every other margin and padding is in
-    `rem`. Two faults in one number: it duplicated a value the document
-    already has, and it ignored it — a reader who sets larger text got
-    bigger words crowded against the same narrow edge. Expressed in
-    `rem` it is not an independent choice at all, it is the page edge
-    standing off by the width the reader reads at.
+    **One `rem`, not sixteen pixels.** Written as `16px` it was a hardcoded
+    copy of the browser's default text size, and the only pixel spacing in
+    a file where every other margin is in `rem` — so a reader who sets
+    larger text got bigger words crowded against the same narrow edge. In
+    `rem` it is not an independent choice at all; it is the page edge
+    stated in terms of the thing the document already scales from.
   */
   --page-inset: 1rem;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-/*
- * The dark palette, twice, and the duplication is deliberate.
- *
- * The first block is the system default: dark when the reader's device says
- * dark, unless they have pinned light here. The second is the pin — a
- * reader who chooses Dark on a light machine, which the first block cannot
- * serve because it only exists inside the media query. Without it the theme
- * control set an attribute and changed no colour: live-looking and inert,
- * which is worse than not offering it.
- *
- * CSS has no way to give one declaration block two scopes, and
- * `light-dark()` would mean betting on a function this project has not
- * decided to require. So the values are written twice and
- * `src/ui/theme.test.ts` asserts the two lists are identical — the
- * duplication is checked rather than promised, because a comment saying
- * "keep these in step" is the kind of constraint that cannot fail.
- */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #362116;
-    --surface: #453026;
-    --ink: #F0E2DB;
-    --muted: #b1a098;
-    --line: #544036;
-    --accent: #E89F7D;
-    --right: #7fc49b;
-    --wrong: #d6725f;
-    --score-ink: #F0E2DB;
-    /* ink 11.98, muted 6.03 (4.90 on a panel), deep-on-accent 6.99,
-       right 7.41, wrong 4.64 */
-  }
-}
-
-:root[data-theme="dark"] {
-  --bg: #362116;
-  --surface: #453026;
-  --ink: #F0E2DB;
-  --muted: #b1a098;
-  --line: #544036;
-  --accent: #E89F7D;
-  --right: #7fc49b;
-  --wrong: #d6725f;
-  --score-ink: #F0E2DB;
 }
 
 * { box-sizing: border-box; }
@@ -613,7 +533,8 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 button {
   font: inherit; font-size: 0.88rem; font-weight: 500;
   padding: 0.5rem 1rem; border-radius: 7px; cursor: pointer;
-  background: var(--accent); color: var(--bg); border: 1px solid transparent;
+  background: var(--accent); color: var(--on-accent);
+  border: 1px solid var(--accent-edge);
 }
 button:hover { filter: brightness(1.08); }
 button:active { transform: translateY(1px); }
@@ -761,7 +682,7 @@ button:active { transform: translateY(1px); }
   font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 6px;
   background: none; color: var(--accent); border: 1px solid currentColor;
 }
-.figure-play:hover { background: var(--accent); color: var(--bg); filter: none; }
+.figure-play:hover { background: var(--accent); color: var(--on-accent); filter: none; }
 /* ---- The practice screen ------------------------------------------------ */
 
 .nav { display: flex; gap: 0.6rem; align-items: center; margin: 0 0 1.25rem; flex-wrap: wrap; }
@@ -799,7 +720,7 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   cursor: pointer;
 }
 .chip:hover { color: var(--ink); filter: none; }
-.chip.on { background: var(--accent); color: var(--bg); border-color: transparent; }
+.chip.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent-edge); }
 
 /* Two kinds of chip, and they have to look like two kinds of thing.
 
@@ -886,7 +807,7 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
    Only here: on every other exercise the answer buttons are the one
    interactive row and there is nothing for them to be confused with. */
 .palette .choice {
-  background: var(--accent); color: var(--bg);
+  background: var(--accent); color: var(--on-accent);
   border-color: var(--accent); font-weight: 600;
 }
 .palette .choice:hover:not(:disabled) { filter: brightness(1.08); }
@@ -1170,7 +1091,16 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   no version of, which is why it works where a colour cannot.
 */
 .wedge.wedge-self:focus-visible {
-  stroke: var(--bg);
+  /*
+    `--on-accent`, not `--bg`: this ring is drawn on a wedge filled with
+    the accent, and `--on-accent` is the token that names what reads on
+    that fill. It was `--bg` and happened to pass while the two themes had
+    different accents; a palette change made the dark one 2.77:1 and the
+    ring all but disappeared. The guard below this file caught it, which
+    is the reason to prefer a token that states the relationship over one
+    that merely measured well.
+  */
+  stroke: var(--on-accent);
   stroke-width: 4;
   stroke-dasharray: 7 5;
 }

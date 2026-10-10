@@ -77,8 +77,10 @@ function fromOklab([L, a, b]: [number, number, number]): [number, number, number
   ];
 }
 
-function mixOklab(a: string, b: string, percent: number): [number, number, number] {
-  const [x, y] = [toOklab(linearOf(a)), toOklab(linearOf(b))];
+function mixOklab(
+  a: [number, number, number], b: [number, number, number], percent: number,
+): [number, number, number] {
+  const [x, y] = [toOklab(a), toOklab(b)];
   const t = percent / 100;
   return fromOklab([0, 1, 2].map((i) => x[i] * t + y[i] * (1 - t)) as [number, number, number]);
 }
@@ -159,14 +161,50 @@ function winning(element: Element, property: string, focus: boolean): string | n
 
 /** A declared value resolved against a palette, as linear sRGB. */
 function resolve(value: string, theme: Map<string, string>): [number, number, number] {
-  const mix = /^color-mix\(\s*in oklab\s*,\s*var\((--[\w-]+)\)\s*([\d.]+)%\s*,\s*var\((--[\w-]+)\)\s*\)$/
-    .exec(value);
+  /*
+    Recursive, and either side of a mix may be a literal or a reference.
+
+    It handled exactly `color-mix(in oklab, var(--a) N%, var(--b))` with
+    both operands naming hex tokens, which was the whole of what the
+    palette then contained. The palette is now **derived**: three colours
+    are chosen and the rest are mixes, several of which reference a token
+    that is itself a mix. Resolving one level of that returns a string
+    where a colour was expected, which is what `not a hex colour:
+    color-mix(...)` was saying.
+  */
+  const text = value.trim();
+  const single = /^var\((--[\w-]+)\)$/.exec(text);
+  if (single) return resolve(token(single[1], theme), theme);
+
+  // Operands are a hex literal or a `var()`, neither of which contains a
+  // comma, so splitting on the one before the closing paren is safe. A
+  // mix written inline inside another would not be, and nothing does that.
+  const mix = /^color-mix\(\s*in oklab\s*,\s*(.+?)\s+([\d.]+)%\s*,\s*(.+?)\s*\)$/.exec(text);
   if (mix) {
-    return mixOklab(token(mix[1], theme), token(mix[3], theme), Number(mix[2]));
+    return mixOklab(resolve(mix[1], theme), resolve(mix[3], theme), Number(mix[2]));
   }
-  const single = /^var\((--[\w-]+)\)$/.exec(value);
-  if (single) return linearOf(token(single[1], theme));
-  return linearOf(value);
+
+  /*
+    A relative colour, in the one shape the palette uses: the panels, which
+    are their ground with its lightness lifted and its hue and chroma kept.
+
+    Only `calc(l + N) c h` is understood, deliberately. A general
+    implementation of relative colour syntax would be a second browser in
+    the test suite, and what this has to resolve is one line of the
+    stylesheet. Anything else throws rather than guessing — a resolver that
+    silently returned the base colour would make a panel's contrast read as
+    its ground's and pass everything.
+  */
+  const relative = /^oklch\(\s*from\s+(.+?)\s+calc\(\s*l\s*\+\s*([\d.]+)\s*\)\s+c\s+h\s*\)$/
+    .exec(text);
+  if (relative) {
+    const [L, a, b] = toOklab(resolve(relative[1], theme));
+    return fromOklab([L + Number(relative[2]), a, b]);
+  }
+  if (/^oklch\(/.test(text)) {
+    throw new Error(`relative colour this resolver does not understand: ${text}`);
+  }
+  return linearOf(text);
 }
 
 function token(name: string, theme: Map<string, string>): string {
@@ -206,22 +244,25 @@ describe('the focus ring on the circle of fifths', () => {
    */
   it('computes what a browser measured', () => {
     const pairs: [keyof typeof THEMES, string, string, number][] = [
-      ['light', '--ink', '--accent', 2.52],
-      ['dark', '--ink', '--accent', 1.71],
+      ['light', '--ink', '--accent', 2.55],
+      ['dark', '--ink', '--accent', 4.45],
       ['light', '--bg', '--accent', 4.76],
-      ['dark', '--bg', '--accent', 6.99],
+      ['dark', '--bg', '--accent', 3.05],
     ];
     for (const [theme, a, b, expected] of pairs) {
       const got = contrast(
-        linearOf(token(a, THEMES[theme])),
-        linearOf(token(b, THEMES[theme])),
+        // `resolve`, not `linearOf`: most tokens are mixes now, and a
+        // reader asking for `--ink` wants the colour it comes out as.
+        resolve(token(a, THEMES[theme]), THEMES[theme]),
+        resolve(token(b, THEMES[theme]), THEMES[theme]),
       );
       expect(got, `${a} on ${b} in ${theme}`).toBeCloseTo(expected, 1);
     }
     // And a mix resolves rather than throwing, which is the other half of
     // what the claim below depends on.
     const relative = resolve('color-mix(in oklab, var(--accent) 55%, var(--surface))', THEMES.dark);
-    expect(contrast(linearOf(token('--ink', THEMES.dark)), relative)).toBeCloseTo(3.62, 1);
+    expect(contrast(resolve(token('--ink', THEMES.dark), THEMES.dark), relative))
+      .toBeCloseTo(7.67, 1);
   });
 
   it('clears the floor for an indicator on every wedge it can land on', () => {

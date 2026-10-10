@@ -7,11 +7,15 @@
  * it lives here, above the scanned directories, in one file rather than
  * scattered across the call sites that need it.
  *
- * ADR 0005 said a shared helper earns its place at the second call site. It
- * is written at the first because the registry guarantees the second: every
- * exercise type needs a seed, and the alternative is five call sites each
- * seeding from `Date.now()` in its own way, which is exactly the failure that
- * record predicted.
+ * **0005 states the opposite of a rule and this file is the answer to it.**
+ * Under *What this costs* it says there is no shared helper, that minting is
+ * therefore a line per call site, and that this is "an opportunity for one of
+ * them to do it badly — seeding from `Date.now()`". That is a predicted
+ * failure, not a threshold for when a helper is earned; an earlier version of
+ * this comment credited the record with the second and it says only the
+ * first. The helper exists here because the registry makes the prediction
+ * certain rather than likely: every exercise type needs a seed, so the
+ * scattered version is five call sites rather than a hypothetical one.
  */
 
 /** Exclusive upper bound, matching what `makeRng` accepts. */

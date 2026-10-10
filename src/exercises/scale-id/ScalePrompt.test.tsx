@@ -96,6 +96,31 @@ describe('answering a scale by playing it', () => {
     expect(playAnswer(), 'no control for answering by playing').toBeTruthy();
   });
 
+  /**
+   * The take is eight seconds long, and a disabled control that says only
+   * "Listening…" for eight seconds reads as broken.
+   *
+   * Found from outside: a reviewer watching it at five seconds concluded
+   * the control was stuck and nearly reported it. The cost of a missing
+   * progress indication is not the wait — it is the learner ceasing to
+   * believe the app is working.
+   */
+  it('says how much of the take is left while it listens', async () => {
+    let resolve: (take: { heard: false; reason: 'unavailable' }) => void = () => {};
+    const slow: AudioIn = {
+      listen: () => new Promise((settle) => { resolve = settle; }),
+    };
+    render(exercise(), slow);
+
+    await act(async () => { playAnswer().click(); });
+    expect(playAnswer().textContent, 'listening without saying for how long')
+      .toMatch(/\d+\s*s/);
+
+    await act(async () => { resolve({ heard: false, reason: 'unavailable' }); });
+    expect(playAnswer().textContent, 'still counting after the take ended')
+      .toMatch(/play your answer/i);
+  });
+
   it('answers with the scale that was played', async () => {
     render(exercise(), take(...MAJOR));
     await answerByPlaying();

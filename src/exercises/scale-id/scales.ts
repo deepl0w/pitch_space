@@ -5,6 +5,7 @@ import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
+import { steadyNotes } from '../played';
 import { presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
@@ -100,9 +101,7 @@ export function scalePlayed(
   notes: readonly PlayedNote[],
   choices: readonly string[],
 ): string | null {
-  const heard = notes
-    .map((note) => note.frequencyHz)
-    .filter((hz): hz is number => hz !== null && hz > 0);
+  const heard = steadyNotes(notes).map((note) => note.frequencyHz as number);
   if (heard.length < 2) return null;
 
   /*
@@ -132,6 +131,24 @@ export function scalePlayed(
     `scaleVoices` sounds exactly one — and a run that stops short has not
     said which scale it is: the first four notes of Dorian and of Aeolian
     are the same four notes.
+
+    **Ruled by the user, and the two halves are deliberate rather than a
+    consequence of how this is written:** *"if the whole octave is played
+    correctly and then there's something else it should be accepted,
+    otherwise a bad note during the scale degrees should be refused"*. So a
+    learner who lands the octave and then fumbles a lower note has answered
+    — the run ended at the octave and nothing after it is read — while one
+    who fumbles inside the run has not, because the run ends at the fumble
+    and never reaches twelve.
+
+    **The interval exercise cannot adopt the same rule, which is worth
+    stating here because the two look inconsistent and are not.** This works
+    because *complete* means something a learner cannot reach by accident:
+    a monotonic run landing exactly on the octave whose pattern is a scale
+    in the catalogue. Any two notes are a complete interval, so completeness
+    carries no information there — a hesitation's first two attacks are a
+    perfectly complete unison, which is precisely the wrong answer that
+    sent `intervalPlayed` to refusing in the first place.
   */
   if (offsets[offsets.length - 1] !== 12) return null;
 

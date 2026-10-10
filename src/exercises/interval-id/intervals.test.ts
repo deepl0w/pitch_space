@@ -626,3 +626,48 @@ describe('the interval someone played', () => {
     expect(intervalPlayed([at(440), at(0, 1)])).toBeNull();
   });
 });
+
+/**
+ * The hint on a wrong answer, and the one direction it must not offer.
+ *
+ * `INTERVAL_MNEMONICS` is ascending throughout. A mnemonic works by handing
+ * the ear a contour it already knows, so one offered for the opposite
+ * contour points at the thing being learned and points the wrong way —
+ * which is worse than no hint, not merely less useful.
+ */
+describe('the tune a wrong answer suggests', () => {
+  const wrongAnswerTo = (direction: IntervalDirection, semitones: number): string => {
+    const settings = intervalSettingsSchema.coerce({
+      presentation: 'listen', semitones: [semitones], directions: [direction],
+    });
+    for (let seed = 1; seed < 500; seed += 1) {
+      const exercise = generateInterval({ seed, settings });
+      if (exercise.direction !== direction || exercise.semitones !== semitones) continue;
+      return gradeInterval(exercise, { semitones: semitones === 1 ? 2 : 1 }).feedback;
+    }
+    throw new Error(`no seed produced ${semitones} semitones ${direction}`);
+  };
+
+  it('offers one when the interval rose', () => {
+    expect(wrongAnswerTo('up', 9), 'no tune offered for an ascending 6th')
+      .toMatch(/Think My Bonnie/);
+  });
+
+  it('offers none when the interval fell', () => {
+    // The defect: a learner who missed a descending major 6th was told to
+    // think of a tune that ascends.
+    expect(wrongAnswerTo('down', 9), 'an ascending tune offered for a descending interval')
+      .not.toMatch(/Think/);
+  });
+
+  it('still names the interval and the pitches when it offers no tune', () => {
+    // So the fix removes a wrong hint rather than the whole explanation.
+    const feedback = wrongAnswerTo('down', 9);
+    expect(feedback).toMatch(/Major 6th/);
+    expect(feedback).toMatch(/to/);
+  });
+
+  it('keeps it for a harmonic interval, which has no contour to contradict', () => {
+    expect(wrongAnswerTo('harmonic', 9)).toMatch(/Think My Bonnie/);
+  });
+});

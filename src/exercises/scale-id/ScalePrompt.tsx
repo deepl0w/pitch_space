@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { scaleType } from '../../theory/scale';
 import { pitchName } from '../../theory/pitch';
+import { useCountdown } from '../countdown';
+import { namePlayed, steadyNotes } from '../played';
 import type { PromptProps } from '../types';
 import {
   DIRECTION_LABELS, scalePlayed, scaleVoices,
@@ -39,6 +41,7 @@ export function ScalePrompt({
   const autoplayed = useRef(false);
   const [chosen, setChosen] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  const secondsLeft = useCountdown(listening, TAKE_SECONDS);
   const [aside, setAside] = useState<string | null>(null);
   const reading = exercise.presentation === 'read';
 
@@ -90,9 +93,14 @@ export function ScalePrompt({
       }
       const typeId = scalePlayed(take.notes, exercise.choices);
       if (typeId === null) {
+        const heard = steadyNotes(take.notes);
         setAside(
-          'I could not read a scale in that. Play it one note at a time, '
-          + 'up to the octave, without repeating a note.',
+          // Named for the same reason the interval prompt names them:
+          // nothing here can hear a real instrument, so what the app
+          // thought it heard is the only evidence anyone gets.
+          `${heard.length > 0 ? `I heard ${namePlayed(heard)}, and could` : 'I could'}`
+          + ' not read a scale in that. Play it one note at a time, up to the'
+          + ' octave, without repeating a note.',
         );
         return;
       }
@@ -129,11 +137,11 @@ export function ScalePrompt({
           onClick={() => { void playAnswer(); }}
           disabled={answered || listening}
         >
-          {listening ? 'Listening…' : 'Play your answer'}
+          {listening ? `Listening… ${secondsLeft}s` : 'Play your answer'}
         </button>
       </div>
 
-      {aside && <p className="secondary">{aside}</p>}
+      {aside && <p className="played-aside" role="status">{aside}</p>}
 
       <div className="choices" role="group" aria-label="Which scale was that?">
         {exercise.choices.map((id) => {

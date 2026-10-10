@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { SIMPLE_INTERVAL_NAMES } from '../../theory/interval';
-import type { PromptProps } from '../types';
+import { useCountdown } from '../countdown';
+import { namePlayed } from '../played';
+import type { PlayedNote, PromptProps } from '../types';
 import {
   intervalPlayed, intervalVoices, readableNotes,
   type IntervalExercise, type IntervalResponse, type IntervalSettings,
@@ -23,6 +25,7 @@ export function IntervalPrompt({
 }: PromptProps<IntervalSettings, IntervalExercise, IntervalResponse>) {
   const [chosen, setChosen] = useState<number | null>(null);
   const [listening, setListening] = useState(false);
+  const secondsLeft = useCountdown(listening, TAKE_SECONDS);
   const [aside, setAside] = useState<string | null>(null);
   const firstHeardAt = useRef<number | null>(null);
   const autoplayed = useRef(false);
@@ -85,7 +88,7 @@ export function IntervalPrompt({
       }
       const semitones = intervalPlayed(take.notes);
       if (semitones === null) {
-        setAside(unreadable(readableNotes(take.notes).length));
+        setAside(unreadable(readableNotes(take.notes)));
         return;
       }
       setAside(`Heard ${nameOf(semitones)}.`);
@@ -109,12 +112,12 @@ export function IntervalPrompt({
           onClick={() => { void playAnswer(); }}
           disabled={answered || listening}
         >
-          {listening ? 'Listening…' : 'Play your answer'}
+          {listening ? `Listening… ${secondsLeft}s` : 'Play your answer'}
         </button>
         <span className="secondary">{PRESENTATION[exercise.direction]}</span>
       </div>
 
-      {aside && <p className="secondary">{aside}</p>}
+      {aside && <p className="played-aside" role="status">{aside}</p>}
 
       <div className="choices" role="group" aria-label="Which interval was that?">
         {exercise.choices.map((semitones) => (
@@ -168,6 +171,10 @@ const REFUSALS: Record<'refused' | 'unavailable', string> = {
 /**
  * Why a take could not be read, which is not one message.
  *
+ * **Naming them is also the only instrument anyone has.** Nothing here can
+ * hear a real instrument, so a learner reporting that their two notes read
+ * as four is a bug report; the app saying *which* four is a diagnosis.
+ *
  * **Saying "I did not hear two notes" to someone who played three is the
  * app telling them the wrong thing about their own playing.** That was the
  * finding: re-striking a note before committing to it is an ordinary thing
@@ -179,10 +186,10 @@ const REFUSALS: Record<'refused' | 'unavailable', string> = {
  * Neither message is scored, and both leave the buttons live. What they
  * differ in is what to do next, which is the only reason to have two.
  */
-function unreadable(heard: number): string {
-  if (heard > 2) {
-    return `I heard ${heard} notes, not two, so I cannot tell which two were `
-      + 'the answer. Play just the two, or answer with the buttons.';
+function unreadable(heard: readonly PlayedNote[]): string {
+  if (heard.length > 2) {
+    return `I heard ${heard.length} notes — ${namePlayed(heard)} — so I cannot tell `
+      + 'which two were the answer. Play just the two, or answer with the buttons.';
   }
   return 'I did not hear two notes. Play them one after the other, '
     + 'and leave the second ringing.';

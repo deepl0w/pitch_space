@@ -76,7 +76,50 @@ with a test behind it stayed true on its own.
 
 **The user role does not read this file.** See `CLAUDE.md`.
 
-## Nothing is in flight
+## Contents
+
+- [`main` — a third presentation, "Play"](#main--a-third-presentation-play)
+
+### `main` — a third presentation, "Play"
+
+**Branch:** `main`, not started. **Asked for by the user**, in these terms:
+a *Play* mode beside Listening and Reading, configurable as **continuous
+listening** or **press to play**, where continuous registers a note and
+takes the next one as the pair, and rejects when too many arrive —
+*"i guess it's fine to tell the user to play again if more notes are
+played"*.
+
+**Settled, because it is the user's own specification:** that it is a mode
+rather than a control inside the other two; that both capture styles
+exist and are a setting; that rejecting an over-long take and asking for
+a replay is acceptable.
+
+**Not settled, and the reason nothing has been built:** the user reports
+that **a real instrument or voice produces more than two notes every
+time**. Every reading on this seam turns on how many notes arrived, so
+until that is understood the mode would be a more convenient way to reach
+a refusal. `8ad3f03` makes the app name what it heard, which is the only
+instrument available — nothing in this repository can hear an instrument.
+Waiting on the user's report of what the extra notes are.
+
+**What it implies for everyone, and this is the part to react to.**
+`Presentation` is `'read' | 'listen'` in `exercises/types.ts`, and
+`lineKey` is `exercise + presentation + items` — so **a third
+presentation splits every line**. A learner's history under Listening
+does not carry to Play, by the same rule that keeps reading and hearing
+apart. That is probably right, since answering by playing is a different
+skill from naming what you hear, and it is a consequence rather than a
+decision anyone has taken yet; architect's to confirm or overturn before
+the value is added, because it is cheap now and a migration later.
+
+**For tester:** `items(settings)` and the settings schema both gain a
+value, so anything asserting the shape of a presentation list or the
+count of lines a settings combination produces will move. The refusal
+paths are the behaviour worth writing toward — `played.ts` is where the
+notes an exercise grades are decided, and continuous capture has no press
+to mark where an answer began.
+
+## Nothing else is in flight
 
 No entry stands, which is the rule above doing its job rather than the file
 being neglected. Every open question the last two entries carried is held

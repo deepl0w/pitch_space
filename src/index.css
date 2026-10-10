@@ -810,6 +810,34 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
 }
 
 /*
+ * What the microphone made of a take, when it could not make an answer of it.
+ *
+ * **Louder than `.warning` on purpose, and that is a reversal.** It began as
+ * `.secondary` — the same muted grey as the "ascending" label beside it — and
+ * a learner who had just played their answer reported not seeing it at all.
+ * It is the only thing on screen at that moment that says why nothing
+ * happened, and a message explaining an absence has to compete with the
+ * absence: there is no wrong answer marked, no tally moving, nothing else
+ * changing to draw the eye.
+ *
+ * Full ink rather than muted, a tinted ground rather than a rule, and the
+ * width of the column rather than a line of small print. Not the error
+ * colour: nothing has gone wrong and the learner has not made a mistake —
+ * the app could not read what they played, which is the app's limit to
+ * report, not theirs to fix.
+ */
+.played-aside {
+  font-size: 0.9rem;
+  color: var(--ink);
+  margin: 0.8rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 0.45rem;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  background: color-mix(in oklab, var(--accent) 10%, var(--bg));
+  text-align: start;
+}
+
+/*
  * Deliberately quieter than .warning, and not accented. It says something is
  * not on screen, not that anything is wrong — and a row from a newer release
  * that looks like an alarm invites the user to clear a history that is

@@ -87,7 +87,22 @@ export const SIMPLE_INTERVAL_NAMES: Record<number, string> = {
   9: 'Major 6th', 10: 'Minor 7th', 11: 'Major 7th', 12: 'Octave',
 };
 
-/** A reference tune for each interval, which is how most people learn them. */
+/**
+ * A reference tune for each interval, which is how most people learn them.
+ *
+ * **Every one of these rises, and that is a property of the table rather
+ * than an accident of which tunes were chosen.** A mnemonic works by giving
+ * the ear a contour it already knows, so one offered for the opposite
+ * contour does not merely fail to help — it points the wrong way, at the
+ * thing the learner is being asked to hear. A descending major 6th answered
+ * with *"Think My Bonnie"* is worse than no hint.
+ *
+ * So callers must not use these for a descending interval. `gradeInterval`
+ * does not. Descending tunes exist and are a real body of content —
+ * *Swing Low* for a descending major 3rd, *The Way You Look Tonight* for a
+ * fifth — and belong in a second table somebody writes deliberately rather
+ * than in a guess appended here.
+ */
 export const INTERVAL_MNEMONICS: Record<number, string> = {
   1: 'Jaws',
   2: 'Happy Birthday',

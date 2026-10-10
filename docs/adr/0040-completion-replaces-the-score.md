@@ -192,3 +192,47 @@ that strains the rule rather than following it.
 None of that argues against the suggestion. It says the suggestion needs a
 second visual channel and a separation from the verdict, and that the rule it
 strains should stop being a comment.
+
+## Correction, 11 October 2026 — "a high cap" bounds the reading, not the interval
+
+The addendum of 7 October read the user's "high cap" as a cap on the review
+interval and said so: *"An item answered correctly for long enough earns a long
+interval, not an exit — which the schedule already has as `MAX_INTERVAL_MS`."*
+The correction beneath it flagged that the phrase had two readings and that
+this record had picked one without saying it was picking.
+
+**It picked the wrong one.** Asked directly which of the two it bounded, the
+user answered: *"high cap is colour ceiling"*.
+
+So the cap is on **the reading itself** — a ceiling the state approaches and
+never reaches. `MAX_INTERVAL_MS` is a separate mechanism, untouched by this and
+still the top of the `INTERVALS_MS` ladder; it simply is not what the user was
+describing.
+
+**This is what makes "there is no done" coherent rather than merely stated.** A
+hue that can arrive at full green is an end by another name: a learner would
+reach it, see nothing further to gain, and have been given the completion this
+record exists to refuse. A ceiling short of the top is how a state says *as
+well known as this gets* without saying *finished*.
+
+**It also strengthens the colour, without settling it.** The question put was
+which of two things the cap bounded; the answer names a colour ceiling, which
+presupposes the colour rather than ruling on it. That is better evidence than
+the original "maybe" and it is still not a decision, and this record has
+already been corrected once for treating the user's hedge as more than it was.
+
+## How this was nearly lost, which is worth as much as the ruling
+
+The user gave this on 7 October to a session that had already ended. Main wrote
+it into `docs/IN-FLIGHT.md` rather than holding it, naming the architect to
+fold it in — the right move, and the protocol working exactly as intended.
+
+**It then sat for four days while the architect reported the question as still
+open to the user.** The entry was titled for the architect, synced into the
+architect's worktree every session, and read past: an audit of that same file
+three sessions later checked four other entries and not this one. A message
+would have been delivered to a session that no longer existed; the repository
+held it and the only thing missing was somebody reading their own name.
+
+That is the standing argument for writing a ruling down rather than carrying
+it, and the standing argument against assuming a synced file has been read.

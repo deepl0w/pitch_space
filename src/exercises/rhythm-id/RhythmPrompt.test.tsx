@@ -106,8 +106,25 @@ function render(
 
 const buttons = () => [...container.querySelectorAll('button')] as HTMLButtonElement[];
 const labelled = (text: string) => buttons().find((b) => b.textContent?.trim() === text);
-const hear = () => buttons()[0];
-const answer = () => buttons()[1];
+/*
+  Found by its words rather than its position.
+
+  These were `buttons()[0]` and `buttons()[1]`, which is the whole list of
+  buttons on the screen and not a control's identity: inserting any button
+  ahead of them makes every case here press the wrong thing. Demonstrated
+  rather than assumed — a decoy control added before "Hear it" turned five
+  cases red, and the ones it did not turn red were pressing something they
+  were not about.
+
+  Both labels per control, because each changes while it is busy and a
+  single one would match nothing the moment the phase moves. A list of two
+  is a coupling to copy; `buttons()[0]` is a coupling to layout, and only
+  one of those fails loudly when it is wrong.
+*/
+const oneOf = (...labels: string[]) =>
+  buttons().find((b) => labels.includes(b.textContent?.trim() ?? ''));
+const hear = () => oneOf('Hear it', 'Playing…')!;
+const answer = () => oneOf('Tap it back', 'Listening for taps…')!;
 const pad = () => container.querySelector('.tap-pad') as HTMLButtonElement | null;
 const counter = () => [...container.querySelectorAll('.secondary')]
   .map((e) => e.textContent ?? '').find((t) => t.includes('so far'));

@@ -499,6 +499,53 @@ describe('the interval someone played', () => {
   it('is the distance between the first two notes with a pitch in them', () => {
     // A4 to C#5 is four semitones however the two are spelled.
     expect(intervalPlayed([at(440), at(554.365, 1)])).toBe(4);
+    // *First two*, which this case claimed in its name and never showed: a
+    // third note is not read, so an arpeggio answers with the interval it
+    // opened on rather than refusing.
+    expect(intervalPlayed([at(440), at(554.365, 1), at(659.255, 2)])).toBe(4);
+  });
+
+  /**
+   * A note struck twice is read as a unison, and the question is graded.
+   *
+   * **The behaviour that exists, pinned as a question rather than as a
+   * decision.** A learner who plays the first note, hesitates, plays it
+   * again and then plays the second has produced three attacks; this reads
+   * the first two and answers *unison*. That is a confident wrong answer to
+   * a question they were in the middle of answering correctly, and it costs
+   * the streak.
+   *
+   * It sits at the boundary ADR 0047 was corrected about, approached from
+   * the other side. That correction says the rule is *enough to grade*
+   * rather than *heard*, because fewer than two readable notes cannot be
+   * told from a learner who played nothing. Too many attacks is the mirror
+   * image: three notes do not say which two were the answer, and the code
+   * picks a reading silently.
+   *
+   * Not resolved here. Ignoring repeats, refusing to grade, and taking the
+   * first and last are all defensible and all change what a learner is told,
+   * which makes it the same kind of product question as what a line reads
+   * after a year away. What this case buys is that answering it fails
+   * loudly instead of landing green.
+   */
+  it('reads a re-struck note as a unison rather than declining to grade', () => {
+    expect(intervalPlayed([at(440), at(440, 1), at(554.365, 2)])).toBe(0);
+  });
+
+  /**
+   * And the order read is the array's, not the clock's.
+   *
+   * `analyse` assembles notes in time order, so the two agree today and no
+   * caller is wrong. Written because the function takes a list and reads
+   * positions out of it: if a caller ever hands it notes gathered some other
+   * way, this is the assumption that breaks, and it breaks into a wrong
+   * answer rather than a refusal.
+   */
+  it('reads the list in the order it was given', () => {
+    const descending = [at(554.365, 1), at(440, 0)];
+    expect(intervalPlayed(descending)).toBe(4);
+    expect(descending.map((n) => n.startSeconds), 'the fixture is in time order')
+      .not.toEqual([...descending.map((n) => n.startSeconds)].sort((a, b) => a - b));
   });
 
   it('is a distance, so playing it downwards answers the same interval', () => {

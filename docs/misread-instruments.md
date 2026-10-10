@@ -119,7 +119,9 @@ behaviour afterwards: measured in the page, read from the shipped IDL, and
 argued from the spec, three establishments none of which needs the others.
 
 So the practical rule is not *distrust yourself*. It is **take observations of
-different kinds, and prefer three cheap ones over one authoritative one**,
+different kinds, and prefer three cheap ones over one authoritative one** —
+with the emphasis on *kinds*, for a reason the next paragraph had to be added
+to supply,
 which is also the only version of this advice that can be followed by somebody
 who does not yet know what they are about to get wrong.
 
@@ -155,6 +157,27 @@ run — its `fixtures/` is git-ignored and empty — and the check was moved
 outside both gates. **Neither message was wrong and neither gap was findable by
 reading the other.** It cost one `cp` and two test runs each way: the cheap
 thing was running, not reviewing.
+
+**The count is the trap, and this document's own wording set it.** "Three
+cheap ones" reads as a number, and a number is satisfiable by repetition.
+Trying to address the fleet's main session, two sessions independently sent
+to `main`, then `main [ref]`, then `main [another ref]` — three failures,
+refused identically — and both concluded the channel was impossible. **Three
+attempts of one kind read as thoroughness and were one experiment repeated.**
+The working route was the socket address from the `from=` attribute of main's
+own messages, which the tool's documentation names first, and which neither
+session tried because each had already satisfied its sense of having checked.
+
+So: **when several attempts of one kind fail, the next observation must be of
+a different kind, and the cheapest different kind is almost always to read the
+thing's own description** rather than to try a fourth variation of the thing
+that failed. Both sessions had that documentation available throughout.
+
+It is worth recording that this document's author made the error and then
+wrote the general form of it about somebody else — telling a third session
+that *three sessions confirming through the same tool is reproducibility, not
+corroboration*, while their own three attempts had the identical shape one
+level down. The rule was applied to the fleet and not to the hand holding it.
 
 **The caveat is what makes it fail quietly.** It works only while the second
 observer really is holding a different instrument. Two sessions reading the
@@ -362,6 +385,20 @@ helps, because nothing is wrong with it.
   only that distance was silent. Reading one curve against its own decay level
   catches what comparing two curves cannot. The defect was in the null space of
   the comparison.
+
+  **The shipped instance of this is better than the test one.** Four of the
+  six instrument packs went out an octave sharp, because a file called `C4`
+  means middle C under one octave convention and not under the other, and a
+  filename carries no indication of which. Every note moved together, so each
+  pack stayed internally consistent, the resampling arithmetic stayed right,
+  and nothing downstream had anything to compare against. **A translation is
+  invisible to every relative check by construction** — and this one shows a
+  second property the envelope pair did not: it arrives with a ready
+  misattribution. An instrument sounding an octave high reads as a bright or
+  odd recording, not as a wrong manifest, so the one perceptual symptom has a
+  plausible innocent explanation waiting for it. The fix is the only kind
+  available: measure the recording's own pitch and refuse a set that disagrees
+  with its labels, which is an absolute reading rather than a relative one.
 - **A medium that cannot represent the defect.** `askable: undefined` survives
   a JSON round trip by vanishing — `JSON.stringify` drops the key — and is real
   under `structuredClone`, which is what IndexedDB actually stores. A test
@@ -386,6 +423,34 @@ helps, because nothing is wrong with it.
   three are code that rounded, and each is individually plausible — an
   implementation that is *nearly* the sentence is what a reasonable
   implementation of a prose sentence looks like.
+
+- **A double whose incompleteness is invisible at the call site.**
+  `src/testing/audioContext.ts` implemented only the surface `Synth` used. When
+  sampled playback arrived it needed `createBufferSource`, which the fake did
+  not answer, so **the sampled branch could not run at all** — and
+  `withinReach` passing its own unit tests read as coverage of a path nothing
+  had executed.
+
+  **The property that makes this worse than a wrong fixture is the one worth
+  carrying: a wrong fixture *value* shows up as a wrong assertion; a missing
+  fixture *capability* shows up as a path never taken.** There is nothing in
+  the test file to read. You cannot grep for a method that is not called. A
+  wrong literal at least sits in the source where somebody can doubt it.
+
+  The remedy is derived rather than listed. `audioContext.test.ts` now
+  compares the fake against every `context.<method>(` the shipped code calls,
+  read out of the source, so a method added tomorrow is compared tomorrow —
+  and it immediately found a live one: `createMediaStreamSource` is absent, so
+  the microphone path is as untestable today as the sampled path was.
+  Recorded as **a named exception with its reason rather than a stub**,
+  because adding a method nothing exercises would declare the gap closed while
+  leaving it open, with a further case that fails if the excuse goes stale.
+  The guard also asserts its own population, its author having applied the
+  eighth convention to the thing they had just written.
+
+  Not in this family, though it was offered alongside: a sweep whose case came
+  up or did not because a draw decided. There is no double in that one — it is
+  the coin, and the closing section below already has it.
 
 The third is the one with a standing rule attached, and `instruments.ts` names
 the gap itself:

@@ -404,6 +404,49 @@ describe('how far a line has advanced', () => {
     expect(completion(l, tallies(l, { a: 999, b: 999 }))).toBe(1);
   });
 
+  /**
+   * The reading does not move with the clock, and 1 is permanent.
+   *
+   * Stated here because nothing else in the suite says it and the record
+   * that governs it says the opposite. `completion` takes no `now`:
+   * `streak` falls on a wrong answer and never with elapsed time, so a line
+   * whose items all sit on the top rung reads 1 for ever, including for a
+   * learner who stopped a year ago.
+   *
+   * [ADR 0040](../../docs/adr/0040-completion-replaces-the-score.md) says
+   * **there is no done**, and its addendum argues a line's reading should
+   * "drift back towards red while nobody practises, because that is true".
+   * Nothing drifts. The two halves of that record are unreconciled in the
+   * code: the Decision is implemented, the addendum that followed it is
+   * not, and this function predates the ruling.
+   *
+   * **This case pins the behaviour that exists, not the one that should.**
+   * What a learner is shown after doing everything right and then stopping
+   * is a product question and is open — so the honest thing is a test that
+   * fails loudly when somebody answers it, pointing at the record, rather
+   * than silence that lets the answer land with nobody rechecking 0040.
+   * `dueAt` and `overdueRatio` are where elapsed time already lives if it
+   * ever arrives here.
+   */
+  it('reads the same however long ago the line was practised', () => {
+    const l = line(['a', 'b']);
+    const top = INTERVALS_MS.length - 1;
+    const stale = (streak: number, lastSeenAt: number) => new Map(
+      ['a', 'b'].map((item) => [
+        tallyKey(l, item as never),
+        { seen: streak, correct: streak, streak, lastSeenAt } as never as ItemTally,
+      ] as const),
+    );
+
+    const YEAR = 365 * 24 * 60 * 60 * 1000;
+    expect(completion(l, stale(top, Date.now())), 'practised just now').toBe(1);
+    expect(completion(l, stale(top, Date.now() - YEAR)), 'practised a year ago').toBe(1);
+    // And the same at a partial streak, so this is about the clock rather
+    // than about the ceiling.
+    expect(completion(l, stale(1, Date.now())))
+      .toBe(completion(l, stale(1, Date.now() - YEAR)));
+  });
+
   it('divides by what the line can ask, not by what has been practised', () => {
     /*
       The defect this forbids: a learner who has practised one interval of

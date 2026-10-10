@@ -319,9 +319,26 @@ shape, the subset property, that the seam reports *whether it heard* as
 well as what
 ([0047](adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)),
 that **interval identification went first**, and that a screen explains a
-refusal as an aside beside the choices which stay live. **Not settled:**
-which exercise is next, and whether a take that was heard but held nothing
-readable should ever be graded — it is not, today. Neither blocks anyone.
+refusal as an aside beside the choices which stay live. **Settled since, by
+[0047's correction](adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md):**
+the test is *enough to grade* rather than *heard*, so a take holding fewer
+than two readable notes leaves the question open — the record was wrong
+and the implementation was right. A consequence worth planning around
+rather than rediscovering: **silence cannot be marked wrong through
+capture at all**, because a silent room and an unreadable one are the same
+signal. If "you did not play" should ever count, it needs a deadline the
+learner can see, decided above the seam.
+
+**Still open, and the one piece waiting on a decision rather than on
+work:** `intervalPlayed` reads the first two readable notes and discards
+the rest, so a learner who strikes a note twice before playing the second
+is graded a *unison*. That is the correction above inverted — *enough to
+grade* wants *unambiguous enough to grade* — and unlike the silence case
+the information is present and thrown away, so there is a real choice
+here. Ignoring repeats, refusing to grade, and taking the first and last
+each tell the learner something different. Pinned by a test, not resolved;
+whoever settles it is deciding what a learner is told, not fixing a bug.
+Also open: which exercise is next.
 
 **What landed.** `listenFor` in `audio/capture/listen.ts` (a take bounded
 by seconds, which `listen` cannot give because `start` resolves on

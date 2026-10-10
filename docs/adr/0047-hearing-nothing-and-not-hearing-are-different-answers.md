@@ -91,3 +91,92 @@ than a side effect.
 adding one later is additive — a richer failure value where a bare one stood.
 The thing that would be expensive to add later, and is therefore settled now,
 is the distinction itself.
+
+## Correction, 11 October 2026 — the bit this record asked for is necessary and not sufficient
+
+The implementation and this record disagree, and **the implementation is
+right.**
+
+A take that was heard but held fewer than two readable notes leaves the
+question open rather than grading it. This record implies otherwise: it asks
+the seam for "one bit the exercise layer cannot otherwise obtain — whether the
+silence is an answer", and treats everything on the *heard* side of that bit as
+an answer.
+
+**There are three states, not two, and the third is indistinguishable from the
+one this record wanted graded.** Fewer than two readable notes is produced both
+by a learner who played nothing and by a learner whose playing could not be
+read — too quiet, too noisy, notes overlapping, a detector that declined. The
+first is an answer and the second is a failed measurement, and **no bit the
+seam could carry would separate them, because the microphone genuinely cannot
+tell.**
+
+So `heard: true` is necessary before an outcome may be recorded and it is not
+sufficient. The rule this record should have stated is about **evidence rather
+than hearing**: an outcome may be written only when the take yields enough to
+grade. Leaving the question open otherwise is what the implementation does and
+it is correct.
+
+**The consequence is worth naming rather than discovering.** Silence cannot be
+marked wrong through capture — not as a policy choice but because the signal
+does not exist. If "you did not play" should ever count as an attempt, it needs
+a different source: a deadline the learner can see, decided above the seam. It
+cannot be recovered from the audio.
+
+**This is the tenth convention arriving on the record that was written to apply
+it**, which is worth more than the fix. That convention is about a *type* that
+cannot state a distinction; here the type is fine — `Heard` carries its bit
+honestly — and the **world** cannot supply the distinction the record assumed.
+I checked that the seam could say whether it heard, and never asked whether
+hearing was the thing that mattered. The remedy is the same one: ask what two
+different situations would look like. A silent room and an unreadable one look
+identical, and no amount of interface design changes that.
+
+## Addendum, 11 October 2026 — the other end of the same rule, and why `AudioIn` is required
+
+### Too many notes is the same fault inverted
+
+`intervalPlayed` filters to readable notes and destructures the first two,
+discarding the rest. So a learner who plays the first note, hesitates, strikes
+it again, then plays the second has produced three attacks and is **graded a
+unison** — a confident wrong answer to a question they were halfway through
+answering correctly, and it costs the streak.
+
+The correction above says the test is *enough to grade* rather than *heard*.
+**It needs its complement: unambiguous enough to grade.** Three attacks are
+more than enough notes and do not say which two were the answer.
+
+**The difference from the silence case matters, and it is the harder half.**
+There, no bit could separate a silent room from an unreadable one — the
+microphone genuinely cannot tell, so declining is the only honest move. Here
+the information is present: the count is right there and the code discards it.
+**That is a choice made silently rather than a limit of the world**, which
+means whoever settles it has a real option and not a forced hand.
+
+At least three resolutions are defensible — ignore repeated attacks on the
+same pitch, refuse to grade an ambiguous take, take the first and the last —
+and they differ in what a learner is told, which makes it a product question
+rather than an implementation one. **Unresolved here deliberately**, and
+pinned in the suite with the question named, so answering it turns cases red
+rather than landing green.
+
+### `AudioIn` is required on every prompt, and the obvious precedent is the wrong one
+
+Seven prompts take it; one uses it. Recorded because the question has been
+asked three times and its answer has only ever existed in messages.
+
+**It is not [0029](0029-a-prompt-is-a-component-and-may-use-one.md).** That
+record is about import direction — an exercise's non-component code must not
+import `ui/` — and says nothing about whether a prop is optional. Reaching for
+it here is an over-extension, and the real argument is better.
+
+**Optionality would manufacture a branch in seven prompts that no user can
+reach.** The screen always supplies the adapter, so every `if (!audioIn)` is
+dead, untestable except by constructing a state the app cannot produce, and
+permanently green. That is the index's eighth convention — a guard whose
+population cannot contain a case — bought voluntarily and seven times over.
+
+And the positive form: **which exercises can be answered by playing is a fact
+about the exercise, not about the plumbing.** A prompt that ignores `audioIn`
+is saying something about itself; it should not also have to ask whether
+listening was available at all.

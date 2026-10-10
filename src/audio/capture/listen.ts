@@ -183,13 +183,25 @@ export async function listenFor(
   source: CaptureSource, seconds: number, options: ListenForOptions = {},
 ): Promise<ListenResult> {
   const chunks: Float32Array[] = [];
-  // Copied for the reason `listen` copies: the source reuses the buffer.
-  await source.start((frame: CaptureFrame) => { chunks.push(new Float32Array(frame.samples)); });
   try {
+    // Copied for the reason `listen` copies: the source reuses the buffer.
+    await source.start((frame: CaptureFrame) => {
+      chunks.push(new Float32Array(frame.samples));
+    });
     await (options.wait ?? sleep)(seconds);
   } finally {
-    // In a `finally` because a source left running holds the microphone
-    // open, and the recording indicator stays on, whatever went wrong.
+    /*
+      In a `finally` because a source left running holds the microphone
+      open, and the recording indicator stays on, whatever went wrong.
+
+      **Starting is inside it, which it was not.** `start` resolves once the
+      worklet is wired, and everything before that — the permission prompt,
+      opening the context, loading the module — can fail *after* the stream
+      has been granted. With the call outside, that path skipped the release
+      entirely and left the light on with nothing listening. `stop` is
+      null-safe at every step, so it frees whatever was acquired and does
+      nothing where nothing was.
+    */
     source.stop();
   }
   return analyse(concat(chunks), source.sampleRate, options);

@@ -192,3 +192,91 @@ that strains the rule rather than following it.
 None of that argues against the suggestion. It says the suggestion needs a
 second visual channel and a separation from the verdict, and that the rule it
 strains should stop being a comment.
+
+## Correction, 11 October 2026 — "a high cap" bounds the reading, not the interval
+
+The addendum of 7 October read the user's "high cap" as a cap on the review
+interval and said so: *"An item answered correctly for long enough earns a long
+interval, not an exit — which the schedule already has as `MAX_INTERVAL_MS`."*
+The correction beneath it flagged that the phrase had two readings and that
+this record had picked one without saying it was picking.
+
+**It picked the wrong one.** Asked directly which of the two it bounded, the
+user answered: *"high cap is colour ceiling"*.
+
+So the cap is on **the reading itself** — a ceiling the state approaches and
+never reaches. `MAX_INTERVAL_MS` is a separate mechanism, untouched by this and
+still the top of the `INTERVALS_MS` ladder; it simply is not what the user was
+describing.
+
+**This is what makes "there is no done" coherent rather than merely stated.** A
+hue that can arrive at full green is an end by another name: a learner would
+reach it, see nothing further to gain, and have been given the completion this
+record exists to refuse. A ceiling short of the top is how a state says *as
+well known as this gets* without saying *finished*.
+
+**It also strengthens the colour, without settling it.** The question put was
+which of two things the cap bounded; the answer names a colour ceiling, which
+presupposes the colour rather than ruling on it. That is better evidence than
+the original "maybe" and it is still not a decision, and this record has
+already been corrected once for treating the user's hedge as more than it was.
+
+## How this was nearly lost, which is worth as much as the ruling
+
+The user gave this on 7 October to a session that had already ended. Main wrote
+it into `docs/IN-FLIGHT.md` rather than holding it, naming the architect to
+fold it in — the right move, and the protocol working exactly as intended.
+
+**It then sat for four days while the architect reported the question as still
+open to the user.** The entry was titled for the architect, synced into the
+architect's worktree every session, and read past: an audit of that same file
+three sessions later checked four other entries and not this one. A message
+would have been delivered to a session that no longer existed; the repository
+held it and the only thing missing was somebody reading their own name.
+
+That is the standing argument for writing a ruling down rather than carrying
+it, and the standing argument against assuming a synced file has been read.
+
+## Clarification, 11 October 2026 — which reading the ceiling is about, and one the record has not reconciled
+
+The correction above says the cap is "on the reading itself". **There are now
+two readings and it does not say which**, which is the fault it was written to
+correct, committed again one paragraph later.
+
+**The ruling is about the colour, which does not exist yet.** The user's words
+name one — *"high cap is colour ceiling"* — and a colour is not a quantity this
+app currently computes. So nothing in `completion` is contradicted by it and no
+test pinning `completion` is wrong.
+
+**`completion` is a different thing and should be described as one**: the
+fraction of the ladder its items have climbed. It reaches exactly 1 when every
+item sits at the top rung, deliberately, and `schedule.test.ts` pins that. A
+fraction that tops out is the right shape for *how far up the ladder this line
+is*; it is not the shape the user described for a colour.
+
+## The gap this exposes, which is not the tester's and not the colour's
+
+**`completion` reaches 1 and stays there, and nothing in it decays.** It takes
+no clock. `streak` increments on a correct answer and resets only on a wrong
+one, never with elapsed time. So a line whose items all reach the top rung
+reads 1 permanently, and a learner who stops for a year still reads 1.
+
+**That is a completion state, and the addendum of 7 October says there is
+none.** The two halves of this record have not been reconciled in code: the
+Decision — a grade read from how far items have advanced — is implemented
+faithfully, and the addendum that followed it is not. `completion` predates the
+ruling and nobody has gone back.
+
+It is also the second time this record's own reasoning has gone unimplemented.
+The addendum argues that a line's reading should "drift back towards red while
+nobody practises, because that is true". Nothing drifts. That property belongs
+to retrievability, which the research note identifies and which this app does
+not compute.
+
+**This record does not resolve it, deliberately.** What a learner is shown when
+they have done everything right and then stopped is a product question, and the
+one open question that remains here — whether the colour is a decision or still
+a maybe — is the same question wearing different clothes. Changing `completion`
+on an architect's reading of an addendum would be inventing the answer. What is
+owed now is only that the record stops describing behaviour the code does not
+have.

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  COMPASS, LICENCES, PACK_MAGIC, type PackManifest,
-  checkManifest, licenceAllowed, nearestRecorded, parsePack, playbackRate, uncovered,
+  COMPASS, FURTHEST_SHIFT, LICENCES, PACK_MAGIC, type PackManifest,
+  checkManifest, licenceAllowed, nearestRecorded, parsePack, playbackRate,
+  uncovered, withinReach,
 } from './pack';
 
 /**
@@ -222,5 +223,44 @@ describe('the licence allowlist', () => {
     // of the list is that nobody has to form a view.
     for (const spdx of LICENCES) expect(spdx).toMatch(/^[\w.-]+$/);
     expect(licenceAllowed('Public domain')).toBe(false);
+  });
+});
+
+/**
+ * How far a recording may be dragged before it stops being the instrument.
+ *
+ * The boundary itself, because this is a `<=` and the whole rule turns on
+ * which side the twelfth falls. Correcting the octave labelling left the
+ * flute's lowest recording at middle C while the app asks for notes twenty
+ * semitones below it, so the branch that chooses synthesis over a sample
+ * stretched an octave and a half is now reachable in ordinary use — and it
+ * is one comparison away from being either always or never taken.
+ *
+ * `FURTHEST_SHIFT` is a judgement about when a shifted sample stops passing,
+ * which is a listening question and not asserted here. What is asserted is
+ * that the comparison means what the constant says: an octave reaches, a
+ * semitone more does not, in both directions.
+ */
+describe('how far a pack will reach for a note', () => {
+  const notes = [60, 64, 67].map((midi) => ({ midi, offset: 0, bytes: 1 }));
+
+  it('reaches exactly as far as the constant says, and no further', () => {
+    expect(withinReach(notes, 60 - FURTHEST_SHIFT), 'an octave below the lowest').toBe(true);
+    expect(withinReach(notes, 60 - FURTHEST_SHIFT - 1), 'one semitone beyond it').toBe(false);
+    expect(withinReach(notes, 67 + FURTHEST_SHIFT), 'an octave above the highest').toBe(true);
+    expect(withinReach(notes, 67 + FURTHEST_SHIFT + 1), 'one semitone beyond it').toBe(false);
+  });
+
+  it('measures from the nearest recording, not from the ends of the table', () => {
+    // A hole in the middle is reached from whichever side is closer, which
+    // is the thing a table-ends reading would get wrong.
+    const gapped = [40, 80].map((midi) => ({ midi, offset: 0, bytes: 1 }));
+    expect(withinReach(gapped, 52), '12 above 40').toBe(true);
+    expect(withinReach(gapped, 68), '12 below 80').toBe(true);
+    expect(withinReach(gapped, 60), '20 from either').toBe(false);
+  });
+
+  it('refuses a pack with nothing in it rather than reaching infinitely', () => {
+    expect(() => withinReach([], 60)).toThrow(/no notes/);
   });
 });

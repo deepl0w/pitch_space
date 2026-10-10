@@ -645,55 +645,47 @@ before the catalogue is written, not after.
 - **A theme toggle**, which needs `Score` to watch the `data-theme` attribute
   as well as the media query (there is a `todo` pinning this in
   `Score.test.tsx`). It belongs on the settings screen above.
-- **Sampled instruments** as an optional download behind the `InstrumentPack`
-  seam, with the synthesised one staying the default. The candidates have
-  been researched and the licences read at source rather than inferred from
-  a page calling something free, which matters because this repository is
-  public and MIT.
+- **Sampled instruments — built, and this entry is kept for the part that is
+  still reference.** Six packs ship, all CC0, listed with their source and
+  licence in `src/audio/output/packs.json`;
+  [`docs/instrument-pack-format.md`](instrument-pack-format.md) specifies the
+  artefact and
+  [ADR 0046](adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md) how
+  one reaches the device. Those are the live facts and this entry does not
+  repeat them.
 
-  The recommendation is **FreePats Upright Piano KW (small)**, CC0 by a
-  dedication shipped inside the archive, 26 FLAC samples at 2.24 MiB that
-  transcode to roughly 400 KB of Opus — small enough to precache beside the
-  existing 1.3 MB shell rather than becoming a download. Its SFZ maps onto
-  Web Audio directly: `pitch_keycenter` becomes a `playbackRate`, the loop
-  points become `loopStart`/`loopEnd`, and the mapping is a build-time JSON
-  manifest and about forty lines rather than an SFZ parser. The same project's
-  Spanish Classical Guitar is CC0 too, one sample per semitone.
+  **The recommendation that stood here was not what shipped**, which is worth
+  leaving visible rather than quietly correcting: it named FreePats' upright
+  piano, and the piano came from VCSL. FreePats supplied the guitar, the one
+  instrument neither other library had.
 
-  The honest cost: one velocity layer and four to six semitones of stretch
-  per sample, so dynamics are gain-only and the hammer noise shifts pitch
-  with the note. The alternative that removes stretch entirely is
-  **FluidR3_GM**'s per-note packs — MIT in Frank Wen's own words, a sample on
-  every semitone, no mapping code at all, but 2 MB an instrument and it
-  sounds like the 2002 General MIDI soundfont it is. Settling that is an hour
-  of A/B listening, not an argument.
-
-  For a *choice* of instrument once one works, **MuseScore_General.sf3** is
-  MIT with its acknowledgements spelled out, 38 MB whole — the opt-in download
-  this entry already describes, or trimmed to a few presets at build time.
-
-  Excluded, with the reason, because each is easy to reach for: Philharmonia
-  forbids redistribution "as is", which is exactly shipping it as a pack;
-  WebAudioFont is GPL-3.0; MusyngKite and FatBoy are CC-BY-SA; FreePats' own
-  General MIDI set is GPL. Two are worse than excluded — GeneralUser GS says
-  in its own licence that its author "cannot be 100% sure where all of the
-  samples originated", and the Splendid Grand Piano's public-domain claim
-  rests on a secondhand assertion about Akai with no primary source. An
-  unverifiable licence is a finding, not a gap.
-
-  Two obligations if this is taken: a `THIRD-PARTY.md` carrying Frank Wen's
-  MIT notice and the MuseScore acknowledgements if either is used (CC0 needs
-  nothing), and an audio extension added to the workbox `globPatterns` in
+  **One line of it was actively dangerous and is removed.** It listed, as an
+  obligation, "an audio extension added to the workbox `globPatterns` in
   `vite.config.ts` — the line that turns a sampled instrument from a download
-  into something the offline app actually has.
+  into something the offline app actually has". **0046 forbids exactly that.**
+  A pack must never enter the precache; synthesis is the offline guarantee and
+  the packs are runtime-cached on first use, so that instruction would have
+  inverted the record while reading like a checklist item. The config comment
+  now says the omission of `.pack` is deliberate, and 0046 carries the hazard
+  because the plugin defaults the same wrong way.
 
-  The larger cost is not the loader. `src/testing/audioContext.ts` implements
-  only the surface `Synth` uses and would need `createBufferSource`,
-  `decodeAudioData` and the buffer properties before any of this is testable,
-  and a sampler adds a second cold path — samples still loading when `play()`
-  is called — on top of the cold-context wake that `play()`'s generation
-  ticket already guards. That ticket is the model for it, and it wants a test
-  before the code.
+  **What stays, because it is still reference for the next library**: the
+  exclusions, each with its reason. Philharmonia forbids redistribution "as
+  is", which is exactly shipping it as a pack; WebAudioFont is GPL-3.0;
+  MusyngKite and FatBoy are CC-BY-SA; FreePats' own General MIDI set is GPL.
+  Two are worse than excluded — GeneralUser GS says in its own licence that
+  its author "cannot be 100% sure where all of the samples originated", and
+  the Splendid Grand Piano's public-domain claim rests on a secondhand
+  assertion about Akai with no primary source. **An unverifiable licence is a
+  finding, not a gap.** MuseScore_General.sf3 remains the candidate if a wider
+  choice of instrument is ever wanted: MIT, acknowledgements spelled out,
+  38 MB whole or trimmed to a few presets at build time.
+
+  **And the cost this entry predicted was paid exactly as written.**
+  `src/testing/audioContext.ts` implemented only the surface `Synth` used, and
+  the sampled branch could not be tested at all until it gained
+  `createBufferSource` — found when a guard that looked like coverage turned
+  out to be pointed at a path that could not run.
 - **Real recordings as pitch-detector fixtures**, which is a different need
   from playback and wants a different source. `src/audio/testing/signals.ts`
   already names what it lacks — "there is no room, no body resonance and no

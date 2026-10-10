@@ -6,7 +6,7 @@ import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
 import { steadyNotes } from '../played';
-import { presentationField } from '../types';
+import { coercePresentation, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
 } from '../types';
@@ -25,6 +25,9 @@ import type {
  * by the staff step the scale asks for. The exercise draws what the theory
  * layer spells rather than respelling it.
  */
+
+/** The modes this exercise can serve, for its field and its coercion alike. */
+const SCALE_MODES = ['listen', 'read', 'play'] as const;
 
 export const SCALE_EXERCISE_ID = 'scale-id';
 
@@ -305,7 +308,7 @@ export function coerceScaleSettings(stored: unknown): ScaleSettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Record<string, unknown>;
   const direction = raw.direction as ScaleDirection;
   return {
-    presentation: raw.presentation === 'read' ? 'read' : 'listen',
+    presentation: coercePresentation(raw.presentation, SCALE_MODES),
     types: coerceTypes(raw.types, SCALE_DEFAULTS.types),
     direction: direction in DIRECTION_LABELS ? direction : SCALE_DEFAULTS.direction,
     clef: CLEFS.includes(raw.clef as Clef) ? raw.clef as Clef : SCALE_DEFAULTS.clef,
@@ -317,7 +320,7 @@ export const scaleSettingsSchema: SettingsSchema<ScaleSettings> = {
   defaults: SCALE_DEFAULTS,
   coerce: coerceScaleSettings,
   fields: [
-    presentationField(),
+    presentationField(SCALE_MODES),
     {
       // Twenty chips, and the whole control. There is no family picker
       // beside them: the degree exercise had a preset picker over its own

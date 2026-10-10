@@ -207,6 +207,73 @@ export async function listenFor(
   return analyse(concat(chunks), source.sampleRate, options);
 }
 
+/**
+ * A take that ends when the caller has what it needs, rather than when a
+ * clock says so.
+ *
+ * **This is what "keep listening" needs and `listenFor` cannot give it.** A
+ * fixed take makes a learner wait out the window after they have finished
+ * playing, which is the thing a press was there to avoid — so removing the
+ * press and keeping the window trades one delay for another. The caller
+ * knows when an answer is complete and nothing down here does: two notes
+ * for an interval, an octave for a scale.
+ *
+ * **Re-analysed from the start each time rather than incrementally**, which
+ * is the expensive choice and the correct one. `detectOnsets` adapts its
+ * threshold to a median of recent spectral flux, so it needs context either
+ * side of a candidate; running it over a growing buffer gives the same
+ * answer for the same audio, where running it over each new slice would
+ * make the first onset of every slice systematically different. A few
+ * hundred milliseconds of arithmetic every poll is affordable and a reading
+ * that depends on when it was taken is not.
+ *
+ * The source is released whatever happens, for the reason `listenFor`
+ * releases it: a microphone left open holds the recording indicator on.
+ */
+export async function listenUntil(
+  source: CaptureSource,
+  enough: (heard: ListenResult) => boolean,
+  limitSeconds: number,
+  options: ListenUntilOptions = {},
+): Promise<ListenResult> {
+  const chunks: Float32Array[] = [];
+  const poll = options.pollSeconds ?? POLL_SECONDS;
+  const wait = options.wait ?? sleep;
+  try {
+    await source.start((frame: CaptureFrame) => {
+      chunks.push(new Float32Array(frame.samples));
+    });
+    for (let waited = 0; waited < limitSeconds; waited += poll) {
+      await wait(Math.min(poll, limitSeconds - waited));
+      const heard = analyse(concat(chunks), source.sampleRate, options);
+      if (enough(heard)) return heard;
+    }
+  } finally {
+    source.stop();
+  }
+  // The limit reached without the caller being satisfied. Still a take, and
+  // still the caller's to refuse — a learner who played nothing has been
+  // heard playing nothing, which is a different thing from a device that
+  // could not be opened.
+  return analyse(concat(chunks), source.sampleRate, options);
+}
+
+export interface ListenUntilOptions extends ListenForOptions {
+  /** How often to ask whether there is enough. Defaults to {@link POLL_SECONDS}. */
+  pollSeconds?: number;
+}
+
+/**
+ * How often a continuous take is examined.
+ *
+ * A quarter second. Short enough that the gap between finishing a phrase
+ * and being answered is not felt — about the threshold at which a response
+ * stops seeming immediate — and long enough that the analysis, which is
+ * over the whole take so far, is a small fraction of the interval it runs
+ * in.
+ */
+export const POLL_SECONDS = 0.25;
+
 export interface ListenForOptions extends ListenOptions {
   /** How to pass the time. Defaults to a real timer. */
   wait?: (seconds: number) => Promise<void>;

@@ -9,7 +9,7 @@ import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
 import { steadyNotes } from '../played';
-import { presentationField } from '../types';
+import { coercePresentation, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
 } from '../types';
@@ -21,6 +21,9 @@ import type {
  * next door renders it and the screen records the result; the claims live
  * here, where a property test can reach them over ten thousand seeds.
  */
+
+/** The modes this exercise can serve, for its field and its coercion alike. */
+const INTERVAL_MODES = ['listen', 'read', 'play'] as const;
 
 export const INTERVAL_EXERCISE_ID = 'interval-id';
 
@@ -117,7 +120,7 @@ export const INTERVAL_DEFAULTS: IntervalSettings = {
 function coerceIntervalSettings(stored: unknown): IntervalSettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Partial<IntervalSettings>;
 
-  const presentation = raw.presentation === 'read' ? 'read' as const : 'listen' as const;
+  const presentation = coercePresentation(raw.presentation, INTERVAL_MODES);
 
   // Sorted and de-duplicated here rather than trusted, so a hand-edited or
   // older document cannot make the generator's candidate pool depend on the
@@ -149,7 +152,7 @@ export const intervalSettingsSchema: SettingsSchema<IntervalSettings> = {
   defaults: INTERVAL_DEFAULTS,
   coerce: coerceIntervalSettings,
   fields: [
-    presentationField(),
+    presentationField(INTERVAL_MODES),
     {
       kind: 'choice', id: 'window', label: 'Range',
       options: WINDOW_CHOICES.map((w) => ({ id: String(w), label: WINDOW_LABELS[w] })),

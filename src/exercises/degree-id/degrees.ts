@@ -6,7 +6,7 @@ import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
-import { keysField, keysIn, presentationField } from '../types';
+import { coercePresentation, keysField, keysIn, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -26,6 +26,9 @@ import type {
  * It is also a different question with different answers, which is why it is
  * a separate exercise rather than a setting on the other one.
  */
+
+/** The modes this exercise can serve, for its field and its coercion alike. */
+const DEGREE_MODES = ['listen', 'read'] as const;
 
 export const DEGREE_EXERCISE_ID = 'degree-id';
 
@@ -227,7 +230,7 @@ export function coerceDegreeSettings(stored: unknown): DegreeSettings {
   const modes: Mode[] = (['major', 'minor'] as Mode[])
     .filter((m) => Array.isArray(raw.modes) && raw.modes.includes(m));
   return {
-    presentation: raw.presentation === 'read' ? 'read' : 'listen',
+    presentation: coercePresentation(raw.presentation, DEGREE_MODES),
     degrees: coerceDegrees(raw.degrees, DEGREE_DEFAULTS.degrees),
     keys: Array.isArray(raw.keys)
       ? raw.keys.filter((k): k is string => typeof k === 'string') : [],
@@ -242,7 +245,7 @@ export const degreeSettingsSchema: SettingsSchema<DegreeSettings> = {
   defaults: DEGREE_DEFAULTS,
   coerce: coerceDegreeSettings,
   fields: [
-    presentationField(),
+    presentationField(DEGREE_MODES),
     keysField(ALL_KEYS.filter((k) => Math.abs(k.accidentals) <= 4)),
     {
       // The only control over which degrees are asked. There was a preset

@@ -12,7 +12,7 @@ import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
-import { presentationField } from '../types';
+import { coercePresentation, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -53,6 +53,9 @@ import type {
  * produces is in the palette, and the palette does not depend on what this
  * particular seed produced.
  */
+
+/** The modes this exercise can serve, for its field and its coercion alike. */
+const PROGRESSION_MODES = ['listen', 'read'] as const;
 
 export const PROGRESSION_EXERCISE_ID = 'progression-id';
 
@@ -583,7 +586,7 @@ function coerceModes(value: unknown): readonly Mode[] {
 export const progressionSettings: SettingsSchema<ProgressionSettings> = {
   defaults: PROGRESSION_DEFAULTS,
   fields: [
-    presentationField(),
+    presentationField(PROGRESSION_MODES),
     {
       kind: 'multi',
       id: 'styles',
@@ -712,7 +715,7 @@ export const progressionSettings: SettingsSchema<ProgressionSettings> = {
       diminished: raw.diminished === true,
       picardy: raw.picardy === true,
       neapolitan: raw.neapolitan === true,
-      presentation: raw.presentation === 'read' ? 'read' : 'listen',
+      presentation: coercePresentation(raw.presentation, PROGRESSION_MODES),
       bars: BAR_CHOICES.includes(raw.bars as typeof BAR_CHOICES[number])
         ? raw.bars as number : PROGRESSION_DEFAULTS.bars,
       modes: coerceModes(raw.modes),

@@ -7,7 +7,7 @@ import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
-import { presentationField } from '../types';
+import { coercePresentation, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -30,6 +30,9 @@ import type {
  * when a palette has to carry both: it refuses inversions outright because
  * seven buttons would become thirty.
  */
+
+/** The modes this exercise can serve, for its field and its coercion alike. */
+const CHORD_MODES = ['listen', 'read'] as const;
 
 export const CHORD_EXERCISE_ID = 'chord-id';
 
@@ -272,7 +275,7 @@ export function coerceChordSettings(stored: unknown): ChordSettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Record<string, unknown>;
   const sounding = raw.sounding as ChordSounding;
   return {
-    presentation: raw.presentation === 'read' ? 'read' : 'listen',
+    presentation: coercePresentation(raw.presentation, CHORD_MODES),
     types: coerceTypes(raw.types, CHORD_DEFAULTS.types),
     inversions: raw.inversions === true,
     sounding: sounding in SOUNDING_LABELS ? sounding : CHORD_DEFAULTS.sounding,
@@ -287,7 +290,7 @@ export const chordSettingsSchema: SettingsSchema<ChordSettings> = {
   defaults: CHORD_DEFAULTS,
   coerce: coerceChordSettings,
   fields: [
-    presentationField(),
+    presentationField(CHORD_MODES),
     {
       kind: 'multi', id: 'roots', label: 'Roots',
       // The id carries the octave and the label does not: the registry

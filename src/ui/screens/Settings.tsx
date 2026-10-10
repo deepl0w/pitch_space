@@ -57,6 +57,11 @@ export function Settings({ go }: { go(route: string): void }) {
     settingsStore.getState().setAppearance({ theme });
   }
 
+  function setCapture(style: string) {
+    if (style !== 'press' && style !== 'continuous') return;
+    settingsStore.getState().setAppearance({ capture: style });
+  }
+
   function setInstrument(id: string) {
     settingsStore.getState().setAppearance({ instrument: id });
     // Stored and pushed, the same pair as the volume below: stored so it
@@ -155,6 +160,34 @@ export function Settings({ go }: { go(route: string): void }) {
             Measure it
           </button>
         </div>
+      </Panel>
+
+      <Panel>
+        <Field label="Answering by playing" group>
+          <OneOf
+            options={[
+              { id: 'press', label: 'Press to play' },
+              { id: 'continuous', label: 'Keep listening' },
+            ]}
+            chosen={appearance.capture}
+            onChange={setCapture}
+          />
+          {/*
+            Named for what each does rather than for how it works. "Press
+            to play" and "Keep listening" are both things the learner
+            does or does not have to do; "manual" and "continuous" are
+            facts about the implementation, and the panel is read by
+            somebody deciding how they want to answer.
+          */}
+          <p className="secondary">
+            {appearance.capture === 'press'
+              ? `Exercises that can be answered by playing open the microphone
+                 when you ask, and listen for a few seconds.`
+              : `The microphone stays open while you practise, and your answer
+                 is taken from what you play. Nothing is recorded or sent
+                 anywhere.`}
+          </p>
+        </Field>
       </Panel>
 
       <Panel>

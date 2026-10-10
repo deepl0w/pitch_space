@@ -121,6 +121,11 @@ const NOT_A_SCREEN: Record<string, string> = {
     + 'component by controls.test.tsx; what this file adds is the call sites.',
   'notation/Score.tsx': 'Draws a stave. It has no caption and no control, and '
     + 'mounting it would need a spec invented here for nothing to be asked of.',
+  'components/DebugColours.tsx': 'A development workbench, removed from a '
+    + 'production build by `import.meta.env.DEV`, so it is not a screen anybody '
+    + 'using the app can reach. Its controls carry their own `aria-label` — the '
+    + 'token they set — which is the one caption that would be useful here, and '
+    + 'a shared one above a list of twelve different colours would not be.',
 };
 
 let root: Root | null = null;

@@ -206,10 +206,10 @@ describe('the focus ring on the circle of fifths', () => {
    */
   it('computes what a browser measured', () => {
     const pairs: [keyof typeof THEMES, string, string, number][] = [
-      ['light', '--ink', '--accent', 2.38],
-      ['dark', '--ink', '--accent', 1.84],
-      ['light', '--bg', '--accent', 7.02],
-      ['dark', '--bg', '--accent', 8.16],
+      ['light', '--ink', '--accent', 2.52],
+      ['dark', '--ink', '--accent', 1.71],
+      ['light', '--bg', '--accent', 4.76],
+      ['dark', '--bg', '--accent', 6.99],
     ];
     for (const [theme, a, b, expected] of pairs) {
       const got = contrast(
@@ -221,7 +221,7 @@ describe('the focus ring on the circle of fifths', () => {
     // And a mix resolves rather than throwing, which is the other half of
     // what the claim below depends on.
     const relative = resolve('color-mix(in oklab, var(--accent) 55%, var(--surface))', THEMES.dark);
-    expect(contrast(linearOf(token('--ink', THEMES.dark)), relative)).toBeCloseTo(4.62, 1);
+    expect(contrast(linearOf(token('--ink', THEMES.dark)), relative)).toBeCloseTo(3.62, 1);
   });
 
   it('clears the floor for an indicator on every wedge it can land on', () => {

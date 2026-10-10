@@ -25,6 +25,8 @@ it ships or is dropped.
 - [Taking your progress with you](#taking-your-progress-with-you)
 - [Bringing your own material](#bringing-your-own-material)
 - [Instruments that play like themselves](#instruments-that-play-like-themselves)
+- [A wrong answer that points at a song you know](#a-wrong-answer-that-points-at-a-song-you-know)
+- [A way from the answer to the reference](#a-way-from-the-answer-to-the-reference)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 [`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
@@ -549,6 +551,78 @@ Three things will be the work, and none of them is the parsing:
   on a corpus that does not add up, which is right for data written by a
   contributor and wrong for data arriving from a file. An import needs to
   refuse an entry and say why, not take the app down.
+
+## A way from the answer to the reference
+
+From the user: after answering a question there should be a small button
+taking you to information on **that specific thing** in the theory reference —
+which also needs an intervals page, because there is not one.
+
+The reference today is Scales, Chords, Chords in a key, the Circle of Fifths
+and Rhythms. Intervals, the exercise most likely to want this, has no page.
+
+### Keyed on item ids, the same as the song list
+
+`scale:harmonic_minor`, `interval:m3:up`, `progression:major:V`. The exercise
+already knows the item it just asked; the button needs a map from an item id
+to a place in the reference, and nothing else. An item with no target shows no
+button rather than a broken one, which also makes the coverage question a
+one-line sweep.
+
+### The hazard: consulting the reference currently costs the answer
+
+**This is the part that would be found late.** `route` lives in `App` and is
+driven by `hashchange`; `round` and `session` are `useState` **inside**
+`PracticeScreen`. So a route change unmounts the screen, and coming back gives
+a new question and a session tally reset to zero.
+
+A learner who answers, taps through to read about the interval they just
+missed, and returns has lost the question they wanted to understand and their
+count for the session. That is worse than not having the button.
+
+**The app already has the shape that avoids it.** Settings opens over whatever
+is on screen — `settingsOpen` is state in `App`, not a route — so nothing
+unmounts and nothing is lost. A reference panel over the practice screen is
+the same move, and it keeps the answer visible beside what it explains, which
+is the point of reading it at that moment.
+
+The alternative is lifting `round` and `session` above the route, which is a
+larger change and buys the same thing less directly.
+
+## A wrong answer that points at a song you know
+
+From the user: more helpful song recommendations on the `Think …` hints — **a
+list of songs and artists for different intervals and chord progressions**,
+shipped with the app. No links.
+
+### It is wrong today for descending intervals
+
+Worth doing first and independent of the rest. `INTERVAL_MNEMONICS` in
+`src/theory/interval.ts` is twelve titles keyed on semitone distance alone,
+and **every tune in it rises**. A learner who misses a *descending* major 6th
+is told *"Think My Bonnie"*, which ascends — pointing at the wrong contour,
+which is most of what they are being asked to hear.
+
+So the key is the interval **and its direction**, which roughly doubles the
+table and is the bulk of the work on the interval half.
+
+### The shape
+
+**Key it on item ids.** `interval:m3:up`, `progression:major:V`,
+`chord:dom7` — the ids already exist, are stable, and are what an exercise
+knows about itself. Inventing a second key for the same things is the kind of
+near-duplicate that drifts, and keying on ids makes 0011's reachability
+obligation a one-line check: every key is something some exercise can ask.
+
+**Artist alongside title**, because a title alone is often not findable —
+*Take On Me* wants a-ha to be looked up with confidence; *Jaws* does not. The
+current table has titles only.
+
+**Not `theory/`.** A song reference is pedagogy, not a fact about music, and
+the table will grow past intervals to chords and progressions.
+
+**Several entries per item, not one.** A single reference that happens not to
+be a song you know is no help at all, and the cost of a second row is a line.
 
 ## Instruments that play like themselves
 

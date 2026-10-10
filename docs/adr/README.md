@@ -87,6 +87,27 @@ repeated it. No single step looked like an invention, and the claim — that the
 DSP layer computes chroma, which it does not — was load-bearing for an exercise
 about to be built on it. Both records now carry dated corrections.
 
+**The same rule reaches data this project did not write, where the record
+that made the claim is a filename or a readme.** Two instances inside one
+feature, both about sample libraries:
+
+- **Pitch.** Four of six instrument packs shipped an octave sharp, because the
+  builder read the note a file was *called*. A file named `C4` is middle C
+  under one octave convention and not under the other; VSCO writes middle C as
+  C3, FreePats writes C4, and VCSL is inconsistent between its own
+  sub-libraries. The builder measures each recording's fundamental now and
+  refuses a set that disagrees with its labels.
+- **Licence.** One library's repository metadata says CC0 while its readme
+  asks for more; another states CC0 only inside the downloaded archive, where
+  neither the project page nor the repository metadata shows it. The allowlist
+  decides what is permitted; a person still opens the package.
+
+**Imported metadata is a claim by somebody outside this repository, and it is
+the only kind no amount of reading our own code can check.** The remedy is the
+first convention's, pointed outward: go to the thing itself — measure the
+audio, open the archive — rather than to the description that travelled with
+it.
+
 **A description of work is not the work, and that holds when the description is
 the author's own and offered in good faith.** On 6 October four claims about
 shipped code arrived by message from the person who had just written it, each

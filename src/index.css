@@ -80,8 +80,15 @@ main {
     controls; here it is put back on the left by naming its track, which
     costs nothing and leaves the reading order alone.
   */
-  main.shell .practice-settings { grid-column: 1; grid-row: 1; }
-  main.shell .practice-main { grid-column: 2; grid-row: 1; }
+  /*
+    Three placed items rather than two: the way out of the screen sits
+    above the sidebar in its own row, and the question spans both so it
+    still owns the full height of the pane.
+  */
+  main.shell .practice-layout { grid-template-rows: auto minmax(0, 1fr); }
+  main.shell .back { grid-column: 1; grid-row: 1; padding: 1.25rem 1rem 0; }
+  main.shell .practice-settings { grid-column: 1; grid-row: 2; padding-top: 0.5rem; }
+  main.shell .practice-main { grid-column: 2; grid-row: 1 / span 2; }
   .practice-settings {
     /* `min-height: 0` is what lets a grid child scroll instead of
        stretching its track: without it the panel's content sets the row
@@ -773,6 +780,14 @@ button:active { transform: translateY(1px); }
 .back {
   background: none; border: none; color: var(--muted);
   font-size: 0.82rem; padding: 0 0 0.75rem; cursor: pointer;
+  /*
+    Held to the start of whatever lays it out, and reading left.
+    It is a grid item in its own right now rather than a block inside the
+    sidebar, and a grid item stretches to its track while a `button`
+    centres its own text — so the way out of the screen drifted into the
+    middle of the sidebar's column, lined up with nothing.
+  */
+  justify-self: start; text-align: left;
 }
 .back:hover { color: var(--accent); filter: none; }
 

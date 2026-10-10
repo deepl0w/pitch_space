@@ -168,6 +168,22 @@ export function PracticeScreen({
       own the viewport until it was noticed.
     */
     <div className="practice-layout">
+      {/*
+        Leaving the page, first in the document because it is first on the
+        screen.
+
+        It lived inside the settings sidebar, which was fine while the
+        sidebar came first — and stopped being fine the moment the sidebar
+        moved after the main column so that one column opens on the
+        exercise. On a phone the way back out of the screen ended up below
+        the whole question. Reported from a phone.
+
+        Hoisted rather than ordered: it is navigation, it belongs at the
+        top for a reader of the document as much as for a reader of the
+        page, and the two-column layout puts it back in the sidebar's
+        corner by naming its track.
+      */}
+      <button className="back" onClick={onBack}>&larr; Everything</button>
 
       <div className="practice-main">
       <header>
@@ -248,7 +264,6 @@ export function PracticeScreen({
         Both read the same store, so hoisting it drills no props.
       */}
       <aside className="practice-settings">
-        <button className="back" onClick={onBack}>&larr; Everything</button>
         {/*
           Which way to practise this family, in the sidebar with every
           other thing you set about the exercise — and as bubbles, like

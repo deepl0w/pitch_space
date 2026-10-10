@@ -553,61 +553,38 @@ Three things will be the work, and none of them is the parsing:
 
 ## A wrong answer that points at a song you know
 
-From the user, across two messages:
-
-> a future feature i want is more helpful song recommendations for wrong
-> answers, the ones with "Think…" and they should link to a youtube video for
-> that song at the time where you can hear that note interval or chord
-> progression
-
-> the catalogue is an internal database … it's just a list of songs+artists
-> for different intervals/chord progressions etc
-
-**So: a table shipped with the app.** Song, artist, and an optional link with
-a timestamp, keyed by interval or progression. Not a service, not fetched, and
-small enough that it goes in the bundle — which is worth one line against
-[0046](adr/0046-a-sampled-pack-is-fetched-on-use-not-precached.md), since the
-instrument packs are deliberately *not* bundled and somebody will reach for
-that precedent. A pack is megabytes and optional; this is text and is wanted at
-the moment a learner gets something wrong, which may be offline.
+From the user: more helpful song recommendations on the `Think …` hints — **a
+list of songs and artists for different intervals and chord progressions**,
+shipped with the app. No links.
 
 ### It is wrong today for descending intervals
 
-Worth doing first, and independent of the rest. `INTERVAL_MNEMONICS` in
-`src/theory/interval.ts` is twelve titles keyed on semitone distance alone, and
-**every tune in it rises**. A learner who misses a *descending* major 6th is
-told *"Think My Bonnie"*, which ascends. The hint does not merely fail to help
-there; it points at the wrong contour, and contour is most of what the learner
-is being asked to hear.
+Worth doing first and independent of the rest. `INTERVAL_MNEMONICS` in
+`src/theory/interval.ts` is twelve titles keyed on semitone distance alone,
+and **every tune in it rises**. A learner who misses a *descending* major 6th
+is told *"Think My Bonnie"*, which ascends — pointing at the wrong contour,
+which is most of what they are being asked to hear.
+
+So the key is the interval **and its direction**, which roughly doubles the
+table and is the bulk of the work on the interval half.
 
 ### The shape
 
-**Artist alongside title, because a title alone is often not findable.**
-*Take On Me* needs a-ha to be looked up with any confidence; *Jaws* does not.
-The current table has titles only.
+**Key it on item ids.** `interval:m3:up`, `progression:major:V`,
+`chord:dom7` — the ids already exist, are stable, and are what an exercise
+knows about itself. Inventing a second key for the same things is the kind of
+near-duplicate that drifts, and keying on ids makes 0011's reachability
+obligation a one-line check: every key is something some exercise can ask.
 
-**The title and artist are required; the link is optional.** A hint must not
-need the network to be worth having — someone practising offline is exactly
-who wants one — so a missing or dead link degrades to what ships today rather
-than to nothing.
-
-**Link out; do not embed.** A player pulls third-party tracking into a
-local-first MIT tool for something a learner taps perhaps once a session.
+**Artist alongside title**, because a title alone is often not findable —
+*Take On Me* wants a-ha to be looked up with confidence; *Jaws* does not. The
+current table has titles only.
 
 **Not `theory/`.** A song reference is pedagogy, not a fact about music, and
-the table will grow to cover chords and progressions.
+the table will grow past intervals to chords and progressions.
 
-### The one thing worth saying about the claims
-
-Every row asserts that an interval is audible in a recording at a moment, and
-nothing in the repository can check that. A URL can be fetched to see whether
-it still resolves, which catches deletions and re-uploads; whether the sound is
-there at 0:42 cannot be checked by anything and never will be.
-
-[0011](adr/0011-what-a-catalogue-owes.md)'s fourth obligation is the one that
-applies — claims asserted, or acknowledged as unassertable. These are the
-second kind, and the acknowledgement belongs in the table itself so that
-nobody later mistakes an unchecked row for a checked one.
+**Several entries per item, not one.** A single reference that happens not to
+be a song you know is no help at all, and the cost of a second row is a line.
 
 ## Instruments that play like themselves
 

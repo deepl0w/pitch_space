@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { DEVICE_OPEN_SECONDS, Synth, type Voice } from './synth';
+import { DEVICE_OPEN_SECONDS, QUIET_BEFORE_COLD, Synth, type Voice } from './synth';
 import {
   advanceAudioClock, audioClock, audioClosed, contextCount, gains, installAudioContext,
   attackTimes, masterGain, oscillators, resetAudio, soundingAfter, suspendUntilResumed,
@@ -403,24 +403,100 @@ describe('the first play, before the audio clock has started', () => {
       .toBeGreaterThan(0.06);
   });
 
-  it('keeps the small headroom once the clock is running', () => {
+  it('keeps the small headroom while the output is still warm', () => {
     /*
-      The control, and the reason the fix is keyed on the clock rather
-      than applied to everything. Widening the headroom for every play
-      would pass the case above and put a quarter second of lag on every
-      sound in the app, which no test would have noticed.
+      The control, and the reason the fix is not applied to everything.
+      Widening the headroom for every play would pass the case above and
+      put a quarter second of lag on every sound in the app, which no
+      test would have noticed.
+
+      Warm means *recently sounding*, so this plays and then plays again
+      inside the note it laid. An earlier version made its warm case a
+      fresh `Synth` on an advanced clock, which reads as warm only if
+      "the clock has started" is the whole rule — and it is not, because
+      a device goes quiet and shuts with the clock still running.
     */
     synth.play(notes(1));
-    const first = oscillators()[0].startedAt!;
-    resetAudio();
-    installAudioContext();
-    advanceAudioClock(5);
-    const warm = new Synth();
+    const first = oscillators()[0].startedAt! - audioClock();
 
-    warm.play(notes(1));
-    const second = oscillators()[0].startedAt!;
-    expect(second - audioClock()).toBeLessThan(first);
-    expect(second - audioClock()).toBeCloseTo(0.06, 5);
+    advanceAudioClock(0.2);
+    synth.play(notes(1));
+    const second = oscillators().at(-1)!.startedAt! - audioClock();
+
+    expect(second).toBeLessThan(first);
+    expect(second).toBeCloseTo(0.06, 5);
+  });
+});
+
+/**
+ * The same budget, paid again after a pause.
+ *
+ * `currentTime === 0` catches the first play of a page and nothing after
+ * it, and an output stream shuts again once it has been silent for a while.
+ * A user reported the consequence — the first tone of a sequence missing
+ * its attack, only on the first play after a pause, a second press straight
+ * afterwards clean — which is the cold case arriving on a clock that has
+ * been running for minutes.
+ */
+describe('a device that has had time to shut again', () => {
+  /*
+    Asserted the way the cold-start cases are — the attack must still be
+    ahead of the clock once the device has had its whole budget to open —
+    rather than as a bound on the headroom in seconds. A first version
+    compared the lead against 0.06 and passed under a deliberately broken
+    build, because `1.5 + 0.06 - 1.5` is `0.06000000000000005` and that is
+    greater than `0.06`. A behavioural question has no epsilon in it.
+  */
+  const stillAheadAfterOpening = () => {
+    const attack = oscillators().at(-1)!.startedAt!;
+    advanceAudioClock(DEVICE_OPEN_SECONDS);
+    return attack > audioClock();
+  };
+
+  it('schedules clear of it reopening', () => {
+    synth.play(notes(1));
+    advanceAudioClock(QUIET_BEFORE_COLD + 1);
+
+    synth.play(notes(1));
+    expect(stillAheadAfterOpening(),
+      'a play after a pause took the warm headroom').toBe(true);
+  });
+
+  /**
+   * The control: a passage still sounding is a device still open, however
+   * long ago the press was.
+   *
+   * Interrupting a long scale well past the threshold is warm, because the
+   * output has been busy the whole time — the silence this measures is the
+   * output's, not the user's. Without this, "cold after half a second"
+   * would be satisfied by a rule that made every press after a pause cold
+   * whether or not anything was sounding, which is a quarter second of lag
+   * on exactly the interruption a learner makes most.
+   */
+  it('stays warm while the last passage is still playing', () => {
+    synth.play(notes(8, 0.5));
+    advanceAudioClock(QUIET_BEFORE_COLD + 1);
+
+    synth.play(notes(1));
+    expect(oscillators().at(-1)!.startedAt! - audioClock(),
+      'cut into a sounding passage and waited for the device to open')
+      .toBeLessThan(DEVICE_OPEN_SECONDS);
+  });
+
+  /**
+   * The other direction: a passage cut at its first note leaves the device
+   * idle from the cut, not from where it would have ended.
+   */
+  it('counts the silence from where a cut passage stopped', () => {
+    synth.play(notes(20, 0.5));
+    advanceAudioClock(0.1);
+    synth.stopAll();
+    advanceAudioClock(QUIET_BEFORE_COLD + 0.2);
+
+    synth.play(notes(1));
+    expect(stillAheadAfterOpening(),
+      'nine seconds of cancelled passage counted as the output sounding')
+      .toBe(true);
   });
 });
 
@@ -464,12 +540,12 @@ describe('a device that takes the full budget to open', () => {
   it('is not paying that budget on every sound afterwards', () => {
     // The other side, and the reason the budget is not simply the headroom
     // everywhere: a quarter second of lag on every note is a worse app than
-    // one missing note on the first play, and only the first play is cold.
-    advanceAudioClock(5);
-    const warm = new Synth();
-    warm.play(notes(1));
+    // one clipped attack after a pause, and only a cold device is cold.
+    synth.play(notes(1));
+    advanceAudioClock(0.2);
+    synth.play(notes(1));
 
-    expect(oscillators()[0].startedAt! - audioClock(),
+    expect(oscillators().at(-1)!.startedAt! - audioClock(),
       'a warm play is waiting out the device-opening budget')
       .toBeLessThan(DEVICE_OPEN_SECONDS);
   });

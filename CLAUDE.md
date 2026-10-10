@@ -292,6 +292,15 @@ which used `git commit` directly. This does, regardless of shape, at the
 cost of the full suite's time on every commit — `fleet.sh check` by hand is
 still worth running first, to see the detail rather than just the verdict.
 
+**A refusal through the hook used to leave nothing behind.** `cmd_check`
+evals the suite straight to the hook's stdout, which a commit swallows;
+a `NOT GREEN` seen once and green on every run since had no output
+anywhere to explain it, not because anything was deleted but because
+nothing was ever kept. It now tees each eval to `.claude/last-check.log`
+in the worktree — fixed path, overwritten each run — and names it beside
+a failing verdict, so the next one-off refusal leaves evidence rather
+than a story nobody can check.
+
 **`git merge` gets the same gate, separately, because `pre-commit` does not
 fire for it at all.** Found within the hour: main's traffic is almost
 entirely merges, one direct commit to roughly twenty merges in a day, so

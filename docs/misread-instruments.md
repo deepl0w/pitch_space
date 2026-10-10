@@ -511,6 +511,24 @@ helps, because nothing is wrong with it.
   Pitch alone cannot tell a re-attack from a wobble inside one note; loudness
   is the half that discriminates, and it was the half dropped.
 
+  **The general form, which the day this was written supplied five instances
+  of: a citation that resolves to something real but wrong passes every check
+  a dangling one fails.** Three record numbers were cited from memory and each
+  named a real record that was not the right one — 0003 for a question about
+  polyphony, which is vexflow containment; 0029 for a platform guard, which is
+  import direction; 0043 for guard scoping, which is instrument choice. Two
+  commit hashes went the same way and were self-caught. **In every case the
+  reader has to open the thing to know**, and the reader is the one person who
+  assumed the writer had.
+
+  The remedy is uniform and is the cheapest in this document: **read an
+  identifier back from the source rather than writing it from recall.** A
+  record number, a commit, a constant — all of them are a lookup, and the
+  lookup is seconds. What makes this worth a paragraph is not the cost of
+  being wrong but that **nothing downstream can catch it**: a wrong number
+  survives review, survives the suite, and arrives at somebody planning work
+  against the record it names.
+
   **What defeats inspection is that each half is independently sensible.**
   "Merge notes at the same pitch" reads as a complete rule. A reader checking
   it has nothing to be suspicious of, because nothing is missing from the

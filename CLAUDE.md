@@ -280,6 +280,12 @@ main's own messages reach every role normally, and whoever it writes to
 can answer back on that same thread. What the name collision actually
 costs is narrower than a severed link — it is main having to speak first,
 every time, rather than being reachable cold the way every other role is.
+**In practice that precondition costs nothing**, confirmed once every role
+had used the socket route: main's own merge and landing announcements are
+routine, so by the time any role has something to report back, it has
+already received a message from main to reply to. The gap is theoretical
+for anyone main has already written to, and real only for reaching main
+cold, which is rare — most traffic this way is a reply to begin with.
 
 Work is not stranded either way — `announce` and `status` read each role's
 own branch directly, so main's tooling still shows a branch moved without
@@ -287,7 +293,14 @@ anyone telling it. What is lost is the fast path and the reasoning behind
 it: main learns *that* something changed and not *why*, and reconstructs
 from commit messages what a message would have said outright. The
 measured cost is main asking more than once for an answer the repository
-already held, including one already committed and merged days earlier.
+already held, including one already committed and merged days earlier —
+**which is the project's first convention pointed at main rather than at
+the protocol**: a message is a correlate of an answer, the repository is
+the mechanism, and asking again without first reading what the branch
+already says is the same mistake `tools/sessions.sh` exists to stop,
+one level up. Worth a main session's own habit, not only a tool's: before
+re-asking a role that cannot be reached cold, check what its branch
+already holds.
 
 **The fix is not a name this file controls.** The branch still says `main`,
 the role still says `main` — what needs to change is the session's own

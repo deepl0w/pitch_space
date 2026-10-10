@@ -100,9 +100,18 @@ const choices = () => [...container.querySelectorAll('.choices button')] as HTML
 const choiceFor = (numeral: string) => choices().find((b) => b.textContent === numeral)!;
 const replay = () => [...container.querySelectorAll('.actions button')]
   .find((b) => b.textContent === 'Play it again') as HTMLButtonElement | undefined;
-/** The control that hands the answer up; it is also the "n to go" counter. */
+/**
+ * The control that hands the answer up; it is also the "n to go" counter.
+ *
+ * Matched on what it says rather than on being last in the group. `.at(-1)`
+ * is a claim about layout: a control added after this one is picked up
+ * silently in its place, which is how the interval prompt's replay case
+ * started pressing a different button when capture arrived beside it. The
+ * pattern covers both of this control's words, since the count is in one
+ * of them.
+ */
 const check = () => [...container.querySelectorAll('.actions button')]
-  .filter((b) => b.textContent !== 'Play it again').at(-1) as HTMLButtonElement;
+  .find((b) => /^(Check|\d+ to go)$/.test(b.textContent?.trim() ?? '')) as HTMLButtonElement;
 const click = (button: HTMLElement) => act(() => { button.click(); });
 /** What each slot reads, which is what the user sees of their own answer. */
 const written = () => slots().map((b) => b.textContent);

@@ -280,3 +280,49 @@ a maybe — is the same question wearing different clothes. Changing `completion
 on an architect's reading of an addendum would be inventing the answer. What is
 owed now is only that the record stops describing behaviour the code does not
 have.
+
+## Resolved, 12 October 2026 — both halves, and my drift argument was wrong
+
+The user, verbatim: *"time off shouldn't change the scores (if you lost the
+skills it will show in your answers and reduce the scores), colors from red -
+bad to green -good, no completion"*.
+
+### The colour is settled and is no longer a maybe
+
+Red for bad, green for good, and **no completion**. Taken with the ruling of
+7 October that the cap is a ceiling on the reading, the scale stops short of
+pure green — because pure green is where an eye stops reading *better* and
+starts reading *finished*, which is the thing this record exists to refuse. A
+percentage is worse still: it has a hundred in it.
+
+This record carried the colour as a *maybe* for five days, correctly, having
+been corrected once for treating the user's hedge as a decision. It is a
+decision now and the earlier caution was not wasted — it is why the question
+was still open to be answered rather than assumed into the code.
+
+### Time off does not move the reading, and the reason overturns mine
+
+The addendum of 7 October argued that a line's reading should "drift back
+towards red while nobody practises, **because that is true**". **That was
+wrong, and the user's reason is better than my argument.**
+
+If the skill has gone, it shows in the answers and the reading falls on its
+own. Decaying a figure by elapsed time is the app **inferring** a loss it has
+not observed — and this project already has that principle, from the other end
+of the same feature: [0047](0047-hearing-nothing-and-not-hearing-are-different-answers.md)
+refuses to guess which two notes a learner meant, on the grounds that guessing
+is the app claiming to know better than its own input. A clock-driven decay is
+the same claim about a learner's ability. **Measure it; do not predict it.**
+
+So `completion` reading only the answer history and never the clock is correct
+and always was. The two halves this record was recorded as having left
+unreconciled are reconciled from the user's side, and the half that needed
+changing was the prose rather than the code: **sticky at the top is right,
+and what was wrong was a reading that could arrive at all.**
+
+**The tester's pin turns out to have been pinning the right behaviour**, which
+is worth saying because it was written explicitly as *the behaviour that
+exists, not the one that should*. Holding an unendorsed behaviour until
+somebody with standing settles it is the move that let this be answered rather
+than quietly changed — had the drift argument been built on my say-so, the
+user would have been shown a reading that lied about them.

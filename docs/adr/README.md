@@ -423,8 +423,26 @@ Two instances, found by the tester a day apart and both now fixed:
   two sessions an afternoon and nearly cost a retraction that would have left
   the real fault in the tree.
 
-**They are one convention because the cure is one, not because the cause is.**
-Structurally empty and stochastically unlucky are different faults — the first
+- **A population that differs by where the suite runs.** A scan asserting
+  that every path cited in the documentation exists was rooted at the
+  repository root and walked whatever lay under it — including
+  `docs/process/` and `docs/findings/`, which are git-ignored and
+  worktree-local, and `.claude/worktrees/`, empty in a worktree and holding
+  every sibling checkout in main's. **One commit was green in one checkout,
+  red in another over a file the first does not have, and would have scanned
+  neither in CI.**
+
+  This is the worst of the three, because it is the only one that breaks what
+  a shared gate means: every worktree's commit hook runs this suite, and
+  "green" stopped being a property of the commit and became a property of the
+  machine. Its cure is also the odd one out — not *assert that the case
+  occurred* but **define the population instead of inheriting it**. The fix
+  reads it from git rather than from the filesystem: *the population is what
+  git has, not what this checkout holds.*
+
+**The first two are one convention because the cure is one, not because the
+cause is.** Structurally empty and stochastically unlucky are different
+faults — the first
 can never contain the case, the second merely did not. What they share is the
 remedy: **assert that the case occurred, in its own assertion, separately from
 asserting what it shows.** A sweep states the size of what it swept; a

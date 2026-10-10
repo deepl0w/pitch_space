@@ -245,15 +245,40 @@ running, socketed, and still unaddressable by name.** `SendMessage` reserves
 the literal string `main` for a background agent's own parent conversation,
 and that reservation wins over a cross-session peer that happens to be
 named `main` — before the `[ref]` a listing error suggests is ever
-consulted. Three sessions hit the same refusal, which is reproduction
-through one instrument and not by itself three witnesses — what actually
-isolates the cause is the contrast sitting beside it unremarked: messages
-to `tester` and to `architect`, from the same sessions, in the same
-sitting, went through. The failure tracks the reserved name, not the
-sender, the host, or main's session being otherwise unreachable. A socket
-is what every other role's addressability reduces to; main is the one
-role where that reduction is wrong, and `tools/sessions.sh` now says so
+consulted. **Three forms were tried and they fail in two different ways,
+not one**, which costs more than a single consistent refusal would: `to:
+"main"` names the reservation outright; the ref the error then suggests
+comes back "not reachable", offering a second ref; that second ref returns
+to the reservation message. Two different refs for one session, live at
+the same moment, and the disambiguator the error itself points at is what
+gets swallowed — a reader who follows it and lands back at the first error
+can reasonably conclude they mistyped rather than that the address cannot
+be used at all.
+
+Confirmed independently by three sessions (architect, tester, this one),
+each re-reading `ListAgents` immediately before sending — reproduction
+through one instrument, which is a repeat count rather than three
+witnesses. What actually isolates the cause is the contrast sitting beside
+it: messages to `tester` and to `architect`, from the same sessions, in the
+same sittings, went through. The failure tracks the reserved name, not the
+sender, the host, or main being otherwise unreachable. `ListAgents` keeps
+listing `main` as reachable regardless, which is the sharper fact: an
+advertised route that cannot be used reads as working right up until it is
+tried, where an absent one would send someone looking for another way. A
+socket is what every other role's addressability reduces to; main is the
+one role where that reduction is wrong, and `tools/sessions.sh` now says so
 explicitly rather than reading the socket and reporting addressable.
+
+**The channel runs one way, and the cost is narrower than "main is cut
+off."** Main's own messages reach every role normally; nothing reaches
+main by name. Work is not stranded — `announce` and `status` read each
+role's own branch directly, so main's tooling still shows a branch moved
+without anyone telling it. What is lost is the fast path and the reasoning
+behind it: main learns *that* something changed and not *why*, and
+reconstructs from commit messages what a message would have said outright.
+The measured cost is main asking more than once for an answer the
+repository already held, including one already committed and merged days
+earlier.
 
 **The fix is not a name this file controls.** The branch still says `main`,
 the role still says `main` — what needs to change is the session's own

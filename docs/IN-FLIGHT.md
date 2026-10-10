@@ -53,13 +53,33 @@ cold reader that a block they never saw once existed, restates what the
 line above it already says, and is the kind of narration this file is
 explicitly not meant to hold. Move the field; that is the statement.
 
+**An open question keeps an entry alive only while another role must act
+differently because of it.** The removal rule above is about *work* —
+merged and reviewed — and the first time an entry had merged work with an
+unresolved question still attached to it, that test gave no answer and the
+entry sat here for want of one. Ruled by architect on the capture seam: a
+question that asks the user to choose between three readings is not in
+flight, it is waiting, and waiting has better homes than a file about what
+is coming. The inverse is the half worth keeping in view, because it looks
+like the same case: if the open question were *which interface a role
+should write against*, the entry stays after the code merges, because
+somebody is genuinely blocked on reading it.
+
+**And an entry is the weakest of the three places a question can live**,
+which is the reason the rule falls this way rather than the other. A test
+that fails when somebody answers wrongly is a claim bound to a fact; a
+document carrying its own command is checkable by whoever opens it; an
+entry here relies on a reader arriving. Moving a question off the third
+tier costs nothing when the first still holds it — and `ARCHITECTURE.md`
+rotted twice on the strength of the third, in the same week the one claim
+with a test behind it stayed true on its own.
+
 **The user role does not read this file.** See `CLAUDE.md`.
 
 ## Contents
 
 - [`architect`, then everyone — progress is per settings combination](#architect-then-everyone--progress-is-per-settings-combination)
 - [`main`, then `architect` — recorded instruments are the aim, synthesis the floor](#main-then-architect--recorded-instruments-are-the-aim-synthesis-the-floor)
-- [`main` — answering by playing, starting with the seam](#main--answering-by-playing-starting-with-the-seam)
 
 ### `architect`, then everyone — progress is per settings combination
 
@@ -311,97 +331,4 @@ not change which note is correct, or what grading accepts. Worth a record
 of its own is the reversal — synthesis was chosen as the destination and
 is now the floor — together with the rule the measurement earns, that
 user-facing copy may not state a cost nothing measured.
-
-### `main` — answering by playing, starting with the seam
-
-**Branch:** `main`, first exercise landed in `338e332`. **Settled:** the
-shape, the subset property, that the seam reports *whether it heard* as
-well as what
-([0047](adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)),
-that **interval identification went first**, and that a screen explains a
-refusal as an aside beside the choices which stay live. **Settled since, by
-[0047's correction](adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md):**
-the test is *enough to grade* rather than *heard*, so a take holding fewer
-than two readable notes leaves the question open — the record was wrong
-and the implementation was right. A consequence worth planning around
-rather than rediscovering: **silence cannot be marked wrong through
-capture at all**, because a silent room and an unreadable one are the same
-signal. If "you did not play" should ever count, it needs a deadline the
-learner can see, decided above the seam.
-
-**Still open, and the one piece waiting on a decision rather than on
-work:** `intervalPlayed` reads the first two readable notes and discards
-the rest, so a learner who strikes a note twice before playing the second
-is graded a *unison*. That is the correction above inverted — *enough to
-grade* wants *unambiguous enough to grade* — and unlike the silence case
-the information is present and thrown away, so there is a real choice
-here. Ignoring repeats, refusing to grade, and taking the first and last
-each tell the learner something different. Pinned by a test, not resolved;
-whoever settles it is deciding what a learner is told, not fixing a bug.
-Also open: which exercise is next.
-
-**What landed.** `listenFor` in `audio/capture/listen.ts` (a take bounded
-by seconds, which `listen` cannot give because `start` resolves on
-*begun*, not on finished); `ui/microphone.ts` as the composition root's
-adapter, the only shipped file outside `audio/capture/` that knows a
-microphone exists; `audioIn: AudioIn` on `PromptProps`, threaded by
-`PracticeScreen` exactly as `audio` is; `intervalPlayed` in
-`interval-id/intervals.ts`, pure, which refuses rather than guessing; and
-the control in `IntervalPrompt`.
-
-**The home-screen lede test flipped on its own and was not edited**, which
-was the point of writing it that way. It went red the moment the adapter
-existed and green when the lede stopped calling playing unbuilt.
-
-**This entry got that wrong once, in the direction the file warns
-about.** It first called the subset property "the whole point", flatly,
-while I was asking architect in the same hour whether the seam's silent
-floor was right — and the answer to that question removed the identity
-adapter the phrase was describing. The entry read as settled because
-nothing in it said a decision was pending; tester wrote toward it, which
-is exactly what the prospective half of its job asks for, and was
-overtaken by a ruling nothing had announced.
-
-The preamble above already says an entry names what is settled and what
-is not, separately, and that a piece waiting on something says so
-plainly. The cost here was one test edit inside the hour. The reason to
-record it anyway is that the next one may be a day, and the entry would
-still have read as finished.
-
-**Why this and why now.** It is the brief's central promise — six kinds
-of practice *answered by playing them on a real instrument* — and the one
-thing the home screen still says is being built. `audio/capture/` works
-and `audio/dsp/` works; neither has ever been joined to an exercise. G4
-is closed, so the progress figure now has something to report about, and
-this is what it will eventually be reporting about.
-
-**The shape is already decided and I am not choosing it.**
-`architecture.test.ts` spells it out in the test that currently asserts
-the lede is honest: capture arrives as an **`AudioIn` beside `AudioOut`,
-injected by the screen**, so that no file under `exercises/` imports
-anything from `audio/capture` on the day a learner can first answer by
-playing. `AudioOut` is "just enough of `Synth` for a prompt to sound its
-exercise", declared in `exercises/types.ts` rather than imported; the new
-one is just enough of `listen` for a prompt to take an answer, declared
-the same way, with the screen adapting the real thing to it.
-
-**For tester.** Two things become checkable before any exercise uses it,
-and the first has since been written and overtaken once — see above.
-The adapter the screen supplies must satisfy the declared interface
-structurally — that is what keeps the capture layer out of
-`exercises/` — and `PlayedNote` must stay a subset of `HeardNote`, since
-the whole point is that the real result can be handed in unchanged. A
-drift between them would be found at the one call site rather than by a
-type error, because the adapter is where the two meet.
-
-**And one that is already written and will flip on its own.** The
-home-screen claim test goes green the day an exercise hands a response to
-capture rather than to a click, and its comment says so: *"the day an
-exercise does wire it, this goes green on its own and the lede is free to
-say so"*. Nobody should edit that test to make this land. If it does not
-flip, the wiring is not real.
-
-**What this does not include.** Microphone permission, the live feedback
-on the staff, and the latency correction G1 is about. The seam is useful
-without them and they are each their own decision.
 

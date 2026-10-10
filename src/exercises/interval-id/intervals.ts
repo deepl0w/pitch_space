@@ -380,9 +380,43 @@ export interface IntervalResponse {
  * comes back as 14 and grades wrong, and the prompt says what it heard so
  * the reason is visible rather than mysterious.
  */
+/**
+ * The notes in a take that carry a pitch, which is what "enough to grade"
+ * counts.
+ *
+ * Exported because the prompt has to say *which* way a take was unreadable —
+ * one note is not three — and counting them there would be a second
+ * definition of readable sitting a directory away from this one. One
+ * definition, two readers.
+ */
+export function readableNotes(notes: readonly PlayedNote[]): readonly PlayedNote[] {
+  return notes.filter((note) => note.frequencyHz !== null);
+}
+
 export function intervalPlayed(notes: readonly PlayedNote[]): number | null {
-  const pitched = notes.filter((note) => note.frequencyHz !== null);
-  if (pitched.length < 2) return null;
+  const pitched = readableNotes(notes);
+  /*
+    Exactly two, not at least two.
+
+    Three attacks do not say which two were the answer, and taking the
+    first pair made the commonest hesitation on a real instrument — play
+    a note, re-strike it because you are not sure of it, then play the
+    second — come back as a *unison*. Graded, wrong, with the same
+    wording, the same tally and the same tone as a confident clean miss,
+    and nothing anywhere saying a third note had arrived. A learner who
+    re-struck out of care for their own tuning was told that doing so was
+    the mistake.
+
+    This is the correction to ADR 0047 arriving from its other end: the
+    test is not *heard* but *enough to grade*, and enough wants
+    unambiguous as well as sufficient. The difference from the silence
+    case is that there the microphone genuinely could not tell a quiet
+    room from an unreadable one, and here the count is present — so
+    discarding it was a choice, and refusing is the honest one. Guessing
+    which two the player meant would be the app deciding it knows better
+    than its own input.
+  */
+  if (pitched.length !== 2) return null;
   const [first, second] = pitched;
   // Both are non-null by the filter; TypeScript cannot see that through it.
   const from = first.frequencyHz as number;

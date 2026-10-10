@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SIMPLE_INTERVAL_NAMES } from '../../theory/interval';
 import type { PromptProps } from '../types';
 import {
-  intervalPlayed, intervalVoices,
+  intervalPlayed, intervalVoices, readableNotes,
   type IntervalExercise, type IntervalResponse, type IntervalSettings,
 } from './intervals';
 
@@ -85,10 +85,7 @@ export function IntervalPrompt({
       }
       const semitones = intervalPlayed(take.notes);
       if (semitones === null) {
-        setAside(
-          'I did not hear two notes. Play them one after the other, '
-          + 'and leave the second ringing.',
-        );
+        setAside(unreadable(readableNotes(take.notes).length));
         return;
       }
       setAside(`Heard ${nameOf(semitones)}.`);
@@ -167,6 +164,29 @@ const REFUSALS: Record<'refused' | 'unavailable', string> = {
   unavailable:
     'No microphone was available. You can still answer with the buttons.',
 };
+
+/**
+ * Why a take could not be read, which is not one message.
+ *
+ * **Saying "I did not hear two notes" to someone who played three is the
+ * app telling them the wrong thing about their own playing.** That was the
+ * finding: re-striking a note before committing to it is an ordinary thing
+ * to do on a real instrument, and the player was told only that they were
+ * wrong — same wording, same tally, same tone as a clean miss, with nothing
+ * anywhere saying a third note had arrived. The ambiguity is the machine's
+ * and it has to read as the machine's.
+ *
+ * Neither message is scored, and both leave the buttons live. What they
+ * differ in is what to do next, which is the only reason to have two.
+ */
+function unreadable(heard: number): string {
+  if (heard > 2) {
+    return `I heard ${heard} notes, not two, so I cannot tell which two were `
+      + 'the answer. Play just the two, or answer with the buttons.';
+  }
+  return 'I did not hear two notes. Play them one after the other, '
+    + 'and leave the second ringing.';
+}
 
 /**
  * Compound intervals have no name in the table, and saying so beats an

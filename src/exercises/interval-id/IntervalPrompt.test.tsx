@@ -378,6 +378,34 @@ describe('answering by playing', () => {
     expect(responses, 'a silent take was graded as an answer').toEqual([]);
   });
 
+  /**
+   * The ambiguity is the machine's, and has to read as the machine's.
+   *
+   * Reported from outside: a learner who re-struck a note before committing
+   * to it was told they were wrong, in the same wording and the same tally
+   * as a clean miss, with nothing saying a third note had arrived. Both
+   * halves matter — not scoring it, and saying *which* way the take could
+   * not be read. "I did not hear two notes" said to someone who played
+   * three is the app telling them something false about their own playing.
+   */
+  it('does not answer a take with a third note in it', async () => {
+    render(exercise({ semitones: 4 }), {
+      audioIn: hearing(note(440), note(440, 1), note(554.365, 2)),
+    });
+    await answerByPlaying();
+
+    expect(responses, 'a hesitation was graded as a unison').toEqual([]);
+  });
+
+  it('says it heard three notes rather than that it heard fewer than two', async () => {
+    render(exercise(), { audioIn: hearing(note(440), note(440, 1), note(554.365, 2)) });
+    await answerByPlaying();
+
+    expect(container.textContent).toMatch(/3 notes/);
+    expect(container.textContent, 'told a player who played three that it heard under two')
+      .not.toMatch(/did not hear two notes/);
+  });
+
   it('does not answer when only one note could be read', async () => {
     render(exercise(), { audioIn: hearing(note(440), note(null, 1)) });
     await answerByPlaying();

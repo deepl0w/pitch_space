@@ -496,40 +496,61 @@ describe('the interval someone played', () => {
     { startSeconds, durationSeconds: 0.5, frequencyHz }
   );
 
-  it('is the distance between the first two notes with a pitch in them', () => {
+  it('is the distance between the two notes with a pitch in them', () => {
     // A4 to C#5 is four semitones however the two are spelled.
     expect(intervalPlayed([at(440), at(554.365, 1)])).toBe(4);
-    // *First two*, which this case claimed in its name and never showed: a
-    // third note is not read, so an arpeggio answers with the interval it
-    // opened on rather than refusing.
-    expect(intervalPlayed([at(440), at(554.365, 1), at(659.255, 2)])).toBe(4);
   });
 
   /**
-   * A note struck twice is read as a unison, and the question is graded.
+   * Three notes are not an answer, where they used to be read as the first
+   * two of them.
    *
-   * **The behaviour that exists, pinned as a question rather than as a
-   * decision.** A learner who plays the first note, hesitates, plays it
-   * again and then plays the second has produced three attacks; this reads
-   * the first two and answers *unison*. That is a confident wrong answer to
-   * a question they were in the middle of answering correctly, and it costs
-   * the streak.
+   * The case below this one pinned the consequence as a question. The user
+   * answered it from the outside, playing the hesitation a real instrument
+   * invites — a note, a pause, the same note again, then the second — and
+   * reported being told, in the same wording and the same tally as a clean
+   * miss, that they were wrong. Nothing said a third note had arrived.
    *
-   * It sits at the boundary ADR 0047 was corrected about, approached from
-   * the other side. That correction says the rule is *enough to grade*
-   * rather than *heard*, because fewer than two readable notes cannot be
-   * told from a learner who played nothing. Too many attacks is the mirror
-   * image: three notes do not say which two were the answer, and the code
-   * picks a reading silently.
-   *
-   * Not resolved here. Ignoring repeats, refusing to grade, and taking the
-   * first and last are all defensible and all change what a learner is told,
-   * which makes it the same kind of product question as what a line reads
-   * after a year away. What this case buys is that answering it fails
-   * loudly instead of landing green.
+   * So the reading is refused rather than guessed. An arpeggio does not
+   * answer with the interval it opened on; nothing is scored, and the
+   * prompt says which way the take was unreadable.
    */
-  it('reads a re-struck note as a unison rather than declining to grade', () => {
-    expect(intervalPlayed([at(440), at(440, 1), at(554.365, 2)])).toBe(0);
+  it('refuses a take with a third note rather than reading the first two', () => {
+    expect(intervalPlayed([at(440), at(554.365, 1), at(659.255, 2)])).toBeNull();
+  });
+
+  /**
+   * The hesitation this was written for, now answered.
+   *
+   * A learner plays the first note, is unsure of it, strikes it again, then
+   * plays the second. That used to read the first two attacks and answer
+   * *unison* — a confident wrong answer to a question they were halfway
+   * through answering correctly, costing the streak, and indistinguishable
+   * from a clean miss in wording, tally and tone.
+   *
+   * It is the boundary ADR 0047 was corrected about, approached from the
+   * other side: the test is *enough to grade* rather than *heard*, and
+   * enough wants unambiguous as well as sufficient. The difference from the
+   * silence case is that there no bit could separate a quiet room from an
+   * unreadable one, and here the count is present — so discarding it was a
+   * choice and refusing is the honest one.
+   *
+   * The case this replaced pinned the old behaviour as a question so that
+   * answering it would fail loudly rather than land green. It did.
+   */
+  it('refuses a re-struck note rather than calling it a unison', () => {
+    expect(intervalPlayed([at(440), at(440, 1), at(554.365, 2)])).toBeNull();
+  });
+
+  /**
+   * And a genuine unison is still answerable, which is what stops the case
+   * above being a rule that deletes an interval from the exercise.
+   *
+   * `INTERVAL_DEFAULTS` offers unison, so a learner can be asked for one and
+   * has to be able to play one — two attacks at the same pitch.
+   */
+  it('still reads a unison played as two notes', () => {
+    expect(intervalPlayed([at(440), at(440, 1)])).toBe(0);
   });
 
   /**

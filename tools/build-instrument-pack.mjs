@@ -101,10 +101,11 @@ const PEAK_CEILING_DBFS = -1;
 /**
  * What each pack is built from.
  *
- * **Two libraries, both CC0, both verified from their own repository rather
- * than from a page describing them.** VCSL is the broader set; VSCO 2 CE is
- * the orchestral one, and is where the sustained instruments come from
- * because VCSL has no strings and no flute.
+ * **Three libraries, all CC0, each verified from its own repository rather
+ * than from a page describing it.** VCSL is the broader set; VSCO 2 CE is the
+ * orchestral one, and is where the sustained instruments come from because
+ * VCSL has no strings and no flute; FreePats has the guitar neither of the
+ * other two has.
  *
  * VSCO's readme adds two requests on top of CC0 — credit Versilian Studios,
  * and do not sell the samples directly. Neither is a condition CC0 imposes
@@ -119,11 +120,10 @@ const PEAK_CEILING_DBFS = -1;
  * shifted is what matters and two semitones is already inaudible as a
  * formant shift.
  *
- * **No guitar.** Neither library has one, and a guitar faked from another
- * plucked instrument would be exactly the "not the instrument you know"
- * problem recordings were added to solve. It stays synthesised until there
- * is a real one, which also suits the user's own note that a guitar wants
- * strummed voicings rather than block chords.
+ * **The octave each library writes its filenames in is not free to assume**,
+ * and `middleC` below records what each one actually does. Four of the six
+ * packs shipped an octave sharp because it was assumed; `midiOf` and
+ * `checkPitch` carry that story and the guard that now prevents it.
  */
 const VCSL = 'https://raw.githubusercontent.com/sgossner/VCSL/master';
 const VSCO = 'https://raw.githubusercontent.com/sgossner/VSCO-2-CE/SFZ';
@@ -136,6 +136,8 @@ const INSTRUMENTS = [{
   source: 'https://github.com/sgossner/VCSL',
   licence: 'CC0-1.0',
   attribution: `${VERSILIAN} Community Sample Library — Upright Piano, Knight`,
+  // Measured: the file named A1 sounds A2. VCSL is not uniform about this.
+  middleC: 3,
   dir: `${VCSL}/Chordophones/Zithers/Upright Piano, Knight/Sustains`,
   // Every four semitones: VCSL samples every other one, so this is its set
   // thinned by half.
@@ -148,6 +150,8 @@ const INSTRUMENTS = [{
   source: 'https://github.com/sgossner/VCSL',
   licence: 'CC0-1.0',
   attribution: `${VERSILIAN} Community Sample Library — Yamaha TX81Z`,
+  // Scientific, unlike its two neighbours from the same library.
+  middleC: 4,
   dir: `${VCSL}/Electrophones/TX81Z/FM Piano`,
   // C, E and G# an octave at a time, which is this library's own spacing.
   notes: ['C2', 'E2', 'G#2', 'C3', 'E3', 'G#3', 'C4', 'E4', 'G#4',
@@ -159,6 +163,7 @@ const INSTRUMENTS = [{
   source: 'https://github.com/sgossner/VCSL',
   licence: 'CC0-1.0',
   attribution: `${VERSILIAN} Community Sample Library — Renaissance Organ, 8'`,
+  middleC: 3,
   dir: `${VCSL}/Aerophones/Edge-blown Aerophones/Renaissance Organ/8'`,
   // The library holds every two semitones from C1; taken every four.
   notes: ['C2', 'E2', 'G#2', 'C3', 'E3', 'G#3', 'C4', 'E4', 'G#4', 'C5', 'E5'],
@@ -169,6 +174,8 @@ const INSTRUMENTS = [{
   source: 'https://github.com/sgossner/VSCO-2-CE',
   licence: 'CC0-1.0',
   attribution: `${VERSILIAN} Chamber Orchestra 2 CE — Violin Section, sustained`,
+  // VSCO is consistently C3; its lowest violin file, G2, is a violin's G3.
+  middleC: 3,
   dir: `${VSCO}/Strings/Violin Section/susVib`,
   // Everything the section has; its spacing is uneven and not ours to fix.
   notes: ['G2', 'A2', 'B2', 'D3', 'F#3', 'A3', 'C4', 'E4', 'G4', 'B4', 'D5'],
@@ -179,6 +186,8 @@ const INSTRUMENTS = [{
   source: 'https://freepats.zenvoid.org/Guitar/acoustic-guitar.html',
   licence: 'CC0-1.0',
   attribution: 'FreePats — Spanish Classical Guitar, recorded by Roberto Zenvoid',
+  // Scientific: its lowest file, E2, is the guitar's own bottom string.
+  middleC: 4,
   /*
     The one library of the three that publishes an archive rather than loose
     files, and the only free per-note guitar I could find at all: VCSL and
@@ -203,17 +212,41 @@ const INSTRUMENTS = [{
   source: 'https://github.com/sgossner/VSCO-2-CE',
   licence: 'CC0-1.0',
   attribution: `${VERSILIAN} Chamber Orchestra 2 CE — Flute, sustained`,
+  // Its lowest file is C3, and a concert flute does not go below C4.
+  middleC: 3,
   dir: `${VSCO}/Woodwinds/Flute/susNV`,
   notes: ['C3', 'E3', 'A3', 'C4', 'E4', 'A4', 'C5', 'E5', 'A5', 'C6'],
   file: (note) => `LDFlute_susNV_${note}_v1_1.wav`,
 }];
 
-/** MIDI number for a name like `C#3`, with A4 = 69 and C4 = 60. */
-function midiOf(name) {
+/**
+ * MIDI number for a name like `C#3`, as *that library* writes octave numbers.
+ *
+ * **A sample library's filename is not scientific pitch notation, and four of
+ * the six here are not.** Octave numbering has two live conventions — middle
+ * C as C4, which MIDI and this app use, and middle C as C3, which Yamaha
+ * established and which much sample-library tooling inherited — and a
+ * filename carries no indication of which one it was written in. So the
+ * convention is read off the library and passed in, rather than assumed.
+ *
+ * Getting this wrong is close to invisible from inside the code: every note
+ * is shifted by the same octave, so the pack is internally consistent, every
+ * test passes, and the only symptom is that the instrument sounds an octave
+ * high. It shipped that way. A user reported the organ as sounding
+ * "artificial" and as not sounding like a chord, which is what a single-rank
+ * 8' flute stop does when a C-E-G in the fourth octave is played in the
+ * fifth; measuring the built packs' own fundamentals found piano, organ,
+ * strings and flute all an octave sharp.
+ *
+ * `checkPitch` below is the guard, and it is the part that matters more than
+ * this argument: the convention is now measured from the audio rather than
+ * believed.
+ */
+function midiOf(name, middleC) {
   const [, letter, accidental, octave] = /^([A-G])(#|b)?(-?\d+)$/.exec(name);
   const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[letter];
   const alter = accidental === '#' ? 1 : accidental === 'b' ? -1 : 0;
-  return (Number(octave) + 1) * 12 + base + alter;
+  return (Number(octave) + 1) * 12 + base + alter + (4 - middleC) * 12;
 }
 
 /**
@@ -267,6 +300,158 @@ function peakOf(path) {
   return Number(match[1]);
 }
 
+/**
+ * How far a recording's own pitch sits from the note it is labelled, in
+ * semitones, or `null` when the recording is too quiet to say.
+ *
+ * Only whole octaves are considered, because that is the error being guarded
+ * against and narrowing the question is what makes the answer reliable: a
+ * general pitch detector has to separate candidates a semitone apart, and
+ * every attempt to do that here was defeated by the material. A piano is
+ * harmonically dense enough that the summed energy of a candidate and of the
+ * candidate an octave away agree within a decibel.
+ *
+ * What does separate them is **peakiness of the fundamental alone** — how far
+ * the candidate's own first partial stands above the spectrum a whole tone
+ * either side of it. A harmonic series has nothing at half its fundamental,
+ * so an octave-low candidate scores nothing, and broadband noise has no peak
+ * anywhere, so a silent recording scores nothing and says so rather than
+ * voting.
+ *
+ * The *lowest* candidate that is a peak at all wins, not the strongest. A
+ * weak fundamental is ordinary — a violin section's bottom G and a guitar's
+ * bottom E both put far more energy into the second harmonic than the first —
+ * and taking the strongest reads exactly those an octave high, which is the
+ * error this is here to find.
+ */
+function octaveOffset(path, midi) {
+  const RATE = 22050;
+  const raw = execFileSync('ffmpeg',
+    ['-nostdin', '-v', 'error', '-i', path, '-ac', '1', '-ar', String(RATE),
+      '-f', 'f32le', '-'],
+    { encoding: 'buffer', maxBuffer: 1 << 28 });
+  const x = new Float32Array(raw.buffer, raw.byteOffset, raw.length >> 2);
+  /*
+    The loudest half-second, rather than a fixed offset into the recording.
+
+    Where that window falls differs by instrument and the difference matters:
+    a sustained flute is the same all through, but the top of the upright
+    piano has decayed into room noise within two seconds, and reading it at a
+    fixed 150 ms meant reading mostly noise. Searched rather than chosen, so
+    one rule covers both. Never the first 50 ms, where a struck note's pitch
+    has not settled and a blown one is still sliding into tune.
+  */
+  const len = RATE >> 1;
+  const earliest = Math.floor(RATE * 0.3);
+  if (x.length < len + earliest) return null;
+  let from = earliest;
+  let loudest = -1;
+  for (let start = earliest; start + len <= x.length; start += Math.floor(RATE * 0.05)) {
+    let energy = 0;
+    for (let i = start; i < start + len; i += 4) energy += x[i] * x[i];
+    if (energy > loudest) {
+      loudest = energy;
+      from = start;
+    }
+  }
+
+  const bin = (hz) => {
+    const w = (2 * Math.PI * hz) / RATE;
+    const c = 2 * Math.cos(w);
+    let s1 = 0;
+    let s2 = 0;
+    for (let i = 0; i < len; i++) {
+      const s0 = x[from + i] * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / len)) + c * s1 - s2;
+      s2 = s1;
+      s1 = s0;
+    }
+    return Math.max(0, s1 * s1 + s2 * s2 - c * s1 * s2) / (len * len);
+  };
+  const hzOf = (m) => 440 * 2 ** ((m - 69) / 12);
+  const peakiness = (hz) => bin(hz)
+    / ((bin(hz * 2 ** (-2 / 12)) + bin(hz * 2 ** (2 / 12))) / 2 + 1e-20);
+
+  const scored = OCTAVES.map((d) => ({ d, score: peakiness(hzOf(midi + d)) }));
+  const best = Math.max(...scored.map((c) => c.score));
+  if (best < A_PEAK) return null;
+  return scored.find((c) => c.score >= Math.max(A_PEAK, best / FAINTEST)).d;
+}
+
+/** The octaves a label could be out by, lowest first. */
+const OCTAVES = [-24, -12, 0, 12, 24];
+
+/**
+ * How far above its own neighbourhood a frequency has to stand to count as a
+ * partial rather than as part of the noise floor: 10 dB.
+ *
+ * A recording where nothing reaches this is not saying anything and does not
+ * vote. The top of the upright piano is what that is for — by the window this
+ * reads, those notes have decayed into room tone.
+ */
+const A_PEAK = 10;
+
+/**
+ * How far below the strongest partial a fundamental may still be believed:
+ * 30 dB.
+ *
+ * Not a tuning knob despite looking like one. A plucked low string really
+ * does put its first partial tens of decibels under its second, so a tight
+ * tolerance would read half the guitar an octave high; and nothing a flute
+ * does puts a spurious peak within 30 dB of its fundamental, so a loose one
+ * does not cost anything there. Every value from 20 to 40 dB gives the same
+ * verdict for all six packs, which is the reason to believe the figure is
+ * not holding the result up.
+ */
+const FAINTEST = 1000;
+
+/**
+ * Refuse a pack whose recordings do not sound the notes it labels them.
+ *
+ * This exists because believing a filename shipped four instruments an octave
+ * sharp — see `midiOf`. A build-time measurement is the only check with any
+ * authority over that: nothing downstream can tell, because the error is
+ * uniform, and a uniformly wrong pack is a perfectly consistent one.
+ *
+ * **The verdict is the set's, not each note's.** A convention belongs to the
+ * library, so the statistic is the modal offset over every note that could be
+ * measured, which survives the few notes any real set will have that are too
+ * quiet or too inharmonic to read. The margin is thinner than it looks for
+ * the piano — nine of its fifteen measurable notes agree, against four
+ * reading an octave high off a strong second partial — so a bare majority is
+ * what is asked for, and a set that cannot reach even that fails rather than
+ * passing on a plurality nobody should trust.
+ *
+ * What this does not catch is one mislabelled file among many, which would
+ * lose the vote and be reported as a disagreement rather than refused. That
+ * is the right way round: the convention error is silent and systematic, and
+ * a single wrong note is audible the first time it is played.
+ */
+function checkPitch(instrument, sources) {
+  const offsets = sources
+    .map((s) => ({ ...s, offset: octaveOffset(s.source, s.midi) }))
+    .filter((s) => s.offset !== null);
+  if (offsets.length === 0) throw new Error(`${instrument.id}: no note was loud enough to measure`);
+
+  const votes = new Map();
+  for (const { offset } of offsets) votes.set(offset, (votes.get(offset) ?? 0) + 1);
+  const [shift, agreeing] = [...votes].reduce((a, b) => (b[1] > a[1] ? b : a));
+
+  if (agreeing * 2 <= offsets.length) {
+    throw new Error(`${instrument.id}: its recordings do not agree on an octave `
+      + `(${[...votes].map(([d, n]) => `${n} at ${d}`).join(', ')} of ${offsets.length} measured)`);
+  }
+  if (shift !== 0) {
+    throw new Error(`${instrument.id}: every note sounds ${shift / 12} octave(s) from its label `
+      + `(${agreeing} of ${offsets.length} measured) — this library writes middle C as `
+      + `C${instrument.middleC - shift / 12}, not C${instrument.middleC}`);
+  }
+  const odd = offsets.filter((s) => s.offset !== 0);
+  const quiet = sources.length - offsets.length;
+  console.log(`  pitch   ${offsets.length - odd.length}/${sources.length} notes sound as labelled`
+    + (odd.length ? `, ${odd.map((s) => `${s.note} by ${s.offset}`).join(', ')}` : '')
+    + (quiet ? `, ${quiet} too quiet to measure` : ''));
+}
+
 /** Mean RMS in dBFS across a set of encoded notes, via ffmpeg's astats. */
 function rmsOf(paths) {
   const levels = paths.map((path) => {
@@ -305,8 +490,9 @@ async function build(instrument, outDir, cacheDir) {
       source = join(cacheDir, `${instrument.id}_${note}.wav`);
       await fetchTo(urlFor(instrument, note), source);
     }
-    sources.push({ midi: midiOf(note), note, source });
+    sources.push({ midi: midiOf(note, instrument.middleC), note, source });
   }
+  checkPitch(instrument, sources);
 
   /*
     One gain for the whole pack, not one per note.

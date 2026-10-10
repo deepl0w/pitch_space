@@ -1,6 +1,7 @@
 import {
   DEFAULT_INSTRUMENT_ID, instrument, isInstrumentId, type Instrument,
 } from './instruments';
+import { withinReach } from './pack';
 import { hasPack, loadPack, playSampled, type SampleBank } from './sampled';
 /**
  * The instrument, synthesised and — once its pack arrives — recorded.
@@ -420,9 +421,16 @@ export class Synth {
       a finished download back for no reason the listener would thank you
       for, and the usual case is a pack that arrives before the first press
       of Start.
+
+      A note the pack cannot reach falls through to synthesis the same way a
+      missing pack does. Those are the notes the real instrument does not
+      have — a flute below middle C — and the synthesised voice has no such
+      limit, so the choice is between a clean tone at the right pitch and a
+      recording dragged an octave and a half down until it is not a flute any
+      more. `FURTHEST_SHIFT` carries the argument.
     */
     const bank = this.bank();
-    if (bank) {
+    if (bank && withinReach(bank.manifest.notes, voice.midi)) {
       const source = playSampled(context, destination, bank, voice, at);
       this.scheduled.push(source);
       source.onended = () => {

@@ -146,6 +146,30 @@ player resamples from the nearest.
 `2 ** ((wanted - nearest) / 12)` and storing it would be a derived number with
 its own opportunity to drift from the `midi` beside it.
 
+**`midi` is what the recording sounds, never what its filename called it.**
+These come apart more often than they look as though they would. Octave
+numbering has two live conventions — middle C as C4, which MIDI and this app
+use, and middle C as C3, which Yamaha established and much sample-library
+tooling inherited — and a filename carries no indication of which one it was
+written in. Four of the six packs shipped an octave sharp on the assumption
+that a file called `C4` sounds middle C; three of the libraries involved do
+not mean that, and one of them is inconsistent between its own sub-libraries.
+
+The error is close to invisible once made. Every note moves together, so the
+pack is internally consistent, the arithmetic above is still right, and
+nothing downstream has anything to compare against — the only symptom is an
+instrument that sounds an octave high, which a reader is likelier to put down
+to the recording than to the manifest. So the builder measures each
+recording's own pitch and refuses a set that does not agree with its labels,
+and `tools/build-instrument-pack.mjs` carries how.
+
+**A player resamples by at most an octave, and declines the rest.** A pack is
+allowed to stop where its instrument stops — a concert flute has no notes
+below middle C — and the right answer for a note it does not have is the
+synthesised voice, not a recording dragged far enough that the formants move
+with it and it stops being the instrument. `FURTHEST_SHIFT` in `pack.ts` is
+the limit and carries the reasoning.
+
 ## `trim` is measured per pack and must not be inherited
 
 The six synthesised voices carry a measured `trim` that brings them within a

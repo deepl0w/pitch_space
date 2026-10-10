@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import { PracticeScreen } from './ui/screens/PracticeScreen';
 import { EXERCISE_TYPES } from './exercises/registry';
 import type { AudioOut } from './exercises/types';
-import { COMPASS, uncovered } from './audio/output/pack';
+import {
+  COMPASS, FURTHEST_SHIFT, nearestRecorded, parsePack, uncovered, withinReach,
+} from './audio/output/pack';
+import type { PackNote } from './audio/output/pack';
+import { PACKS } from './audio/output/sampled';
 
 /**
  * What a sample pack will have to cover, measured from the app rather than
@@ -37,6 +43,21 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+/**
+ * Each built pack's note table, read out of the pack itself.
+ *
+ * From `public/packs/`, not from `packs.json`: the index carries a count and
+ * the table is inside the binary, and it is the table that decides how far a
+ * note gets resampled. Read with `node:fs` under jsdom, which works because
+ * vitest runs the file in node and only the globals are the browser's.
+ */
+const PACK_NOTES: Record<string, readonly PackNote[]> = Object.fromEntries(
+  PACKS.map((pack) => [
+    pack.id,
+    parsePack(new Uint8Array(readFileSync(join('public', 'packs', pack.file)))).manifest.notes,
+  ]),
+);
 
 /** How many rounds to draw per exercise. Each mount is a fresh seed. */
 const ROUNDS = 4;
@@ -186,5 +207,58 @@ describe('the range a sampled pack will have to cover', () => {
     expect(short.below.length, 'a pack an octave too high covers the bottom')
       .toBeGreaterThan(0);
     expect(short.above, 'and has room to spare at the top').toEqual([]);
+  });
+
+  /**
+   * And against the packs that actually shipped, which is the half this file
+   * was missing.
+   *
+   * Everything above builds its own note tables, so it tests `uncovered` and
+   * says nothing about any real pack. That is how four packs shipped an
+   * octave sharp: the arithmetic was right, the tables were made up, and
+   * nothing in the suite ever looked at `packs.json`. Reading the built index
+   * is what turns this from a check of a function into a check of the
+   * product.
+   *
+   * **Not a demand that every pack cover everything**, which is the version
+   * of this test that would have been wrong. A pack is allowed to stop where
+   * its instrument stops — a concert flute has no notes below middle C and a
+   * violin none below the G under it — and `withinReach` is what keeps those
+   * notes from being answered by a recording dragged an octave and a half
+   * down. So the property is the one that actually has to hold: of the notes
+   * a pack does claim, none is further than `FURTHEST_SHIFT` from a
+   * recording, and the ones it declines are declined for a reason this file
+   * can state.
+   */
+  it('either reaches a note honestly or declines it', () => {
+    expect(PACKS.length, 'no packs are built').toBeGreaterThan(0);
+    const overreaching = PACKS.flatMap((pack) => everything
+      .filter((midi) => withinReach(PACK_NOTES[pack.id], midi))
+      .filter((midi) => Math.abs(nearestRecorded(PACK_NOTES[pack.id], midi).midi - midi)
+        > FURTHEST_SHIFT)
+      .map((midi) => `${pack.id} claims MIDI ${midi}`));
+    expect([...new Set(overreaching)]).toEqual([]);
+
+    /*
+      And the declining is real rather than vacuous. A pack that declined
+      everything would satisfy the case above and leave the app silently
+      synthesised, which is the failure that hides behind a green guard.
+
+      Named notes rather than counts over `everything`, because the sweep
+      above draws fresh seeds and does not promise to ask for a bass note on
+      any given run — a first version of this asserted that the flute
+      declined something and passed or failed with the draw. These are
+      properties of the packs themselves: the octave around middle C is what
+      every instrument has, and the bottom of the compass is below all six by
+      more than an octave.
+    */
+    for (const pack of PACKS) {
+      const notes = PACK_NOTES[pack.id];
+      expect(withinReach(notes, COMPASS.lowest),
+        `${pack.id} claims to reach MIDI ${COMPASS.lowest}`).toBe(false);
+      for (const midi of [60, 64, 67, 72]) {
+        expect(withinReach(notes, midi), `${pack.id} cannot reach MIDI ${midi}`).toBe(true);
+      }
+    }
   });
 });

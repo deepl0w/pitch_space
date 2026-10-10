@@ -317,7 +317,26 @@ The remedy is not vigilance. **A summary should be generated from what it
 summarises, or carry the command that checks it, or not exist.**
 `tools/report-facts.sh` is the worked example of the first
 ([0023](0023-a-document-cannot-cite-its-own-commit.md)), and "What is not
-built" now carries two commands as the second.
+built" carried two commands as the second.
+
+**The three are not equal, and the week of 11 October tested two of them
+against each other.** "What is not built" rotted a *second* time with its
+commands in place — three of four entries false again, one of them
+contradicted by a passing test in the same repository. The lede claim, bound
+to a fact in `src/architecture.test.ts`, flipped on its own in the same week.
+
+**The reason is who each remedy addresses.** A command in a document is run by
+someone reading the document, and **the reader is not who makes it stale** —
+the writer of the next feature is, and they never arrive at the file. Nobody
+who built the capture layer had any reason to open `ARCHITECTURE.md`. A claim
+bound to a fact needs no reader at all: it fails in the suite of the person
+who falsified it, at the moment they do.
+
+So the ordering is: **bind it to a fact, or let it not exist. Carrying a
+command is a third-best that has now failed once and should be chosen only
+where the claim genuinely cannot be bound** — and then per entry, not as two
+commands at the top of a list, since a reader who skips the list skips the
+commands with it.
 
 That these four were fixed on four different days, in four different
 documents, without anyone noticing they were one fault is the convention

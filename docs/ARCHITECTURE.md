@@ -382,32 +382,51 @@ settings-gated rather than unreachable.
 
 ## What is not built
 
-**This is the section that rots, and it rots silently.** Building something
-does not prompt anyone to delete its entry here, where a claim about what
-*exists* is contradicted the moment a reader opens the file it describes. On
-5 October three of its four entries were false and had been for days. Check
-this list against the tree before trusting it, and prefer a command to a
-sentence:
+**This is the section that rots, and it has now done so twice.** On 5 October
+three of its four entries were false and had been for days. On 11 October
+three of four were false again — including one contradicted by a *passing
+test* in the same repository. Building something does not prompt anyone to
+delete its entry here, and the builder has no reason to open this file.
 
-```bash
-grep -n "    id: '" src/exercises/registry.ts   # the exercise types that exist
-ls src/audio/capture/                           # what the capture layer holds
-```
+**The warning this section used to carry was addressed to the wrong person.**
+It told the reader to check before trusting the list, with two commands at the
+top. The reader is not who makes it stale; the writer of the next feature is,
+and they never arrive here. So each entry now carries its own check, and an
+entry that cannot carry one does not belong.
 
-- **No exercise is answered by playing it.** This is the one that still
-  stands, and it is the gap between the app and its own description. The
-  analysis chain in `audio/dsp/` is complete and nothing feeds it: `capture/`
-  holds `measureLatency.ts` and nothing else, so the only microphone use in
-  the app is the calibration step, which grades nothing. There is no worklet
-  and no analysis worker.
-- **Six exercise types exist**, which the menu no longer overstates —
-  note identification, chord progression, key, chord, scale and rhythm.
-  Sight reading is the one named in the brief that has no exercise.
-- **Spaced repetition is built and not wired.**
-  [`src/state/schedule.ts`](../src/state/schedule.ts) is pure with its clock
-  injected, and takes `items(settings)` from the exercise contract as its
-  denominator. Nothing in the UI calls it yet, so no user sees a due count.
+- **Sight reading has no exercise.** Seven exercise types across six families
+  — note identification, chord progression, key, chord, scale and rhythm —
+  and the one named in the brief with nothing behind it is reading from the
+  staff. *(The previous version of this entry said "six exercise types",
+  conflating a type with a family, which `registry.ts` is careful to
+  separate: a family is one of the six kinds of practice, a type is one way
+  of asking it.)*
+
+  ```bash
+  ./tools/report-facts.sh | grep -E '^exercises|^families'
+  ```
+
 - **The Android target.** `CLAUDE.md` describes a PWA and an Android APK. The
-  PWA half now exists — `vite.config.ts` imports and configures `VitePWA`. The
-  APK does not: the `android:*` scripts invoke `npx cap` with no Capacitor
-  dependency, no `capacitor.config.*` and no `android/` directory.
+  PWA half exists; the APK does not — the `android:*` scripts invoke `npx cap`
+  with no Capacitor dependency, no `capacitor.config.*` and no `android/`.
+
+  ```bash
+  grep -c capacitor package.json; ls -d android 2>/dev/null || echo 'no android/'
+  ```
+
+### Three entries removed on 11 October, because they had become false
+
+Kept as a list rather than deleted silently, since what they were wrong about
+is the argument for the per-entry checks above.
+
+- **"No exercise is answered by playing it."** An interval can be. `capture/`
+  holds nine files including the worklet, where this said it held
+  `measureLatency.ts` and nothing else. **`src/architecture.test.ts` already
+  asserted the opposite and was green** — the repository contained a passing
+  test contradicting this paragraph, which is as clear a case as this document
+  will ever produce for binding a claim to a fact rather than to a reader's
+  diligence.
+- **"Spaced repetition is built and not wired."** `Home.tsx` imports
+  `completion` from `state/schedule` and every exercise card shows how far its
+  line has advanced.
+- **"Six exercise types exist."** Seven, across six families; see above.

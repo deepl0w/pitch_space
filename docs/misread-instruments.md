@@ -452,6 +452,30 @@ helps, because nothing is wrong with it.
   up or did not because a draw decided. There is no double in that one — it is
   the coin, and the closing section below already has it.
 
+- **Half a predicate, where each half is plausible alone.** `assemble` in
+  `audio/capture/listen.ts` joins two attacks when they agree about pitch
+  **and** did not get louder — `MERGE_CENTS` at line 354, `NEW_NOTE_RISE` at
+  388, combined thirty-four lines later in one function. Two instances of the
+  same fault followed:
+
+  A comment cited `MERGE_CENTS` where it meant `NEW_NOTE_RISE`. **A dangling
+  name fails on sight; this one passes**, because the constant it names is
+  real, nearby, and part of the very predicate under discussion.
+
+  And `steadyNotes` in `exercises/played.ts` first reimplemented the pitch
+  half without the loudness half — *"the obvious tolerance to add"*, and it
+  destroys the unison, which a learner answers by striking one pitch twice.
+  Pitch alone cannot tell a re-attack from a wobble inside one note; loudness
+  is the half that discriminates, and it was the half dropped.
+
+  **What defeats inspection is that each half is independently sensible.**
+  "Merge notes at the same pitch" reads as a complete rule. A reader checking
+  it has nothing to be suspicious of, because nothing is missing from the
+  sentence — only from the predicate. The remedy is to keep the halves where
+  one cannot be taken for the whole: adjacent, or behind a single name, so
+  that half of it is visibly half. The comment now says where the real rule
+  lives and that a more generous merge belongs there rather than copied.
+
 The third is the one with a standing rule attached, and `instruments.ts` names
 the gap itself:
 

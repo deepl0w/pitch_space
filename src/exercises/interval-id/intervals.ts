@@ -448,7 +448,21 @@ export function gradeInterval(exercise: IntervalExercise, response: IntervalResp
 
   const heard = SIMPLE_INTERVAL_NAMES[exercise.semitones];
   const played = `${pitchName(from)} to ${pitchName(to)}`;
-  const mnemonic = INTERVAL_MNEMONICS[exercise.semitones];
+  /*
+    No tune for a descending interval. `INTERVAL_MNEMONICS` is ascending
+    throughout, and a mnemonic works by handing the ear a contour it already
+    knows — so offering one for the opposite contour points at the thing the
+    learner is being asked to hear and points the wrong way. A learner who
+    missed a descending major 6th was being told to think of *My Bonnie*,
+    which rises.
+
+    Harmonic keeps it: both notes sound at once, so there is no contour for
+    an ascending tune to contradict, and the tune is still the shortest way
+    to hear the distance.
+  */
+  const mnemonic = exercise.direction === 'down'
+    ? undefined
+    : INTERVAL_MNEMONICS[exercise.semitones];
 
   return {
     correct,

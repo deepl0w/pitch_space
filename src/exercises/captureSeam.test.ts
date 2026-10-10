@@ -250,8 +250,28 @@ describe('a unison answered by playing it', () => {
       RATE,
     );
 
-    expect(take.notes.length, 'the hesitation was merged, so nothing refuses it')
+    /*
+      The durable half: the chain delivers three notes. True whatever is
+      decided about what to do with them, because it is a fact about
+      assembly rather than about grading — and it is what makes a rule
+      based on the count worth having at all. If a re-strike were merged,
+      nothing downstream would ever see the ambiguity.
+    */
+    expect(take.notes.length, 'the hesitation was merged, so no rule can see it')
       .toBeGreaterThan(2);
+
+    /*
+      **And the half that moves.** Refusing is the current answer and not
+      the only defensible one: ignoring repeated attacks on one pitch would
+      remove the same symptom and grade the learner correctly, which is
+      friendlier, and that choice is back with the person whose call it is.
+      Under that resolution this line becomes `toBe(4)` rather than
+      `toBeNull()`, and nothing else in this file changes.
+
+      Marked rather than loosened. A test that fails loudly when the
+      behaviour moves is the point; what it should not do is make somebody
+      work out which of its assertions was the decision.
+    */
     expect(intervalPlayed(take.notes), 'three attacks were graded anyway').toBeNull();
   });
 });

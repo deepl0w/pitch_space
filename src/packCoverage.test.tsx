@@ -240,25 +240,48 @@ describe('the range a sampled pack will have to cover', () => {
     expect([...new Set(overreaching)]).toEqual([]);
 
     /*
-      And the declining is real rather than vacuous. A pack that declined
-      everything would satisfy the case above and leave the app silently
-      synthesised, which is the failure that hides behind a green guard.
+      And both halves of the branch are real rather than vacuous — derived
+      from each pack's own table rather than from named notes, because a
+      hand-picked list answers a question about the list.
 
-      Named notes rather than counts over `everything`, because the sweep
-      above draws fresh seeds and does not promise to ask for a bass note on
-      any given run — a first version of this asserted that the flute
-      declined something and passed or failed with the draw. These are
-      properties of the packs themselves: the octave around middle C is what
-      every instrument has, and the bottom of the compass is below all six by
-      more than an octave.
+      The two failures are opposite and neither is visible from the case
+      above. A `withinReach` that always said no would leave the app
+      silently synthesised with every pack downloaded and unused; one that
+      always said yes would kill the fallback and drag a flute recording
+      an octave and a half down. So: inside its own range a pack declines
+      nothing, and across the compass the app can ask for, every pack
+      declines something.
     */
     for (const pack of PACKS) {
       const notes = PACK_NOTES[pack.id];
-      expect(withinReach(notes, COMPASS.lowest),
-        `${pack.id} claims to reach MIDI ${COMPASS.lowest}`).toBe(false);
-      for (const midi of [60, 64, 67, 72]) {
-        expect(withinReach(notes, midi), `${pack.id} cannot reach MIDI ${midi}`).toBe(true);
+      const recorded = notes.map((n) => n.midi).sort((a, b) => a - b);
+
+      /*
+        Inside its own range, every semitone. The note tables are spaced
+        no more than four apart — asserted in `packs.test.ts` as the shift
+        the builder declares — so this cannot fail by arithmetic; it fails
+        if `withinReach` stops working, or if a rebuilt table develops a
+        hole wider than two octaves.
+      */
+      const unreachable = [];
+      for (let midi = recorded[0]; midi <= recorded[recorded.length - 1]; midi += 1) {
+        if (!withinReach(notes, midi)) unreachable.push(midi);
       }
+      expect(unreachable, `${pack.id} declines notes inside its own range`).toEqual([]);
+
+      /*
+        And the compass reaches past it. Not a tautology about
+        `FURTHEST_SHIFT`: it says the app can ask for notes no pack holds,
+        which is why the synthesised floor is still load-bearing and is
+        the thing that stops being true if somebody records every
+        instrument across all 88 keys.
+      */
+      const declined = [];
+      for (let midi = COMPASS.lowest; midi <= COMPASS.highest; midi += 1) {
+        if (!withinReach(notes, midi)) declined.push(midi);
+      }
+      expect(declined.length, `${pack.id} reaches the whole compass, so nothing falls through`)
+        .toBeGreaterThan(0);
     }
   });
 });

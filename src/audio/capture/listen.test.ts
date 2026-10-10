@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { analyse, listen, listenFor } from './listen';
 import { RecordedSource } from './recorded';
-import { framesOf } from './source';
+import { framesOf, type CaptureFrame, type CaptureSource } from './source';
 import { mix, pluckSequence, pluckedString, silence, startingAt } from '../testing/signals';
 import { frameSizeFor } from '../dsp/pitchDetector';
 
@@ -389,5 +389,73 @@ describe('a take of a fixed length', () => {
     });
 
     expect(asked, 'the take did not wait, or waited for something else').toEqual([3.5]);
+  });
+});
+
+/**
+ * What `listenFor` does to the device when the take goes wrong.
+ *
+ * The `finally` around the wait exists because "a source left running holds
+ * the microphone open, and the recording indicator stays on, whatever went
+ * wrong" — and `await source.start(...)` sits outside it. A `start` that
+ * acquires the stream, delivers a frame and *then* rejects therefore skips
+ * the release entirely: the light stays on, with nothing listening.
+ *
+ * Not hypothetical for a real device. `MicrophoneSource.start` resolves once
+ * the worklet is wired, and everything it does before that point — the
+ * permission prompt, opening the context, loading the module — can fail
+ * after the stream has been granted.
+ *
+ * `stop()` is null-safe at every step, so calling it on a source that never
+ * finished starting releases whatever it did acquire and does nothing where
+ * there is nothing to release.
+ */
+describe('a take that cannot be finished', () => {
+  /** A source that hands over a frame and then fails, as a device can. */
+  function failing(): CaptureSource & { stopped: number } {
+    const self = {
+      sampleRate: 44_100,
+      stopped: 0,
+      async start(onFrame: (frame: CaptureFrame) => void) {
+        onFrame({ samples: new Float32Array(8192), startSeconds: 0 });
+        throw new Error('device went away');
+      },
+      stop() { self.stopped += 1; },
+    };
+    return self as unknown as CaptureSource & { stopped: number };
+  }
+
+  /** A source that starts cleanly and never delivers anything. */
+  function silent(): CaptureSource & { stopped: number } {
+    const self = { sampleRate: 44_100, stopped: 0, async start() {}, stop() { self.stopped += 1; } };
+    return self as unknown as CaptureSource & { stopped: number };
+  }
+
+  it('releases the device when starting fails part-way through', async () => {
+    const source = failing();
+    await expect(listenFor(source, 0.01, { wait: async () => {} }))
+      .rejects.toThrow(/device went away/);
+    expect(source.stopped, 'the microphone was left open after a failed start').toBe(1);
+  });
+
+  it('still reports the failure rather than swallowing it', async () => {
+    // Releasing the device must not turn a broken take into an empty one:
+    // an empty take is an answer, and a device that fell over is not.
+    const source = failing();
+    await expect(listenFor(source, 0.01, { wait: async () => {} })).rejects.toThrow();
+  });
+
+  it('analyses a take that produced no frames at all, rather than throwing', async () => {
+    // The wait can finish before anything arrives — a device that is slow to
+    // deliver, or a take short enough to beat the first frame. Zero samples
+    // has to reach `analyse` safely, because the alternative is an exception
+    // on the path whose whole purpose is to fail softly.
+    const source = silent();
+    const result = await listenFor(source, 0.01, { wait: async () => {} });
+
+    expect(result.notes).toEqual([]);
+    expect(result.durationSeconds).toBe(0);
+    expect(result.sampleRate).toBe(44_100);
+    expect(source.stopped, 'the device was not released after an empty take').toBe(1);
   });
 });

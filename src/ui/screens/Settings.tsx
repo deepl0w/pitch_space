@@ -235,10 +235,10 @@ export function Settings({ go }: { go(route: string): void }) {
           <p className="secondary">
             {ALL_RECORDED
               ? `Real recordings, downloaded once and kept. Picking one plays
-                 a note.`
+                 a chord.`
               : `Recorded instruments play real recordings, downloaded once and
                  kept. The rest are generated as they play. Picking one plays
-                 a note.`}
+                 a chord.`}
           </p>
           {/*
             The credit, read off the generated index rather than typed.

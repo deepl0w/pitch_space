@@ -77,7 +77,7 @@ words:
 7. *A claim's altitude decides whether anything can falsify it* — a summary needs a mechanism its parts do not.
 8. *A claim about what the user wants* — the only kind nothing in the repository can contradict.
 9. *A guard must be able to fail* — a sound assertion over an empty or unlucky population is the usual way it cannot.
-10. *A reason attached to working code* — unfalsifiable because the code is right — and its dual, *a distinction the type cannot state*.
+10. *A reason attached to working code* — unfalsifiable because the code is right — and its dual, *a distinction the type cannot state*; with the one constructive move against both, *pin the behaviour that exists*.
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in
@@ -86,6 +86,27 @@ of what it holds, 0013 cited 0012, this index drew it, and the published report
 repeated it. No single step looked like an invention, and the claim — that the
 DSP layer computes chroma, which it does not — was load-bearing for an exercise
 about to be built on it. Both records now carry dated corrections.
+
+**The same rule reaches data this project did not write, where the record
+that made the claim is a filename or a readme.** Two instances inside one
+feature, both about sample libraries:
+
+- **Pitch.** Four of six instrument packs shipped an octave sharp, because the
+  builder read the note a file was *called*. A file named `C4` is middle C
+  under one octave convention and not under the other; VSCO writes middle C as
+  C3, FreePats writes C4, and VCSL is inconsistent between its own
+  sub-libraries. The builder measures each recording's fundamental now and
+  refuses a set that disagrees with its labels.
+- **Licence.** One library's repository metadata says CC0 while its readme
+  asks for more; another states CC0 only inside the downloaded archive, where
+  neither the project page nor the repository metadata shows it. The allowlist
+  decides what is permitted; a person still opens the package.
+
+**Imported metadata is a claim by somebody outside this repository, and it is
+the only kind no amount of reading our own code can check.** The remedy is the
+first convention's, pointed outward: go to the thing itself — measure the
+audio, open the archive — rather than to the description that travelled with
+it.
 
 **A description of work is not the work, and that holds when the description is
 the author's own and offered in good faith.** On 6 October four claims about
@@ -302,6 +323,31 @@ That these four were fixed on four different days, in four different
 documents, without anyone noticing they were one fault is the convention
 demonstrating itself: each was checked locally and nothing summarised them.
 
+**The remedy has since been built and has fired, which is worth recording
+because everything above this line is a failure.** A convention illustrated
+only by things going wrong gives a reader no way to tell whether its advice
+works or is merely sensible-sounding.
+
+`src/architecture.test.ts` carries the home screen's lede — the first instance
+above — as a case. It went red when the capture adapter landed and the
+sentence had not caught up, and green when the sentence did; main reports it as
+the second such test to flip on its own rather than being edited.
+
+**The design detail is what makes it work, and it is the opposite of the
+obvious implementation.** It does not snapshot the sentence. A reworded lede
+that still claims playing as a present capability fails it, and the wording is
+free to change in every other way, because what is checked is **the fact the
+wording has to answer to** — whether any exercise actually hands a response to
+the capture layer rather than to a click. A test on the string would have been
+brittle, would have failed on every rewrite for no reason, and would have been
+deleted within a month; a test on the fact survives rewording and cannot be
+satisfied by it.
+
+It is also deliberately one-directional. It catches claiming a capability with
+nothing behind it, and lets the opposite — building something and not saying so
+— pass. That asymmetry is why going green on its own is safe rather than a
+missed alarm: a quiet app is a smaller fault than a lying one.
+
 **A claim about what the user wants is a claim too, and it is the only kind
 nothing in the repository can contradict.** Every convention above points at
 statements about the code, where a grep, a test or a second reader eventually
@@ -455,6 +501,40 @@ and notice when they look the same. The tell is that you cannot write the
 test — if you set out to assert the difference and find there is no expression
 for it, that is the finding, and the fix belongs in the type rather than in
 the suite.
+
+**There is one constructive move against both of the above, and it is the
+only one in this list: pin the behaviour that exists, with the open question
+named in the case.** The ninth and tenth describe claims nothing is positioned
+to contradict. Where the contradiction is a record and the code drifting
+apart, and resolving it is somebody else's call, the choice is not between
+fixing it and saying nothing.
+
+`completion` ignores the clock: `streak` falls on a wrong answer and never
+with elapsed time, so a line whose items all reach the top rung reads 1 for
+ever, including for a learner who stopped a year ago.
+[0040](0040-completion-replaces-the-score.md) says there is no done and argues
+a reading should drift back while nobody practises. Nothing drifts. What a
+learner should see after doing everything right and then stopping is a product
+question and open, so neither the architect nor the tester could answer it.
+
+`schedule.test.ts` now pins the drift-free behaviour and says in the case that
+**it pins the behaviour that exists, not the one that should**, citing the
+record. Simulating an answer — decaying the streak by a month's staleness —
+turns three cases red including that one.
+
+**What it buys is a reader that cannot forget.** Without the case, the day
+somebody answers the product question the change lands green and nobody
+rereads 0040. With it, the suite fails loudly and the failure message points at
+the record that has been waiting. That matters here specifically: this project
+has already had a user's ruling sit four days in a file synced into the
+worktree of the role named in it.
+
+**The counterintuitive part is that pinning behaviour you do not endorse looks
+exactly like endorsing it**, and only the comment separates them — which makes
+this the one place a comment is load-bearing rather than decorative. The fifth
+convention says a constraint worth a comment is worth a test and the comment
+should point at the test. This is that reversed: a test whose job is to point
+at a record.
 
 **Checking more and checking exactly pull in opposite directions, and that is
 the point.** The first convention says check more — no claim about the code

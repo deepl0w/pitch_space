@@ -250,3 +250,29 @@ wrong". The graceful floor keeps absorbing things it was not built for. That is
 not an argument against the floor; it is the standing reason this feature's
 faults are found by reproduction rather than by symptom, and the reason it cost
 two false readings before anyone reproduced it deliberately.
+
+
+## Addendum, 11 October 2026 — the floor is wider than this record described
+
+Throughout, this record treats synthesis as what sounds when a pack has not
+arrived: on first load, while a download runs, when a device cannot fetch one.
+That is no longer the whole of it.
+
+`FURTHEST_SHIFT` in `src/audio/output/pack.ts` limits a player to resampling
+by at most an octave, and hands anything further to synthesis. **So synthesis
+now also covers notes a pack *has* and should not stretch to** — a flute
+recording dropped twenty semitones is not a flute, because the formants move
+with the pitch, and the learner would be asked to identify a slow dark growl.
+
+**This is not a new decision and does not want its own record.** It is
+[0045](0045-an-instrument-may-change-how-a-note-is-produced-never-which-note-is-correct.md)'s
+first tier — the note is right and only the timbre is at stake — with a
+threshold on how far the timbre may be degraded before the honest answer is
+the other voice. The fallback is the one this record already argues for,
+reached for a second reason.
+
+What is corrected here is only this record's description of when the floor
+applies. A reader of 0046 alone would conclude that synthesis sounds exactly
+when a pack is missing, and would be surprised to hear it for a note the
+manifest plainly lists. The reasoning for the limit itself lives beside the
+constant and in [`docs/instrument-pack-format.md`](../instrument-pack-format.md).

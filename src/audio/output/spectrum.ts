@@ -11,7 +11,8 @@
  * the exercise layer takes from `audio/output/synth` is `import type`, erased
  * at compile time, and a value import is not. One `import { SPECTRUM_BANDS }`
  * put the module that constructs the `AudioContext` into the runtime graph of
- * a prompt — which is the thing ADR 0029 exists to prevent, arriving as a
+ * a prompt — which is the thing the layer boundary exists to prevent (see
+ * `architecture.test.ts`; 0029 is a different rule), arriving as a
  * convenience rather than as a decision. Nothing failed; `architecture.test.ts`
  * guards `theory/`, `generate/` and `audio/dsp/`, and the exercise layer was
  * not in the list.

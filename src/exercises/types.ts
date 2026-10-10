@@ -422,7 +422,14 @@ export interface AudioOut {
    *
    * Here so that a prompt can draw what is sounding without reaching for an
    * `AnalyserNode` — the exercise layer does not import the platform, and
-   * the one `AudioContext` belongs to `audio/output` (ADR 0005, ADR 0029).
+   * the one `AudioContext` belongs to `audio/output`.
+   *
+   * **No record number here, because no record makes either claim.** This
+   * cited 0005 and 0029, which are *seeds are minted outside the core* and
+   * *a prompt is a component and may use one*: both real, both about
+   * something else, and a citation that resolves to the wrong record passes
+   * every check a dangling one fails. The constraint is enforced by
+   * `architecture.test.ts` instead, which is the thing a reader can run.
    * What crosses the seam is an array of numbers.
    *
    * Optional, like everything a test double would otherwise have to

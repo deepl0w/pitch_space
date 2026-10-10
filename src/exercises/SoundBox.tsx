@@ -18,7 +18,7 @@ import { SPECTRUM_BANDS } from '../audio/output/spectrum';
  * and the comment here said so plainly, because a waveform that is not the
  * waveform is the kind of thing a reader trusts. Drawing the real signal
  * needs an `AnalyserNode` on the output, and the output lives behind
- * `AudioOut`, which an exercise may not reach past (ADR 0029) — so the
+ * `AudioOut`, which an exercise may not reach past — so the
  * output grew a method that fills an array of band levels, and nothing here
  * knows what an `AudioContext` is.
  *

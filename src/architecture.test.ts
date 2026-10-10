@@ -1040,7 +1040,13 @@ describe('a sampled voice does not inherit a synthesised trim', () => {
 });
 
 /**
- * ADR 0029 — what the exercise layer may pull in behind it.
+ * What the exercise layer may pull in behind it.
+ *
+ * **Deliberately not attributed to a record.** This was titled for ADR 0029,
+ * which is *a prompt is a component and may use one* — a rule about which
+ * direction imports point, not about the platform. It is 0001's containment
+ * extended to a directory 0001 does not cover, and no record makes that
+ * claim yet.
  *
  * **The exercise layer is not a pure layer and this is not ADR 0001's rule.**
  * It renders: its components legitimately call `setTimeout`, drive
@@ -1052,8 +1058,12 @@ describe('a sampled voice does not inherit a synthesised trim', () => {
  * declared in `exercises/types.ts` rather than imported from `audio/` for
  * exactly this reason: a prompt is handed a thing with `play` and `spectrum`
  * on it and never learns what an `AudioContext` is. That is what keeps every
- * prompt renderable under jsdom and the single output owned by one module
- * (ADR 0005).
+ * prompt renderable under jsdom and the single output owned by one module.
+ * (No ADR number: 0005 is *seeds are minted outside the core*, and nothing
+ * in `docs/adr/` records the one-context decision at all — the planning
+ * document proposed it as 0005 and that number went elsewhere when the
+ * records were written. This file is the enforcement; there is no record to
+ * point at.)
  *
  * **The distinction that makes this checkable is `import type`.** Every import
  * the exercise layer takes from `audio/output/synth` is type-only and erased
@@ -1067,7 +1077,7 @@ describe('a sampled voice does not inherit a synthesised trim', () => {
  * on. Reaching a platform type *through* a module is the failure; naming one
  * in a component is not.
  */
-describe('ADR 0029 — the exercise layer reaches no further than the seam', () => {
+describe('the exercise layer reaches no further than the seam', () => {
   const EXERCISES = join(SRC, 'exercises');
 
   /**

@@ -8,6 +8,7 @@ import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
+import { steadyNotes } from '../played';
 import { presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
@@ -390,7 +391,7 @@ export interface IntervalResponse {
  * definition, two readers.
  */
 export function readableNotes(notes: readonly PlayedNote[]): readonly PlayedNote[] {
-  return notes.filter((note) => note.frequencyHz !== null);
+  return steadyNotes(notes);
 }
 
 export function intervalPlayed(notes: readonly PlayedNote[]): number | null {

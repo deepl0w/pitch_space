@@ -5,6 +5,7 @@ import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
+import { steadyNotes } from '../played';
 import { presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
@@ -100,9 +101,7 @@ export function scalePlayed(
   notes: readonly PlayedNote[],
   choices: readonly string[],
 ): string | null {
-  const heard = notes
-    .map((note) => note.frequencyHz)
-    .filter((hz): hz is number => hz !== null && hz > 0);
+  const heard = steadyNotes(notes).map((note) => note.frequencyHz as number);
   if (heard.length < 2) return null;
 
   /*

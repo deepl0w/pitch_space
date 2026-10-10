@@ -180,3 +180,36 @@ And the positive form: **which exercises can be answered by playing is a fact
 about the exercise, not about the plumbing.** A prompt that ignores `audioIn`
 is saying something about itself; it should not also have to ask whether
 listening was available at all.
+
+## Resolved, 11 October 2026 — refusal, and what actually decided it
+
+The addendum above left the ambiguous take open and named three defensible
+resolutions. It is settled: **`intervalPlayed` takes exactly two readable
+notes and refuses otherwise**, and the prompt says *which* way a take was
+unreadable rather than giving one message for every failure.
+
+**What settled it came from the black-box role, and it is the kind of evidence
+neither the record nor the suite could produce.** The ambiguity never reaches
+the player: what comes back from a hesitation is identical in wording, tally
+and tone to a confident clean miss. A learner who played the right interval
+with a re-struck first note is told, in the app's ordinary voice, that they
+were wrong — and given nothing to tell that apart from being wrong.
+
+**Being exact about what that evidence establishes, because it is narrower
+than the decision it was used for.** It kills *taking the first two* — the
+behaviour that shipped — completely. It does not distinguish between the
+remaining options: **ignoring repeated attacks on one pitch would also have
+removed the reported symptom**, and would have graded the learner correctly
+rather than refusing them, which is the friendlier outcome and was passed over.
+
+Refusal is still the right call and this record does not reopen it. The
+argument for it is the one this record's correction already made: guessing
+which two notes somebody meant is the app claiming to know better than its own
+input, and a wrong guess is indistinguishable to the learner from a wrong
+answer. **An honest refusal is legible; a confident misreading is not.** That
+reasoning stands on its own and did not need the symptom to support it.
+
+**And the message was itself a false claim before this landed.** "I did not
+hear two notes" was told to people who had played three. A refusal that
+misdescribes the refusal is a smaller version of the fault the whole record is
+about, which is why the prompt now distinguishes too few from too many.

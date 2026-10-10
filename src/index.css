@@ -607,7 +607,18 @@ button.quiet:hover { color: var(--ink); border-color: var(--accent); filter: non
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  /* A rounded box rather than a pill, for the reason `.chips-single` gives
+     a few rules down about its own border: a 999px radius is a radius that
+     does not scale, so it is a pill at one height and an oval at another.
+     A chip is 26px tall for a mouse and 44px for a finger, and at 44px the
+     end caps were most of a 70px-wide chip — reported as buttons that
+     "seem weirder, a bit too big and vertically stretched".
+
+     0.45rem is the group's 0.7rem less the 0.25rem of padding that insets
+     a chip from it, which is what makes the two curves concentric where
+     they sit one inside the other. Derived from the box outside it rather
+     than chosen to look right, so the two stay related if either moves. */
+  border-radius: 0.45rem;
   padding: 0.25rem 0.6rem;
   font-size: 0.78rem;
   font-weight: 500;
@@ -1010,9 +1021,21 @@ select,
     min-height: 44px;
   }
 
+  /* The 44px above is a floor for a finger, and on a chip it was doing the
+     whole job on its own: the text stayed at its mouse size while the box
+     grew, so two thirds of the height was empty and a 999px radius drawn
+     round it read as a stretched lozenge rather than a chip. Reported as
+     buttons that "seem weirder, a bit too big and vertically stretched".
+
+     So the content grows with the target rather than rattling inside it.
+     The padding is what the height is made of and the floor is what
+     catches the short labels — a chip reading "C" is still 44px tall
+     because a finger needs it to be, but it is now 44px of chip rather
+     than 30px of empty pill. */
   .chip,
   .figure-play {
-    padding-inline: 0.85rem;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.95rem;
   }
 
   /* The back control is text rather than a box, so it needs the room above

@@ -50,7 +50,10 @@ const LINE: ProgressLine = {
 /** A log that refuses everything, as a device with no storage quota does. */
 function brokenLog(): Log<AttemptRow> {
   const refuse = () => Promise.reject(new Error('no storage'));
-  return { append: refuse, all: refuse, count: refuse, clear: refuse };
+  // Durable, because what this exercises is the read *failing* — a log
+  // that admitted to being volatile would be reported unavailable before
+  // it ever threw, and the throw is the path under test.
+  return { durable: true, append: refuse, all: refuse, count: refuse, clear: refuse };
 }
 
 describe('loading a history', () => {
@@ -314,5 +317,37 @@ describe('tallying by eye and by ear', () => {
     expect(tallyKey(READING, m3)).toMatch(/::interval:m3:up$/);
     expect(tallyKey(LINE, m3), 'the two presentations share one key')
       .not.toBe(tallyKey(READING, m3));
+  });
+});
+
+/**
+ * A volatile log is not an empty history, and the difference is the whole
+ * point of the status.
+ *
+ * The defect this pins shipped: `defaultAttemptLog` falls back to memory
+ * when a browser refuses IndexedDB, the fallback works, `all()` answers
+ * `[]`, and the store reported `ready` with no attempts — which is
+ * byte-identical to a brand-new profile. A learner with months of
+ * practice and blocked storage saw a stranger's screen, in silence,
+ * because nothing had failed.
+ *
+ * Found from outside by blocking storage in a browser, not by the suite,
+ * which had no way to express the difference until `Log` declared it.
+ */
+describe('a log that cannot keep anything', () => {
+  it('reads as unavailable rather than as an empty history', async () => {
+    const store = createProgressStore(memoryLog<AttemptRow>([], { durable: false }));
+    await store.getState().load();
+    expect(store.getState().status).toBe('unavailable');
+    expect(store.getState().attempts).toEqual([]);
+  });
+
+  it('still reads as ready when the log is durable and simply empty', async () => {
+    // The control: without it the case above passes for a store that
+    // reports `unavailable` unconditionally, which is the same screen for
+    // a different wrong reason.
+    const store = createProgressStore(memoryLog<AttemptRow>());
+    await store.getState().load();
+    expect(store.getState().status).toBe('ready');
   });
 });

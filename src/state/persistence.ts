@@ -35,6 +35,21 @@ export interface Log<T> {
   all(): Promise<T[]>;
   count(): Promise<number>;
   clear(): Promise<void>;
+  /**
+   * Whether what is written here survives the tab closing.
+   *
+   * **A reader cannot tell an empty durable log from a working volatile
+   * one**, and the difference is the whole of what a progress figure
+   * means: the first is a learner who has not practised, the second is a
+   * learner whose history exists and cannot be reached. Both answer
+   * `all()` with `[]` and neither throws, so nothing downstream can
+   * distinguish them by behaviour — the log has to say.
+   *
+   * Found when storage was blocked in a browser and every figure on the
+   * home screen quietly vanished rather than saying it could not read
+   * anything: the fallback worked, which is what made it silent.
+   */
+  readonly durable: boolean;
 }
 
 export function memorySlot<T>(initial: T | null = null): Slot<T> {
@@ -46,9 +61,23 @@ export function memorySlot<T>(initial: T | null = null): Slot<T> {
   };
 }
 
-export function memoryLog<T>(initial: readonly T[] = []): Log<T> {
+/**
+ * A log in memory, which is two different things depending on why it exists.
+ *
+ * As a test double it stands in for working storage and should say it is
+ * durable, because the thing under test is everything *except* the
+ * storage. As the fallback when a browser refuses IndexedDB it is
+ * genuinely volatile, and saying so is what lets the progress store tell
+ * a learner their history is unreachable rather than showing them an
+ * empty one. Same object, opposite claims, so the caller states which.
+ */
+export function memoryLog<T>(
+  initial: readonly T[] = [],
+  { durable = true }: { durable?: boolean } = {},
+): Log<T> {
   let records = [...initial];
   return {
+    durable,
     append: async (record) => { records.push(record); },
     all: async () => [...records],
     count: async () => records.length,

@@ -113,6 +113,7 @@ export function indexedDbLog<T extends Keyed>(storeName = ATTEMPTS_STORE): Log<T
   }
 
   return {
+    durable: true,
     async append(record) {
       await transact('readwrite', async (store) => { await request(store.put(record)); });
     },

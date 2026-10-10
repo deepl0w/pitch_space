@@ -62,7 +62,12 @@ export type ProgressStore = StoreApi<ProgressState>;
  * that lasts the session, which is better than a screen that will not load.
  */
 export function defaultAttemptLog(): Log<AttemptRow> {
-  return indexedDbAvailable() ? indexedDbLog<AttemptRow>() : memoryLog<AttemptRow>();
+  // Volatile on purpose: this is the fallback for a browser that refuses
+  // IndexedDB, so the app still works for the session while the store
+  // reports that the learner's history cannot be read.
+  return indexedDbAvailable()
+    ? indexedDbLog<AttemptRow>()
+    : memoryLog<AttemptRow>([], { durable: false });
 }
 
 export function createProgressStore(log: Log<AttemptRow> = defaultAttemptLog()): ProgressStore {
@@ -101,6 +106,24 @@ export function createProgressStore(log: Log<AttemptRow> = defaultAttemptLog()):
         // written by a release that indexed a different field would come
         // back in an order nothing downstream expects.
         attempts.sort((a, b) => a.answeredAt - b.answeredAt);
+        /*
+          A volatile log reads as `unavailable`, not as an empty history.
+
+          `defaultAttemptLog` falls back to memory when IndexedDB is
+          refused, which keeps the app working for the session — and made
+          this read `ready` with no attempts, which is exactly a
+          brand-new profile. A learner with months of practice and
+          blocked storage saw a stranger's screen and no explanation,
+          which is the failure the first progress figure was pulled for,
+          arriving by a route that could not throw.
+
+          The catch below only fires when reading *fails*. Here nothing
+          fails; the answer is just not the learner's history.
+        */
+        if (!log.durable) {
+          set({ status: 'unavailable', attempts: [], unreadable: 0, fromNewerRelease: 0 });
+          return;
+        }
         set({ status: 'ready', attempts, unreadable, fromNewerRelease });
       } catch {
         set({ status: 'unavailable', attempts: [], unreadable: 0, fromNewerRelease: 0 });

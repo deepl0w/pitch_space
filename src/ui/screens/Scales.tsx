@@ -7,7 +7,7 @@ import { usePlayer } from '../sound';
 import { pitchName } from '../../theory/pitch';
 import { SCALE_TYPES, degreeLabel, spellScale } from '../../theory/scale';
 import { noteValue } from '../../theory/meter';
-import { CLEFS, OCTAVES, signatureKey, tonicFor, tonicOptions } from './options';
+import { CLEFS, OCTAVES, TONICS, signatureKey, tonicFor, tonicOptions } from './options';
 
 const FAMILIES = ['common', 'mode', 'pentatonic', 'symmetric', 'exotic'] as const;
 
@@ -15,11 +15,14 @@ const FAMILIES = ['common', 'mode', 'pentatonic', 'symmetric', 'exotic'] as cons
 const entry = entryFor('scales');
 
 /**
- * `focus` is a scale id, from `ui/reference.ts` when this page is opened
- * from an answer; it decides where the page starts and nothing after.
+ * `focus` is a scale id and `tonic` a note name, from `ui/reference.ts` when
+ * this page is opened from an answer; they decide where the page starts and
+ * nothing after.
  */
-export function Scales({ focus }: { focus?: string }) {
-  const [tonicName, setTonicName] = useState('C');
+export function Scales({ focus, tonic }: { focus?: string; tonic?: string }) {
+  const [tonicName, setTonicName] = useState(
+    () => TONICS.some((t) => pitchName(t, false) === tonic) ? tonic! : 'C',
+  );
   const [scaleId, setScaleId] = useState(
     () => SCALE_TYPES.some((s) => s.id === focus) ? focus! : 'major',
   );

@@ -47,7 +47,7 @@ function useRoute(): [string, (route: string) => void] {
  * A reference page also takes a `focus` when it is opened from an answer
  * (`ui/reference.ts`); reached by its route it has none, and opens bare.
  */
-type ScreenProps = { go(route: string): void; focus?: string };
+type ScreenProps = { go(route: string): void; focus?: string; tonic?: string };
 const SCREENS: Partial<Record<string, (props: ScreenProps) => React.ReactElement>> = {
   intervals: Intervals,
   scales: Scales,

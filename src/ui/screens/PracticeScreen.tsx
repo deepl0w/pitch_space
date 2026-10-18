@@ -486,7 +486,7 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
                 the attempt's does: the settings may have moved since.
               */
               const counts = tally.get(tallyKey(lineOfRound(definition.id, round), item));
-              const target = referenceFor(item);
+              const target = referenceFor(item, round.exercise.keyId);
               const label = itemLabel(item);
               return (
                 <li key={item}>

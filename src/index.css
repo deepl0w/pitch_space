@@ -814,16 +814,6 @@ button:active { transform: translateY(1px); }
 /* Unbuilt entries are listed rather than hidden, so the shape of the app is
    visible before all of it exists. They are not buttons, because nothing
    happens when you press them. */
-.card-pending { cursor: default; opacity: 0.62; }
-.card-pending:hover { border-color: var(--line); }
-.card-state {
-  /* `auto` rather than a gap: with every card the same height the state
-     chip belongs on the bottom edge, not floating after a short blurb. */
-  align-self: flex-start; margin-top: auto; padding-top: 0.3rem;
-  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em;
-  color: var(--muted); border: 1px solid var(--line);
-  border-radius: 999px; padding: 0.1rem 0.45rem;
-}
 
 .back {
   background: none; border: none; color: var(--muted);

@@ -171,6 +171,7 @@ describe('forgetting a setting', () => {
 describe('the menu entry', () => {
   it('is listed under setup rather than among the exercises', () => {
     expect(SETUP_MENU.map((e) => e.route)).toContain('calibration');
-    expect(entryFor('calibration').ready).toBe(true);
+    // The entry resolves to calibration's own, rather than to a fallback.
+    expect(entryFor('calibration').route).toBe('calibration');
   });
 });

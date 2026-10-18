@@ -1058,12 +1058,8 @@ describe('a sampled voice does not inherit a synthesised trim', () => {
  * declared in `exercises/types.ts` rather than imported from `audio/` for
  * exactly this reason: a prompt is handed a thing with `play` and `spectrum`
  * on it and never learns what an `AudioContext` is. That is what keeps every
- * prompt renderable under jsdom and the single output owned by one module.
- * (No ADR number: 0005 is *seeds are minted outside the core*, and nothing
- * in `docs/adr/` records the one-context decision at all — the planning
- * document proposed it as 0005 and that number went elsewhere when the
- * records were written. This file is the enforcement; there is no record to
- * point at.)
+ * prompt renderable under jsdom and the single output owned by one module
+ * (ADR 0049).
  *
  * **The distinction that makes this checkable is `import type`.** Every import
  * the exercise layer takes from `audio/output/synth` is type-only and erased

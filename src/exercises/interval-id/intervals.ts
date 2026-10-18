@@ -463,7 +463,7 @@ export function gradeInterval(exercise: IntervalExercise, response: IntervalResp
     table has descending rows of its own, so the stopgap goes and the learner
     gets a falling tune for a falling interval.
   */
-  const hint = songHint(exercise.items[0]);
+  const hint = songHint(exercise.items[0], exercise.seed);
 
   return {
     correct,

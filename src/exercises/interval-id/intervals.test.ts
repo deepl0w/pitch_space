@@ -1,3 +1,4 @@
+import { songsFor } from '../songs';
 import { describe, expect, it } from 'vitest';
 import {
   INTERVAL_DEFAULTS, INTERVAL_DIRECTIONS, INTERVAL_SLUGS, MAX_SEMITONES, WINDOW_CHOICES, generateInterval, gradeInterval, intervalItemId, intervalPlayed, intervalScoreNotes, intervalSettingsSchema, intervalVoices, pitchWindow, type IntervalDirection, type IntervalSettings,
@@ -284,9 +285,12 @@ describe('grading an interval', () => {
   });
 
   it('offers the mnemonic when the answer was wrong, and not when it was right', () => {
+    // Asked as a hint being there or not, not as one particular song: which
+    // two songs a question offers turns with its seed, so naming one here
+    // would pin the rotation rather than test the verdict.
     const ex = exercise({ semitones: [5], directions: ['up'] });
-    expect(gradeInterval(ex, { semitones: 4 }).feedback).toContain('Here Comes the Bride');
-    expect(gradeInterval(ex, { semitones: 5 }).feedback).not.toContain('Here Comes the Bride');
+    expect(gradeInterval(ex, { semitones: 4 }).feedback).toContain('Think of');
+    expect(gradeInterval(ex, { semitones: 5 }).feedback).not.toContain('Think of');
   });
 
   it('has no mnemonic to offer for a unison and does not invent one', () => {
@@ -655,9 +659,13 @@ describe('the tune a wrong answer suggests', () => {
     throw new Error(`no seed produced ${semitones} semitones ${direction}`);
   };
 
+  /** Whether a verdict names some song from the given row, in any order. */
+  const namesFrom = (feedback: string, item: string): boolean =>
+    songsFor(item).some((song) => feedback.includes(song.title));
+
   it('offers one when the interval rose', () => {
-    expect(wrongAnswerTo('up', 9), 'no tune offered for an ascending 6th')
-      .toMatch(/Think of My Bonnie/);
+    expect(namesFrom(wrongAnswerTo('up', 9), 'interval:M6:up'),
+      'no rising tune offered for an ascending 6th').toBe(true);
   });
 
   it('offers a falling tune when the interval fell, and never the rising one', () => {
@@ -697,6 +705,7 @@ describe('the tune a wrong answer suggests', () => {
   });
 
   it('keeps it for a harmonic interval, which has no contour to contradict', () => {
-    expect(wrongAnswerTo('harmonic', 9)).toMatch(/Think of My Bonnie/);
+    // Both notes at once, so the rising row stands in for it.
+    expect(namesFrom(wrongAnswerTo('harmonic', 9), 'interval:M6:up')).toBe(true);
   });
 });

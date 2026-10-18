@@ -117,3 +117,38 @@ describe('a song as written', () => {
     expect(bracketed.map((song) => song.title)).toEqual([]);
   });
 });
+
+describe('which songs a learner is offered', () => {
+  it('can show every song in every row, so none is verified for nothing', () => {
+    /*
+      The hint took the first two, and three rows held a third — Summertime,
+      Auld Lang Syne, Sweet Caroline — that no question could ever show. Each
+      was checked against a published source and then sat unreachable, which
+      is worse than not having it: the table claims coverage the learner never
+      meets. Asked across every seed modulo the row length, which is every
+      window the rotation can produce.
+    */
+    const unreachable: string[] = [];
+    for (const [item, songs] of Object.entries(SONGS)) {
+      const shown = new Set<string>();
+      for (let seed = 0; seed < songs.length; seed += 1) {
+        for (const song of songs) if (songHint(item, seed).includes(song.title)) shown.add(song.title);
+      }
+      for (const song of songs) if (!shown.has(song.title)) unreachable.push(`${item}: ${song.title}`);
+    }
+    expect(unreachable, 'a verified song no question can show').toEqual([]);
+  });
+
+  it('offers the same pair again for the same question', () => {
+    // A question reported by its seed has to reproduce its whole verdict,
+    // hint included, or the report describes something nobody can see again.
+    for (const seed of [0, 1, 7, 12_345]) {
+      expect(songHint('interval:P4:up', seed)).toBe(songHint('interval:P4:up', seed));
+    }
+  });
+
+  it('offers a different pair on a different question, where the row has more than two', () => {
+    const pairs = new Set([0, 1, 2].map((seed) => songHint('interval:P4:up', seed)));
+    expect(pairs.size, 'every question offered the same two songs').toBe(3);
+  });
+});

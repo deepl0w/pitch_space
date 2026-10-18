@@ -1541,3 +1541,50 @@ describe('what the service worker precaches', () => {
     }
   });
 });
+
+/**
+ * No test mounts a React root it cannot take down again.
+ *
+ * **Twice now.** A root that outlives its file keeps React's scheduled work
+ * alive while vitest tears the jsdom environment down underneath it, and the
+ * failure that produces — `window is not defined`, from no test in
+ * particular — is the worst kind this suite has had: it failed a gate once,
+ * did not reproduce in six runs, and left nothing to name. The first time it
+ * was one file; the second it was four, every one of them written as
+ * `createRoot(host).render(...)` with the root discarded on the spot, so it
+ * could not be unmounted even by a caller who wanted to.
+ *
+ * That spelling is the whole rule. Binding the root does not prove anyone
+ * unmounts it, and a count of `unmount()` calls per file proves less than it
+ * looks — one teardown satisfies it while four roots leak. What is
+ * mechanical is whether the root was kept at all, and discarding it is the
+ * one state from which unmounting is impossible rather than merely absent.
+ * Whether a kept root is actually taken down stays a matter of reading.
+ */
+describe('roots a test mounts', () => {
+  const testFiles = () => filesUnder(SRC).filter((file) => /\.test\.tsx?$/.test(file));
+
+  it('are kept, so they can be unmounted', () => {
+    /*
+      Through `hits`, which reads `codeOf` and so asks the code rather than
+      the prose. Not a precaution: the first version of this scanned raw
+      source and failed on the sentence above, which quotes the spelling it
+      forbids. A rule about a spelling is a rule that will be written out in
+      the comment explaining it.
+    */
+    expect(hits(testFiles(), /createRoot\([^)]*\)\s*\.render/),
+      'a root nothing can unmount').toEqual([]);
+  });
+
+  it('is asking this of the files that mount them', () => {
+    /*
+      The population, because the rule above is satisfied by finding no test
+      files at all — and this file's other sweeps have been empty for exactly
+      that reason before.
+    */
+    const mounting = testFiles()
+      .filter((file) => readFileSync(file, 'utf8').includes('createRoot'));
+    expect(mounting.length, 'no test file mounts a root, so the rule asks nothing')
+      .toBeGreaterThan(10);
+  });
+});

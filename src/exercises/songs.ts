@@ -197,9 +197,31 @@ export function songsFor(item: string): readonly SongReference[] {
  * song the learner knows is no help at all; two rather than all because a
  * verdict line that lists four songs stops being read. Empty when there is
  * nothing — a silence is honest, a forced reference is not.
+ *
+ * **Which two turns with the question.** It took the first two, which left
+ * every third song in a row unreachable — *Summertime*, *Auld Lang Syne* and
+ * *Sweet Caroline* were verified and could never be shown, found by checking
+ * why a song a reviewer looked for never appeared. A row's later songs are a
+ * learner's later chances to know one, so the window starts at the seed:
+ * different questions offer different pairs, and the same question — reported
+ * by its seed — offers the same pair again.
+ *
+ * **The seed is required, and it had a default for one commit.** `seed = 0`
+ * meant a caller that left it out got the first two songs for ever — the
+ * exact defect the rotation removed, and invisible, because the hint it
+ * produced was still correct, well-formed and verified. Only the dead
+ * entries came back, which is the thing nobody notices. The next caller is
+ * the most likely to forget it: this table is meant to grow to chords and
+ * progressions. Required, the compiler refuses the omission where it is
+ * written, in a worktree that never runs the suite as readily as one that
+ * does — which a test grepping for one-argument calls could only approximate.
+ * Raised by tester.
  */
-export function songHint(item: string): string {
-  const named = songsFor(item).slice(0, 2).map(describe);
+export function songHint(item: string, seed: number): string {
+  const songs = songsFor(item);
+  const start = songs.length === 0 ? 0 : Math.abs(Math.trunc(seed)) % songs.length;
+  const turned = [...songs.slice(start), ...songs.slice(0, start)];
+  const named = turned.slice(0, 2).map(describe);
   if (named.length === 0) return '';
   return `Think of ${named.join(' or ')}`;
 }

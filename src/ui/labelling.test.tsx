@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Calibration } from './screens/Calibration';
 import { Chords } from './screens/Chords';
 import { CircleOfFifths } from './screens/CircleOfFifths';
@@ -308,12 +308,20 @@ describe('a control a pointer is not required for', () => {
     collection time has nowhere to go — which is what the first version of
     this block did, and it failed loudly rather than quietly, for once.
   */
+  /** A root per screen, so none of them outlives the file. */
+  const rendered: Root[] = [];
+  afterAll(() => { act(() => { for (const root of rendered.splice(0)) root.unmount(); }); });
+
   let screens: { file: string; controls: Element[] }[] | null = null;
   const hosts = () => {
     screens ??= Object.entries(SCREENS).map(([file, screen]) => {
       const host = document.createElement('div');
       document.body.append(host);
-      act(() => { createRoot(host).render(screen()); });
+      const root = createRoot(host);
+      // Kept so `afterAll` can take it down; the controls are read once here
+      // and held, so unmounting between tests would empty them.
+      rendered.push(root);
+      act(() => { root.render(screen()); });
       return { file, controls: controlsIn(host) };
     });
     return screens;

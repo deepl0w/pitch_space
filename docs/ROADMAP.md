@@ -742,6 +742,24 @@ exist in `src/audio/dsp/`. Nothing outside `generate/` calls
 feature would leave that code with no caller, which is the question to
 answer then rather than now.
 
+**How much code that is, measured rather than described**, because *the
+engine* is vague and the decision turns on the size of it. Exactly three
+modules under `generate/` have no caller outside it — `melody`, `motif` and
+`passage`, **878 lines of source and 1,821 with their tests.** Everything
+else there survives a drop: `harmony`, `patterns` and `templates` each have
+one external caller, `rhythm` two, `cells` and `tonicize` three.
+
+So the question deferred is not *whether to delete the generator* but
+whether to keep three of its nine modules. Run it rather than trust this
+paragraph, which is a figure the next commit can change:
+
+```bash
+for f in src/generate/*.ts; do case "$f" in *.test.ts) continue;; esac
+  n=$(basename "$f" .ts)
+  echo "$(grep -rln "from '.*generate/$n'" src/ | grep -v '^src/generate/' | grep -v '\.test\.' | wc -l) $n"
+done | sort -n
+```
+
 **Removed from the interface, 18 October.** The home screen listed it as a
 greyed card marked "not built yet" — the only unbuilt entry ever on it — and
 the README opened "Ear training and sight reading". Both promised something

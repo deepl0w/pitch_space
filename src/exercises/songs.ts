@@ -204,10 +204,20 @@ export function songsFor(item: string): readonly SongReference[] {
  * why a song a reviewer looked for never appeared. A row's later songs are a
  * learner's later chances to know one, so the window starts at the seed:
  * different questions offer different pairs, and the same question — reported
- * by its seed — offers the same pair again. Without a seed it starts at the
- * top, which is what every caller got before.
+ * by its seed — offers the same pair again.
+ *
+ * **The seed is required, and it had a default for one commit.** `seed = 0`
+ * meant a caller that left it out got the first two songs for ever — the
+ * exact defect the rotation removed, and invisible, because the hint it
+ * produced was still correct, well-formed and verified. Only the dead
+ * entries came back, which is the thing nobody notices. The next caller is
+ * the most likely to forget it: this table is meant to grow to chords and
+ * progressions. Required, the compiler refuses the omission where it is
+ * written, in a worktree that never runs the suite as readily as one that
+ * does — which a test grepping for one-argument calls could only approximate.
+ * Raised by tester.
  */
-export function songHint(item: string, seed = 0): string {
+export function songHint(item: string, seed: number): string {
   const songs = songsFor(item);
   const start = songs.length === 0 ? 0 : Math.abs(Math.trunc(seed)) % songs.length;
   const turned = [...songs.slice(start), ...songs.slice(0, start)];

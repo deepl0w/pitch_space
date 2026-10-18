@@ -89,20 +89,20 @@ describe('a harmonic interval', () => {
 
 describe('the hint', () => {
   it('names two songs, with who wrote them, so a learner has a second chance to know one', () => {
-    const hint = songHint('interval:m2:up');
+    const hint = songHint('interval:m2:up', 0);
     expect(hint).toBe('Think of the Jaws theme (John Williams) or the Pink Panther theme (Henry Mancini)');
   });
 
   it('says where in the song the interval is, when it is not the opening', () => {
-    expect(songHint('interval:P5:up')).toContain('at the first "twinkle" to the second');
+    expect(songHint('interval:P5:up', 0)).toContain('at the first "twinkle" to the second');
   });
 
   it('leaves out "traditional", which is not something anyone searches for', () => {
-    expect(songHint('interval:M2:down')).toBe('Think of Mary Had a Little Lamb or Three Blind Mice');
+    expect(songHint('interval:M2:down', 0)).toBe('Think of Mary Had a Little Lamb or Three Blind Mice');
   });
 
   it('says nothing for an item with no songs, rather than a broken sentence', () => {
-    expect(songHint('chord:dom7')).toBe('');
+    expect(songHint('chord:dom7', 0)).toBe('');
   });
 });
 

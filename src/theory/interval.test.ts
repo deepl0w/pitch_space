@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INTERVAL_MNEMONICS, SIMPLE_INTERVAL_NAMES, directedIntervalName, intervalBetween, intervalName, qualityOf } from './interval';
+import { SIMPLE_INTERVAL_NAMES, directedIntervalName, intervalBetween, intervalName, qualityOf } from './interval';
 import { type Pitch, diatonicOf, midiOf, parsePitch, pitch, pitchFromDiatonic, pitchName } from './pitch';
 
 const between = (low: string, high: string) =>
@@ -118,11 +118,6 @@ describe('the ear-training tables', () => {
     }
   });
 
-  it('offers a mnemonic for every interval it names, bar the unison', () => {
-    for (let semitones = 1; semitones <= 12; semitones++) {
-      expect(INTERVAL_MNEMONICS[semitones], `${semitones}`).toBeTypeOf('string');
-    }
-  });
 });
 
 describe('intervals measured in either order', () => {

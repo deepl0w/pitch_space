@@ -595,16 +595,27 @@ From the user: more helpful song recommendations on the `Think …` hints — **
 list of songs and artists for different intervals and chord progressions**,
 shipped with the app. No links.
 
-### It is wrong today for descending intervals
+### Built for intervals, 18 October
 
-Worth doing first and independent of the rest. `INTERVAL_MNEMONICS` in
-`src/theory/interval.ts` is twelve titles keyed on semitone distance alone,
-and **every tune in it rises**. A learner who misses a *descending* major 6th
-is told *"Think My Bonnie"*, which ascends — pointing at the wrong contour,
-which is most of what they are being asked to hear.
+**The interval half is done** — `src/exercises/songs.ts`, keyed on item ids,
+title and composer or performer, two or three songs per interval and a
+separate row for each direction. A wrong answer names two of them, with the
+moment in the song where the interval falls when it is not the opening.
+`INTERVAL_MNEMONICS` is gone from `theory/`.
 
-So the key is the interval **and its direction**, which roughly doubles the
-table and is the bulk of the work on the interval half.
+Descending intervals were the reason it came first. The old table rose
+throughout, and for a while the honest answer for a falling interval was to
+say nothing, since every tune available pointed the ear the wrong way. They
+have falling rows of their own now. Every song was checked against
+Wikipedia's interval recognition table rather than recalled: the cost of a
+wrong reference is the defect itself, and one source consulted while
+building it got its own arithmetic wrong.
+
+**What is not built: chords and progressions.** The shape below covers them
+and the ids exist, but reference songs for a chord quality or a progression
+are a much less settled body of knowledge than interval mnemonics — there is
+no Wikipedia table to check them against, and a guessed one is the failure
+this whole section is about. They want a source before they want code.
 
 ### The shape
 

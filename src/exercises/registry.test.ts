@@ -7,7 +7,7 @@ import { RHYTHM_EXERCISE_ID as RHYTHM_ID } from './rhythm-id/rhythms';
 import { itemLabel } from './itemLabel';
 import { SCALE_TYPES } from '../theory/scale';
 import { CHORD_TYPES } from '../theory/chord';
-import type { AnyExerciseDefinition } from './types';
+import type { AnyExerciseDefinition, ItemId } from './types';
 
 /**
  * The contract, asked of every registered exercise type.
@@ -299,6 +299,51 @@ describe('every exercise type’s generator', () => {
             expect(type.generate(spec), `${type.id} with ${field.id}=${JSON.stringify(value)}, seed ${seed}`)
               .toEqual(type.generate(spec));
           }
+        }
+      }
+    });
+  });
+
+  /**
+   * And when the schedule wished for something, which is now most questions.
+   *
+   * **A third input arrived under the promise.** `03ad9e3` aims each question
+   * at what the schedule says is due, so a generated question is a function of
+   * the seed, the settings *and* `prefer` — and its own message says the wish
+   * is recorded "so a seed still rebuilds the question". That only holds if
+   * generation is stable given all three, and every sweep here passed no wish
+   * at all, which is the same shape as the settings gap above: an input held
+   * at its default while the app has moved off it.
+   *
+   * Both halves of the seam, because they are different code paths. A wish
+   * the type can ask is the aiming path; a wish from another exercise
+   * entirely is the declined path, which `ExerciseSpec.prefer` is explicit
+   * about — "it aims if it can, ignores the wish if it cannot". A declined
+   * wish is still recorded, so it still has to rebuild the same question.
+   */
+  it('is reproducible when the schedule wished for something, honoured or declined', () => {
+    each((type) => {
+      const settings = type.settings.coerce(type.settings.defaults);
+      const askable = type.items(widestSettings(type));
+      expect(askable.length, `${type.id} can ask nothing`).toBeGreaterThan(0);
+
+      /*
+        A spread rather than all of them: an exercise can ask hundreds, and
+        the question here is whether the generator is stable, not whether
+        some particular item is. Taken by stride so the sample is the same
+        on every run — a sweep that sampled randomly would be a flake with a
+        good reason.
+      */
+      const stride = Math.max(1, Math.ceil(askable.length / 6));
+      const wishes: (ItemId | undefined)[] = askable.filter((_, i) => i % stride === 0);
+      // A wish this type cannot possibly meet: the declined path.
+      wishes.push('nonesuch:not-an-item' as ItemId);
+
+      for (const prefer of wishes) {
+        for (const seed of SEEDS) {
+          const spec = { seed, settings, prefer };
+          expect(type.generate(spec), `${type.id} wishing ${String(prefer)}, seed ${seed}`)
+            .toEqual(type.generate(spec));
         }
       }
     });

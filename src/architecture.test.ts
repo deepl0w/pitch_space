@@ -5,6 +5,7 @@ import { CHORD_TYPES } from './theory/chord';
 import { SCALE_TYPES } from './theory/scale';
 import { EXERCISE_FAMILIES, EXERCISE_TYPES } from './exercises/registry';
 import { EXERCISE_MENU, REFERENCE_MENU, SETUP_MENU } from './ui/menu';
+import { notBuiltSection } from './testing/readme';
 
 /**
  * The boundaries from docs/adr/, asked of the repository.
@@ -838,13 +839,6 @@ describe("the home screen's claim about how exercises are answered", () => {
    */
   const README = join(SRC, '..', 'README.md');
 
-  function notBuiltSection(source: string): string {
-    const start = source.indexOf('## What is not built yet');
-    if (start === -1) throw new Error('could not find the "not built" section in README.md');
-    const next = source.indexOf('\n## ', start + 1);
-    return source.slice(start, next === -1 ? undefined : next);
-  }
-
   /**
    * A sentence saying capture is absent, with nothing in it disclaiming
    * that as partial. Sentence-scoped for the lede's reason — a qualifier
@@ -859,7 +853,7 @@ describe("the home screen's claim about how exercises are answered", () => {
   }
 
   it('does not tell a reader capture is missing once it is wired', () => {
-    const section = notBuiltSection(readFileSync(README, 'utf8'));
+    const section = notBuiltSection();
     // Not idle: the section exists and still lists something.
     expect(section.length, 'the "not built" section is empty').toBeGreaterThan(200);
 
@@ -991,7 +985,7 @@ describe("the home screen's claim about how exercises are answered", () => {
       identifier somebody might spell either way.
     */
     const offered = menuEntries().filter((entry) => /sight/i.test(`${entry.route} ${entry.name}`));
-    const section = notBuiltSection(readFileSync(README, 'utf8'));
+    const section = notBuiltSection();
     const listed = /sight.read/i.test(section);
 
     if (offered.length > 0) {
@@ -1010,7 +1004,7 @@ describe("the home screen's claim about how exercises are answered", () => {
     // The scope rather than a package name: `@capacitor/cli` and `core` are
     // two of several, and which ones the build needs is not this file's business.
     const capacitor = declared.filter((name) => name.startsWith('@capacitor/'));
-    const section = notBuiltSection(readFileSync(README, 'utf8'));
+    const section = notBuiltSection();
     const listed = /capacitor is not set up/i.test(section);
 
     if (capacitor.length > 0) {

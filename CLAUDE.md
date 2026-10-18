@@ -402,6 +402,15 @@ in the worktree — fixed path, overwritten each run — and names it beside
 a failing verdict, so the next one-off refusal leaves evidence rather
 than a story nobody can check.
 
+**That single path then lost the exact failure it was built for.** Commit,
+merge and push run the gate in quick succession, so the run right after a
+flaky failure is usually green — and a fixed path overwritten every run
+means the passing rerun erases the failing one before anyone reads it.
+`.claude/last-failed-check.log` is written only on a failure and left
+alone by every pass that follows, so the one-off case survives the reruns
+it is usually followed by instead of being the one case this mechanism
+could not keep.
+
 **`git merge` gets the same gate, separately, because `pre-commit` does not
 fire for it at all.** Found within the hour: main's traffic is almost
 entirely merges, one direct commit to roughly twenty merges in a day, so

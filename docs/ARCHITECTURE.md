@@ -536,6 +536,18 @@ Both entries below bind that way rather than by hunting for names, which is
 why they have held. **Bind an absence against where the thing would be
 offered, never against what it would be called.**
 
+**Which turns out to be one rule with the capability case, not two.** The
+asymmetry above is real — an absence has no implementation to read — but the
+cure is the same on both sides and tester named it better than this had:
+*enumerate where the vocabulary is fixed by something other than the person
+writing the code.* `AudioIn`'s members are fixed by the interface. A card's
+existence is fixed by the menu arrays the app maintains for its own reasons.
+A browser hands over a file in three ways and a new one cannot be invented
+locally, which is why checking for `createObjectURL` and its two siblings
+beats checking for a button labelled "Export" — not because it is stricter,
+but because the names are not the author's to choose. Everywhere a predicate
+rests on a word somebody picked, it is a guess wearing a guard's clothes.
+
 **And the unit is the claim rather than the bullet.** One sentence can carry
 both kinds: *sight reading is in the backlog, very late, may be dropped, and
 nothing in the app offers it* is an intention welded to a fact. Pinning at

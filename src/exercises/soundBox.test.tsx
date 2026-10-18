@@ -227,3 +227,62 @@ describe('what the wave is drawn from', () => {
     expect(host.querySelector('.sound-drawn'), 'claimed to draw a signal it stopped getting').toBeNull();
   });
 });
+
+/**
+ * The box drawing the player while they answer.
+ *
+ * The same picture from the other end of the room, so the claims are about
+ * which end: while a take is open the bars come from the input and not the
+ * output, and the box will not sound the question into the open microphone.
+ */
+describe('while the player is answering', () => {
+  it('draws the input, not the output', () => {
+    /*
+      Two taps that answer differently, so a box reading the wrong one is
+      visible as the wrong one. Asserting only that *something* was read
+      would pass with the sources swapped.
+    */
+    vi.useFakeTimers();
+    let inputReads = 0;
+    let outputReads = 0;
+    show({
+      playedAt: 0,
+      listening: true,
+      spectrum: () => { outputReads += 1; return true; },
+      listenSpectrum: (into) => { inputReads += 1; into.fill(200); return true; },
+    });
+    act(() => { vi.advanceTimersByTime(50); });
+
+    expect(inputReads, 'the box never read the microphone').toBeGreaterThan(0);
+    expect(outputReads, 'the box drew the question while the player was answering').toBe(0);
+    expect(host.querySelector('.sound-listening'), 'nothing says this is the player').not.toBeNull();
+  });
+
+  it('draws even though nothing has been played', () => {
+    // A take can open before the question has ever sounded — on a reading
+    // question there is no passage at all — so the drawing cannot depend on
+    // `playedAt` the way the output's does.
+    vi.useFakeTimers();
+    show({ playedAt: 0, listening: true, listenSpectrum: () => true });
+    expect(sounding(), 'an open take drew nothing because no passage had played').toBe(true);
+  });
+
+  it('will not sound the question into the open microphone', () => {
+    /*
+      There is no echo cancellation, on purpose, so whatever the speaker
+      plays while a take is open is heard as the answer. The control that
+      would do that has to be unavailable, not merely discouraged.
+    */
+    show({ playedAt: 0, listening: true, listenSpectrum: () => true });
+    const control = host.querySelector('.sound-play') as HTMLButtonElement;
+    expect(control.disabled, 'the question could be played over the answer').toBe(true);
+  });
+
+  it('gives the control back once the take is over', () => {
+    show({ playedAt: 0, listening: true, listenSpectrum: () => true });
+    show({ playedAt: 0, listening: false, listenSpectrum: () => true });
+    const control = host.querySelector('.sound-play') as HTMLButtonElement;
+    expect(control.disabled, 'the box stayed locked after the player finished').toBe(false);
+    expect(host.querySelector('.sound-listening')).toBeNull();
+  });
+});

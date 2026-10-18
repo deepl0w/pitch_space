@@ -1,3 +1,4 @@
+import { SPECTRUM_BANDS, SPECTRUM_SMOOTHING } from '../output/spectrum';
 import type { CaptureFrame, CaptureSource } from './source';
 import workletUrl from './capture.worklet.ts?worker&url';
 
@@ -52,6 +53,15 @@ export class MicrophoneSource implements CaptureSource {
   private context: AudioContext | null = null;
   private stream: MediaStream | null = null;
   private node: AudioWorkletNode | null = null;
+  /**
+   * A tap on the incoming signal, for drawing what the player is playing.
+   *
+   * A branch beside the worklet rather than in front of it: the analyser is
+   * fed from the same stream source and its output goes nowhere, so nothing
+   * the pitch detector reads passes through it. A visualiser must not be
+   * able to change what is heard.
+   */
+  private analyser: AnalyserNode | null = null;
 
   private readonly options: MicrophoneOptions;
 
@@ -96,7 +106,21 @@ export class MicrophoneSource implements CaptureSource {
     this.node = node;
     node.port.onmessage = (event: MessageEvent<CaptureFrame>) => onFrame(event.data);
 
-    context.createMediaStreamSource(this.stream).connect(node);
+    const input = context.createMediaStreamSource(this.stream);
+    input.connect(node);
+    /*
+      Sized as the output's tap is, so a drawing reads both through one
+      buffer: the same band count over the same kind of shape. The bands
+      are coarse on purpose — this is a picture of the player making a
+      sound, not a second pitch detector.
+    */
+    if (typeof context.createAnalyser === 'function') {
+      const analyser = context.createAnalyser();
+      analyser.fftSize = SPECTRUM_BANDS * 2;
+      analyser.smoothingTimeConstant = SPECTRUM_SMOOTHING;
+      input.connect(analyser);
+      this.analyser = analyser;
+    }
     // Connected to the destination through a silent gain: a worklet with
     // no sink is not pulled, and routing the microphone to the speakers
     // for real would be a feedback loop in a room with a microphone open.
@@ -105,10 +129,21 @@ export class MicrophoneSource implements CaptureSource {
     node.connect(silent).connect(context.destination);
   }
 
+  /** The input's band levels, while the device is open. */
+  spectrum(into: Uint8Array<ArrayBuffer>): boolean {
+    if (this.analyser === null) return false;
+    this.analyser.getByteFrequencyData(into);
+    return true;
+  }
+
   stop(): void {
     this.node?.port.close();
     this.node?.disconnect();
     this.node = null;
+    // Before the context closes, so a drawing asking mid-teardown is told
+    // there is nothing rather than read from a node on a closed graph.
+    this.analyser?.disconnect();
+    this.analyser = null;
     // Tracks first: releasing the device is what turns the recording
     // indicator off, and a user who pressed stop should see that happen
     // rather than wait for a context to close.

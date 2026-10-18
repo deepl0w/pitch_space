@@ -538,6 +538,17 @@ export interface AudioIn {
     enough: (notes: readonly PlayedNote[]) => boolean,
     limitSeconds: number,
   ): Promise<Heard>;
+  /**
+   * The input's band levels while a take is open, for drawing the player.
+   *
+   * The twin of `AudioOut.spectrum` and declared on the same terms: an
+   * array of numbers crosses the seam, never a node, so a prompt can show
+   * what is coming in without learning what a microphone is. `false` when
+   * no take is open — between takes there is nothing to draw, and a flat
+   * line would claim the room is silent rather than that nobody is
+   * listening, which are different answers (ADR 0047).
+   */
+  spectrum?(into: Uint8Array<ArrayBuffer>): boolean;
 }
 
 export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> {

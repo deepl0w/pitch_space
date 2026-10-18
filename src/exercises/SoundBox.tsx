@@ -29,6 +29,7 @@ import { SPECTRUM_BANDS } from '../audio/output/spectrum';
  */
 export function SoundBox({
   voices, onPlay, onStop, playedAt, spectrum, staff, label = 'Play it', note,
+  listening = false, listenSpectrum,
 }: {
   /** The passage about to sound, read only for how long it lasts. */
   voices: readonly Voice[];
@@ -63,6 +64,18 @@ export function SoundBox({
    * is a supported state rather than a missing dependency.
    */
   spectrum?: (into: Uint8Array<ArrayBuffer>) => boolean;
+  /**
+   * A take is open: the player is answering, and the box draws them.
+   *
+   * **The visualiser reused for the answer, asked for in those terms** —
+   * once the wave drew the real output, the same box should give feedback
+   * while the learner plays. It is the same picture from the other end:
+   * what the question sounded like, then what you sounded like, in one
+   * place, so the comparison is something you can see as well as hear.
+   */
+  listening?: boolean;
+  /** The input's band levels while `listening`; see `AudioIn.spectrum`. */
+  listenSpectrum?: (into: Uint8Array<ArrayBuffer>) => boolean;
   label?: string;
   /** A word about the question — "ascending", "two octaves" — beside the bars. */
   note?: string;
@@ -95,7 +108,17 @@ export function SoundBox({
   // After the render rather than during it: nothing here is read while
   // rendering, and writing a ref mid-render is how a component comes to
   // depend on a value React did not know had changed.
-  useEffect(() => { latest.current = voices; tap.current = spectrum; });
+  useEffect(() => {
+    latest.current = voices;
+    tap.current = listening ? listenSpectrum : spectrum;
+  });
+
+  /*
+    Drawing while either is true: a passage is sounding, or the player is.
+    One loop for both rather than a second for the microphone, because the
+    picture is the same picture and only its source differs.
+  */
+  const drawing = playing || listening;
 
   /*
     As many bars as the row is wide enough for, which is what makes it a
@@ -150,8 +173,8 @@ export function SoundBox({
    */
   useEffect(() => {
     const element = wave.current;
-    const read = tap.current;
-    if (!playing || element === null || read === undefined) return undefined;
+    const read = listening ? listenSpectrum : tap.current;
+    if (!drawing || element === null || read === undefined) return undefined;
     if (typeof requestAnimationFrame !== 'function') return undefined;
 
     const bands = new Uint8Array(SPECTRUM_BANDS);
@@ -194,7 +217,11 @@ export function SoundBox({
       // of a passage that has stopped.
       for (const span of [...element.children]) (span as HTMLElement).style.transform = '';
     };
-  }, [playing, bars]);
+    // `listening` as well as `drawing`: switching from the output's tap to
+    // the input's must restart the loop on the new source, not keep reading
+    // the old one under the new label.
+    // oxlint-disable-next-line exhaustive-deps
+  }, [drawing, listening, bars]);
 
   function stop() {
     onStop();
@@ -203,7 +230,10 @@ export function SoundBox({
   }
 
   return (
-    <div className={`sound${playing ? ' sound-playing' : ''}${drawn ? ' sound-drawn' : ''}`}>
+    <div
+      className={`sound${drawing ? ' sound-playing' : ''}${drawn ? ' sound-drawn' : ''}`
+        + (listening ? ' sound-listening' : '')}
+    >
       {/*
         The stave takes the box over once the answer is in it.
 
@@ -241,6 +271,13 @@ export function SoundBox({
           className="sound-play"
           onClick={playing ? stop : onPlay}
           aria-label={playing ? 'Stop' : label}
+          /*
+            Not while the player is answering. Sounding the question now
+            would play it straight into the open microphone, which the pitch
+            detector would then hear as the answer — and there is no echo
+            cancellation to take it back out, deliberately (see `capture/`).
+          */
+          disabled={listening}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             {playing

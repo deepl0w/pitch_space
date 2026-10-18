@@ -60,6 +60,15 @@ export interface CaptureSource {
   start(onFrame: (frame: CaptureFrame) => void): Promise<void>;
   /** Stop and release whatever was held. Safe to call when not started. */
   stop(): void;
+  /**
+   * Fill `into` with the input's band levels, 0 to 255, and say whether
+   * anything was read — the input-side twin of `Synth.spectrum`.
+   *
+   * Optional because only a live device has a level worth drawing: a file
+   * source replaying a recording has nobody waiting on a picture of it, and
+   * a test double would implement this for no reader.
+   */
+  spectrum?(into: Uint8Array<ArrayBuffer>): boolean;
 }
 
 /**

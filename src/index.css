@@ -584,6 +584,17 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
  * resting line, which is what reads as a waveform rather than as a bar
  * chart standing on the floor.
  */
+/*
+ * The player, drawn in the page's ink rather than the accent.
+ *
+ * The box shows two different sounds at two different moments — the
+ * question, then the answer — and they should not look like the same one.
+ * Accent is what the app plays; ink is what the reader writes, which is the
+ * nearest thing the palette has to "this is you". Not green: green is a
+ * verdict here, and nothing has been judged while the take is still open.
+ */
+.sound-listening .sound-wave > span { background: var(--ink); }
+
 .sound-drawn .sound-wave > span {
   animation: none;
   transform-origin: center;
@@ -613,6 +624,21 @@ input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   /* The glyph is the control's meaning, so it takes the button's colour
      rather than a fill of its own. */
   fill: currentColor;
+}
+
+/*
+ * Locked while the player answers, and looking it.
+ *
+ * It refuses a press during a take — sounding the question then would play
+ * it into the open microphone — and it first did so while staying the same
+ * solid red circle, so it looked exactly as pressable as it had a moment
+ * before. A control that turns down a press while advertising one is worse
+ * than one that plainly is not available. The same quiet treatment a chip
+ * gets when it cannot be chosen, so "unavailable" has one look in the app.
+ */
+.sound-play:disabled {
+  background: var(--surface); color: var(--muted);
+  border-color: var(--line); cursor: default;
 }
 
 /* A reader who has asked for less motion gets the colour change and no

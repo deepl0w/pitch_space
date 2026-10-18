@@ -157,3 +157,76 @@ describe('the microphone, as an exercise sees it', () => {
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 });
+
+/**
+ * The input's level, for drawing the player while they answer.
+ *
+ * What is worth holding is the lifecycle rather than the numbers: a level is
+ * readable exactly while a take holds the device, and not before or after.
+ * Getting that wrong is silent — a drawing that keeps reading after the take
+ * reads a node on a closed graph, and one that reads `false` throughout just
+ * shows the keyframe and looks fine.
+ */
+describe('the level of what is coming in', () => {
+  /** A source whose take ends only when the test says so. */
+  function holding() {
+    let release: () => void = () => {};
+    const ended = new Promise<void>((resolve) => { release = resolve; });
+    const source: CaptureSource = {
+      sampleRate: 48_000,
+      frameSize: 1024,
+      start: () => Promise.resolve(),
+      stop: () => {},
+      spectrum: (into) => { into.fill(9); return true; },
+    };
+    return { source, release, wait: () => ended };
+  }
+
+  it('reports nothing while no take is open', () => {
+    // Not zeroes: no take means nobody is listening, which is a different
+    // answer from a silent room (ADR 0047), and a drawing must be able to
+    // tell them apart.
+    expect(microphoneIn().spectrum!(new Uint8Array(4))).toBe(false);
+  });
+
+  it('reads the open device during a take, and stops when it ends', async () => {
+    const { source, release, wait } = holding();
+    const mic = microphoneIn({ source: () => source, wait });
+    const into = new Uint8Array(4);
+
+    const take = mic.listen(4);
+    // `take` reaches `start` on a later turn; let it get there.
+    await Promise.resolve();
+    expect(mic.spectrum!(into), 'nothing to read while the device is open').toBe(true);
+    expect([...into]).toEqual([9, 9, 9, 9]);
+
+    release();
+    await take;
+    expect(mic.spectrum!(new Uint8Array(4)), 'still reading after the take ended').toBe(false);
+  });
+
+  it('lets go of the device when a take fails, too', async () => {
+    /*
+      The failure path is where a dangling reference would live: the source
+      was constructed, so it was tracked, and then `start` threw. If only
+      the success path cleared it, the drawing would keep asking a device
+      that never opened.
+    */
+    /*
+      A source that refuses *and still answers for its level*. With the
+      ordinary refusing fake this case passed with the release deleted,
+      because that fake has no `spectrum` at all — so a dangling reference
+      read `false` exactly as a cleared one does, and the case could not see
+      the thing it is named for. This one would answer `true` from beyond the
+      grave, which is what a missed release looks like.
+    */
+    const refusesButAnswers: CaptureSource = {
+      ...refusing('NotAllowedError'),
+      spectrum: (into) => { into.fill(9); return true; },
+    };
+    const mic = microphoneIn({ source: () => refusesButAnswers, wait: instantly });
+    const heard = await mic.listen(2);
+    expect(heard.heard).toBe(false);
+    expect(mic.spectrum!(new Uint8Array(4)), 'still reading a device that never opened').toBe(false);
+  });
+});

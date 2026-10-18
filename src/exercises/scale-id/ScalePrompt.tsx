@@ -167,6 +167,8 @@ export function ScalePrompt({
           onStop={() => { audio.stopAll(); }}
           playedAt={playedAt}
           staff={answerStaff}
+          listening={listening}
+          listenSpectrum={audioIn.spectrum?.bind(audioIn)}
           spectrum={audio.spectrum?.bind(audio)}
           label="Play it again"
           note={DIRECTION_LABELS[exercise.direction].toLowerCase()}

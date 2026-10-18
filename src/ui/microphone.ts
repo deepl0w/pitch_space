@@ -50,9 +50,17 @@ export const LONGEST_TAKE_SECONDS = 30;
  * device — see above.
  */
 export function microphoneIn(options: MicrophoneInOptions = {}): AudioIn {
+  /*
+    The device currently open, if any, so its level can be read while a
+    take runs. One at a time: a take is the only thing that opens one, and
+    the screen does not start a second while the first is listening.
+  */
+  let open: CaptureSource | null = null;
+  const track = (source: CaptureSource | null) => { open = source; };
   return {
-    listen: (seconds: number) => take(options, seconds),
-    listenUntil: (enough, limitSeconds) => take(options, limitSeconds, enough),
+    listen: (seconds: number) => take(options, seconds, undefined, track),
+    listenUntil: (enough, limitSeconds) => take(options, limitSeconds, enough, track),
+    spectrum: (into) => open?.spectrum?.(into) ?? false,
   };
 }
 
@@ -80,9 +88,11 @@ async function take(
   options: MicrophoneInOptions,
   seconds: number,
   enough?: (notes: readonly PlayedNote[]) => boolean,
+  track: (source: CaptureSource | null) => void = () => {},
 ): Promise<Heard> {
   try {
     const source = (options.source ?? (() => new MicrophoneSource()))();
+    track(source);
     const bounded = Math.min(seconds, LONGEST_TAKE_SECONDS);
     /*
       One function for both takes, because everything around the take is
@@ -119,6 +129,10 @@ async function take(
       `AudioContext` at all throws there rather than in `start`.
     */
     return { heard: false, reason: refused(error) ? 'refused' : 'unavailable' };
+  } finally {
+    // Whatever happened, nothing is open now — `listenFor` released the
+    // device in its own `finally`, and a drawing must stop reading from it.
+    track(null);
   }
 }
 

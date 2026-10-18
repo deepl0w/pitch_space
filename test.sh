@@ -32,8 +32,8 @@ Options:
       --coverage    Unit tests with a coverage report
   -t, --types       Type check only (tsc --noEmit)
   -l, --lint        Lint only (oxlint)
-      --offline     Build, then assert the service worker precaches what the
-                    app needs to run with no network
+      --offline     Assert the built service worker precaches what the app
+                    needs to run with no network (reads dist/; build first)
       --all         unit + types + lint + offline
   -c, --check       Check this machine is set up, and run nothing
   -h, --help        This message
@@ -223,9 +223,16 @@ fi
 
 if $OFFLINE; then
     echo -e "${BLUE}Offline precache${NC}"
+    # A missing service worker is a failure, not a note. This branch was a
+    # warning written while the PWA plugin was still planned, and it
+    # outlived the plugin landing: a build that stopped emitting sw.js
+    # would have passed --offline with a yellow line nobody reads. The
+    # plugin is wired (architecture.test.ts holds it), so its absence after
+    # a build means the build broke.
     if [ ! -f dist/sw.js ]; then
-        echo -e "${YELLOW}⚠${NC} no service worker in dist/ — the PWA plugin is not wired up yet"
-        echo "  Nothing to check. See the it.todo in src/architecture.test.ts."
+        echo -e "${RED}✗${NC} no service worker in dist/ — the build did not emit one"
+        echo "  Build first (./build.sh), or check vite-plugin-pwa in vite.config.ts."
+        FAILURES=$((FAILURES + 1))
     elif node tools/check-precache.mjs; then
         echo -e "${GREEN}✓${NC} the app's own assets are precached"
     else

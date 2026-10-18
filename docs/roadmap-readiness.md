@@ -477,20 +477,32 @@ second test suite.
 
 ## The order I would take them in
 
-Cheapest-now-and-dearest-later first, which is not the same as most important.
-**G2, G3 and G6 are done** and have left the list. What remains:
+**This list names no next thing to build, and that is the current answer
+rather than an omission.** G2, G3, G4 and G6 are done. What is left is one
+constraint, one thing that should be written alongside its first real need,
+and one that is not due — so a reader arriving here looking for the next
+feature should look at `ROADMAP.md` instead, where the planned work is.
 
-1. **G4**, before the due count ships a second time. Its blocker was G3 and
-   G3 is closed, so the count is now the whole of it — and it has already been
-   removed once for getting this wrong.
-2. **G1's signal half**, which is not a task so much as a constraint on
-   whatever reads it. See below.
-3. **G7**, whenever the first of its four needs is built rather than before.
-   It is cheapest to write alongside a claim that wants it — a harness built
-   speculatively gets the assertions someone imagined, and the four above are
-   real ones already waiting.
-4. **G5**, not yet. Flag it in `IN-FLIGHT.md` when `ExerciseSpec` or `items`
-   is next touched, so the person widening them knows what is coming.
+- **G1's signal half** is not a task. It is a constraint on whoever first
+  reads the latency figure: it is `null` for most users and will stay so
+  until calibration works, so a schedule built expecting it and then fed
+  nulls is 0018's problem one level up.
+- **G7** wants building alongside the first of its needs rather than before
+  them. A harness written speculatively gets the assertions somebody
+  imagined; the needs listed under it are real ones already waiting.
+- **G5** is not due. Flag it in `IN-FLIGHT.md` when `ExerciseSpec` or `items`
+  is next touched, so whoever widens them knows what is coming.
+
+**G4 sat at the top of this list for six days after its own section said
+Closed**, which is the failure this document's opening paragraph describes,
+arriving one level down inside the document that describes it. The section
+carried a command and the command agreed with the section;
+`grep -n 'completion' src/ui/screens/Home.tsx` finds the call at line 164.
+**The ordering list carried no command and nothing contradicted it** — and it
+is the half a reader planning work reads first, which is the worst place for
+the stale half to be. An ordered list of gaps is a summary of the sections
+above it, and a summary needs a mechanism its parts do not; this one had none
+and the sections each had one.
 
 **The three that closed did so in three different ways, which is worth more
 than the fact that they closed.** G3 was closed by someone building the wider

@@ -44,12 +44,18 @@ Spaced repetition replaces the uniform sample with a schedule: each practisable
 atom carries its own review history, and the generator is steered towards the
 ones that are due.
 
-**Much of this is now built and none of it is connected**, which is a state
-worth naming because a plan describing built work as unstarted is the one kind
-of staleness nobody is positioned to notice. `src/state/schedule.ts`,
-`src/state/line.ts` and the item tally all exist and are tested;
-`tools/report-facts.sh` prints `scheduler 0 production importer(s)`, and that
-line rather than this paragraph is the thing to believe. Records
+**The schedule steers practice as of 19 October.** Each new question asks
+`src/state/wish.ts` for the item most worth asking — unseen first in the
+catalogue's order, then the most overdue, never the item just asked while
+anything else is due — and hands it to the generator as `prefer`. The
+attempt records the wish (attempt schema 4), because a question is now a
+function of seed, settings *and* wish, and because a wish absent from the
+attempt's items is 0037's declined wish, kept. Progression and rhythm answer
+`aims: 'none'`, so for them the record is all there is.
+
+What is still not done is everything this section calls distinctive:
+latency plays no part, the ladder is not SM-2 or FSRS, and nothing on screen
+says what is due. Records
 [0039](adr/0039-a-line-is-an-exercise-and-the-items-its-settings-make-askable.md)
 to [0044](adr/0044-deterministic-is-not-the-same-as-seeded.md) settled the
 questions below that have been settled; where this section and a record
@@ -320,9 +326,10 @@ What a believable version needs, from those three:
   two exercises is promising work the user cannot do from that card
   without first changing which exercise is running.
 
-Until then `src/state/schedule.ts` has no production caller, which is
-the honest state and recorded in `docs/IN-FLIGHT.md` rather than hidden
-behind a surface that said the wrong thing.
+Until then nothing on screen counts what is due. The schedule acts
+instead of reporting — it chooses the next question — which needs none of
+the three properties above, because it never has to tell the learner a
+number.
 
 ## Learning the catalogues from real music
 

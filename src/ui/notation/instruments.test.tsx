@@ -118,6 +118,23 @@ describe('the drawing', () => {
     expect(container.querySelectorAll('.diagram-dim').length).toBeGreaterThan(0);
   });
 
+  it('says which note is off the neck, rather than drawing nothing marked', () => {
+    // C2 is below the low E. A unison there marked no dot at all and read as
+    // a diagram that failed; the page's octave picker reaches it.
+    act(() => root.render(
+      <Fretboard pitches={p(['C2', 'C2'])} root={parsePitch('C2')} label="x" marking="sounding" />,
+    ));
+    expect(container.querySelector('figcaption')?.textContent).toMatch(/C2 is below the lowest string/);
+    act(() => root.render(
+      <Fretboard pitches={p(['C5', 'C6'])} root={parsePitch('C5')} label="x" marking="sounding" />,
+    ));
+    expect(container.querySelector('figcaption')?.textContent).toMatch(/C6 is above the twelfth fret/);
+    act(() => root.render(
+      <Fretboard pitches={p(['C4', 'G4'])} root={parsePitch('C4')} label="x" marking="sounding" />,
+    ));
+    expect(container.querySelector('figcaption')).toBeNull();
+  });
+
   it('draws nothing until an instrument is chosen, then the one chosen', () => {
     const view = <InstrumentDiagram pitches={triad} root={triad[0]} label="C" marking="map" />;
     act(() => settingsStore.getState().setAppearance({ diagram: 'none' }));

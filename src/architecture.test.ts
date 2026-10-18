@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { CHORD_TYPES } from './theory/chord';
 import { SCALE_TYPES } from './theory/scale';
 import { EXERCISE_FAMILIES, EXERCISE_TYPES } from './exercises/registry';
+import { EXERCISE_MENU, REFERENCE_MENU, SETUP_MENU } from './ui/menu';
 
 /**
  * The boundaries from docs/adr/, asked of the repository.
@@ -955,6 +956,70 @@ describe("the home screen's claim about how exercises are answered", () => {
     expect(audioInMembers().sort(),
       'AudioIn grew a member: add it to ANSWERING if an answer can be graded from it, '
       + 'or to NOT_ANSWERING if it cannot').toEqual(known);
+  });
+
+  /**
+   * Two bullets that claim an absence, bound to where the thing would be
+   * offered rather than to how it would be written.
+   *
+   * **Architect's distinction, and it is the whole of why these are not the
+   * same as the counts above.** A capability has a named home — `AudioIn`
+   * exists, so its members can be enumerated and classified. An absence has
+   * no home: the thing that would falsify "there is no export" has not been
+   * written, so any predicate over identifiers is a guess at the shape the
+   * absent thing will take, and a guess that misses passes while being
+   * wrong. What does exist is the surface the thing would have to appear on,
+   * and the app keeps those closed for its own reasons.
+   *
+   * Both are two-sided for the reason the capture guard above is: a README
+   * that stops saying a thing is missing once it arrives is the easy half,
+   * and a README still saying it after it arrives is the half that rotted.
+   */
+  const menuEntries = () => [...EXERCISE_MENU, ...REFERENCE_MENU, ...SETUP_MENU];
+
+  it('is asking the menus, which have to have something in them', () => {
+    // Every door the app offers. An empty population would make both cases
+    // below report "nothing offers it" about an app that offers everything.
+    expect(menuEntries().length, 'the menus came back empty').toBeGreaterThan(5);
+  });
+
+  it('calls sight reading unbuilt exactly while nothing offers it', () => {
+    /*
+      The home screen's cards are `EXERCISE_FAMILIES` mapped, so a sight
+      reading exercise could not be added without a card appearing — which
+      is what makes the menus the right surface rather than a search for an
+      identifier somebody might spell either way.
+    */
+    const offered = menuEntries().filter((entry) => /sight/i.test(`${entry.route} ${entry.name}`));
+    const section = notBuiltSection(readFileSync(README, 'utf8'));
+    const listed = /sight.read/i.test(section);
+
+    if (offered.length > 0) {
+      expect(listed, `the app offers ${offered[0].name} and the README still calls it unbuilt`)
+        .toBe(false);
+    } else {
+      expect(listed, 'nothing offers sight reading and the README no longer says so').toBe(true);
+    }
+  });
+
+  it('calls the Android build unbuilt exactly while Capacitor is absent', () => {
+    const manifest = JSON.parse(readFileSync(join(SRC, '..', 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>; devDependencies?: Record<string, string>;
+    };
+    const declared = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies });
+    // The scope rather than a package name: `@capacitor/cli` and `core` are
+    // two of several, and which ones the build needs is not this file's business.
+    const capacitor = declared.filter((name) => name.startsWith('@capacitor/'));
+    const section = notBuiltSection(readFileSync(README, 'utf8'));
+    const listed = /capacitor is not set up/i.test(section);
+
+    if (capacitor.length > 0) {
+      expect(listed, `${capacitor.join(', ')} is installed and the README still says it is not`)
+        .toBe(false);
+    } else {
+      expect(listed, 'no Capacitor anywhere and the README no longer says the Android build is unbuilt')
+        .toBe(true);
+    }
   });
 
   it('quotes the catalogues at the sizes they are', () => {

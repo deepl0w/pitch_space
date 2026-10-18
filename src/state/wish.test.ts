@@ -66,4 +66,32 @@ describe('which item the next question aims at', () => {
     expect(nextWish(narrowed, history, NOW)).toBeUndefined();
     expect(nextWish(narrowed, new Map(), NOW)).toBe('interval:m3:up');
   });
+
+  it('works through every miss in turn, not the first two in the catalogue', () => {
+    /*
+      Every item seen and missed, the state a struggling learner reaches.
+      A miss is infinitely overdue, and two infinities tied and fell to
+      catalogue order, so the queue alternated the first two misses for
+      ever. Asked over a whole rotation: each miss once before any twice.
+    */
+    const wide: ProgressLine = {
+      ...line,
+      askable: ['interval:m2:up', 'interval:M2:up', 'interval:m3:up', 'interval:M3:up', 'interval:P4:up'] as ItemId[],
+    };
+    const seen = new Map<string, number>(wide.askable.map((item, i) => [item, NOW - 10_000 + i]));
+    const asked: (ItemId | undefined)[] = [];
+    let now = NOW;
+    let previous: ItemId | undefined;
+    for (let round = 0; round < wide.askable.length; round += 1) {
+      const history = new Map([...seen].map(([item, at]) => [
+        tallyKey(wide, item as ItemId), { ...missed, lastSeenAt: at },
+      ]));
+      const next = nextWish(wide, history, now, previous);
+      asked.push(next);
+      now += 1000;
+      seen.set(next!, now);
+      previous = next;
+    }
+    expect(new Set(asked).size, `asked ${asked.join(', ')}`).toBe(wide.askable.length);
+  });
 });

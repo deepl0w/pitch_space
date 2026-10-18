@@ -182,8 +182,25 @@ export function schedule(
   return rows.sort((a, b) => {
     if ((a.tally === null) !== (b.tally === null)) return a.tally === null ? -1 : 1;
     if (a.tally !== null && b.tally !== null) {
-      const byOverdue = overdueRatio(b.tally, now) - overdueRatio(a.tally, now);
-      if (byOverdue !== 0) return byOverdue;
+      /*
+        Compared, not subtracted. A miss is due at once, so its ratio is
+        infinite, and Infinity − Infinity is NaN — which the sort read as a
+        tie and settled by catalogue order. With every item seen and missed,
+        the queue's head was then always the first two misses in the
+        catalogue: a learner answering wrong was asked major second and
+        minor third alternately, fourteen rounds running, and never the
+        other nine. Found by the user role from outside.
+
+        **Equally overdue, the one waiting longest goes first** — the
+        oldest miss before the newest — which is what turns a tie among
+        misses into a rotation through all of them.
+      */
+      const ra = overdueRatio(a.tally, now);
+      const rb = overdueRatio(b.tally, now);
+      if (ra !== rb) return ra > rb ? -1 : 1;
+      if (a.tally.lastSeenAt !== b.tally.lastSeenAt) {
+        return a.tally.lastSeenAt - b.tally.lastSeenAt;
+      }
     }
     return a.index - b.index;
   }).map(({ item, tally, due, reachable: itemReachable }) => ({

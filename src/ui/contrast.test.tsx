@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act } from 'react';
-import { createRoot } from 'react-dom/client';
-import { describe, expect, it } from 'vitest';
+import { createRoot, type Root } from 'react-dom/client';
+import { afterAll, describe, expect, it } from 'vitest';
 import { CircleOfFifths } from './screens/CircleOfFifths';
 import { APP_RULES, customProperties } from '../testing/stylesheet';
 
@@ -215,10 +215,28 @@ function token(name: string, theme: Map<string, string>): string {
 
 /* -- the claim -------------------------------------------------------------- */
 
+/**
+ * The one root this file mounts, kept so it can be unmounted.
+ *
+ * `afterAll` and not `afterEach`: the wedges are read once and every case
+ * below holds on to them, so taking the tree down between tests would empty
+ * the thing being asked about. What matters is that it does not outlive the
+ * file — an unmounted root keeps React's scheduled work alive past the last
+ * test, and vitest tears jsdom down underneath it, which has shown up here
+ * as `window is not defined` once and not again in six runs.
+ */
+let wheel: Root | null = null;
+
+afterAll(() => {
+  act(() => { wheel?.unmount(); });
+  wheel = null;
+});
+
 function wedges(): Element[] {
   const host = document.createElement('div');
   document.body.append(host);
-  act(() => { createRoot(host).render(<CircleOfFifths />); });
+  wheel = createRoot(host);
+  act(() => { wheel!.render(<CircleOfFifths />); });
   return [...host.querySelectorAll('.wedge')];
 }
 

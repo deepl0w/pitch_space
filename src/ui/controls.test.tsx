@@ -1,13 +1,31 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest';
-import { createRoot } from 'react-dom/client';
+import { afterEach, describe, expect, it } from 'vitest';
+import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
 import { Field } from './controls';
+
+/**
+ * Every root this file mounts, so none of them outlives it.
+ *
+ * A root that is never unmounted keeps React's scheduled work alive past the
+ * last test, and vitest then tears the jsdom environment down underneath it —
+ * which has already shown up here as `window is not defined`, once, and not
+ * again in six runs. An intermittent failure with no stable name is expensive
+ * out of all proportion to the fix, and the fix is to unmount what we mount.
+ */
+const mounted: Root[] = [];
+
+afterEach(() => {
+  act(() => { for (const root of mounted.splice(0)) root.unmount(); });
+  document.body.replaceChildren();
+});
 
 function render(node: React.ReactElement): HTMLElement {
   const host = document.createElement('div');
   document.body.append(host);
-  act(() => { createRoot(host).render(node); });
+  const root = createRoot(host);
+  mounted.push(root);
+  act(() => { root.render(node); });
   return host;
 }
 

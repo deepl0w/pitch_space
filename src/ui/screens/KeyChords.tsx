@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { DiagramPicker, InstrumentDiagram } from '../notation/InstrumentDiagram';
+import { useSettings } from '../../state/settingsStore';
 import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
@@ -26,6 +28,9 @@ export function KeyChords({ focus }: { focus?: string }) {
     () => ALL_KEYS.some((k) => keyId(k) === focus) ? focus! : 'C_major',
   );
   const [sevenths, setSevenths] = useState(false);
+  // Which of the seven the instrument shows: one neck is readable, seven are not.
+  const [shown, setShown] = useState(0);
+  const diagram = useSettings((s) => s.doc.appearance.diagram);
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();
@@ -69,9 +74,25 @@ export function KeyChords({ focus }: { focus?: string }) {
         />
         <Picker label="Clef" value={clef} onChange={setClef} options={CLEFS} />
         <Picker label="Octave" value={octave} onChange={setOctave} options={OCTAVES} />
+        <DiagramPicker />
+        {diagram !== 'none' && (
+          <Picker
+            label="Chord shown"
+            value={shown}
+            onChange={setShown}
+            options={chords.map(({ numeral: n, chord }, i) => ({
+              value: i, label: `${numeralText(n)} — ${chordSymbol(chord)}`,
+            }))}
+          />
+        )}
       </Panel>
 
       <Score spec={spec} />
+      <InstrumentDiagram
+        pitches={spellChord(chords[shown].chord)}
+        root={chords[shown].chord.root}
+        label={chordSymbol(chords[shown].chord)}
+      />
 
       <Actions>
         <button onClick={() => play(notes)}>Play each chord</button>

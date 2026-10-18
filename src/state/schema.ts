@@ -121,10 +121,21 @@ export interface AppearanceSettings {
    * than arrived at.
    */
   capture: CaptureStyle;
+  /**
+   * Which instrument the reference pages draw a scale or chord on, beside
+   * the stave: none, a keyboard, or a guitar neck.
+   *
+   * A preference rather than a page's own state, because a guitarist wants
+   * the neck on every page and should not have to ask for it on each.
+   */
+  diagram: Diagram;
 }
+
+export type Diagram = 'none' | 'piano' | 'guitar';
 
 export const APPEARANCE_DEFAULTS: AppearanceSettings = {
   theme: 'system', volume: 1, instrument: DEFAULT_INSTRUMENT_ID, capture: 'press',
+  diagram: 'none',
 };
 
 /** Version 3 adds the preferences that are not about a particular exercise. */
@@ -231,7 +242,9 @@ function coerceAppearance(value: unknown): AppearanceSettings {
   // existed has no key, reads as unknown, and takes the default.
   const capture = a.capture === 'continuous' || a.capture === 'press'
     ? a.capture : APPEARANCE_DEFAULTS.capture;
-  return { theme, volume, instrument, capture };
+  const diagram = a.diagram === 'piano' || a.diagram === 'guitar' || a.diagram === 'none'
+    ? a.diagram : APPEARANCE_DEFAULTS.diagram;
+  return { theme, volume, instrument, capture, diagram };
 }
 
 /**

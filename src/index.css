@@ -1531,3 +1531,32 @@ select,
   */
   inline-size: 100%;
 }
+
+/* ---- A scale or chord on an instrument ---------------------------------- */
+
+/* Beside the stave on the reference pages, at the stave's width, scrolling
+   sideways rather than shrinking on a phone: a neck squeezed to 340px has
+   dots too small to read and labels on top of each other. */
+.diagram { margin: 0.75rem 0 0; overflow-x: auto; }
+.diagram svg { display: block; width: 100%; min-width: 30rem; height: auto; }
+.diagram-keyboard { max-width: 42rem; }
+/* A keyboard's colours are the instrument's, not the theme's: ink and
+   surface swap in dark mode, which drew light black keys on dark white ones
+   — a keyboard nobody has seen. So the keys keep ivory and ebony in both,
+   and a marked note is a dark dot ringed in ivory, legible on either. */
+.diagram-keyboard { --key-white: #f3efe6; --key-black: #1f1c1a; }
+.key-white { fill: var(--key-white); stroke: #b9b2a6; }
+.key-black { fill: var(--key-black); }
+.diagram-keyboard .diagram-note circle {
+  fill: var(--key-black); stroke: var(--key-white); stroke-width: 1.5;
+}
+.diagram-keyboard .diagram-note text { fill: var(--key-white); }
+.diagram-keyboard .diagram-root circle { stroke: var(--key-white); stroke-width: 1.5; }
+.string, .fret { stroke: var(--line); stroke-width: 1; }
+.nut { stroke: var(--ink); stroke-width: 3; }
+.fret-number { fill: var(--muted); font-size: 9px; }
+.diagram-note circle { fill: var(--ink); }
+.diagram-note text { fill: var(--bg); }
+.diagram-root circle { fill: var(--accent); }
+.diagram-root text { fill: var(--on-accent); }
+.diagram text { font-size: 8px; font-weight: 650; }

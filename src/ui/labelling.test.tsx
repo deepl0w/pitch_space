@@ -9,6 +9,8 @@ import { Calibration } from './screens/Calibration';
 import { Chords } from './screens/Chords';
 import { CircleOfFifths } from './screens/CircleOfFifths';
 import { Home } from './screens/Home';
+import { DiagramPicker, Fretboard, Keyboard } from './notation/InstrumentDiagram';
+import { parsePitch } from '../theory/pitch';
 import { Intervals } from './screens/Intervals';
 import { KeyChords } from './screens/KeyChords';
 import { PracticeScreen } from './screens/PracticeScreen';
@@ -98,6 +100,16 @@ const SCREENS: Record<string, () => ReactElement> = {
       ))}
     </>
   ),
+  'notation/InstrumentDiagram.tsx': () => {
+    const triad = ['C4', 'E4', 'G4'].map(parsePitch);
+    return (
+      <>
+        <DiagramPicker />
+        <Keyboard pitches={triad} root={triad[0]} label="C major" />
+        <Fretboard pitches={triad} root={triad[0]} label="C major" />
+      </>
+    );
+  },
   'screens/Home.tsx': () => <Home go={() => {}} />,
   'screens/Intervals.tsx': () => <Intervals />,
   'screens/KeyChords.tsx': () => <KeyChords />,

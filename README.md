@@ -35,7 +35,8 @@ Six kinds of practice, each asked by ear or off the staff.
 There are also reference screens — every interval with songs that have
 it, the circle of fifths, every scale in every key, the rhythm figures the
 generator builds from — for looking things up rather than being tested on
-them. After an answer, each thing it judged has a button that opens its
+them. Intervals, scales and chords can also be drawn on a piano keyboard or
+a guitar neck beside the stave. After an answer, each thing it judged has a button that opens its
 page over the question, so looking it up does not cost the question.
 
 **What is asked moves, so the skill transfers.** Scales, chords and
@@ -109,11 +110,11 @@ is not something a test can see.
 
 Stated plainly, because the brief promises some of it.
 
-- **The microphone, for four of the six.** Intervals and scales can be
+- **The microphone, for most exercises.** Intervals and scales can be
   answered by playing them: the capture chain runs from a real device
-  through the detectors to the grader. The other four still take a click,
-  and rhythm is answered by tapping, which is a real way to practise rhythm
-  and is not the same thing.
+  through the detectors to the grader. Scale degrees, keys, chords and
+  progressions still take a click, and rhythm is answered by tapping, which
+  is a real way to practise rhythm and is not the same thing.
 - **Sight reading** is in the backlog, very late, and may be dropped. The
   melody generator it would run on is written and tested, but nothing in
   the app offers it and the home screen no longer lists it.

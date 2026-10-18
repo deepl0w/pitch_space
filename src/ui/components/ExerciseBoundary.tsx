@@ -14,7 +14,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
  * stops the app is the loudest possible signal and guarantees someone finds
  * it, where one broken card among five working ones can survive a release. So
  * the seed goes on screen and the error goes to the console — generation is
- * reproducible from `(seed, settings)` (ADR 0002, ADR 0005), which makes a
+ * reproducible from `(seed, settings, wish)` (ADR 0002, ADR 0005), which makes a
  * named seed a defect someone can reproduce exactly rather than a story about
  * a blank page. There is nowhere to send a report today; when there is, what
  * it collects is a decision to make deliberately rather than inherit from here.

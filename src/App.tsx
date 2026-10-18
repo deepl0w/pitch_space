@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Overlay } from './ui/components/Overlay';
 import { CogIcon } from './ui/controls';
 import { Home } from './ui/screens/Home';
+import { Intervals } from './ui/screens/Intervals';
 import { Scales } from './ui/screens/Scales';
 import { Chords } from './ui/screens/Chords';
 import { KeyChords } from './ui/screens/KeyChords';
@@ -42,8 +44,12 @@ function useRoute(): [string, (route: string) => void] {
  * One signature rather than two: a screen that wants to send the reader
  * somewhere else — settings pointing at calibration — should not have to
  * reach for `window.location` and keep a second copy of what a route is.
+ * A reference page also takes a `focus` when it is opened from an answer
+ * (`ui/reference.ts`); reached by its route it has none, and opens bare.
  */
-const SCREENS: Partial<Record<string, (props: { go(route: string): void }) => React.ReactElement>> = {
+type ScreenProps = { go(route: string): void; focus?: string };
+const SCREENS: Partial<Record<string, (props: ScreenProps) => React.ReactElement>> = {
+  intervals: Intervals,
   scales: Scales,
   chords: Chords,
   'key-chords': KeyChords,
@@ -54,12 +60,7 @@ const SCREENS: Partial<Record<string, (props: { go(route: string): void }) => Re
 };
 
 /**
- * Settings, over whatever is already on screen.
- *
- * The same component the route renders, in a layer rather than a page,
- * so the exercise underneath keeps its round and its audio. Escape and
- * the backdrop both close it, because a thing that covers your work
- * should be dismissible without aiming at a button.
+ * Settings, in a layer over whatever is already on screen.
  *
  * `go` closes before it navigates: the two destinations reachable from
  * inside — calibration and the back link — are real route changes, and
@@ -68,52 +69,10 @@ const SCREENS: Partial<Record<string, (props: { go(route: string): void }) => Re
  * one the Escape key belonged to.
  */
 function SettingsOverlay({ onClose, go }: { onClose(): void; go(route: string): void }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  /*
-    Hold the page still underneath.
-
-    `.overlay` is fixed and scrolls its own content, which is enough
-    until the content fits — then a wheel over the backdrop has nothing
-    to scroll, falls through to the document, and moves the page behind
-    the panel. Worst on a phone, where the backdrop is the 16px either
-    side of a full-width panel and is most of what a thumb lands on.
-
-    The padding is not cosmetic. Removing the scrollbar by hiding
-    overflow widens the content box by its width, so every centred thing
-    on the page jumps sideways as settings opens and back as it closes —
-    replacing a scroll nobody wanted with a lurch nobody wanted. The gap
-    is measured rather than assumed because it is zero on overlay
-    scrollbars, which is most phones and some desktops.
-  */
-  useEffect(() => {
-    const root = document.documentElement;
-    const gap = window.innerWidth - root.clientWidth;
-    const scroll = root.style.overflow;
-    const pad = root.style.paddingRight;
-    root.style.overflow = 'hidden';
-    if (gap > 0) root.style.paddingRight = `${gap}px`;
-    return () => { root.style.overflow = scroll; root.style.paddingRight = pad; };
-  }, []);
-
   return (
-    <div
-      className="overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Settings"
-      /* The backdrop only, not a click that bubbled out of the panel. */
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="overlay-panel">
-        <button type="button" className="overlay-close" onClick={onClose}>Done</button>
-        <Settings go={go} />
-      </div>
-    </div>
+    <Overlay label="Settings" onClose={onClose}>
+      <Settings go={go} />
+    </Overlay>
   );
 }
 

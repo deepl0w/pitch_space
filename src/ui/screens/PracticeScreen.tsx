@@ -4,6 +4,8 @@ import { Score } from '../notation/Score';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { Field, OneOf } from '../controls';
 import { ExerciseBoundary } from '../components/ExerciseBoundary';
+import { ReferenceOverlay } from '../components/ReferenceOverlay';
+import { referenceFor, type ReferenceTarget } from '../reference';
 import { EXERCISE_FAMILIES, findFamily, memberOr } from '../../exercises/registry';
 import { itemLabel } from '../../exercises/itemLabel';
 import { newAttemptId, newSeed } from '../../exercises/seed';
@@ -325,6 +327,8 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
   // keys kept counting into the same "of" — two exercises blended under one
   // name, with nothing on screen to say so.
   const [session, setSession] = useState({ asked: 0, right: 0 });
+  // Here rather than in the app, beside the round it must not discard.
+  const [lookingUp, setLookingUp] = useState<ReferenceTarget | null>(null);
 
   function start() {
     // Minting the seed is an application event and belongs here rather than
@@ -482,12 +486,30 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
                 the attempt's does: the settings may have moved since.
               */
               const counts = tally.get(tallyKey(lineOfRound(definition.id, round), item));
+              const target = referenceFor(item);
+              const label = itemLabel(item);
               return (
                 <li key={item}>
-                  <span className="primary">{itemLabel(item)}</span>
+                  <span className="primary">{label}</span>
                   <span className="secondary">
                     {counts ? `${counts.correct} of ${counts.seen} right` : 'not recorded yet'}
                   </span>
+                  {/*
+                    On the item and not on the verdict, because a round can
+                    grade several and each opens a different page. Named for
+                    a screen reader with what it looks up, since five rows of
+                    "Look it up" say nothing out of context.
+                  */}
+                  {target && (
+                    <button
+                      type="button"
+                      className="look-up"
+                      onClick={() => setLookingUp(target)}
+                      aria-label={`Look it up: ${label}`}
+                    >
+                      Look it up
+                    </button>
+                  )}
                 </li>
               );
             })}
@@ -504,6 +526,9 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
         </section>
       )}
       </div>
+      {lookingUp && (
+        <ReferenceOverlay target={lookingUp} onClose={() => setLookingUp(null)} />
+      )}
     </>
   );
 }

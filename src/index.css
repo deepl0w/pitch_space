@@ -733,6 +733,23 @@ button:active { transform: translateY(1px); }
 }
 .readout .items .primary { font-size: 0.82rem; }
 .readout .items .secondary { font-size: 0.72rem; }
+/* The way from an answered item to its page in the reference. Quiet and
+   last in the row: it is a thing you may want after reading the count,
+   not a second answer competing with the verdict above. */
+.readout .items .look-up {
+  margin-inline-start: auto; font-size: 0.72rem; font-weight: 500;
+  padding: 0.15rem 0.5rem; background: transparent;
+  color: var(--accent); border-color: var(--line);
+}
+.readout .items .look-up:hover { border-color: var(--accent); filter: none; }
+
+/* Songs on the intervals page: one per line, title then who and where,
+   because a credit that wraps under its title reads as a second song. */
+.songs { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.songs li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.2rem 0.6rem;
+  border-bottom: 1px solid var(--line); padding: 0.35rem 0;
+}
 
 .items { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; }
 .items li {

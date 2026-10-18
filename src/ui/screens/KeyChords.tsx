@@ -17,8 +17,14 @@ const DEGREES: Degree[] = [1, 2, 3, 4, 5, 6, 7];
 /** Title and lede come from the menu, so the card and this page cannot drift. */
 const entry = entryFor('key-chords');
 
-export function KeyChords() {
-  const [keyIdValue, setKeyIdValue] = useState('C_major');
+/**
+ * `focus` is a key id, from `ui/reference.ts` when this page is opened from
+ * an answer; it decides where the page starts and nothing after.
+ */
+export function KeyChords({ focus }: { focus?: string }) {
+  const [keyIdValue, setKeyIdValue] = useState(
+    () => ALL_KEYS.some((k) => keyId(k) === focus) ? focus! : 'C_major',
+  );
   const [sevenths, setSevenths] = useState(false);
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);

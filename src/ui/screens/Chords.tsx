@@ -15,10 +15,23 @@ const FAMILIES = ['triad', 'seventh', 'sixth', 'sus', 'extended', 'altered'] as 
 /** Title and lede come from the menu, so the card and this page cannot drift. */
 const entry = entryFor('chords');
 
-export function Chords() {
+function opening(focus: string | undefined): { chordId: string; inversion: number } {
+  const [id, inv] = (focus ?? '').split(':');
+  const type = CHORD_TYPES.find((c) => c.id === id);
+  if (!type) return { chordId: 'maj7', inversion: 0 };
+  const n = inv?.startsWith('inv') ? Number(inv.slice(3)) : 0;
+  return { chordId: type.id, inversion: n > 0 && n < type.semitones.length ? n : 0 };
+}
+
+/**
+ * `focus` is a chord id with its inversion if it has one — `dom7:inv2` — from
+ * `ui/reference.ts`; it decides where the page starts and nothing after.
+ */
+export function Chords({ focus }: { focus?: string }) {
+  const [start] = useState(() => opening(focus));
   const [rootKey, setRootKey] = useState('C_major');
-  const [chordId, setChordId] = useState('maj7');
-  const [inversion, setInversion] = useState(0);
+  const [chordId, setChordId] = useState(start.chordId);
+  const [inversion, setInversion] = useState(start.inversion);
   const [open, setOpen] = useState(false);
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);

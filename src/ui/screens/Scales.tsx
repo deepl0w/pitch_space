@@ -14,9 +14,15 @@ const FAMILIES = ['common', 'mode', 'pentatonic', 'symmetric', 'exotic'] as cons
 /** Title and lede come from the menu, so the card and this page cannot drift. */
 const entry = entryFor('scales');
 
-export function Scales() {
+/**
+ * `focus` is a scale id, from `ui/reference.ts` when this page is opened
+ * from an answer; it decides where the page starts and nothing after.
+ */
+export function Scales({ focus }: { focus?: string }) {
   const [tonicName, setTonicName] = useState('C');
-  const [scaleId, setScaleId] = useState('major');
+  const [scaleId, setScaleId] = useState(
+    () => SCALE_TYPES.some((s) => s.id === focus) ? focus! : 'major',
+  );
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();

@@ -330,6 +330,37 @@ describe('the readout under an answered question', () => {
     }
   });
 
+  it('opens the reference on an answered item over the question, and gives the question back', () => {
+    /*
+      The feature is a button; the claim worth testing is what it does not
+      cost. A route change unmounts this screen, and the round and the
+      session tally are its state — so a look-up that navigated would come
+      back to a new question and a count of zero, which is worse than no
+      button. Asked of every exercise, because each grades a different kind
+      of item and each opens a different page.
+    */
+    for (const type of EXERCISE_TYPES) {
+      const s = screen(type.id);
+      s.start();
+      expect(answerFully(s.container), `${type.id} could not be answered`).toBe(true);
+
+      const before = s.container.querySelector('.practice-main')?.textContent;
+      const lookUp = s.container.querySelector('.readout .look-up') as HTMLButtonElement | null;
+      expect(lookUp, `${type.id} offered no way to the reference`).not.toBeNull();
+      act(() => lookUp!.click());
+
+      const layer = s.container.querySelector('[role="dialog"]');
+      expect(layer, `${type.id} opened nothing`).not.toBeNull();
+      expect(layer!.querySelector('h1')?.textContent, `${type.id} opened an untitled page`)
+        .toBe(layer!.getAttribute('aria-label'));
+
+      act(() => (layer!.querySelector('.overlay-close') as HTMLButtonElement).click());
+      expect(s.container.querySelector('[role="dialog"]')).toBeNull();
+      expect(s.container.querySelector('.practice-main')?.textContent,
+        `${type.id} came back to something other than the question it left`).toBe(before);
+    }
+  });
+
   it('lists what was judged, not what was shown', () => {
     /*
       ADR 0024, which was accepted on 4 October and not built until the

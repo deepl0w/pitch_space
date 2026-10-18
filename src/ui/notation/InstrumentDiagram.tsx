@@ -200,7 +200,11 @@ export function Fretboard({ pitches, root, label, marking }: {
           {offNeck.map((p) => `${pitchName(p)} is ${midiOf(p) < lowest
             ? 'below the lowest string'
             : midiOf(p) > GUITAR_TUNING[GUITAR_TUNING.length - 1] + FRETS
-              ? 'above the twelfth fret' : 'between the strings\' reach'}`).join('; ')}
+              ? 'above the twelfth fret'
+              // Unreachable under standard tuning, whose strings overlap.
+              // Kept for an alternate tuning with a gap, where without it
+              // the sentence would claim "above the twelfth fret" wrongly.
+              : 'between the strings\' reach'}`).join('; ')}
           {' '}— not on this neck, so only its other places are shown.
         </figcaption>
       )}

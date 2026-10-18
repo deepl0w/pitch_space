@@ -1559,4 +1559,8 @@ select,
 .diagram-note text { fill: var(--bg); }
 .diagram-root circle { fill: var(--accent); }
 .diagram-root text { fill: var(--on-accent); }
+/* The same note elsewhere on the neck, when the drawing is of a distance:
+   kept, so the map is still there, and quiet, so the two that sound stand. */
+.diagram-dim circle { fill: none; stroke: var(--muted); stroke-width: 1; }
+.diagram-dim text { fill: var(--muted); }
 .diagram text { font-size: 8px; font-weight: 650; }

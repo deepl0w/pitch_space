@@ -44,6 +44,8 @@ export interface FretPosition {
   /** 0 is the open string. */
   readonly fret: number;
   readonly pitchClass: number;
+  /** The exact note at this position, octave included. */
+  readonly midi: number;
 }
 
 /**
@@ -55,6 +57,12 @@ export interface FretPosition {
  * neck and a chord has many shapes, and drawing one octave at one position
  * would choose a fingering for the reader. Every position is the map they
  * choose from.
+ *
+ * **Right for a map, wrong for a distance.** An interval is two notes a set
+ * distance apart, and by pitch class an octave is the same six dots as a
+ * unison — found by architect on the intervals page. So each position also
+ * carries its exact `midi`, and a drawing of a distance marks the positions
+ * where the two notes actually sound and dims the rest.
  */
 export function fretPositions(pitches: readonly Pitch[]): FretPosition[] {
   const wanted = new Set(pitches.map((p) => ((midiOf(p) % 12) + 12) % 12));
@@ -62,7 +70,7 @@ export function fretPositions(pitches: readonly Pitch[]): FretPosition[] {
   GUITAR_TUNING.forEach((open, string) => {
     for (let fret = 0; fret <= FRETS; fret += 1) {
       const pitchClass = (open + fret) % 12;
-      if (wanted.has(pitchClass)) out.push({ string, fret, pitchClass });
+      if (wanted.has(pitchClass)) out.push({ string, fret, pitchClass, midi: open + fret });
     }
   });
   return out;

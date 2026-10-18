@@ -88,7 +88,7 @@ export function Scales({ focus, tonic }: { focus?: string; tonic?: string }) {
       </Panel>
 
       <Score spec={spec} />
-      <InstrumentDiagram pitches={pitches} root={pitches[0]} label={`${tonicName} ${type.name}`} />
+      <InstrumentDiagram pitches={pitches} root={pitches[0]} label={`${tonicName} ${type.name}`} marking="map" />
 
       <Actions>
         <button onClick={() => play(notes)}>Play the scale</button>

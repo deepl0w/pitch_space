@@ -92,6 +92,7 @@ export function KeyChords({ focus }: { focus?: string }) {
         pitches={spellChord(chords[shown].chord)}
         root={chords[shown].chord.root}
         label={chordSymbol(chords[shown].chord)}
+        marking="map"
       />
 
       <Actions>

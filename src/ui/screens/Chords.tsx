@@ -86,7 +86,7 @@ export function Chords({ focus }: { focus?: string }) {
       </Panel>
 
       <Score spec={spec} />
-      <InstrumentDiagram pitches={pitches} root={built.root} label={chordSymbol(built)} />
+      <InstrumentDiagram pitches={pitches} root={built.root} label={chordSymbol(built)} marking="map" />
 
       <Actions>
         <button onClick={() => play(notes)}>Play as a chord</button>

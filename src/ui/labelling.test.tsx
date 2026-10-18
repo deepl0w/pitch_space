@@ -106,7 +106,7 @@ const SCREENS: Record<string, () => ReactElement> = {
       <>
         <DiagramPicker />
         <Keyboard pitches={triad} root={triad[0]} label="C major" />
-        <Fretboard pitches={triad} root={triad[0]} label="C major" />
+        <Fretboard pitches={triad} root={triad[0]} label="C major" marking="map" />
       </>
     );
   },

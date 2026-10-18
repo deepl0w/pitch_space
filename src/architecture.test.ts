@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { join, matchesGlob, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CHORD_TYPES } from './theory/chord';
 import { SCALE_TYPES } from './theory/scale';
@@ -147,6 +147,9 @@ function resolveWithin(file: string, specifier: string): string | null {
   if (!specifier.startsWith('.')) return null;
   return show(join(file, '..', specifier));
 }
+
+/** The build config, read by two describes below. */
+const VITE_CONFIG = readFileSync(join(SRC, '..', 'vite.config.ts'), 'utf8');
 
 describe('ADR 0001 — a pure core', () => {
   // Nothing here may reach for the platform. This is what lets the whole music
@@ -430,12 +433,33 @@ describe('the npm scripts', () => {
 
   /**
    * A declared dependency that nothing imports is usually harmless, but these
-   * two are load-bearing claims: CLAUDE.md's first paragraph says the app ships
-   * as an installable PWA and as an Android APK. Neither is true while the
-   * plugin is unwired, so the gap should be visible here rather than only in a
-   * document nobody diffs.
+   * two are load-bearing claims: CLAUDE.md's first paragraph says the app
+   * ships as an installable PWA and as an Android APK, and neither is true
+   * while the dependency sits unwired. The gap belongs here rather than only
+   * in a document nobody diffs.
+   *
+   * **The PWA half is real now, so it is a case and no longer a todo.** It
+   * was written as a todo while the plugin sat in `package.json` doing
+   * nothing; wiring it is what `VitePWA(...)` in `vite.config.ts` does. A
+   * todo left standing after its work lands is the failure CLAUDE.md names
+   * in its own terms — a completed task still reading as outstanding, which
+   * sends the next reader looking for work already done.
    */
-  it.todo('wires vite-plugin-pwa into vite.config.ts so the PWA half is real');
+  it('wires the PWA plugin it declares, so the installable half is real', () => {
+    expect(pkg.devDependencies['vite-plugin-pwa'], 'the plugin is not declared at all')
+      .toBeDefined();
+    /*
+      Comments stripped first, and not as a precaution: the config's own
+      prose says the plugin "has been a dependency since the scaffold and was
+      never wired". Asking the raw text whether it mentions the plugin would
+      be answered by the sentence explaining that it does not.
+    */
+    const code = VITE_CONFIG.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code, 'the plugin is declared but never imported').toContain('vite-plugin-pwa');
+    expect(code, 'the plugin is imported but never applied').toMatch(/VitePWA\s*\(/);
+  });
+
+  /** Still outstanding, and still accurate: neither package is installed. */
   it.todo('installs @capacitor/cli and core so the android scripts can run');
 });
 
@@ -1433,5 +1457,87 @@ describe('the page shell', () => {
     const max = Number(keys.get('maximum-scale') ?? Infinity);
     expect(max, 'zoom is capped below the 2x a reader is entitled to')
       .toBeGreaterThanOrEqual(2);
+  });
+});
+
+/**
+ * What the service worker precaches, which is decided outside `src/`.
+ *
+ * `vite.config.ts` is not imported by anything under `src/`, so every walk in
+ * this file passes it by — the same reason `index.html` went unread until the
+ * case above. That matters more here than it did there, because the config
+ * carries a rule whose entire enforcement is a list not naming something.
+ */
+describe('what the service worker precaches', () => {
+
+  /**
+   * The precache globs, as written.
+   *
+   * Read out of the source rather than by importing the config, because
+   * `VitePWA(...)` returns a plugin and keeps its options to itself — there
+   * is nothing on the other side to ask. So this finds the array and then
+   * hands the patterns to a real matcher: the fragile half is locating the
+   * literal, which fails loudly, and the half that decides anything is
+   * `path.matchesGlob`, not a regex guessing at brace expansion.
+   */
+  function precacheGlobs(): string[] {
+    const literal = /globPatterns\s*:\s*\[([^\]]*)\]/.exec(VITE_CONFIG);
+    /*
+      Absent is the failure, not a pass. Workbox falls back to its own
+      default glob with no `globPatterns`, and that default is one of the
+      three ways the comment in the config says this rule dies.
+    */
+    expect(literal, 'no globPatterns: workbox would fall back to its own default glob')
+      .not.toBeNull();
+    const patterns = [...literal![1].matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1]);
+    expect(patterns.length, 'globPatterns is empty').toBeGreaterThan(0);
+    return patterns;
+  }
+
+  /**
+   * ADR 0046: a sampled instrument is fetched on first use, never precached.
+   *
+   * **The config enforces that by not naming `.pack`, and says so: "the
+   * omission is the whole of the protection".** A rule held by an absence
+   * cannot fail on its own — widening the glob for an unrelated reason
+   * silently triples the first load for every reader, including everyone who
+   * never changes instrument, and the only symptom is a slower download that
+   * nobody is measuring.
+   *
+   * Matched against the packs actually in `public/packs/`, at the path they
+   * take in `dist/`, so this asks the question of the real filenames rather
+   * than of an example someone chose.
+   */
+  it('never precaches a sampled pack', () => {
+    const packs = readdirSync(join(SRC, '..', 'public', 'packs'))
+      .filter((name) => name.endsWith('.pack'));
+    expect(packs.length, 'no packs to ask about, so this would pass on nothing')
+      .toBeGreaterThan(0);
+
+    const swept = precacheGlobs().flatMap((pattern) => packs
+      .filter((pack) => matchesGlob(`packs/${pack}`, pattern))
+      .map((pack) => `${pattern} precaches ${pack}`));
+
+    expect(swept, 'a precache glob now sweeps the sampled packs in (ADR 0046)').toEqual([]);
+  });
+
+  /**
+   * And the other side, so narrowing is caught as well as widening.
+   *
+   * The config's stated reason for precaching at all is the notation font:
+   * a cached shell that cannot draw a stave is a blank exercise. A glob
+   * tightened until the font fell out would leave this file's other case
+   * green while making offline worthless.
+   *
+   * Asked of a representative name rather than the built file, deliberately:
+   * the real font is emitted into `dist/assets` with a content hash at build
+   * time, and the claim here is about the pattern, which exists now.
+   */
+  it('still precaches the notation font', () => {
+    const globs = precacheGlobs();
+    for (const font of ['assets/Bravura.woff2', 'assets/Bravura.otf']) {
+      expect(globs.some((pattern) => matchesGlob(font, pattern)),
+        `nothing precaches ${font}, so an offline stave cannot be drawn`).toBe(true);
+    }
   });
 });

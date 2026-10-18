@@ -5,7 +5,7 @@ import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
 import { usePlayer } from '../sound';
 import { pitchName } from '../../theory/pitch';
-import { SCALE_TYPES, degreeLabel, spellScale } from '../../theory/scale';
+import { SCALE_TYPES, degreeLabel, descendingType, spellScale } from '../../theory/scale';
 import { noteValue } from '../../theory/meter';
 import { CLEFS, OCTAVES, TONICS, signatureKey, tonicFor, tonicOptions } from './options';
 
@@ -53,6 +53,13 @@ export function Scales({ focus, tonic }: { focus?: string; tonic?: string }) {
     [pitches],
   );
   const spec = useMemo(() => ({ notes, clef, key }), [notes, clef, key]);
+  // The descending form, which is the same notes for every type but melodic
+  // minor: that one comes down as the natural minor, as the exercise plays it.
+  const descending = useMemo(() => {
+    const one = spellScale({ ...tonicPitch, octave }, descendingType(type));
+    return [...one, { ...one[0], octave: one[0].octave + 1 }]
+      .reverse().map((p) => ({ pitches: [p], value: noteValue('q') }));
+  }, [tonicPitch, type, octave]);
 
   return (
     <>
@@ -82,7 +89,7 @@ export function Scales({ focus, tonic }: { focus?: string; tonic?: string }) {
 
       <Actions>
         <button onClick={() => play(notes)}>Play the scale</button>
-        <button onClick={() => play([...notes].reverse())}>Play it descending</button>
+        <button onClick={() => play(descending)}>Play it descending</button>
       </Actions>
 
       <Readout

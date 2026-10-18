@@ -5,7 +5,7 @@ import { useCountdown } from '../countdown';
 import { namePlayed, steadyNotes } from '../played';
 import type { PromptProps } from '../types';
 import {
-  DIRECTION_LABELS, scalePlayed, scaleVoices,
+  DIRECTION_LABELS, sameAnswer, scaleAnswerVoices, scalePlayed, scaleVoices,
   type ScaleExercise, type ScaleResponse, type ScaleSettings,
 } from './scales';
 import { SoundBox } from '../SoundBox';
@@ -187,16 +187,35 @@ export function ScalePrompt({
 
       {aside && <p className="played-aside" role="status">{aside}</p>}
 
+      {/*
+        Afterwards the two marked chips play, as the interval exercise's do:
+        the answer and the one chosen, from the same root and in the same
+        direction, so the learner hears exactly the difference they missed.
+        Only those two, for that exercise's reason — every chip playable is
+        a keyboard for working the answer out after the fact.
+
+        A chosen name that is the same answer by ear — natural minor for a
+        falling melodic minor — is marked right, not wrong.
+      */}
       <div className="choices" role="group" aria-label="Which scale was that?">
         {exercise.choices.map((id) => {
-          const right = answered && id === exercise.typeId;
-          const wrong = answered && id === chosen && id !== exercise.typeId;
+          const isChosen = id === chosen;
+          const right = answered
+            && (id === exercise.typeId || (isChosen && sameAnswer(exercise, id, exercise.typeId)));
+          const wrong = answered && isChosen && !right;
+          const playable = answered && !reading && (right || wrong);
           return (
             <button
               key={id}
-              className={`choice${right ? ' right' : ''}${wrong ? ' wrong' : ''}`}
-              disabled={answered}
-              onClick={() => answer(id)}
+              type="button"
+              className={`choice${right ? ' right' : ''}${wrong ? ' wrong' : ''}`
+                + (playable ? ' playable' : '')}
+              disabled={answered && !playable}
+              aria-label={playable ? `Hear ${scaleType(id).name}` : undefined}
+              onClick={() => {
+                if (!answered) { answer(id); return; }
+                audio.play(scaleAnswerVoices(exercise, id));
+              }}
             >
               {scaleType(id).name}
             </button>

@@ -16,13 +16,13 @@ import type { AnyExerciseDefinition } from './types';
  * exercise — so adding the next type is one import and one entry, and
  * nothing else in the app changes.
  *
- * **A family is one of the six kinds of practice; a type is one way of
- * asking it.** Naming a note is one kind, and naming the distance to a
+ * **A family is one kind of practice; a type is one way of asking it.** Naming a note is one kind, and naming the distance to a
  * reference, naming the note outright and naming its degree in a key are
  * three ways of asking it. They are separate *types* because their settings,
  * their answers and their grading have nothing in common — and one *family*
- * because a learner choosing what to practise is choosing between six
- * things, not between nine.
+ * because a learner choosing what to practise is choosing between kinds of
+ * practice, not between every way each can be asked. No count here: the
+ * one that stood was wrong in the file that defines the count.
  *
  * Grouping here rather than in the menu because the grouping is a fact about
  * the exercises and the menu is a view of it. The home screen shows one card

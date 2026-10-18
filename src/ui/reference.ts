@@ -53,14 +53,16 @@ function askedIn(asked: string | undefined, mode: Mode): Key | undefined {
  * and degree items name a mode and not a key, so without it their page opens
  * on C major or A minor; with it, on the key the learner just heard. A second
  * argument rather than a richer id, because the id is what history is keyed
- * on and the key is only where to point.
+ * on and the key is only where to point. Required though it may be
+ * `undefined`: optional, leaving it out compiled and silently sent every
+ * look-up to C, which is how the seed on `songHint` was lost the day before.
  *
  * Nothing is a real answer and shows no button: a cadence is graded by no
  * exercise yet and has no page, and an id this release does not recognise —
  * history outlives the code that wrote it — should cost a button rather than
  * open a page at an arbitrary default that claims to be about it.
  */
-export function referenceFor(item: ItemId, asked?: string): ReferenceTarget | null {
+export function referenceFor(item: ItemId, asked: string | undefined): ReferenceTarget | null {
   const [kind, ...rest] = item.split(':');
   switch (kind) {
     case 'interval': {

@@ -21,6 +21,7 @@ import {
   type ItemTally, type TallyKey,
 } from '../../state/progressStore';
 import { attemptFrom } from '../../state/attempt';
+import { nextWish } from '../../state/wish';
 
 /**
  * One screen for every exercise type.
@@ -76,6 +77,15 @@ interface Round {
    * a drawing.
    */
   askable: readonly ItemId[];
+  /**
+   * The item the schedule asked this question to aim at, if any.
+   *
+   * Recorded with the attempt for two reasons: the question is a function of
+   * the seed, the settings *and* this, so a seed reported without it does not
+   * rebuild the same question; and a wish the exercise could not meet is the
+   * evidence ADR 0037 asks to be kept.
+   */
+  wished?: ItemId;
   startedAt: number;
   result: Result | null;
 }
@@ -338,12 +348,30 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
     const fresh = definition.settings.coerce(
       settingsStore.getState().doc.exercises[definition.id],
     );
+    const askable = definition.items(fresh);
+    /*
+      Aimed at what is due, once there is a history to say what that is.
+
+      Only when the log has loaded: while it is loading, or cannot be read,
+      every item looks unseen, and steering on that would walk a returning
+      learner through the catalogue from the top as if they had never
+      practised — the home screen's "cannot say I do not know" problem
+      arriving as behaviour instead of as a number.
+    */
+    const now = Date.now();
+    const wished = progressStore.getState().status === 'ready'
+      ? nextWish(
+        { exercise: definition.id, askable, presentation: fresh.presentation },
+        tally, now, round?.wished ?? round?.exercise.items[0],
+      )
+      : undefined;
     setRound({
       id: newAttemptId(),
-      exercise: definition.generate({ seed, settings: fresh }),
+      exercise: definition.generate({ seed, settings: fresh, prefer: wished }),
       settings: fresh,
-      askable: definition.items(fresh),
-      startedAt: Date.now(),
+      askable,
+      ...(wished === undefined ? {} : { wished }),
+      startedAt: now,
       result: null,
     });
   }
@@ -432,7 +460,7 @@ function ExerciseRound({ definition, audio, audioIn, capture, tally, settings }:
             deserves a fresh attempt. "Next" sits outside it, so a user whose
             question failed to draw can always ask for another one.
           */
-          <ExerciseBoundary key={round.id} seed={round.exercise.seed}>
+          <ExerciseBoundary key={round.id} seed={round.exercise.seed} wished={round.wished}>
             <RoundView
               definition={definition}
               round={round}

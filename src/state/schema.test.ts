@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { ItemId } from '../exercises/types';
 import {
   ATTEMPT_MIGRATIONS, ATTEMPT_SCHEMA, SETTINGS_DEFAULTS, SETTINGS_MIGRATIONS,
   SETTINGS_SCHEMA, UNCALIBRATED, attemptRow, coerceAttempt, coerceSettings, settingsDefaults,
@@ -400,5 +401,35 @@ describe('upgrading an attempt from v1 to v2', () => {
   // be refused rather than stored half-upgraded.
   it('refuses a v2 attempt that has no presentation at all', () => {
     expect(() => coerceAttempt(v1())).toThrow(/presentation/);
+  });
+});
+
+describe('the wish an attempt was aimed at', () => {
+  /*
+    Version 4. A question is generated from its seed, its settings and the
+    schedule's wish, so a row without the wish cannot rebuild what was asked;
+    and a wish absent from `items` is ADR 0037's declined wish, kept.
+  */
+  it('reads a version-3 row with no wish, which is what every one of them was', () => {
+    const out = migrate<Attempt>(versioned(3, { ...attempt, askable: ['interval:m3:up'] }), {
+      current: ATTEMPT_SCHEMA,
+      steps: ATTEMPT_MIGRATIONS,
+      validate: coerceAttempt,
+    });
+    expect(out.ok).toBe(true);
+    if (out.ok) expect('wished' in out.value).toBe(false);
+  });
+
+  it('keeps a wish through a write and a read, declined or not', () => {
+    const declined = { ...attempt, wished: 'progression:major:V' as ItemId };
+    expect(coerceAttempt(attemptRow(declined).data).wished).toBe('progression:major:V');
+  });
+
+  it('leaves an absent wish absent rather than writing an explicit undefined', () => {
+    expect('wished' in coerceAttempt(attempt)).toBe(false);
+  });
+
+  it('refuses a row whose wish is not an id', () => {
+    expect(() => coerceAttempt({ ...attempt, wished: 7 })).toThrow(/wish/);
   });
 });

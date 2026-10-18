@@ -7,6 +7,8 @@ import { EXERCISE_TYPES } from '../../exercises/registry';
 import type { AudioOut } from '../../exercises/types';
 import { resizeTo } from '../../testing/resizeObserver';
 import { ALL_KEYS, keyId, keyName } from '../../theory/key';
+import { progressStore, type ProgressState } from '../../state/progressStore';
+import { settingsStore } from '../../state/settingsStore';
 
 /**
  * Changing which exercise is running, while one is on screen.
@@ -737,5 +739,68 @@ describe('the way out of the practice screen', () => {
     expect(back!.compareDocumentPosition(question!) & Node.DOCUMENT_POSITION_FOLLOWING,
       'the way out of the screen is reachable only after the whole question')
       .toBeTruthy();
+  });
+});
+
+/**
+ * The schedule steering the next question.
+ *
+ * Everything it needed was built and tested and nothing connected it, so
+ * every question was a uniform draw however much history sat behind it.
+ * Asked through the screen, because the claim is about what the learner is
+ * asked, and `nextWish` being right and the screen asking it are two claims.
+ */
+describe('the schedule choosing what is asked', () => {
+  let saved: ProgressState;
+  beforeEach(() => {
+    saved = progressStore.getState();
+    // A loaded, empty history that stays loaded: the screen's own `load`
+    // would otherwise find no IndexedDB under jsdom and mark it unavailable.
+    progressStore.setState({ status: 'ready', attempts: [], load: async () => {} });
+  });
+  afterEach(() => { progressStore.setState(saved, true); });
+
+  const interval = EXERCISE_TYPES.find((t) => t.id === 'interval-id')!;
+  const settings = () => interval.settings.coerce(settingsStore.getState().doc.exercises[interval.id]);
+  const last = () => progressStore.getState().attempts.at(-1)!;
+
+  it("aims a new learner's first question at the top of the catalogue, and records that it did", () => {
+    const s = screen(interval.id);
+    s.start();
+    expect(s.answer()).toBe(true);
+    const first = interval.items(settings())[0];
+    expect(last().wished).toBe(first);
+    expect(last().items, 'aimed at one item and asked another').toContain(first);
+  });
+
+  it('rebuilds the exact question from what the attempt recorded', () => {
+    // ADR 0002's promise, one input wider: the seed and the settings no
+    // longer determine the question on their own once a wish is involved.
+    const s = screen(interval.id);
+    s.start();
+    expect(s.answer()).toBe(true);
+    const a = last();
+    const rebuilt = interval.generate({ seed: a.seed, settings: a.settings, prefer: a.wished });
+    expect(rebuilt.items).toEqual(a.items);
+  });
+
+  it('moves on to the next unseen item rather than asking the first again', () => {
+    const s = screen(interval.id);
+    s.start();
+    expect(s.answer()).toBe(true);
+    act(() => s.button('Next')?.click());
+    expect(s.answer()).toBe(true);
+    const asked = progressStore.getState().attempts.map((a) => a.wished);
+    expect(asked).toEqual(interval.items(settings()).slice(0, 2));
+  });
+
+  it('does not steer while the history cannot be read', () => {
+    // Every item looks unseen then, and steering on that would walk a
+    // returning learner through the catalogue from the top.
+    progressStore.setState({ status: 'unavailable' });
+    const s = screen(interval.id);
+    s.start();
+    expect(s.answer()).toBe(true);
+    expect(last().wished).toBeUndefined();
   });
 });

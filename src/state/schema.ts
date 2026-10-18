@@ -265,7 +265,7 @@ function coerceAudio(value: unknown): AudioSettings {
 
 /* -- attempts ------------------------------------------------------------- */
 
-export const ATTEMPT_SCHEMA = 3;
+export const ATTEMPT_SCHEMA = 4;
 
 /**
  * One answered exercise, in the shape a spaced-repetition scheduler will
@@ -363,7 +363,26 @@ export interface AttemptV3 extends AttemptV2 {
   askable?: readonly ItemId[];
 }
 
-export type Attempt = AttemptV3;
+/**
+ * Version 4 adds the item the schedule asked for, when it asked for one.
+ *
+ * Two readers need it and neither can get it any other way. **Reproduction**:
+ * generation is now a function of `(seed, settings, wish)`, so a seed reported
+ * without the wish rebuilds a different question for every exercise that aims
+ * (ADR 0002's promise, one input wider). **The declined wish**: ADR 0037 says
+ * a wish an exercise cannot meet is kept, because progression and rhythm
+ * answer `aims: 'none'` and a due item there would otherwise go unpractised
+ * with nothing anywhere but a tally that does not move. A wish absent from
+ * `items` is that record; nothing new is needed to read it.
+ *
+ * Optional, and absent on every earlier row truthfully: nothing wished before
+ * this version existed, so the migration has nothing to recover.
+ */
+export interface AttemptV4 extends AttemptV3 {
+  wished?: ItemId;
+}
+
+export type Attempt = AttemptV4;
 
 export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [
   // 2 -> 3 is deliberately a no-op, and that is the decision rather than
@@ -395,6 +414,9 @@ export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [
   // It is not dropped, which is the other half: the user's ruling makes
   // history disposable *for now* and owes a porting system later, and a
   // step that deleted rows would leave that system nothing to port.
+  (data) => data,
+  // 3 -> 4: nothing, and here the nothing is simply true. No row before
+  // version 4 was generated from a wish, so an absent `wished` describes it.
   (data) => data,
 ];
 
@@ -473,7 +495,7 @@ function isStoredPresentation(value: unknown): value is Presentation {
  */
 export function coerceAttempt(data: unknown): Attempt {
   if (typeof data !== 'object' || data === null) throw new Error('Attempt is not an object');
-  const a = data as Partial<AttemptV3>;
+  const a = data as Partial<AttemptV4>;
   if (typeof a.id !== 'string' || a.id === '') throw new Error('Attempt has no id');
   if (typeof a.exerciseType !== 'string') throw new Error(`Attempt ${a.id} has no exercise type`);
   /*
@@ -514,6 +536,9 @@ export function coerceAttempt(data: unknown): Attempt {
     && (!Array.isArray(a.askable) || !a.askable.every((i): i is ItemId => typeof i === 'string'))) {
     throw new Error(`Attempt ${a.id} has an unreadable askable set`);
   }
+  if (a.wished !== undefined && typeof a.wished !== 'string') {
+    throw new Error(`Attempt ${a.id} has an unreadable wish`);
+  }
   return {
     id: a.id,
     exerciseType: a.exerciseType,
@@ -528,6 +553,7 @@ export function coerceAttempt(data: unknown): Attempt {
     // Spread rather than assigned, so an absent set stays absent instead
     // of becoming an explicit `undefined` that an export would then write.
     ...(a.askable === undefined ? {} : { askable: [...a.askable] }),
+    ...(a.wished === undefined ? {} : { wished: a.wished }),
   };
 }
 

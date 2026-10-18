@@ -26,6 +26,8 @@ export function attemptFrom(
     /** Frozen at generation — what was actually used, not what is set now. */
     readonly settings: unknown;
     readonly startedAt: number;
+    /** The item the schedule asked the generator for, if it asked. */
+    readonly wished?: ItemId;
   },
   exerciseType: string,
   result: Result,
@@ -81,5 +83,7 @@ export function attemptFrom(
       not belong to a line".
     */
     ...(askable === undefined ? {} : { askable: [...askable] }),
+    // Absent when nothing was wished, for the same reason as `askable`.
+    ...(round.wished === undefined ? {} : { wished: round.wished }),
   };
 }

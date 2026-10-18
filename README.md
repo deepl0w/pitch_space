@@ -117,11 +117,13 @@ Stated plainly, because the brief promises some of it.
 - **Sight reading** is in the backlog, very late, and may be dropped. The
   melody generator it would run on is written and tested, but nothing in
   the app offers it and the home screen no longer lists it.
-- **Spaced repetition.** Attempts are recorded per item and per sense, and
-  the schedule that would read them is written and tested — but nothing
-  calls it yet. A first attempt to surface it on the home screen was
-  removed the same hour: the arithmetic was right and the sentence it told
-  the user was wrong.
+- **Spaced repetition, in part.** Each question now aims at what is due —
+  what you have never been asked first, then what you got wrong or have
+  not seen for longest — for the five exercises that can aim at one thing.
+  Progressions and rhythm cannot yet, and say so in the history rather
+  than pretending. What it does not use is how long you took, and there is
+  no "due today" count: a first attempt at one was removed the same hour,
+  because the arithmetic was right and the sentence was wrong.
 - **Export and import** of your history, and **custom scales, chords and
   progressions**. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
 - **The Android build.** `./build.sh --android` exists and refuses with a

@@ -28,6 +28,14 @@ interface Props {
    * most likely to throw.
    */
   seed?: number;
+  /**
+   * The item the schedule aimed this question at, if it aimed.
+   *
+   * Part of the report because it is part of the input: the question is
+   * generated from the seed, the settings and this, so the seed alone
+   * rebuilds a different one for any exercise that aims.
+   */
+  wished?: string;
   children: ReactNode;
 }
 
@@ -46,10 +54,15 @@ export class ExerciseBoundary extends Component<Props, State> {
     // The whole of "report" for now. Kept to one line with the seed in it so
     // a bug report can be copied out of the console rather than retyped.
     console.error(
-      `Exercise failed${this.props.seed === undefined ? '' : ` (seed ${this.props.seed})`}:`,
+      `Exercise failed${this.props.seed === undefined ? '' : ` (${this.report()})`}:`,
       error,
       info.componentStack,
     );
+  }
+
+  private report(): string {
+    const { seed, wished } = this.props;
+    return wished === undefined ? `seed ${seed}` : `seed ${seed}, aimed at ${wished}`;
   }
 
   render() {
@@ -71,7 +84,7 @@ export class ExerciseBoundary extends Component<Props, State> {
         */}
         {this.props.seed !== undefined && (
           <p className="secondary">
-            Worth reporting, with this: seed {this.props.seed}.
+            Worth reporting, with this: {this.report()}.
           </p>
         )}
         <p className="secondary">{error.message}</p>

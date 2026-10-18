@@ -88,7 +88,7 @@ export function Intervals({ focus }: { focus?: string }) {
       </Panel>
 
       <Score spec={spec} />
-      <InstrumentDiagram pitches={pitches} root={pitches[0]} label={heard} />
+      <InstrumentDiagram pitches={pitches} root={pitches[0]} label={heard} marking="sounding" />
 
       <Actions>
         <button onClick={() => play(notes)}>Play the interval</button>

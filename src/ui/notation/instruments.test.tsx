@@ -89,15 +89,37 @@ describe('the drawing', () => {
   });
 
   it('marks every position on the neck, the roots apart', () => {
-    act(() => root.render(<Fretboard pitches={triad} root={triad[0]} label="C" />));
+    act(() => root.render(<Fretboard pitches={triad} root={triad[0]} label="C" marking="map" />));
     expect(marks().length).toBe(fretPositions(triad).length);
     expect(marks().filter((m) => m === '*C').length).toBe(
       fretPositions(triad).filter((f) => f.pitchClass === 0).length,
     );
   });
 
+  it('tells an octave from a unison on the neck when it is drawing a distance', () => {
+    /*
+      By pitch class C4–C5 and C4–C4 are the same six dots, every one marked
+      as the root — so the intervals page drew a perfect octave exactly as it
+      drew a unison. Marking where the two notes sound tells them apart.
+    */
+    const strong = () => [...container.querySelectorAll('.diagram-root, .diagram-note')]
+      .map((g) => g.getAttribute('data-at'));
+    const draw = (names: string[]) => {
+      act(() => root.render(
+        <Fretboard pitches={p(names)} root={parsePitch(names[0])} label="x" marking="sounding" />,
+      ));
+      return strong();
+    };
+    const octave = draw(['C4', 'C5']);
+    const unison = draw(['C4', 'C4']);
+    expect(octave).not.toEqual(unison);
+    // The positions not sounding are kept, dimmed: the map stays, with the
+    // distance on it.
+    expect(container.querySelectorAll('.diagram-dim').length).toBeGreaterThan(0);
+  });
+
   it('draws nothing until an instrument is chosen, then the one chosen', () => {
-    const view = <InstrumentDiagram pitches={triad} root={triad[0]} label="C" />;
+    const view = <InstrumentDiagram pitches={triad} root={triad[0]} label="C" marking="map" />;
     act(() => settingsStore.getState().setAppearance({ diagram: 'none' }));
     act(() => root.render(view));
     expect(container.querySelector('svg')).toBeNull();

@@ -36,17 +36,27 @@ export function DiagramPicker() {
  * `root` is drawn in the accent so the shape can be read from where it
  * starts, which is how either instrument is learned.
  */
-export function InstrumentDiagram({ pitches, root, label }: {
+/**
+ * How the guitar marks the notes. `map` is every position of every note by
+ * name, for a scale or chord; `sounding` marks only where these exact notes
+ * are and dims the other positions, for an interval, whose subject is the
+ * distance. Required, not defaulted: a default would be the next page's
+ * silent choice. The keyboard always marks the exact notes.
+ */
+export type Marking = 'map' | 'sounding';
+
+export function InstrumentDiagram({ pitches, root, label, marking }: {
   pitches: readonly Pitch[];
   root: Pitch;
   /** What the notes are, for a screen reader: "C major scale". */
   label: string;
+  marking: Marking;
 }) {
   const diagram = useSettings((s) => s.doc.appearance.diagram);
   if (diagram === 'none' || pitches.length === 0) return null;
   return diagram === 'piano'
     ? <Keyboard pitches={pitches} root={root} label={label} />
-    : <Fretboard pitches={pitches} root={root} label={label} />;
+    : <Fretboard pitches={pitches} root={root} label={label} marking={marking} />;
 }
 
 const WHITE_W = 24;
@@ -115,13 +125,20 @@ const MARKERS = [3, 5, 7, 9, 12];
  * Highest string at the top, as a guitarist looking down at the neck sees it
  * and as tablature writes it.
  */
-export function Fretboard({ pitches, root, label }: {
+export function Fretboard({ pitches, root, label, marking }: {
   pitches: readonly Pitch[];
   root: Pitch;
   label: string;
+  marking: Marking;
 }) {
   const names = spelledNames(pitches);
   const rootPc = pc(midiOf(root));
+  const sounding = new Set(pitches.map(midiOf));
+  const classOf = ({ pitchClass, midi }: { pitchClass: number; midi: number }) => {
+    if (marking === 'map') return pitchClass === rootPc ? 'diagram-root' : 'diagram-note';
+    if (!sounding.has(midi)) return 'diagram-dim';
+    return midi === midiOf(root) ? 'diagram-root' : 'diagram-note';
+  };
   const strings = GUITAR_TUNING.length;
   const yOf = (string: number) => 14 + (strings - 1 - string) * STRING_GAP;
   const xOfFret = (fret: number) => NUT_X + fret * FRET_W;
@@ -149,12 +166,12 @@ export function Fretboard({ pitches, root, label }: {
           <text key={`m${fret}`} className="fret-number" x={xOfFret(fret) - FRET_W / 2}
                 y={height - 4} textAnchor="middle">{fret}</text>
         ))}
-        {fretPositions(pitches).map(({ string, fret, pitchClass }) => {
+        {fretPositions(pitches).map(({ string, fret, pitchClass, midi }) => {
           // An open string sits behind the nut; a fretted note between frets.
           const x = fret === 0 ? NUT_X - 14 : xOfFret(fret) - FRET_W / 2;
           return (
-            <g key={`${string}-${fret}`}
-               className={pitchClass === rootPc ? 'diagram-root' : 'diagram-note'}>
+            <g key={`${string}-${fret}`} className={classOf({ pitchClass, midi })}
+               data-at={`${string}-${fret}`}>
               <circle cx={x} cy={yOf(string)} r={8} />
               <text x={x} y={yOf(string) + 3.5} textAnchor="middle">{names.get(pitchClass)}</text>
             </g>

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { DiagramPicker, InstrumentDiagram } from '../notation/InstrumentDiagram';
 import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
@@ -83,9 +84,11 @@ export function Intervals({ focus }: { focus?: string }) {
         <Picker label="Direction" value={direction} onChange={setDirection} options={DIRECTIONS} />
         <Picker label="Clef" value={clef} onChange={setClef} options={CLEFS} />
         <Picker label="Octave" value={octave} onChange={setOctave} options={OCTAVES} />
+        <DiagramPicker />
       </Panel>
 
       <Score spec={spec} />
+      <InstrumentDiagram pitches={pitches} root={pitches[0]} label={heard} />
 
       <Actions>
         <button onClick={() => play(notes)}>Play the interval</button>

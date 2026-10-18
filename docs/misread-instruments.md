@@ -496,6 +496,33 @@ helps, because nothing is wrong with it.
   up or did not because a draw decided. There is no double in that one — it is
   the coin, and the closing section below already has it.
 
+- **An optional parameter, which makes a wiring error a legal program.**
+  Twice in two days: `songHint` gained a seed and `referenceFor` gained the
+  key the exercise had asked, and in both the call site could omit it. The
+  function's own tests pass — they pass the argument — the compiler is
+  content because optional means omittable, and the behaviour regresses with
+  nothing on screen to show it. `referenceFor` has a 1500-case map test that
+  says nothing whatever about whether anyone calls it correctly.
+
+  **A thorough unit test of a function is evidence about the function and
+  about nothing else.** What optionality decides is *who catches a caller's
+  mistake*, and it moves that from the compiler — which would have refused a
+  missing argument outright — to an integration test that may not exist. Both
+  of these were caught by a tester writing one, not by the suite that already
+  covered the function.
+
+  So it is not that optional parameters are bad: `audioIn` is **required** on
+  every prompt precisely so that no prompt has to handle a case the screen
+  cannot produce, and making it optional would have manufactured a dead
+  branch seven times over. The question is which mistake the type is letting
+  through. Where a value is genuinely absent sometimes, **required and
+  nullable** keeps the compiler as the guard while still permitting *none* —
+  `referenceFor(item, asked: string | undefined)` rather than `asked?`. The
+  caller must then say which they mean, and forgetting stops compiling.
+
+  Recorded by the session that recommended the optional form for the second
+  of the two.
+
 - **Half a predicate, where each half is plausible alone.** `assemble` in
   `audio/capture/listen.ts` joins two attacks when they agree about pitch
   **and** did not get louder — `MERGE_CENTS` at line 354, `NEW_NOTE_RISE` at

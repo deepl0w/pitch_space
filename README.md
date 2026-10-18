@@ -110,11 +110,19 @@ is not something a test can see.
 
 Stated plainly, because the brief promises some of it.
 
+<<<<<<< HEAD
+- **The microphone, for five of the seven.** Intervals and scales can be
+  answered by playing them: the capture chain runs from a real device
+  through the detectors to the grader. The other five still take a click,
+  and rhythm is answered by tapping, which is a real way to practise rhythm
+  and is not the same thing.
+=======
 - **The microphone, for most exercises.** Intervals and scales can be
   answered by playing them: the capture chain runs from a real device
   through the detectors to the grader. Scale degrees, keys, chords and
   progressions still take a click, and rhythm is answered by tapping, which
   is a real way to practise rhythm and is not the same thing.
+>>>>>>> main
 - **Sight reading** is in the backlog, very late, and may be dropped. The
   melody generator it would run on is written and tested, but nothing in
   the app offers it and the home screen no longer lists it.

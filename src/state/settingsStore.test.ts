@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createSettingsStore } from './settingsStore';
 import { memorySlot, type Slot } from './persistence';
@@ -329,5 +331,62 @@ describe('a settings document with history in it', () => {
     // The control: these are not the defaults, so surviving is a claim.
     expect((intervals.settings.defaults as { clef: string }).clef).not.toBe('bass');
     expect((rhythm.settings.defaults as { tempo: number }).tempo).not.toBe(132);
+  });
+});
+
+/**
+ * The appearance a device keeps, field by field.
+ *
+ * **`diagram` arrived with no round-trip of its own, which is what main
+ * asked me to look at.** The repair is a hand-written three-way check —
+ * `'piano' || 'guitar' || 'none'` — and making it discard the value
+ * entirely passed all 1539 cases: a reader who chose the keyboard would
+ * have had it reset on every load, with nothing on screen to say so and
+ * nothing red to find it.
+ */
+describe('the appearance a device keeps', () => {
+  /**
+   * `Diagram`'s members, read from the union rather than listed again here.
+   *
+   * The repair names its three values by hand. A fourth added to the type
+   * would compile, be offered by the settings panel, and be thrown away on
+   * the next load by a check that had never heard of it — the repair and a
+   * second hand-written list agreeing with each other and both wrong. So
+   * the population comes from the type, and widening it fails here until
+   * the repair is widened too.
+   */
+  function diagramValues(): string[] {
+    const source = readFileSync(join(process.cwd(), 'src', 'state', 'schema.ts'), 'utf8');
+    const union = /export type Diagram =([^;]+);/.exec(source);
+    if (union === null) throw new Error('could not find the Diagram union in schema.ts');
+    return [...union[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+  }
+
+  const hydrate = (appearance: unknown) => createSettingsStore(
+    memorySlot<Stored>(versioned(SETTINGS_SCHEMA, { ...doc(), appearance })),
+  ).getState().doc.appearance;
+
+  it('keeps every diagram the type says a reader can choose', () => {
+    const values = diagramValues();
+    expect(values.length, 'the Diagram union came back empty').toBeGreaterThan(1);
+
+    for (const diagram of values) {
+      expect(hydrate({ ...APPEARANCE_DEFAULTS, diagram }).diagram,
+        `a stored "${diagram}" did not survive being read back`).toBe(diagram);
+    }
+  });
+
+  it('takes the default where a document predates the field', () => {
+    // Every document written before this release, which is all of them.
+    const { diagram: _absent, ...older } = APPEARANCE_DEFAULTS;
+    expect(hydrate(older).diagram).toBe(APPEARANCE_DEFAULTS.diagram);
+  });
+
+  it('repairs a diagram that is not one, rather than carrying it', () => {
+    expect(hydrate({ ...APPEARANCE_DEFAULTS, diagram: 'tuba' }).diagram)
+      .toBe(APPEARANCE_DEFAULTS.diagram);
+    // And does not take the rest of the document down with it.
+    expect(hydrate({ ...APPEARANCE_DEFAULTS, diagram: 'tuba' }).instrument)
+      .toBe(APPEARANCE_DEFAULTS.instrument);
   });
 });

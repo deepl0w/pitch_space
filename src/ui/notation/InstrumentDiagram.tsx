@@ -1,4 +1,4 @@
-import { midiOf, type Pitch } from '../../theory/pitch';
+import { midiOf, pitchName, type Pitch } from '../../theory/pitch';
 import type { Diagram } from '../../state/schema';
 import { useSettings, settingsStore } from '../../state/settingsStore';
 import { Picker } from '../controls';
@@ -134,6 +134,18 @@ export function Fretboard({ pitches, root, label, marking }: {
   const names = spelledNames(pitches);
   const rootPc = pc(midiOf(root));
   const sounding = new Set(pitches.map(midiOf));
+  /*
+    A sounding note the neck cannot reach — below the low E, or past the
+    twelfth fret — has no position to mark, and a diagram with nothing
+    marked reads as one that failed to draw. Said in words instead, which
+    teaches something true about the instrument.
+  */
+  const lowest = GUITAR_TUNING[0];
+  const highest = GUITAR_TUNING[GUITAR_TUNING.length - 1] + FRETS;
+  const offNeck = marking === 'sounding'
+    ? [...new Map(pitches.map((p) => [midiOf(p), p])).values()]
+      .filter((p) => midiOf(p) < lowest || midiOf(p) > highest)
+    : [];
   const classOf = ({ pitchClass, midi }: { pitchClass: number; midi: number }) => {
     if (marking === 'map') return pitchClass === rootPc ? 'diagram-root' : 'diagram-note';
     if (!sounding.has(midi)) return 'diagram-dim';
@@ -178,6 +190,13 @@ export function Fretboard({ pitches, root, label, marking }: {
           );
         })}
       </svg>
+      {offNeck.length > 0 && (
+        <figcaption className="secondary">
+          {offNeck.map((p) => `${pitchName(p)} is ${midiOf(p) < lowest
+            ? 'below the lowest string' : 'above the twelfth fret'}`).join('; ')}
+          {' '}— not on this neck, so only its other places are shown.
+        </figcaption>
+      )}
     </figure>
   );
 }

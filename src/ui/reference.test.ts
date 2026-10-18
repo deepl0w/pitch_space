@@ -61,6 +61,44 @@ describe('the way from an answer to the reference', () => {
     expect(referenceFor('progression:minor:iv')).toEqual({ route: 'key-chords', focus: 'A_minor' });
   });
 
+  it('opens on the key the question was asked in, when the caller has it', () => {
+    expect(referenceFor('progression:minor:iv', 'F#_minor'))
+      .toEqual({ route: 'key-chords', focus: 'F#_minor' });
+    expect(referenceFor('degree:5:major', 'Ab_major'))
+      .toEqual({ route: 'scales', focus: 'major', tonic: 'Ab' });
+    // A key that is not one, or is in the other mode, is no better than
+    // none: the plainest key of the item's own mode, as without it.
+    expect(referenceFor('progression:major:V', 'A_minor'))
+      .toEqual({ route: 'key-chords', focus: 'C_major' });
+    expect(referenceFor('degree:5:major', 'H_major')).toEqual({ route: 'scales', focus: 'major' });
+  });
+
+  it('is handed a key every exercise asked in one actually used', () => {
+    /*
+      The second argument is only as good as the exercises filling it: an
+      exercise that asked in A♭ and left `keyId` off, or wrote one in the
+      other mode, sends the learner to C major with nothing on screen to
+      say so. Asked of what the generators produce, not of a fixture.
+    */
+    let checked = 0;
+    for (const type of EXERCISE_TYPES) {
+      const settings = widestSettings(type);
+      for (let seed = 1; seed <= 40; seed += 1) {
+        const exercise = type.generate({ seed, settings });
+        for (const item of exercise.items) {
+          if (!/^(progression|degree):/.test(item)) continue;
+          const target = referenceFor(item, exercise.keyId);
+          const opened = target?.route === 'key-chords' ? target.focus
+            : target?.tonic === undefined ? undefined
+              : `${target.tonic}_${item.split(':')[2]}`;
+          expect(opened, `${type.id} seed ${seed}: ${item}`).toBe(exercise.keyId);
+          checked += 1;
+        }
+      }
+    }
+    expect(checked, 'no exercise asked in a key, so this checked nothing').toBeGreaterThan(40);
+  });
+
   it('offers nothing for an id it does not recognise, rather than a page about something else', () => {
     // History outlives the code that wrote it (ADR 0007), so an id from a
     // later or earlier release is a real input here.

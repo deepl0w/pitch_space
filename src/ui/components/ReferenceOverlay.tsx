@@ -10,7 +10,7 @@ import { entryFor } from '../menu';
 import { stopSound } from '../sound';
 import type { ReferenceRoute, ReferenceTarget } from '../reference';
 
-const PAGES: Record<ReferenceRoute, (props: { focus?: string }) => ReactElement> = {
+const PAGES: Record<ReferenceRoute, (props: { focus?: string; tonic?: string }) => ReactElement> = {
   intervals: Intervals,
   scales: Scales,
   chords: Chords,
@@ -40,7 +40,7 @@ export function ReferenceOverlay({ target, onClose }: {
   useEffect(() => () => stopSound(), []);
   return (
     <Overlay label={entryFor(target.route).name} onClose={onClose}>
-      <Page focus={target.focus} />
+      <Page focus={target.focus} tonic={target.tonic} />
     </Overlay>
   );
 }

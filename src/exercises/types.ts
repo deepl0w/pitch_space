@@ -282,6 +282,15 @@ export interface ExerciseBase {
    * shown" from "shown and not tested".
    */
   readonly items: readonly ItemId[];
+  /**
+   * The key the question was asked in, where it was asked in one.
+   *
+   * Not part of any item id, deliberately: ids key a learner's history
+   * (ADR 0007), and a tonic in them would split one skill into twelve.
+   * Carried here so the app can still say *which* key — the reference opens
+   * on it — without the id paying for it.
+   */
+  readonly keyId?: string;
 }
 
 /* -- settings schema ------------------------------------------------------ */

@@ -397,13 +397,9 @@ export class Synth {
    * The one `AudioContext`, for the capture layer.
    *
    * Not a widening of the containment but the reason for it. There is one
-   * context — a decision this codebase holds and **no record states**: 0005
-   * is *seeds are minted outside the core* and was cited here by mistake,
-   * and nothing else in `docs/adr/` claims it. ADR 0014 does say input and
-   * output have to be on one clock or a measured round trip means nothing —
-   * so capture cannot mint its own, and the only way for it to share this
-   * one is to be handed
-   * it. Null before the first sound, because the context is created lazily
+   * context (ADR 0049), and ADR 0014 says input and output have to be on one
+   * clock or a measured round trip means nothing — so capture cannot mint its
+   * own, and the only way for it to share this one is to be handed it. Null before the first sound, because the context is created lazily
    * on a user gesture.
    *
    * Read, never owned: closing or suspending it from outside would silence

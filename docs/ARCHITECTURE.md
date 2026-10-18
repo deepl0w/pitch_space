@@ -17,6 +17,7 @@ file is what is true today.
 - [The exercise contract](#the-exercise-contract)
   - [Presentation](#presentation)
 - [What an attempt records](#what-an-attempt-records)
+- [Two tables keyed on the item id](#two-tables-keyed-on-the-item-id)
 - [Persistence](#persistence)
 - [The analysis chain](#the-analysis-chain)
 - [Generation](#generation)
@@ -64,8 +65,8 @@ flowchart TB
     vex --> screen
     def --> screen
     screen --> out["audio/output/<br/>Synth, schedule"]
-    mic["microphone<br/>not yet built"] -.-> dsp
-    dsp -.-> def
+    mic["audio/capture/<br/>microphone, worklet, listen"] --> dsp
+    dsp --> def
     screen --> stores
 
     classDef pure fill:#dbe9d6,stroke:#4f7a43,color:#16210f
@@ -76,8 +77,17 @@ flowchart TB
     class def,vex seam
 ```
 
-Dotted arrows are built but not yet wired: the analysis chain is complete and
-tested, and nothing captures audio into it yet.
+Every arrow is wired. Capture was the last one, and it was dotted here for
+long enough to be worth saying what closed it: a microphone opens its own
+`AudioContext`, a worklet hands frames to the analysis chain, and
+[`AudioIn`](../src/exercises/types.ts) puts the result in front of a prompt as
+one of two answers — notes, or a reason nothing could be graded
+([ADR 0047](adr/0047-hearing-nothing-and-not-hearing-are-different-answers.md)).
+Two exercises take it today, interval and scale identification:
+
+```bash
+grep -rln 'audioIn.listen' src/exercises/*/[A-Z]*.tsx
+```
 
 ### How the boundary is kept
 
@@ -107,6 +117,7 @@ sequenceDiagram
     participant S as PracticeScreen
     participant D as ExerciseDefinition
     participant A as Synth / Score
+    participant M as audioIn
     participant P as progressStore
 
     U->>S: new exercise
@@ -118,7 +129,12 @@ sequenceDiagram
     else presentation is listen
         S->>A: play the voices
     end
-    U->>S: response
+    alt answered by naming it
+        U->>S: response
+    else answered by playing it
+        U->>M: plays on the instrument
+        M-->>S: notes heard, or why nothing could be graded
+    end
     S->>D: grade(exercise, response)
     D-->>S: Result with per-item outcomes
     S->>A: answerScore(exercise)
@@ -129,13 +145,23 @@ sequenceDiagram
 Keeping `grade` out of an `onClick` is what makes it property-testable, and it
 is where every claim an exercise makes actually sits.
 
+The listening is the prompt's own call and not the screen's: the screen hands
+`audioIn` down, and the exercise says what counts as enough to grade, because
+nothing below it can — two notes answer an interval, a run reaching the octave
+answers a scale, and neither is a fact about a microphone.
+
 ## The exercise contract
 
 [`src/exercises/types.ts`](../src/exercises/types.ts) says what an exercise type
-is, as a contract rather than a convention. Six exist — note identification,
-chord progression, key, chord, scale and rhythm — and sight reading is the one
-in the brief still unwritten. The intent was that the sixth cost almost
-nothing, and it did.
+is, as a contract rather than a convention. Seven exist across six families —
+intervals and scale degrees are two ways of asking note identification, and
+then chord progression, key, chord, scale and rhythm — and sight reading is the
+one in the brief still unwritten. The intent was that each new one cost almost
+nothing, and so far each has.
+
+```bash
+./tools/report-facts.sh | grep -E '^exercises|^families'
+```
 
 The seams it defines:
 
@@ -173,11 +199,18 @@ passing as the containment it exists for eroded.
 
 That containment pays for itself twice. It was written so the renderer stays
 replaceable; it also turns out to be what makes VexFlow's weight removable from
-the first paint. The notation chunk is 377 kB gzipped — most of it the Bravura
-font — against 465 kB of JavaScript in total, and **exactly one runtime import
+the first paint. The notation chunk is most of the JavaScript the app ships and
+most of *it* is the Bravura font — 377 kB gzipped against 465 kB in total when
+this was measured, at `f883e1f` on 4 October — and **exactly one runtime import
 reaches it**: [`Score.tsx`](../src/ui/notation/Score.tsx) importing `drawScore`.
-Every other reference, in six screens and three exercises, is `import type` and
-is erased at compile time.
+Every other reference is `import type` and is erased at compile time. The
+proportion is the load-bearing part and it is not quoted again below; the
+single importer is asserted rather than remembered, by
+[`src/architecture.test.ts`](../src/architecture.test.ts).
+
+```bash
+npm run build && ./tools/report-facts.sh | grep '^bundle'
+```
 
 So there is one edge to make dynamic, inside an effect that already runs
 imperatively and already has a failure path. Had VexFlow leaked into those six
@@ -192,12 +225,19 @@ treats any throw as "the engraver could not lay out this spec", which is a
 generator bug worth showing; a chunk that fails to load is a different failure
 and would be reported as the first. That matters more than it sounds for an
 app meant to be installable: **a lazily loaded chunk has to be precached by the
-service worker or the app breaks offline**, and `vite-plugin-pwa` is currently
-a declared dependency that `vite.config.ts` never imports.
+service worker or the app breaks offline**. That was open while
+`vite-plugin-pwa` sat in `package.json` as a dependency `vite.config.ts` never
+imported. It is wired now, and the obligation is asserted rather than
+remembered — `test.sh --offline` fails if the built service worker leaves out
+anything the app needs, the notation chunk and its font included.
+
+```bash
+./test.sh --offline
+```
 
 **A family is a kind of practice; a type is one way of asking it.**
 [`registry.ts`](../src/exercises/registry.ts) groups types into families, so
-the home screen offers six kinds rather than nine ways of asking them, and the
+the home screen offers six kinds rather than one card per type, and the
 practice screen offers a family's types in a selector. The grouping lives in
 the registry rather than the menu because it is a fact about the exercises and
 the menu is a view of it.
@@ -213,10 +253,12 @@ accepts either, so a bookmark made before the families existed still resolves.
 
 **The evidence is good for adding a type and was bad for switching between
 them.** Adding is cheap as advertised: the second exercise,
-[`key-id`](../src/exercises/key-id), is 356 lines of non-test source and
-required no change to the screen, the settings panel or the attempt log —
+[`key-id`](../src/exercises/key-id), arrived as 356 lines of non-test source
+and required no change to the screen, the settings panel or the attempt log —
 [`registry.ts`](../src/exercises/registry.ts) gained one import and one array
-entry.
+entry. That line count is what it cost on the day and has grown since; the
+part worth checking is the second sentence, and the registry still reads that
+way for all seven.
 
 Switching was not. The screen is generic over exercise types, which means it
 holds state belonging to a *particular* type — the live question, the session
@@ -233,7 +275,7 @@ unsafe to switch between is not the seam it advertises.
 
 One leak is closed: a card whose blurb is not listed in
 [`ui/menu.ts`](../src/ui/menu.ts) now falls back to the definition's own
-`description` rather than to the empty string, so a sixth exercise cannot ship
+`description` rather than to the empty string, so a new exercise cannot ship
 with a blank card.
 
 ### Presentation
@@ -275,7 +317,41 @@ An [`ItemId`](../src/exercises/types.ts) is a colon-joined path —
 makes it a compatibility commitment from the first release. Renaming one
 silently orphans everything the user has learned about it.
 
-## Persistence
+## Two tables keyed on the item id
+
+The log is not the only thing that key buys. Two tables answer a graded item
+without either of them knowing what an exercise is:
+[`exercises/songs.ts`](../src/exercises/songs.ts), which names tunes a learner
+may already know for the interval they just missed, and
+[`ui/reference.ts`](../src/ui/reference.ts), which says where in the theory
+reference that item is explained so an answered question can offer a button to
+it. Both were asked for by the user, in that order.
+
+Keying on the id rather than on a second vocabulary of their own is what makes
+their coverage checkable: *every entry is something an exercise can ask*, and
+*every askable item either has a page or is a deliberate omission*, are sweeps
+over `items(settings)` rather than hopes. A near-duplicate key would be free to
+drift from the thing it describes, which for a song table means putting the
+wrong contour in a learner's ear — worse than silence, because they trust it.
+
+Each sits on the side of the boundary its content belongs to rather than where
+its caller is. A song reference is pedagogy and not a fact about music, so it
+is under `exercises/` and not in `theory/`: which tune somebody already knows is
+a guess about the learner, where a minor third is a minor third. A reference
+target is a route, which is the app's, so it is in `ui/` — and
+[ADR 0029](adr/0029-a-prompt-is-a-component-and-may-use-one.md) is why it
+cannot simply live beside the exercise that wants it. What crosses back is in
+the receiving page's own terms — a scale id, a key id, a metre — so no
+reference page parses an exercise's ids.
+
+Both return *nothing* as a real answer: an empty hint, a null target. An id
+this release does not recognise is a thing history can hold, since the log
+outlives the code that wrote it, and it should cost a button rather than open
+a page that claims to be about it.
+
+The intervals page the second of these needed did not exist and now does, which
+is the ordinary shape of this: a reference button is only as good as the pages
+it can point at.
 
 Split by what the data is, not by convenience
 ([ADR 0006](adr/0006-settings-in-localstorage-progress-in-indexeddb.md)):
@@ -291,7 +367,7 @@ both implementations are made to keep them.
 
 ## The analysis chain
 
-Built and tested, not yet wired to a microphone. All of it is pure arithmetic
+Fed by `capture/` and gradeable by two exercises. All of it is pure arithmetic
 over sample arrays, which is the point — it is verified against synthesised and
 recorded signals off-device rather than by playing into a laptop.
 
@@ -333,9 +409,24 @@ polyphonic transcription, and that an inconclusive hearing reports *no*
 outcome rather than a wrong one
 ([ADR 0013](adr/0013-knowing-the-answer-narrows-what-judging-has-to-do.md)).
 
-Timing is all on one clock, `AudioContext.currentTime`, with a performed note's
+Timing is on one clock, `AudioContext.currentTime`, with a performed note's
 start given in *exercise* time — seconds from the exercise's own zero
-([ADR 0014](adr/0014-one-clock-and-the-latency-nobody-can-measure.md)). The Web
+([ADR 0014](adr/0014-one-clock-and-the-latency-nobody-can-measure.md)).
+
+**That is the rule and not yet the whole practice, and the difference is worth
+stating here rather than leaving to be discovered.** The app runs two
+`AudioContext`s, not one: output owns the synth's, and `capture/` opens its
+own deliberately, because the rate the device gives a microphone is not the
+rate chosen for playback and reading the wrong one puts every frequency 147
+cents out
+([ADR 0049](adr/0049-one-audiocontext-owned-by-one-module.md)'s correction has
+the measurement). A note from `listen()` is accordingly timed from the start
+of its take, not from either context's `currentTime`. Nothing is wrong today
+because the two exercises that take audio ask about order and pitch rather
+than placement — the bill falls due when a rhythm exercise is graded from the
+microphone, which is the same bill the paragraph below describes.
+
+The Web
 Audio API reports `baseLatency` and `outputLatency` but has no input-latency
 property, so what the microphone path costs has to be calibrated rather than
 read. The size of that gap is not academic: `toleranceFor` caps the matching
@@ -393,6 +484,24 @@ It told the reader to check before trusting the list, with two commands at the
 top. The reader is not who makes it stale; the writer of the next feature is,
 and they never arrive here. So each entry now carries its own check, and an
 entry that cannot carry one does not belong.
+
+**That worked, and the rot moved.** On 19 October both remaining entries here
+verified clean on their own commands — the first time this section has survived
+a week unattended. The body of the document had meanwhile gone false in six
+places, and four of them were the *same facts this section had already
+corrected*: the diagram still labelled the microphone "not yet built" and the
+prose still said nothing captured audio, 290 lines above a removed entry
+recording that `capture/` holds nine files; the exercise contract still opened
+"Six exist", which the list below had struck out on 11 October as the
+type-versus-family conflation. A document can contradict itself at a distance
+and read fine at both ends.
+
+So the lesson from the 11th generalises one step further than it was written.
+It is not that *a list of absences* needs per-entry checks; it is that a
+**claim about what exists** needs one wherever it is made, and this file is
+mostly such claims. The ones that can carry a command now do. The ones that
+cannot — a measured bundle split, what a type cost on the day it landed — say
+which commit they describe instead, and stop pretending to be current.
 
 - **Sight reading has no exercise.** Seven exercise types across six families
   — note identification, chord progression, key, chord, scale and rhythm —

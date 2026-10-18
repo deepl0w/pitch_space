@@ -523,6 +523,33 @@ helps, because nothing is wrong with it.
   Recorded by the session that recommended the optional form for the second
   of the two.
 
+- **A check bound to one copy of a claim has no axis for the other copy.**
+  `docs/ARCHITECTURE.md`'s "What is not built" rotted twice, so on 11 October
+  each of its entries was given a command of its own — the right fix, and on
+  19 October both surviving entries verified clean, the first week this
+  section has gone unattended without going false. In the same eight days the
+  document's *body* went false in six places, four of them about facts that
+  list had already corrected: the diagram still labelled the microphone "not
+  yet built" and the prose still said nothing captured audio, 290 lines above
+  a removed entry recording that `capture/` held nine files; the contract
+  section still opened "Six exist", struck out below on the 11th as the
+  type-versus-family conflation.
+
+  **The checks worked exactly as designed and could not have caught this.**
+  Each verifies the sentence it is attached to. None has any way to ask
+  whether the same assertion is made elsewhere, and a document long enough to
+  need a contents block is long enough that both ends are never read in one
+  sitting — so it contradicts itself and reads fine wherever you open it.
+
+  This is the project's "a safeguard is not a safeguard where it was not
+  pointed" at its shortest range: not a README a sentence away from the lede
+  that corrected itself, but **two copies inside one file, under one heading
+  list, one of them bound and one not.** Distance within a document does the
+  work that distance between documents did. The remedy that scales is not a
+  second check but a smaller surface: where a fact is stated twice, state it
+  once and point at it — and where a figure cannot be bound to a command at
+  all, say which commit it describes rather than letting it read as current.
+
 - **Half a predicate, where each half is plausible alone.** `assemble` in
   `audio/capture/listen.ts` joins two attacks when they agree about pitch
   **and** did not get louder — `MERGE_CENTS` at line 354, `NEW_NOTE_RISE` at

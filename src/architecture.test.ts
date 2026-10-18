@@ -1312,3 +1312,126 @@ describe('the exercise layer reaches no further than the seam', () => {
       .not.toContain(synth);
   });
 });
+
+/**
+ * ADR 0029 — an exercise's non-component code does not import `ui/`.
+ *
+ * **The record promised this guard and it was never written.** Its own
+ * Decision says *"the narrow rule gets a guard, because neither version has
+ * one now"* — and for a week the narrow rule held by habit alone, which is
+ * the exact condition the record names as how its contradiction survived:
+ * the constraint lived in prose, so breaking it looked like ordinary work.
+ *
+ * What it protects is that `generate`, `grade`, the settings schema and
+ * `items` stay free of the UI and so stay property-testable with no DOM. A
+ * prompt is a component and may use a shared one; `RhythmPrompt` does, to
+ * draw the stave it moves a cursor over.
+ *
+ * **The component boundary is the file extension here, and that is checked
+ * rather than assumed** by the case below it: every `.tsx` under
+ * `exercises/` renders, and no `.ts` does. If that ever stops being true the
+ * extension stops being a proxy for "is a component", and this rule needs a
+ * different line rather than a wider exemption.
+ */
+describe('ADR 0029 — non-component exercise code imports nothing from ui/', () => {
+  const EXERCISES = join(SRC, 'exercises');
+  const UI = join(SRC, 'ui');
+  const isTest = (file: string) => /\.test\.tsx?$/.test(file);
+  const plain = filesUnder(EXERCISES).filter((f) => f.endsWith('.ts') && !isTest(f));
+
+  /** Every `ui/` module a file imports, type-only or not — the record says
+   *  "must not import", and a type is still a dependency on that layer. */
+  function uiImportsOf(file: string): string[] {
+    return importsOf(file).filter((specifier) => {
+      if (!specifier.startsWith('.')) return false;
+      return join(file, '..', specifier).startsWith(UI);
+    });
+  }
+
+  it('is looking at the code the rule is about', () => {
+    // Generators, graders, schemas and definitions: two dozen today. A scan
+    // that found none would pass the case below by covering nothing.
+    expect(plain.length, 'no non-component exercise code found').toBeGreaterThan(15);
+  });
+
+  it('finds no import of ui/ outside a component', () => {
+    const offenders = plain.flatMap((file) =>
+      uiImportsOf(file).map((specifier) => `${show(file)} imports ${specifier}`));
+    expect(offenders).toEqual([]);
+  });
+
+  it('can see a ui/ import where one exists, or the case above is idle', () => {
+    /*
+      The control. `RhythmPrompt.tsx` imports `ui/notation` on purpose, and
+      the same matcher has to find it — otherwise "no offenders" could mean
+      the resolver never lands anything in `ui/` at all.
+    */
+    const rhythm = join(EXERCISES, 'rhythm-id', 'RhythmPrompt.tsx');
+    expect(uiImportsOf(rhythm).length, 'the matcher cannot see a ui/ import that exists')
+      .toBeGreaterThan(0);
+  });
+
+  it('keeps the file extension an honest proxy for "is a component"', () => {
+    /*
+      The rule above leans on `.ts` meaning "does not render". That holds
+      because nothing under `exercises/` returns JSX from a `.ts` file — which
+      TypeScript enforces, JSX being a syntax error there — and every `.tsx`
+      either renders or tests something that does. So the check worth having
+      is the other direction: no `.tsx` here is secretly plain logic that
+      would escape the rule by its extension.
+    */
+    const tsx = filesUnder(EXERCISES).filter((f) => f.endsWith('.tsx') && !isTest(f));
+    const plainInDisguise = tsx.filter((f) => !/<[A-Za-z]/.test(readFileSync(f, 'utf8')));
+    expect(plainInDisguise.map(show), 'a .tsx with no JSX would escape the rule by its extension')
+      .toEqual([]);
+  });
+});
+
+/**
+ * The page shell, which no test read until now.
+ *
+ * `index.html` is not under `src/` and nothing imports it, so every guard in
+ * this file walked straight past it. It carries exactly one decision worth
+ * holding, and it is one that is cheap to get wrong in a plausible direction.
+ */
+describe('the page shell', () => {
+  const SHELL = readFileSync(join(SRC, '..', 'index.html'), 'utf8');
+
+  /**
+   * A reader may always zoom.
+   *
+   * **Written because the app has just made the declaration next door to
+   * this one.** Android inflates text on its own inside blocks it judges
+   * wide, which showed up as a phone rendering the same page with larger
+   * controls than a desktop window of the same width; `text-size-adjust:
+   * 100%` in `index.css` turns that off. The stylesheet says in as many
+   * words that this is not a reason to suppress zoom as well.
+   *
+   * The hazard is that the two look like the same fix. `user-scalable=no`
+   * and `maximum-scale=1` sit in the viewport meta, they are the first
+   * result for most phrasings of "stop the phone resizing my page", and
+   * they would make the reported symptom quieter while taking pinch-zoom
+   * away from everyone — WCAG 1.4.4, and the people it costs most are the
+   * ones who most need to enlarge a stave.
+   *
+   * Matched on the properties rather than on the whole content string, so
+   * adding `viewport-fit=cover` or any other key does not fail this for a
+   * reason that has nothing to do with zoom.
+   */
+  it('never takes zoom away from the reader', () => {
+    const viewport = /<meta\s+name="viewport"\s+content="([^"]*)"/.exec(SHELL);
+    expect(viewport, 'no viewport meta, so a phone renders this at desktop width')
+      .not.toBeNull();
+
+    const keys = new Map(viewport![1].split(',').map((part) => {
+      const [k, v] = part.split('=');
+      return [k.trim(), (v ?? '').trim()];
+    }));
+
+    expect(keys.get('user-scalable'), 'pinch-zoom is switched off').not.toBe('no');
+    // A maximum below 2 fails WCAG 1.4.4 even where scaling is still allowed.
+    const max = Number(keys.get('maximum-scale') ?? Infinity);
+    expect(max, 'zoom is capped below the 2x a reader is entitled to')
+      .toBeGreaterThanOrEqual(2);
+  });
+});

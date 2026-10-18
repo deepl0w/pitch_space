@@ -31,7 +31,7 @@ export const intervalIdentification = defineExercise<
   Prompt: IntervalPrompt,
   questionScore: intervalQuestionScore,
   // The answer's stave goes inside the sound box, in place of the wave.
-  promptDrawsAnswerStaff: true,
+  staves: 'answer-in-prompt',
   answerScore: (exercise) => ({ notes: intervalScoreNotes(exercise), clef: exercise.clef }),
 });
 

@@ -562,10 +562,10 @@ function RoundView({
 
         Before the prompt rather than inside it, because the prompt is the
         exercise's own and the stave is the screen's. The exercises that do
-        want it inline set `promptDrawsScores` and get it as a prop; for
+        want it inline say `staves: 'prompt'` and get it as a prop; for
         the rest this is the slot.
       */}
-      {!definition.promptDrawsScores && questionScore && <Score spec={questionScore} />}
+      {definition.staves !== 'prompt' && questionScore && <Score spec={questionScore} />}
       {/*
         The answer's stave, unless the prompt is placing it.
 
@@ -576,8 +576,7 @@ function RoundView({
         there, so a definition that says so gets it as a prop instead and
         this slot stays empty.
       */}
-      {!definition.promptDrawsScores && !definition.promptDrawsAnswerStaff
-        && answerScore && <Score spec={answerScore} />}
+      {definition.staves === 'screen' && answerScore && <Score spec={answerScore} />}
       <Prompt
         // A fresh exercise is a fresh component: remounting is what clears
         // the prompt's own state without a reset path that has to be kept in
@@ -591,10 +590,10 @@ function RoundView({
         audioIn={audioIn}
         capture={capture}
         moveOn={moveOn}
-        answerStaff={definition.promptDrawsAnswerStaff && answerScore
+        answerStaff={definition.staves === 'answer-in-prompt' && answerScore
           ? <Score spec={answerScore} />
           : undefined}
-        scores={definition.promptDrawsScores ? { questionScore, answerScore } : undefined}
+        scores={definition.staves === 'prompt' ? { questionScore, answerScore } : undefined}
       />
     </>
   );

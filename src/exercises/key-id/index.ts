@@ -30,6 +30,9 @@ export const keyIdentification = defineExercise<KeySettings, KeyExercise, KeyRes
   items: keyItems,
   grade: gradeKey,
   Prompt: KeyPrompt,
+  // Both staves in the screen's own boxes: nothing here needs to move or
+  // to share a box with a sound.
+  staves: 'screen',
   questionScore: keyQuestionSpec,
   // The signature *is* the question, so the same stave serves as the answer.
   answerScore: keyScoreSpec,

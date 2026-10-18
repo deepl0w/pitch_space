@@ -33,7 +33,7 @@ export const rhythmIdentification = defineExercise<
   aims: 'none',
   // The stave carries a moving cursor and the marks for how it was played,
   // so it belongs inside the component holding the clock. See PromptDrawnScores.
-  promptDrawsScores: true,
+  staves: 'prompt',
   settings: rhythmSettingsSchema,
   generate: generateRhythmExercise,
   items: rhythmItems,

@@ -30,7 +30,7 @@ export const degreeIdentification = defineExercise<
   Prompt: DegreePrompt,
   questionScore: degreeQuestionSpec,
   // The answer's stave goes inside the sound box, in place of the wave.
-  promptDrawsAnswerStaff: true,
+  staves: 'answer-in-prompt',
   answerScore: degreeScoreSpec,
 });
 

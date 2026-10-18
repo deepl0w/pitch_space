@@ -33,7 +33,7 @@ export const scaleIdentification = defineExercise<
   Prompt: ScalePrompt,
   questionScore: scaleQuestionSpec,
   // The answer's stave goes inside the sound box, in place of the wave.
-  promptDrawsAnswerStaff: true,
+  staves: 'answer-in-prompt',
   answerScore: scaleScoreSpec,
 });
 

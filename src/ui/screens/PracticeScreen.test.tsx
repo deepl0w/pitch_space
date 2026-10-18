@@ -6,6 +6,7 @@ import { PracticeScreen } from './PracticeScreen';
 import { EXERCISE_TYPES } from '../../exercises/registry';
 import type { AudioOut } from '../../exercises/types';
 import { resizeTo } from '../../testing/resizeObserver';
+import { ALL_KEYS, keyId, keyName } from '../../theory/key';
 
 /**
  * Changing which exercise is running, while one is on screen.
@@ -359,6 +360,41 @@ describe('the readout under an answered question', () => {
       expect(s.container.querySelector('.practice-main')?.textContent,
         `${type.id} came back to something other than the question it left`).toBe(before);
     }
+  });
+
+  it('opens the reference on the key the question was asked in', () => {
+    /*
+      The call site, which nothing reached. `referenceFor`'s second argument
+      is optional and `reference.test.ts` covers the map thoroughly — so
+      dropping `round.exercise.keyId` at the one place that supplies it
+      compiles clean and passes all 1500 cases, while every progression
+      look-up quietly opens on the mode's plainest key instead of the one the
+      learner just heard. Verified by doing exactly that before writing this.
+
+      Read from the question rather than from a fixture: the screen picks its
+      own seed, so the key it asked in is only knowable from what it drew.
+      The listening prompt names it in the sound box's note, which is also
+      the only place the learner is told.
+    */
+    const s = screen('progression-id');
+    s.start();
+
+    const note = s.container.querySelector('.sound .secondary')?.textContent ?? '';
+    const askedName = /cadence in (.+?), then/.exec(note)?.[1];
+    expect(askedName, `the question named no key to check against: "${note}"`).toBeDefined();
+    const asked = ALL_KEYS.find((k) => keyName(k) === askedName);
+    expect(asked, `"${askedName ?? ''}" is not a key this app knows`).toBeDefined();
+
+    expect(answerFully(s.container), 'the progression could not be answered').toBe(true);
+    const lookUp = s.container.querySelector('.readout .look-up') as HTMLButtonElement | null;
+    expect(lookUp, 'no way through to the reference').not.toBeNull();
+    act(() => lookUp!.click());
+
+    const layer = s.container.querySelector('[role="dialog"]');
+    expect(layer, 'the look-up opened nothing').not.toBeNull();
+    const opened = [...layer!.querySelectorAll('select')].map((picker) => picker.value);
+    expect(opened, `opened somewhere other than ${askedName}, the key just heard`)
+      .toContain(keyId(asked!));
   });
 
   it('lists what was judged, not what was shown', () => {

@@ -124,4 +124,33 @@ describe('the reference, opened from an answer', () => {
   it('opens on the metre a rhythm figure belongs to', () => {
     expect(open('cell:q')).toContain('4/4');
   });
+
+  /**
+   * The sixth route, which had no landing case while the other five did.
+   *
+   * A progression item carries its mode and numeral but no key, so
+   * `reference.ts` sends the page the mode's plainest key — `A_minor` for a
+   * minor progression. Nothing rendered that: the whole suite passed with
+   * `KeyChords` ignoring `focus` altogether, which puts every minor
+   * progression on C major. Right page, wrong mode, nothing on screen
+   * suggesting it — the same correct-looking failure the reference guards
+   * were written against, on the one route they did not reach.
+   *
+   * Both modes, because a case for the minor alone would pass against a page
+   * hard-wired to A minor, and that is the mirror of the defect.
+   */
+  it('opens on the key a progression’s mode is plainest in', () => {
+    expect(open('progression:minor:iv')).toContain('A_minor');
+    /*
+      Closed before the second, which is the only way the app reaches it:
+      `PracticeScreen` renders the overlay as `{lookingUp && ...}`, so
+      closing unmounts it and the next look-up is a fresh mount. Re-rendering
+      one mounted overlay at a new target leaves the page where it was —
+      `KeyChords` takes its key in a `useState` initialiser, which runs once —
+      and asserting against that would be asserting a transition no button
+      can produce.
+    */
+    act(() => root.render(null));
+    expect(open('progression:major:V')).toContain('C_major');
+  });
 });

@@ -436,7 +436,7 @@ Node 20.19+ or 22.12+, and for the Android build a JDK 17+ and the Android SDK.
 ./test.sh --check            # is this machine set up
 npm test                     # the vitest suite — run this before handing work back
 npm run typecheck            # tsc; a merge can pass tests and still not compile
-./test.sh --all              # what CI runs: tests, types, lint, offline precache
+./test.sh --all              # the same four checks CI runs, as separate steps there
 ./build.sh                   # production web build
 ./build.sh --dev             # the dev server, at http://localhost:5173
 make help                    # the same things, wrapped

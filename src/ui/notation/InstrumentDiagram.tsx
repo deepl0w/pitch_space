@@ -140,11 +140,16 @@ export function Fretboard({ pitches, root, label, marking }: {
     marked reads as one that failed to draw. Said in words instead, which
     teaches something true about the instrument.
   */
+  //
+  // Judged by the positions themselves, not by the neck's lowest and
+  // highest notes: those agree only while adjacent strings overlap, which
+  // standard tuning does and a wide alternate tuning need not (architect).
+  const positions = fretPositions(pitches);
+  const reachable = new Set(positions.map((at) => at.midi));
   const lowest = GUITAR_TUNING[0];
-  const highest = GUITAR_TUNING[GUITAR_TUNING.length - 1] + FRETS;
   const offNeck = marking === 'sounding'
     ? [...new Map(pitches.map((p) => [midiOf(p), p])).values()]
-      .filter((p) => midiOf(p) < lowest || midiOf(p) > highest)
+      .filter((p) => !reachable.has(midiOf(p)))
     : [];
   const classOf = ({ pitchClass, midi }: { pitchClass: number; midi: number }) => {
     if (marking === 'map') return pitchClass === rootPc ? 'diagram-root' : 'diagram-note';
@@ -178,7 +183,7 @@ export function Fretboard({ pitches, root, label, marking }: {
           <text key={`m${fret}`} className="fret-number" x={xOfFret(fret) - FRET_W / 2}
                 y={height - 4} textAnchor="middle">{fret}</text>
         ))}
-        {fretPositions(pitches).map(({ string, fret, pitchClass, midi }) => {
+        {positions.map(({ string, fret, pitchClass, midi }) => {
           // An open string sits behind the nut; a fretted note between frets.
           const x = fret === 0 ? NUT_X - 14 : xOfFret(fret) - FRET_W / 2;
           return (
@@ -193,7 +198,9 @@ export function Fretboard({ pitches, root, label, marking }: {
       {offNeck.length > 0 && (
         <figcaption className="secondary">
           {offNeck.map((p) => `${pitchName(p)} is ${midiOf(p) < lowest
-            ? 'below the lowest string' : 'above the twelfth fret'}`).join('; ')}
+            ? 'below the lowest string'
+            : midiOf(p) > GUITAR_TUNING[GUITAR_TUNING.length - 1] + FRETS
+              ? 'above the twelfth fret' : 'between the strings\' reach'}`).join('; ')}
           {' '}— not on this neck, so only its other places are shown.
         </figcaption>
       )}

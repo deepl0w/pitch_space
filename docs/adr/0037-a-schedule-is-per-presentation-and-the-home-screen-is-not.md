@@ -312,3 +312,52 @@ fault. Naming it here keeps it from reading as settled by having been shipped.
 of `(seed, settings, wish)`; see
 [0002](0002-generation-is-reproducible-from-its-seed.md)'s addendum of the
 same date for what that costs a bug report.
+
+## Addendum, 19 October 2026 — the first caller also found a defect in the thing it called
+
+A second half to the entry above, and a sharper answer to this record's bet
+than the first half gave. Wiring the caller did not only reveal what the
+schedule was missing. It made `schedule()` itself fail, in a way its own tests
+could not reach, and the failure reached a learner before it reached anyone
+reading the code.
+
+**The defect.** `overdueRatio` returns `Infinity` by design when an item's
+interval is zero, which is what a miss gets, because a miss is due at once.
+The comparator subtracted one ratio from the other, and `Infinity − Infinity`
+is `NaN`. A comparator that returns `NaN` has no defined meaning, and what
+happened in practice was that the pair was left as it lay — so ties fell
+through to catalogue order. Fixed in `963cca9` by comparing rather than
+subtracting, with equally overdue items ordered oldest-miss first, which turns
+a tie among misses into a rotation through all of them.
+
+**Why no test caught it, and this is the part worth keeping.** Every fixture
+in the schedule's suite builds tallies with finite ratios, so every comparison
+it makes is between two ordinary numbers. One miss among finite ratios also
+sorts correctly — `Infinity` beats everything and the comparator answers
+properly — so the case that fails needs *two items missed at the same time*.
+That is not an exotic corner of the domain. It is what a beginner's pool looks
+like for their entire first session, and what any learner's looks like after a
+bad run. **The untested case was an edge case of the fixtures and the normal
+case of the app**, which is the opposite of how an untested case usually
+earns its name.
+
+**The caller's good rule made the symptom plausible.** The entry above
+credits `nextWish` for refusing to re-aim at the item just asked, and that
+rule is still right. It is also what turned this defect from something
+obviously broken into something that looked like a policy: with ties falling
+to catalogue order the head of the queue was always the first catalogue item,
+and skipping the one just asked made the app alternate between the first two.
+The user role reports being asked major second and minor third in turn for
+fourteen rounds, never seeing the other nine. One item repeating looks like a
+fault; two items alternating looks like a decision somebody made. A correct
+rule can launder a defect into a feature, and the only reason this was caught
+is that somebody was practising rather than reading.
+
+**What it says about deciding a consumer's requirements early.** The entry
+above concluded that the method caught the structural questions and could not
+catch what asking the same question twice feels like. This is the same
+boundary from the other side: the method also cannot catch what a module does
+when a real caller hands it a real population. Both halves of what the wiring
+found — the anti-repeat rule and this — were invisible to a record written
+before the caller existed, and both were visible within one session of
+somebody using the app.

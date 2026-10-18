@@ -109,9 +109,9 @@ is not something a test can see.
 
 Stated plainly, because the brief promises some of it.
 
-- **The microphone, for four of the six.** Intervals and scales can be
+- **The microphone, for five of the seven.** Intervals and scales can be
   answered by playing them: the capture chain runs from a real device
-  through the detectors to the grader. The other four still take a click,
+  through the detectors to the grader. The other five still take a click,
   and rhythm is answered by tapping, which is a real way to practise rhythm
   and is not the same thing.
 - **Sight reading** is in the backlog, very late, and may be dropped. The

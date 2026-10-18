@@ -3,7 +3,7 @@ import { join, matchesGlob, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CHORD_TYPES } from './theory/chord';
 import { SCALE_TYPES } from './theory/scale';
-import { EXERCISE_FAMILIES } from './exercises/registry';
+import { EXERCISE_FAMILIES, EXERCISE_TYPES } from './exercises/registry';
 
 /**
  * The boundaries from docs/adr/, asked of the repository.
@@ -886,10 +886,27 @@ describe("the home screen's claim about how exercises are answered", () => {
    * locate any more is exactly the state this is meant to catch.
    */
   const WORDS: Record<string, number> = {
+    one: 1, two: 2, three: 3,
     four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
     twelve: 12, fifteen: 15, sixteen: 16, eighteen: 18, twenty: 20,
     'twenty-four': 24, 'twenty-one': 21, thirty: 30,
   };
+
+  /**
+   * The exercises a learner can actually answer by playing.
+   *
+   * By what the prompt *does*, not by what it is handed: every prompt takes
+   * an `audioIn` prop, so a file mentioning the name proves nothing. Calling
+   * `listen` or `listenUntil` is the capability the README is describing.
+   */
+  function listeningExercises(): string[] {
+    const root = join(SRC, 'exercises');
+    const dirs = filesUnder(root)
+      .filter((file) => file.endsWith('.tsx') && !file.includes('.test.'))
+      .filter((file) => /audioIn\.listen(Until)?\s*\(/.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(root, file).split(sep)[0]);
+    return [...new Set(dirs)];
+  }
 
   it('quotes the catalogues at the sizes they are', () => {
     const readme = readFileSync(README, 'utf8').replace(/\s+/g, ' ');
@@ -897,6 +914,25 @@ describe("the home screen's claim about how exercises are answered", () => {
       ["a chord's qualities", /quality, from ([\w-]+),/i, CHORD_TYPES.length],
       ['the scale types', /a scale, from ([\w-]+) types/i, SCALE_TYPES.length],
       ['the kinds of practice', /([\w-]+) kinds of practice/i, EXERCISE_FAMILIES.length],
+      /*
+        The "not built yet" bullets, which carry the same kind of figure and
+        had no check pointed at them — the gap architect raised, and the one
+        CLAUDE.md's safeguard convention already cites the README for by
+        name. A count in prose beside a catalogue that anyone may add to is
+        the same shape wherever it sits.
+
+        Two numbers from the microphone bullet rather than one, because the
+        pair is where it went wrong: it read "four of the six", mixing the
+        count of exercise *types* with the count of *families*. A test has
+        to name a denominator, which is most of why it is worth having.
+      */
+      ['the exercises with no way to play an answer',
+        /The microphone, for ([\w-]+) of the/i,
+        EXERCISE_TYPES.length - listeningExercises().length],
+      ['the exercise types', /The microphone, for [\w-]+ of the ([\w-]+)\./i,
+        EXERCISE_TYPES.length],
+      ['the exercises that can aim at one item', /for the ([\w-]+) exercises that can aim/i,
+        EXERCISE_TYPES.filter((type) => type.aims !== 'none').length],
     ];
 
     for (const [what, pattern, actual] of claims) {

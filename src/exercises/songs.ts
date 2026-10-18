@@ -99,12 +99,16 @@ export const SONGS: Readonly<Record<string, readonly SongReference[]>> = {
   ],
   'interval:P4:down': [
     { title: 'Eine kleine Nachtmusik', by: 'Wolfgang Amadeus Mozart' },
-    { title: 'O Come, All Ye Faithful', by: TRADITIONAL },
+    { title: 'O Come, All Ye Faithful', by: TRADITIONAL, at: '"come" to "all"' },
   ],
 
   'interval:tritone:up': [
     { title: 'Maria, from West Side Story', by: 'Leonard Bernstein' },
-    { title: 'the Simpsons theme', by: 'Danny Elfman' },
+    // Not *The Simpsons*, though it is the commonest citation. Its score
+    // opens on a held chord and then C–E — a major third — with the
+    // tritone spread over three notes. Told "the first two notes", a
+    // learner hears the wrong interval.
+
   ],
   'interval:tritone:down': [
     { title: 'YYZ', by: 'Rush' },

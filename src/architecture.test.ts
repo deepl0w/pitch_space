@@ -1316,3 +1316,52 @@ describe('the exercise layer reaches no further than the seam', () => {
       .not.toContain(synth);
   });
 });
+
+/**
+ * The page shell, which no test read until now.
+ *
+ * `index.html` is not under `src/` and nothing imports it, so every guard in
+ * this file walked straight past it. It carries exactly one decision worth
+ * holding, and it is one that is cheap to get wrong in a plausible direction.
+ */
+describe('the page shell', () => {
+  const SHELL = readFileSync(join(SRC, '..', 'index.html'), 'utf8');
+
+  /**
+   * A reader may always zoom.
+   *
+   * **Written because the app has just made the declaration next door to
+   * this one.** Android inflates text on its own inside blocks it judges
+   * wide, which showed up as a phone rendering the same page with larger
+   * controls than a desktop window of the same width; `text-size-adjust:
+   * 100%` in `index.css` turns that off. The stylesheet says in as many
+   * words that this is not a reason to suppress zoom as well.
+   *
+   * The hazard is that the two look like the same fix. `user-scalable=no`
+   * and `maximum-scale=1` sit in the viewport meta, they are the first
+   * result for most phrasings of "stop the phone resizing my page", and
+   * they would make the reported symptom quieter while taking pinch-zoom
+   * away from everyone — WCAG 1.4.4, and the people it costs most are the
+   * ones who most need to enlarge a stave.
+   *
+   * Matched on the properties rather than on the whole content string, so
+   * adding `viewport-fit=cover` or any other key does not fail this for a
+   * reason that has nothing to do with zoom.
+   */
+  it('never takes zoom away from the reader', () => {
+    const viewport = /<meta\s+name="viewport"\s+content="([^"]*)"/.exec(SHELL);
+    expect(viewport, 'no viewport meta, so a phone renders this at desktop width')
+      .not.toBeNull();
+
+    const keys = new Map(viewport![1].split(',').map((part) => {
+      const [k, v] = part.split('=');
+      return [k.trim(), (v ?? '').trim()];
+    }));
+
+    expect(keys.get('user-scalable'), 'pinch-zoom is switched off').not.toBe('no');
+    // A maximum below 2 fails WCAG 1.4.4 even where scaling is still allowed.
+    const max = Number(keys.get('maximum-scale') ?? Infinity);
+    expect(max, 'zoom is capped below the 2x a reader is entitled to')
+      .toBeGreaterThanOrEqual(2);
+  });
+});

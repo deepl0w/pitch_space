@@ -638,3 +638,37 @@ describe('the way past a question', () => {
     expect(screen.container.querySelector('.move-on')?.textContent?.trim()).toBe('Next');
   });
 });
+
+/**
+ * Where the way out of the screen sits in the document, which is not the
+ * same question as where it sits on the page.
+ *
+ * **The defect was an ordering one and the CSS hid it.** The control lived
+ * inside the settings sidebar, which was fine while the sidebar came first;
+ * moving the sidebar after the main column — so that one column opens on the
+ * exercise rather than on its settings — put the way out below the whole
+ * question on a phone. Reported from a phone, because at two columns the
+ * grid puts it back in the sidebar's corner and nothing looks wrong.
+ *
+ * So this asserts document order and not position. Position is the
+ * stylesheet's to decide and it legitimately differs by width; the document
+ * is what Tab and a screen reader follow at every width, and it is the thing
+ * that was wrong. A rule that moved the control visually while leaving it
+ * last in the document would still have stranded both.
+ */
+describe('the way out of the practice screen', () => {
+  it('comes before the question in the document', () => {
+    const screen = screenFor('interval-id');
+    const back = screen.container.querySelector('.back');
+    const question = screen.container.querySelector('.practice-main');
+
+    expect(back, 'no way out of the screen at all').not.toBeNull();
+    expect(question, 'no question to come before').not.toBeNull();
+
+    // `FOLLOWING` is "later in the document than the node asked", which is
+    // the relation the grid is free to contradict visually and Tab is not.
+    expect(back!.compareDocumentPosition(question!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'the way out of the screen is reachable only after the whole question')
+      .toBeTruthy();
+  });
+});

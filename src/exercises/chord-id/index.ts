@@ -34,7 +34,7 @@ export const chordIdentification = defineExercise<
   Prompt: ChordPrompt,
   questionScore: chordQuestionSpec,
   // The answer's stave goes inside the sound box, in place of the wave.
-  promptDrawsAnswerStaff: true,
+  staves: 'answer-in-prompt',
   answerScore: chordScoreSpec,
 });
 

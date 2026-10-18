@@ -42,7 +42,7 @@ export const progressionIdentification = defineExercise<
   Prompt: ProgressionPrompt,
   questionScore: progressionQuestionSpec,
   // The answer's stave goes inside the sound box, in place of the wave.
-  promptDrawsAnswerStaff: true,
+  staves: 'answer-in-prompt',
   answerScore: progressionScoreSpec,
 });
 

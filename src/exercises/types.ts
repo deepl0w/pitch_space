@@ -591,14 +591,14 @@ export interface PromptProps<S extends BaseSettings, E extends ExerciseBase, R> 
    */
   moveOn?: ReactNode;
   /**
-   * Set only when the definition sets `promptDrawsScores`; see
+   * Set only when the definition's `staves` is `'prompt'`; see
    * {@link PromptDrawnScores}.
    */
   scores?: PromptDrawnScores;
   /**
    * The revealed answer's stave, ready to render, or null until there is one.
    *
-   * Set only when the definition sets `promptDrawsAnswerStaff`, and handed
+   * Set only when the definition's `staves` is `'answer-in-prompt'`, and handed
    * over as a node rather than as a spec for the same reason `moveOn` is:
    * drawing it needs `ui/notation`, and what crosses into an exercise is
    * something already drawn.
@@ -804,22 +804,32 @@ export interface ExerciseDefinition<S extends BaseSettings, E extends ExerciseBa
   questionScore?(exercise: E): ScoreSpec | null;
 
   /**
-   * The prompt draws both staves itself; the screen draws neither and
-   * passes the specs down. See {@link PromptDrawnScores}.
-   */
-  promptDrawsScores?: boolean;
-
-  /**
-   * The prompt places the answer's stave, rather than the screen.
+   * Who draws the staves — one choice with three answers.
    *
-   * Narrower than `promptDrawsScores`, which hands over both staves and
-   * leaves the prompt to build them. This hands over one, already drawn,
-   * and only so it can be put somewhere the screen cannot reach — inside
-   * the sound box, in place of the wave, once the question is answered.
-   * The question's own stave stays with the screen, where a reading
-   * question still wants it.
+   * - `'screen'`: the screen draws the question's stave and the answer's,
+   *   each in its own box. Key identification.
+   * - `'prompt'`: the prompt draws both from the specs it is handed (see
+   *   {@link PromptDrawnScores}), because it needs the stave to *move* — a
+   *   cursor on the audio clock, notes coloured by how they were played.
+   *   Rhythm.
+   * - `'answer-in-prompt'`: the screen draws the question's stave and the
+   *   prompt places the answer's, already drawn, inside its sound box in
+   *   place of the wave — so answering a listening question changes what is
+   *   in the box rather than adding a box. Every listening exercise.
+   *
+   * **It was two booleans and that admitted a fourth state nothing meant.**
+   * `promptDrawsScores` and `promptDrawsAnswerStaff` were set one at a time,
+   * and both true was meaningless and unprevented. Counted rather than
+   * argued: five exercises set the second, one the first, and key
+   * identification set neither — so the third answer is inhabited rather
+   * than theoretical, which is the case for naming it instead of inferring
+   * it from two absences.
+   *
+   * Required rather than defaulted for the same reason. A default would be
+   * one of three answers wearing the clothes of no answer, and the next
+   * exercise would get it without anyone deciding.
    */
-  promptDrawsAnswerStaff?: boolean;
+  staves: 'screen' | 'prompt' | 'answer-in-prompt';
   /**
    * Every item these settings make askable, whether or not it has ever
    * been asked.

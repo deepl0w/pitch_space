@@ -244,3 +244,71 @@ That does not make the field urgent. It makes it the opposite of dead, and it
 means the question for the first caller is not "should this be removed" but
 "does the schedule want to know that a learner is adding notes" — which is a
 different question and has an answer.
+
+## Addendum, 19 October 2026 — the first caller is written
+
+The first revisit trigger has fired. [`state/wish.ts`](../../src/state/wish.ts)
+is the caller every decision above was taken for, written in `03ad9e3`, and
+this record's own bet was that it might want something else. Mostly it did
+not. Where it did, the difference is more interesting than the agreement.
+
+**What held.** The caller is per-presentation without being told to be: it
+takes a `ProgressLine`, and a line is already `(exercise, presentation,
+askable)`, so the question this record spent its length on never came up at
+the call site. It consults the schedule only when `status` is `'ready'`, as
+the contract here says. And the declined wish is kept, in a cheaper form than
+this record implied — **a wish absent from `exercise.items` is the record**,
+so nothing new had to be stored to say that an exercise could not meet one.
+This record said `ScheduledItem` had to be able to express the gap; the
+caller showed that for *this* gap the two lists the app already keeps express
+it between them.
+
+**What the caller wanted and this record did not foresee.** `nextWish` will
+not re-aim at the item just asked while anything else is due. The reason is a
+consequence of the ladder that nobody traced forward: a wrong answer zeroes
+the streak, a zeroed streak is due at once, so the head of the queue after a
+miss is very often the miss. Left alone, the first schedule-steered app would
+have turned one mistake into a drill the learner did not choose — the
+schedule behaving exactly as specified and the product being wrong. The
+caller's rule is to skip it while something else is due and to ask it anyway
+when it is the only thing due, which is the right shape: the alternative to a
+repeat is not variety, it is a question the schedule has no reason for.
+
+That is the best available argument for this record's own method, and also
+the limit of it. Deciding a consumer's requirements before the consumer
+exists caught the structural questions — presentation, loading states, the
+unmet wish — and could not catch this one, because it is not about what the
+schedule returns. It is about what asking the same question twice in a row
+feels like.
+
+**What has not been exercised.** `ScheduledItem.reachable` was added by this
+record specifically so a caller could pass an `askable` wider than the
+settings allow. The first caller passes the line's own set and no second one,
+so the field defaults to `true` on every row and has no production consumer:
+
+```bash
+grep -rn 'reachable' src --include='*.ts' --include='*.tsx' \
+  | grep -v '\.test\.' | grep -v '^src/state/schedule.ts'
+```
+
+That is not a defect — the default was designed for exactly this caller, and
+the motivating case (`m7b5` due while triads only are allowed) is real and
+simply has not arrived. It is recorded because an unexercised field is a claim
+nothing checks, which this project has had to learn twice elsewhere, and
+because the honest summary of this record's reachability decision is *correct
+and so far unused* rather than *vindicated*.
+
+**What was handed to the first caller and is still open.** The 6 October
+addendum above says a scheduler reading `streak` alone can be driven to
+"mastered" by clicking, and that whoever wrote the first caller should know
+it before they read it. They now have, and nothing at the caller addresses it
+— `nextWish` reads `due`, `due` rests on `dueAt(streak)`, and a streak still
+cannot tell thirteen alternatives from two. Whether that belongs at the caller
+at all is the open part: it is a property of the ladder, and fixing it in the
+thing that asks the ladder would put the correction a layer away from the
+fault. Naming it here keeps it from reading as settled by having been shipped.
+
+**One consequence landed outside this record.** Generation is now a function
+of `(seed, settings, wish)`; see
+[0002](0002-generation-is-reproducible-from-its-seed.md)'s addendum of the
+same date for what that costs a bug report.

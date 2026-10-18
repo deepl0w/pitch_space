@@ -107,9 +107,13 @@ than as the thing that does the testing.
 
 The seed is minted above the core, at the moment the user asks for a new
 exercise, and handed in ([ADR 0005](adr/0005-seeds-are-minted-outside-the-core.md)).
-Everything downstream of it is a pure function of `(seed, settings)`
-([ADR 0002](adr/0002-generation-is-reproducible-from-its-seed.md)), so an
-exercise a user reports by its seed reproduces exactly.
+Everything downstream of it is a pure function of its inputs
+([ADR 0002](adr/0002-generation-is-reproducible-from-its-seed.md)), and since
+18 October those inputs are `(seed, settings, wish)`: the schedule now names
+the item the next question should aim at, and an exercise that can aim takes
+it. So a seed alone no longer rebuilds the question for the five types that
+aim — which is why the wish is stored on the attempt beside the seed, and a
+reported *attempt* still reproduces exactly.
 
 ```mermaid
 sequenceDiagram
@@ -122,7 +126,9 @@ sequenceDiagram
 
     U->>S: new exercise
     S->>S: mint seed
-    S->>D: generate({seed, settings})
+    S->>P: what is due? (nextWish)
+    P-->>S: an item to aim at, or nothing
+    S->>D: generate({seed, settings, prefer})
     D-->>S: exercise with items and presentation
     alt presentation is read
         S->>A: questionScore(exercise)

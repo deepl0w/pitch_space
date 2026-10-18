@@ -278,6 +278,19 @@ describe('while the player is answering', () => {
     expect(control.disabled, 'the question could be played over the answer').toBe(true);
   });
 
+  it('says so to a screen reader, not only to the eye', () => {
+    /*
+      Greyed out is visible; disabled is announced; but the *name* is what a
+      screen reader reads, and it kept offering "Play it again" through the
+      whole take. The case that matters is the name changing, since a
+      disabled control with a stale name still misleads.
+    */
+    show({ playedAt: 0, listening: true, listenSpectrum: () => true, label: 'Play it again' });
+    const control = host.querySelector('.sound-play') as HTMLButtonElement;
+    expect(control.getAttribute('aria-label'), 'still offering to play during the take')
+      .toBe('Listening to your answer');
+  });
+
   it('gives the control back once the take is over', () => {
     show({ playedAt: 0, listening: true, listenSpectrum: () => true });
     show({ playedAt: 0, listening: false, listenSpectrum: () => true });

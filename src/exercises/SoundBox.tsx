@@ -270,7 +270,15 @@ export function SoundBox({
           type="button"
           className="sound-play"
           onClick={playing ? stop : onPlay}
-          aria-label={playing ? 'Stop' : label}
+          /*
+            The name says what is happening, not only what the button would
+            do. During a take it is disabled and greyed, which a sighted
+            reader sees at once — and its name still said "Play it again",
+            so a screen-reader user heard an offer that was not available,
+            with nothing standing in for the countdown everyone else saw.
+            Found from outside.
+          */
+          aria-label={listening ? 'Listening to your answer' : playing ? 'Stop' : label}
           /*
             Not while the player is answering. Sounding the question now
             would play it straight into the open microphone, which the pitch

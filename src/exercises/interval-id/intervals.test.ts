@@ -630,10 +630,17 @@ describe('the interval someone played', () => {
 /**
  * The hint on a wrong answer, and the one direction it must not offer.
  *
- * `INTERVAL_MNEMONICS` is ascending throughout. A mnemonic works by handing
- * the ear a contour it already knows, so one offered for the opposite
- * contour points at the thing being learned and points the wrong way —
- * which is worse than no hint, not merely less useful.
+ * A song works by handing the ear a contour it already knows, so one offered
+ * for the opposite contour points at the thing being learned and points the
+ * wrong way — worse than no hint, not merely less useful.
+ *
+ * **These cases outlived the fix they were written for, and changed with
+ * it.** The first table rose throughout, so the honest answer for a falling
+ * interval was silence, and a case pinned exactly that: *offers none when the
+ * interval fell*. `songs.ts` has falling rows of its own now, so silence is
+ * no longer the right answer — but the defect silence was guarding against
+ * is still the thing to hold. The case asserts that, rather than the
+ * stopgap: a falling tune, and never the rising one.
  */
 describe('the tune a wrong answer suggests', () => {
   const wrongAnswerTo = (direction: IntervalDirection, semitones: number): string => {
@@ -650,24 +657,25 @@ describe('the tune a wrong answer suggests', () => {
 
   it('offers one when the interval rose', () => {
     expect(wrongAnswerTo('up', 9), 'no tune offered for an ascending 6th')
-      .toMatch(/Think My Bonnie/);
+      .toMatch(/Think of My Bonnie/);
   });
 
-  it('offers none when the interval fell', () => {
+  it('offers a falling tune when the interval fell, and never the rising one', () => {
     // The defect: a learner who missed a descending major 6th was told to
-    // think of a tune that ascends.
-    expect(wrongAnswerTo('down', 9), 'an ascending tune offered for a descending interval')
-      .not.toMatch(/Think/);
+    // think of *My Bonnie*, which ascends.
+    const feedback = wrongAnswerTo('down', 9);
+    expect(feedback, 'a rising tune offered for a falling interval').not.toMatch(/My Bonnie/);
+    expect(feedback, 'no tune at all for a falling interval').toMatch(/Nobody Knows the Trouble/);
   });
 
-  it('still names the interval and the pitches when it offers no tune', () => {
-    // So the fix removes a wrong hint rather than the whole explanation.
+  it('still names the interval and the pitches alongside the tune', () => {
+    // The hint is an addition to the explanation, never a replacement for it.
     const feedback = wrongAnswerTo('down', 9);
     expect(feedback).toMatch(/Major 6th/);
     expect(feedback).toMatch(/to/);
   });
 
   it('keeps it for a harmonic interval, which has no contour to contradict', () => {
-    expect(wrongAnswerTo('harmonic', 9)).toMatch(/Think My Bonnie/);
+    expect(wrongAnswerTo('harmonic', 9)).toMatch(/Think of My Bonnie/);
   });
 });

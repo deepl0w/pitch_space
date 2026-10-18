@@ -1,8 +1,9 @@
+import { songHint } from '../songs';
 import { makeRng, pick, rngInt, chance } from '../../theory/rng';
 import { diatonicOf, midiOf, pitchFromMidi, pitchName, respell, type Pitch } from '../../theory/pitch';
 import {
   directedIntervalName, intervalBetween, intervalName,
-  INTERVAL_MNEMONICS, SIMPLE_INTERVAL_NAMES,
+  SIMPLE_INTERVAL_NAMES,
 } from '../../theory/interval';
 import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
@@ -452,27 +453,24 @@ export function gradeInterval(exercise: IntervalExercise, response: IntervalResp
   const heard = SIMPLE_INTERVAL_NAMES[exercise.semitones];
   const played = `${pitchName(from)} to ${pitchName(to)}`;
   /*
-    No tune for a descending interval. `INTERVAL_MNEMONICS` is ascending
-    throughout, and a mnemonic works by handing the ear a contour it already
-    knows — so offering one for the opposite contour points at the thing the
-    learner is being asked to hear and points the wrong way. A learner who
-    missed a descending major 6th was being told to think of *My Bonnie*,
-    which rises.
+    Songs that contain the interval the learner missed, from `songs.ts`,
+    keyed on the item id so up and down are different rows.
 
-    Harmonic keeps it: both notes sound at once, so there is no contour for
-    an ascending tune to contradict, and the tune is still the shortest way
-    to hear the distance.
+    A descending interval used to get nothing here, deliberately: the only
+    table rose throughout, and a learner who missed a descending major 6th
+    had been told to think of *My Bonnie*, which rises — pointing the ear at
+    the opposite contour. Suppressing it was the honest stopgap. The song
+    table has descending rows of its own, so the stopgap goes and the learner
+    gets a falling tune for a falling interval.
   */
-  const mnemonic = exercise.direction === 'down'
-    ? undefined
-    : INTERVAL_MNEMONICS[exercise.semitones];
+  const hint = songHint(exercise.items[0]);
 
   return {
     correct,
     feedback: correct
       ? `Yes — ${heard}, ${played}, spelled ${spelled}.`
       : `No: that was ${heard} (${played}, spelled ${spelled})`
-        + `${mnemonic ? `. Think ${mnemonic}` : ''}.`,
+        + `${hint ? `. ${hint}` : ''}.`,
     outcomes: [{
       item: exercise.items[0],
       correct,

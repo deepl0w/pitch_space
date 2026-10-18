@@ -595,16 +595,27 @@ From the user: more helpful song recommendations on the `Think …` hints — **
 list of songs and artists for different intervals and chord progressions**,
 shipped with the app. No links.
 
-### It is wrong today for descending intervals
+### Built for intervals, 18 October
 
-Worth doing first and independent of the rest. `INTERVAL_MNEMONICS` in
-`src/theory/interval.ts` is twelve titles keyed on semitone distance alone,
-and **every tune in it rises**. A learner who misses a *descending* major 6th
-is told *"Think My Bonnie"*, which ascends — pointing at the wrong contour,
-which is most of what they are being asked to hear.
+**The interval half is done** — `src/exercises/songs.ts`, keyed on item ids,
+title and composer or performer, two or three songs per interval and a
+separate row for each direction. A wrong answer names two of them, with the
+moment in the song where the interval falls when it is not the opening.
+`INTERVAL_MNEMONICS` is gone from `theory/`.
 
-So the key is the interval **and its direction**, which roughly doubles the
-table and is the bulk of the work on the interval half.
+Descending intervals were the reason it came first. The old table rose
+throughout, and for a while the honest answer for a falling interval was to
+say nothing, since every tune available pointed the ear the wrong way. They
+have falling rows of their own now. Every song was checked against
+Wikipedia's interval recognition table rather than recalled: the cost of a
+wrong reference is the defect itself, and one source consulted while
+building it got its own arithmetic wrong.
+
+**What is not built: chords and progressions.** The shape below covers them
+and the ids exist, but reference songs for a chord quality or a progression
+are a much less settled body of knowledge than interval mnemonics — there is
+no Wikipedia table to check them against, and a guessed one is the failure
+this whole section is about. They want a source before they want code.
 
 ### The shape
 
@@ -712,6 +723,29 @@ measures, which is right while the instrument changes only timbre. A fretboard
 shape changes the notes, so it would reach `items(settings)` and the ruling
 would not cover it. That is 0039's escape clause territory and wants deciding
 before the catalogue is written, not after.
+
+## Sight reading — backlog, and possibly dropped
+
+**Deferred by the user, and not as a sequencing note.** Asked on 18 October:
+sight reading should be "a very late thing, everything else should be in an
+advanced stage", and "might even drop the sight reading feature later". So
+it is not next and not merely later — it is the one item on this roadmap
+whose existence is in question, and it should be read that way rather than
+as a queue position.
+
+**What is already built, so the decision costs nothing to defer.** The
+generation side is finished and tested: `generatePassage` in
+`src/generate/passage.ts` draws melody, harmony and rhythm together, and the
+pitch detector, onset detector and dynamic-programming rhythm alignment
+exist in `src/audio/dsp/`. Nothing outside `generate/` calls
+`generatePassage` — the engine is complete and disconnected. Dropping the
+feature would leave that code with no caller, which is the question to
+answer then rather than now.
+
+**Removed from the interface, 18 October.** The home screen listed it as a
+greyed card marked "not built yet" — the only unbuilt entry ever on it — and
+the README opened "Ear training and sight reading". Both promised something
+that may not come, and both were withdrawn with it.
 
 ## Also planned, not yet designed
 

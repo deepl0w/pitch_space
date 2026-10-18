@@ -7,10 +7,9 @@ import { pitchName } from '../theory/pitch';
 /**
  * What an exercise type is, as a contract rather than as a convention.
  *
- * There will be six of these — sight reading, note identification, rhythm,
- * chord, chord progression, scale — and the sixth should cost almost nothing
- * to add. That only holds if the screen, the settings panel and the attempt
- * log are written against this file and never against a particular exercise.
+ * One of these per exercise type, and the next should cost almost nothing to
+ * add. That only holds if the screen, the settings panel and the attempt log
+ * are written against this file and never against a particular exercise.
  *
  * **The seams**, in the order they are most likely to be tested:
  *

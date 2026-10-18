@@ -118,3 +118,42 @@ is itself deterministic, so decide it deliberately rather than per-generator.
 Or when a persisted seed from an older version is found not to reproduce. That
 is the cost above arriving in the field, and it is the point to decide whether
 exercises need a format version alongside the seed.
+
+## Addendum, 19 October 2026 — the tuple gained a third member
+
+The Decision above says *given the same seed and the same settings*. Since
+`03ad9e3` that is one input short: the schedule names the item the next
+question should aim at, `PracticeScreen` passes it as `ExerciseSpec.prefer`,
+and an exercise that can aim generates a different question for the same
+`(seed, settings)` depending on what was wished. Generation is a function of
+`(seed, settings, wish)`.
+
+**Nothing in the Decision's reasoning is weakened, and that is worth saying
+before the correction, because the two are easy to confuse.** Every musical
+choice is still drawn from an explicitly passed `Rng` and from nothing else.
+No clock reaches the core, no ambient entropy, no iteration order deciding a
+musical outcome. The wish is an *input*, handed in from above exactly as the
+seed is and by the same argument as [0005](0005-seeds-are-minted-outside-the-core.md);
+it is not the core reaching out for something. A pure function of three things
+is as pure as a pure function of two.
+
+What changes is the reporting unit, which is half of why this record exists.
+A seed alone was the bug report. For the five types that aim it no longer is,
+and the failure mode is the quiet one: the seed still produces *an* exercise,
+plausibly the right shape, just not the one the user saw. The repair was made
+with the change rather than after it — the attempt stores `wished` (schema v4),
+and `ExerciseBoundary` prints `seed N, aimed at <item>` rather than the seed
+alone — so a reported attempt and a reported crash both still reproduce. The
+promise that moved is narrower than it looks: not *reproducible*, but *what
+you must quote to reproduce*.
+
+The property tests are untouched for a different reason, and it is luck
+sitting on top of a good default rather than design. They call `generate`
+without a `prefer`, so the ten thousand are the same ten thousand. A future
+suite that varies the wish will need it in whatever it prints on failure, for
+the same reason the screen does.
+
+**Two of seven types do not aim at all** — progression and rhythm answer
+`aims: 'none'` — so for those a seed remains sufficient. That is a difference
+between exercises in what reproducing one requires, which nothing in this
+record anticipated and which is cheap only while the boundary is `aims`.

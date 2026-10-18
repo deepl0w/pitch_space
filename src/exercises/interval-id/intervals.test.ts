@@ -665,14 +665,35 @@ describe('the tune a wrong answer suggests', () => {
     // think of *My Bonnie*, which ascends.
     const feedback = wrongAnswerTo('down', 9);
     expect(feedback, 'a rising tune offered for a falling interval').not.toMatch(/My Bonnie/);
-    expect(feedback, 'no tune at all for a falling interval').toMatch(/Nobody Knows the Trouble/);
+    /*
+      That a tune was offered, not which one. Naming the song pinned the
+      order of the descending major 6th row: moving `Nobody Knows` behind two
+      other falling tunes — a change that breaks nothing, since all three
+      fall — failed this case, and failed it saying "no tune at all for a
+      falling interval" when there was one. A diagnostic that is wrong about
+      what happened costs more than the case was worth.
+
+      Which row the tune came from is `songs.test.ts`'s "never borrows a
+      rising tune", over every id rather than this one. Two claims, each
+      failing for its own reason.
+    */
+    expect(feedback, 'no tune at all for a falling interval').toMatch(/Think of /);
   });
 
   it('still names the interval and the pitches alongside the tune', () => {
     // The hint is an addition to the explanation, never a replacement for it.
     const feedback = wrongAnswerTo('down', 9);
-    expect(feedback).toMatch(/Major 6th/);
-    expect(feedback).toMatch(/to/);
+    expect(feedback, 'the interval was not named').toMatch(/Major 6th/);
+    /*
+      The pitch pair by its shape. This was `/to/`, which read as "the pitches
+      are joined by the word to" and was in fact satisfied by any `to`
+      anywhere in the sentence — it happens to work only because no song in
+      this row has one in its title. Dropping the separator *and* putting a
+      title with "to" in that row passes it, so the assertion stops testing
+      its claim on an edit to a table it is not about.
+    */
+    expect(feedback, 'the pitches that were played are not named')
+      .toMatch(/[A-G][#b]?\d+ to [A-G][#b]?\d+/);
   });
 
   it('keeps it for a harmonic interval, which has no contour to contradict', () => {

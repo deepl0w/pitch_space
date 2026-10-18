@@ -36,29 +36,29 @@ describe('the way from an answer to the reference', () => {
       than a silence. None is excused today; one that should be has to be
       argued for here, by name.
     */
-    const bare = askable().filter((item) => referenceFor(item) === null);
+    const bare = askable().filter((item) => referenceFor(item, undefined) === null);
     expect(bare, 'an item a learner can answer with no page to look it up on').toEqual([]);
   });
 
   it('only sends a learner to a page the reference has', () => {
     const routes = new Set(REFERENCE_MENU.map((entry) => entry.route));
     const nowhere = askable()
-      .map((item) => ({ item, route: referenceFor(item)?.route }))
+      .map((item) => ({ item, route: referenceFor(item, undefined)?.route }))
       .filter(({ route }) => route !== undefined && !routes.has(route));
     expect(nowhere).toEqual([]);
   });
 
   it('opens the page on the thing asked, not on its default', () => {
-    expect(referenceFor('interval:m6:down')).toEqual({ route: 'intervals', focus: 'm6:down' });
-    expect(referenceFor('interval:unison')).toEqual({ route: 'intervals', focus: 'unison' });
-    expect(referenceFor('scale:harmonic_minor')).toEqual({ route: 'scales', focus: 'harmonic_minor' });
-    expect(referenceFor('chord:dom7:inv2')).toEqual({ route: 'chords', focus: 'dom7:inv2' });
-    expect(referenceFor('key:Eb_major')).toEqual({ route: 'circle', focus: 'Eb_major' });
+    expect(referenceFor('interval:m6:down', undefined)).toEqual({ route: 'intervals', focus: 'm6:down' });
+    expect(referenceFor('interval:unison', undefined)).toEqual({ route: 'intervals', focus: 'unison' });
+    expect(referenceFor('scale:harmonic_minor', undefined)).toEqual({ route: 'scales', focus: 'harmonic_minor' });
+    expect(referenceFor('chord:dom7:inv2', undefined)).toEqual({ route: 'chords', focus: 'dom7:inv2' });
+    expect(referenceFor('key:Eb_major', undefined)).toEqual({ route: 'circle', focus: 'Eb_major' });
     // A signature names no mode; the major key that carries it is on the
     // circle beside its relative minor, so either would be one glance away.
-    expect(referenceFor('signature:-3')).toEqual({ route: 'circle', focus: 'Eb_major' });
-    expect(referenceFor('degree:5:minor')).toEqual({ route: 'scales', focus: 'natural_minor' });
-    expect(referenceFor('progression:minor:iv')).toEqual({ route: 'key-chords', focus: 'A_minor' });
+    expect(referenceFor('signature:-3', undefined)).toEqual({ route: 'circle', focus: 'Eb_major' });
+    expect(referenceFor('degree:5:minor', undefined)).toEqual({ route: 'scales', focus: 'natural_minor' });
+    expect(referenceFor('progression:minor:iv', undefined)).toEqual({ route: 'key-chords', focus: 'A_minor' });
   });
 
   it('opens on the key the question was asked in, when the caller has it', () => {
@@ -107,7 +107,7 @@ describe('the way from an answer to the reference', () => {
       'key:H_major', 'signature:9', 'degree:5:dorian', 'progression:lydian:I',
       'cell:nonesuch', 'cadence:PAC', 'nonesuch',
     ] as ItemId[]) {
-      expect(referenceFor(item), item).toBeNull();
+      expect(referenceFor(item, undefined), item).toBeNull();
     }
   });
 });

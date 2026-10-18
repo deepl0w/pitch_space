@@ -68,6 +68,20 @@ export function scaleType(id: string): ScaleType {
 }
 
 /**
+ * The scale a type is played as on the way down.
+ *
+ * Itself for every type but one. Melodic minor raises its sixth and seventh
+ * to lead up to the tonic and has no reason to keep them coming down, so in
+ * the classical form it descends as the natural minor — the same notes, which
+ * is why a descending run of one *is* the other by ear. The jazz form keeps
+ * the raised notes both ways; this app follows the classical one, by the
+ * user's choice on 19 October.
+ */
+export function descendingType(type: ScaleType): ScaleType {
+  return type.id === 'melodic_minor' ? scaleType('natural_minor') : type;
+}
+
+/**
  * Spell one ascending octave of `type` from `root`, choosing each accidental so
  * the note lands on the staff step the scale asks for.
  */

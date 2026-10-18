@@ -90,6 +90,8 @@ export interface ChordExercise extends ExerciseBase {
   /** The sounding voicing, which is also what the answer staff draws. */
   readonly pitches: readonly Pitch[];
   readonly sounding: ChordSounding;
+  /** Drop-2 or close, kept so another chord can be voiced the same way. */
+  readonly open: boolean;
   readonly clef: Clef;
   readonly choices: readonly string[];
   /** Offered only when the exercise is asking about the bass. */
@@ -192,6 +194,7 @@ export function generateChord(spec: ExerciseSpec<ChordSettings>): ChordExercise 
     inversion,
     pitches: voiced,
     sounding: settings.sounding,
+    open: settings.openVoicing,
     clef: settings.clef,
     choices: types.map((t) => t.id),
     inversionChoices: settings.inversions ? inversions : [],
@@ -241,8 +244,37 @@ const ARPEGGIO_GAP = 0.3;
 const HOLD = 1.8;
 
 export function chordVoicesFor(exercise: ChordExercise): Voice[] {
-  const midis = exercise.pitches.map(midiOf);
-  if (exercise.sounding === 'arpeggio') {
+  return voicesOf(exercise.pitches, exercise.sounding);
+}
+
+/**
+ * Another chord on offer, sounded as the question was: the same root, the
+ * same voicing and the same sounding.
+ *
+ * For hearing a wrong answer against the right one, as the interval
+ * exercise's marked chips do. One thing differs at a time. A quality chip
+ * keeps the question's inversion and changes the quality; a bass chip keeps
+ * the quality and changes the inversion — so each comparison is about the
+ * half of the answer it is on.
+ *
+ * An inversion the chosen chord lacks — second inversion asked of a
+ * seventh, a triad offered beside it — falls to its highest, rather than
+ * putting a note in the bass the chord does not contain.
+ */
+export function chordAnswerVoices(
+  exercise: ChordExercise,
+  typeId: string,
+  inversion: number,
+): Voice[] {
+  const type = chordType(typeId);
+  const at = Math.min(inversion, type.semitones.length - 1);
+  const pitches = voiceChord(chord(exercise.root, type, at), { open: exercise.open });
+  return voicesOf(pitches, exercise.sounding);
+}
+
+function voicesOf(pitches: readonly Pitch[], sounding: ChordSounding): Voice[] {
+  const midis = pitches.map(midiOf);
+  if (sounding === 'arpeggio') {
     return schedule(
       midis.map((midi) => ({ midis: [midi] })),
       { eventGap: ARPEGGIO_GAP, rollGap: 0, hold: ARPEGGIO_GAP * 2.2 },

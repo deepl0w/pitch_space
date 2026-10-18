@@ -1,5 +1,7 @@
 import { makeRng, pick } from '../../theory/rng';
-import { SCALE_TYPES, scaleType, spellScale, type ScaleType } from '../../theory/scale';
+import {
+  SCALE_TYPES, descendingType, scaleType, spellScale, type ScaleType,
+} from '../../theory/scale';
 import { midiOf, parsePitch, pitchName, type Pitch } from '../../theory/pitch';
 import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
@@ -240,13 +242,18 @@ export function generateScale(spec: ExerciseSpec<ScaleSettings>): ScaleExercise 
 }
 
 export function gradeScale(exercise: ScaleExercise, response: ScaleResponse): Result {
-  const correct = response.typeId === exercise.typeId;
+  const correct = sameAnswer(exercise, response.typeId, exercise.typeId);
   const asked = scaleType(exercise.typeId);
   const on = pitchName(exercise.root, false);
+  // Said, when the other name was taken: a learner who answered natural
+  // minor to a falling melodic minor should learn why that counts.
+  const twin = correct && response.typeId !== exercise.typeId
+    ? ` Coming down, ${scaleType(response.typeId).name} is the same notes.`
+    : '';
   return {
     correct,
     feedback: correct
-      ? `Yes — ${asked.name}, on ${on}.`
+      ? `Yes — ${asked.name}, on ${on}.${twin}`
       : `That was ${asked.name}, on ${on}.`,
     outcomes: [
       { item: `scale:${exercise.typeId}` as ItemId, correct, latencyMs: response.latencyMs },
@@ -264,14 +271,56 @@ const STEP = 0.26;
  * its octave is one gesture, and repeating the turning point makes it two.
  */
 export function scaleVoices(exercise: ScaleExercise): Voice[] {
-  const up = [...exercise.pitches, octaveAbove(exercise.pitches[0])];
-  const order = exercise.direction === 'up' ? up
-    : exercise.direction === 'down' ? [...up].reverse()
-      : [...up, ...[...up].reverse().slice(1)];
+  return voicesOf(exercise.typeId, exercise.root, exercise.direction);
+}
+
+/**
+ * Another scale on offer, played as the question was: the same root and the
+ * same direction.
+ *
+ * For hearing a wrong answer against the right one, which is what the
+ * interval exercise's marked chips already do. Only the type differs, because
+ * the type is what the learner got wrong — move the root as well and the ear
+ * has two things to compare, which is the comparison it was already failing.
+ */
+export function scaleAnswerVoices(exercise: ScaleExercise, typeId: string): Voice[] {
+  return voicesOf(typeId, exercise.root, exercise.direction);
+}
+
+/**
+ * A scale as it is heard, from its root, in a direction.
+ *
+ * Coming down, a type plays its descending form (`descendingType`): the
+ * melodic minor falls as the natural minor, so up-and-back rises with the
+ * raised notes and returns without them, as it is taught.
+ */
+function voicesOf(typeId: string, root: Pitch, direction: ScaleDirection): Voice[] {
+  const type = scaleType(typeId);
+  const octave = (pitches: readonly Pitch[]) => [...pitches, octaveAbove(pitches[0])];
+  const up = octave(spellScale(root, type));
+  const down = octave(spellScale(root, descendingType(type))).reverse();
+  const order = direction === 'up' ? up
+    : direction === 'down' ? down
+      : [...up, ...down.slice(1)];
   return schedule(
     order.map((pitch) => ({ midis: [midiOf(pitch)] })),
     { eventGap: STEP, rollGap: 0, hold: STEP * 1.6 },
   );
+}
+
+/**
+ * Whether two types are the same answer to this question.
+ *
+ * Only by ear and only descending: a falling melodic minor is the natural
+ * minor's notes, so asking a learner to tell them apart would be asking for
+ * something the sound does not contain. Up-and-back is not such a case — the
+ * rising half differs — and neither is reading, where the stave shows the
+ * ascending form.
+ */
+export function sameAnswer(exercise: ScaleExercise, a: string, b: string): boolean {
+  if (a === b) return true;
+  if (exercise.presentation !== 'listen' || exercise.direction !== 'down') return false;
+  return descendingType(scaleType(a)).id === descendingType(scaleType(b)).id;
 }
 
 function octaveAbove(pitch: Pitch): Pitch {

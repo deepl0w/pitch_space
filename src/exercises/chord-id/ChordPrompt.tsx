@@ -3,7 +3,7 @@ import { INVERSION_LABELS, chordType } from '../../theory/chord';
 import { pitchName } from '../../theory/pitch';
 import type { PromptProps } from '../types';
 import {
-  SOUNDING_LABELS, chordVoicesFor,
+  SOUNDING_LABELS, chordAnswerVoices, chordVoicesFor,
   type ChordExercise, type ChordResponse, type ChordSettings,
 } from './chords';
 import { SoundBox } from '../SoundBox';
@@ -104,16 +104,31 @@ export function ChordPrompt({
 
       <div className="actions">{moveOn}</div>
 
+      {/*
+        Afterwards the marked chips play, as the interval exercise's do: the
+        answer and the one chosen, on the same root and voiced the same way,
+        so the learner hears the difference they missed. Only those two —
+        every chip playable is a keyboard for working it out after the fact.
+        A reading question was never about a sound and stays silent.
+      */}
       <div className="choices" role="group" aria-label="Which chord was that?">
         {exercise.choices.map((id) => {
           const right = answered && id === exercise.typeId;
           const wrong = answered && id === quality && id !== exercise.typeId;
+          const playable = answered && !reading && (right || wrong);
           return (
             <button
               key={id}
-              className={`choice${right ? ' right' : ''}${wrong ? ' wrong' : ''}`}
-              disabled={answered || (quality !== null && quality !== id)}
-              onClick={() => chooseQuality(id)}
+              type="button"
+              className={`choice${right ? ' right' : ''}${wrong ? ' wrong' : ''}`
+                + (playable ? ' playable' : '')}
+              disabled={answered ? !playable : quality !== null && quality !== id}
+              aria-label={playable ? `Hear ${chordType(id).name}` : undefined}
+              onClick={() => {
+                if (!answered) { chooseQuality(id); return; }
+                // The question's inversion, so only the quality differs.
+                audio.play(chordAnswerVoices(exercise, id, exercise.inversion));
+              }}
             >
               {chordType(id).name}
             </button>
@@ -128,12 +143,20 @@ export function ChordPrompt({
             {exercise.inversionChoices.map((inv) => {
               const right = answered && inv === exercise.inversion;
               const wrong = answered && inv === bass && inv !== exercise.inversion;
+              const playable = answered && !reading && (right || wrong);
               return (
                 <button
                   key={inv}
-                  className={`choice${right ? ' right' : ''}${wrong ? ' wrong' : ''}`}
-                  disabled={answered || (bass !== null && bass !== inv)}
-                  onClick={() => chooseBass(inv)}
+                  type="button"
+                  className={`choice${right ? ' right' : ''}${wrong ? ' wrong' : ''}`
+                    + (playable ? ' playable' : '')}
+                  disabled={answered ? !playable : bass !== null && bass !== inv}
+                  aria-label={playable ? `Hear ${INVERSION_LABELS[inv]}` : undefined}
+                  onClick={() => {
+                    if (!answered) { chooseBass(inv); return; }
+                    // The question's quality, so only the bass differs.
+                    audio.play(chordAnswerVoices(exercise, exercise.typeId, inv));
+                  }}
                 >
                   {INVERSION_LABELS[inv]}
                 </button>

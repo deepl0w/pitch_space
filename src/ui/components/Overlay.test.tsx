@@ -94,7 +94,7 @@ describe('the reference, opened from an answer', () => {
   const picked = () => [...container.querySelectorAll('select')].map((select) => select.value);
 
   function open(item: string) {
-    const target = referenceFor(item as ItemId);
+    const target = referenceFor(item as ItemId, undefined);
     expect(target, item).not.toBeNull();
     act(() => root.render(<ReferenceOverlay target={target!} onClose={() => {}} />));
     return picked();

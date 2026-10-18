@@ -24,6 +24,7 @@ that got this wrong twice in one day from the harness side.
 - [Three accounts of how it felt](#three-accounts-of-how-it-felt)
 - [A reproduction attempt is an instrument too](#a-reproduction-attempt-is-an-instrument-too)
 - [A check can be sound and still have no coordinate for the failure](#a-check-can-be-sound-and-still-have-no-coordinate-for-the-failure)
+- [A citation that resolves to the wrong real thing](#a-citation-that-resolves-to-the-wrong-real-thing)
 - [One that is still lying, and stays open](#one-that-is-still-lying-and-stays-open)
 - [The other direction: a true finding killed](#the-other-direction-a-true-finding-killed)
 
@@ -511,63 +512,6 @@ helps, because nothing is wrong with it.
   Pitch alone cannot tell a re-attack from a wobble inside one note; loudness
   is the half that discriminates, and it was the half dropped.
 
-  **The same fault against an external source, where the remedy is sharper.**
-  Building the song table, two sources were each accurate about what they
-  described and both gave the wrong answer to the question being asked — and
-  agreed with each other while doing it. An encyclopaedia describes *Eine
-  kleine Nachtmusik* as opening with an ascending Mannheim rocket, which is
-  true of the passage; read as notation the first two notes fall. Every
-  interval chart cites *The Simpsons* for the tritone, which is true of the
-  theme; its score opens on a held chord and then a major third, with the
-  tritone spread across three notes.
-
-  **A chart says an interval is *in* a song. The hint says "the first two
-  notes". Those are different claims**, and the second is not answered by a
-  source that makes the first. So: **prefer the source that states the thing
-  itself over one that states a property of it** — the notation over the
-  contour word, the notes over the interval name. Two descriptions agreeing
-  established that they described the same property, not that the property
-  answered the question, which is this document's own caveat about agreement
-  arriving through music rather than through measurement.
-
-  Verified by the session that built the table, reading the score; this
-  document has not re-read it. Its disposal is in `songs.ts` — the Mozart
-  sits under `interval:P4:down`, and *The Simpsons* is absent with the reason
-  written where someone would otherwise add it back.
-
-  **The general form, which the day this was written supplied five instances
-  of: a citation that resolves to something real but wrong passes every check
-  a dangling one fails.** Three record numbers were cited from memory and each
-  named a real record that was not the right one — 0003 for a question about
-  polyphony, which is vexflow containment; 0029 for a platform guard, which is
-  import direction; 0043 for guard scoping, which is instrument choice. Two
-  commit hashes went the same way and were self-caught. **In every case the
-  reader has to open the thing to know**, and the reader is the one person who
-  assumed the writer had.
-
-  **The remedy stated here first was "read an identifier back from the
-  source", and it is incomplete — a fourth instance, found hours later, is
-  immune to it.** `synth.ts` cites *ADR 0005 says there is one context*; 0005
-  is *Seeds are minted outside the core* and contains `AudioContext` zero
-  times, and **no record made the one-context claim at all** until
-  [0049](adr/0049-one-audiocontext-owned-by-one-module.md). That number was
-  not recalled. A planning document proposed an 0005 about one `AudioContext`;
-  when records were written the number went to the seeds decision, and nothing
-  marked the plan as having stopped being authoritative. **Reading the
-  identifier back from its source would have confirmed it.**
-
-  So the remedy is one step further out: **verify a citation against what it
-  points at, not against where you got it.** Open 0005 and see whether it says
-  this. That covers both causes — the recalled number and the inherited one —
-  and it is the first convention of the ADR index pointed at a reference
-  rather than at a claim: *check it against the thing, not against the record
-  that made it.* The record that made this one was never marked as having
-  stopped being the record, which is a thing ADRs have a mechanism for
-  (`Superseded by`) and planning documents do not. What makes this worth a paragraph is not the cost of
-  being wrong but that **nothing downstream can catch it**: a wrong number
-  survives review, survives the suite, and arrives at somebody planning work
-  against the record it names.
-
   **What defeats inspection is that each half is independently sensible.**
   "Merge notes at the same pitch" reads as a complete rule. A reader checking
   it has nothing to be suspicious of, because nothing is missing from the
@@ -611,6 +555,75 @@ to constrain.
 flattering, expected. Those describe what happens to a finding once it exists.
 This one asks whether the check could have produced the finding at all, which
 is a question asked earlier and answered before any of them apply.
+
+## A citation that resolves to the wrong real thing
+
+Grew out of the half-predicate case above, where the constant cited was real,
+nearby and wrong. It is its own subject because the property that defeats
+inspection there holds wherever an identifier appears, and because its remedy
+is a habit rather than a structure.
+
+**The same fault against an external source, where the remedy is sharper.**
+Building the song table, two sources were each accurate about what they
+described and both gave the wrong answer to the question being asked — and
+agreed with each other while doing it. An encyclopaedia describes *Eine
+kleine Nachtmusik* as opening with an ascending Mannheim rocket, which is
+true of the passage; read as notation the first two notes fall. Every
+interval chart cites *The Simpsons* for the tritone, which is true of the
+theme; its score opens on a held chord and then a major third, with the
+tritone spread across three notes.
+
+**A chart says an interval is *in* a song. The hint says "the first two
+notes". Those are different claims**, and the second is not answered by a
+source that makes the first. So: **prefer the source that states the thing
+itself over one that states a property of it** — the notation over the
+contour word, the notes over the interval name. Two descriptions agreeing
+established that they described the same property, not that the property
+answered the question, which is this document's own caveat about agreement
+arriving through music rather than through measurement.
+
+Verified by the session that built the table, reading the score; this
+document has not re-read it. Its disposal is in `songs.ts` — the Mozart
+sits under `interval:P4:down`, and *The Simpsons* is absent with the reason
+written where someone would otherwise add it back.
+
+**The general form, which the day this was written supplied five instances
+of: a citation that resolves to something real but wrong passes every check
+a dangling one fails.** Three record numbers were cited from memory and each
+named a real record that was not the right one — 0003 for a question about
+polyphony, which is vexflow containment; 0029 for a platform guard, which is
+import direction; 0043 for guard scoping, which is instrument choice. Two
+commit hashes went the same way and were self-caught. **In every case the
+reader has to open the thing to know**, and the reader is the one person who
+assumed the writer had.
+
+**The remedy stated here first was "read an identifier back from the
+source", and it is incomplete — a fourth instance, found hours later, is
+immune to it.** `synth.ts` cites *ADR 0005 says there is one context*; 0005
+is *Seeds are minted outside the core* and contains `AudioContext` zero
+times, and **no record made the one-context claim at all** until
+[0049](adr/0049-one-audiocontext-owned-by-one-module.md). That number was
+not recalled. A planning document proposed an 0005 about one `AudioContext`;
+when records were written the number went to the seeds decision, and nothing
+marked the plan as having stopped being authoritative. **Reading the
+identifier back from its source would have confirmed it.**
+
+So the remedy is one step further out: **verify a citation against what it
+points at, not against where you got it.** Open 0005 and see whether it says
+this. That covers both causes — the recalled number and the inherited one —
+and it is the first convention of the ADR index pointed at a reference
+rather than at a claim: *check it against the thing, not against the record
+that made it.* The record that made this one was never marked as having
+stopped being the record, which is a thing ADRs have a mechanism for
+(`Superseded by`) and planning documents do not. What makes this worth a paragraph is not the cost of
+being wrong but that **nothing downstream can catch it**: a wrong number
+survives review, survives the suite, and arrives at somebody planning work
+against the record it names.
+
+**Where this leaves the half-predicate case**: it is the same fault with the
+two halves adjacent rather than a number apart, and the remedy there is
+structural — keep them where one cannot be taken for the whole — while the
+remedy here is a habit, because a citation has no structure to fix.
 
 ## One that is still lying, and stays open
 

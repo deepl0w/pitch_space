@@ -3,7 +3,7 @@ import { join, matchesGlob, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CHORD_TYPES } from './theory/chord';
 import { SCALE_TYPES } from './theory/scale';
-import { EXERCISE_FAMILIES } from './exercises/registry';
+import { EXERCISE_FAMILIES, EXERCISE_TYPES } from './exercises/registry';
 
 /**
  * The boundaries from docs/adr/, asked of the repository.
@@ -886,10 +886,76 @@ describe("the home screen's claim about how exercises are answered", () => {
    * locate any more is exactly the state this is meant to catch.
    */
   const WORDS: Record<string, number> = {
+    one: 1, two: 2, three: 3,
     four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
     twelve: 12, fifteen: 15, sixteen: 16, eighteen: 18, twenty: 20,
     'twenty-four': 24, 'twenty-one': 21, thirty: 30,
   };
+
+  /**
+   * The exercises a learner can actually answer by playing.
+   *
+   * By what the prompt *does*, not by what it is handed: every prompt takes
+   * an `audioIn` prop, so a file mentioning the name proves nothing. Calling
+   * `listen` or `listenUntil` is the capability the README is describing.
+   */
+  /**
+   * The ways a prompt can ask the microphone for something to grade.
+   *
+   * Named rather than inferred, because the two kinds are not the same
+   * claim: `listen` and `listenUntil` return a `Heard` — audio an answer is
+   * graded from — and `spectrum` returns a level to draw, which a prompt
+   * showing a wave uses without offering anybody a way to play an answer.
+   */
+  const ANSWERING = ['listen', 'listenUntil'];
+
+  /** On `AudioIn`, but not a way to answer. */
+  const NOT_ANSWERING = ['spectrum'];
+
+  /** `AudioIn`'s members, read from the interface rather than remembered. */
+  function audioInMembers(): string[] {
+    const source = codeOf(join(SRC, 'exercises', 'types.ts')).join('\n');
+    const body = /export interface AudioIn \{([\s\S]*?)\n\}/.exec(source);
+    if (body === null) throw new Error('could not find the AudioIn interface');
+    return [...body[1].matchAll(/^\s+(\w+)\??\(/gm)].map((m) => m[1]);
+  }
+
+  /**
+   * Which exercises a learner can actually answer by playing.
+   *
+   * By what the prompt *does*, not by what it is handed: every prompt takes
+   * an `audioIn` prop, so a file mentioning the name proves nothing.
+   */
+  function listeningExercises(): string[] {
+    const calls = new RegExp(`audioIn\\.(?:${ANSWERING.join('|')})\\s*\\(`);
+    const root = join(SRC, 'exercises');
+    const dirs = filesUnder(root)
+      .filter((file) => file.endsWith('.tsx') && !file.includes('.test.'))
+      .filter((file) => calls.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(root, file).split(sep)[0]);
+    return [...new Set(dirs)];
+  }
+
+  /**
+   * And the list above is every way there is.
+   *
+   * **The guard's own population, which architect caught me leaving
+   * unbound.** `ANSWERING` is two method names written down. Add a third
+   * entry point to `AudioIn` and the count below is computed over an
+   * incomplete population: the README keeps its old figure, the guard agrees
+   * with it, and both are wrong in the direction that reads as more missing
+   * than there is. A silent agreement between a stale list and a stale
+   * sentence is worse than either alone.
+   *
+   * So the interface is enumerated and every member has to be classified.
+   * Adding one fails here, naming it, rather than quietly widening nothing.
+   */
+  it('knows every way a prompt can reach the microphone', () => {
+    const known = [...ANSWERING, ...NOT_ANSWERING].sort();
+    expect(audioInMembers().sort(),
+      'AudioIn grew a member: add it to ANSWERING if an answer can be graded from it, '
+      + 'or to NOT_ANSWERING if it cannot').toEqual(known);
+  });
 
   it('quotes the catalogues at the sizes they are', () => {
     const readme = readFileSync(README, 'utf8').replace(/\s+/g, ' ');
@@ -897,6 +963,25 @@ describe("the home screen's claim about how exercises are answered", () => {
       ["a chord's qualities", /quality, from ([\w-]+),/i, CHORD_TYPES.length],
       ['the scale types', /a scale, from ([\w-]+) types/i, SCALE_TYPES.length],
       ['the kinds of practice', /([\w-]+) kinds of practice/i, EXERCISE_FAMILIES.length],
+      /*
+        The "not built yet" bullets, which carry the same kind of figure and
+        had no check pointed at them — the gap architect raised, and the one
+        CLAUDE.md's safeguard convention already cites the README for by
+        name. A count in prose beside a catalogue that anyone may add to is
+        the same shape wherever it sits.
+
+        Two numbers from the microphone bullet rather than one, because the
+        pair is where it went wrong: it read "four of the six", mixing the
+        count of exercise *types* with the count of *families*. A test has
+        to name a denominator, which is most of why it is worth having.
+      */
+      ['the exercises with no way to play an answer',
+        /The microphone, for ([\w-]+) of the/i,
+        EXERCISE_TYPES.length - listeningExercises().length],
+      ['the exercise types', /The microphone, for [\w-]+ of the ([\w-]+)\./i,
+        EXERCISE_TYPES.length],
+      ['the exercises that can aim at one item', /for the ([\w-]+) exercises that can aim/i,
+        EXERCISE_TYPES.filter((type) => type.aims !== 'none').length],
     ];
 
     for (const [what, pattern, actual] of claims) {

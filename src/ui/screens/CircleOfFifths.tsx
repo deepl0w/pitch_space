@@ -169,8 +169,14 @@ function Wedge({ className, d, name, selected, onChoose }: {
 
 const SIGNATURE_SIZE = 8;
 
-export function CircleOfFifths() {
-  const [selectedId, setSelectedId] = useState('C_major');
+/**
+ * `focus` is a key id, from `ui/reference.ts` when this page is opened from
+ * an answer; it decides where the page starts and nothing after.
+ */
+export function CircleOfFifths({ focus }: { focus?: string }) {
+  const [selectedId, setSelectedId] = useState(
+    () => ALL_KEYS.some((k) => keyId(k) === focus) ? focus! : 'C_major',
+  );
   const [sevenths, setSevenths] = useState(false);
   const play = usePlayer();
 

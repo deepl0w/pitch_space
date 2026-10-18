@@ -114,6 +114,14 @@ export const SETUP_MENU: readonly MenuEntry[] = [
 
 export const REFERENCE_MENU: readonly MenuEntry[] = [
   {
+    route: 'intervals',
+    name: 'Intervals',
+    blurb: 'Every interval to the octave, up, down and together, with songs that have it.',
+    lede: 'Every interval up to the octave, from any note, rising, falling or '
+      + 'sounded together — spelled as the interval is named, with the songs '
+      + 'that start with it.',
+  },
+  {
     route: 'scales',
     name: 'Scales',
     blurb: 'Twenty scale types in every key, spelled as the scale requires.',

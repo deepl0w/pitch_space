@@ -34,9 +34,15 @@ import { patternsFor } from '../../generate/patterns';
 const RHYTHM_PITCH = parsePitch('B4');
 const TEMPO = 84;
 
-export function Rhythms() {
+/**
+ * `focus` is a time signature, from `ui/reference.ts` when this page is
+ * opened from an answer; it decides where the page starts and nothing after.
+ */
+export function Rhythms({ focus }: { focus?: string }) {
   const entry = entryFor('rhythms');
-  const [meter, setMeter] = useState('4/4');
+  const [meter, setMeter] = useState(
+    () => TIME_SIGNATURES.some((t) => t.id === focus) ? focus! : '4/4',
+  );
   const play = usePulsePlayer();
   const ts = timeSignature(meter);
 

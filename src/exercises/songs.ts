@@ -42,7 +42,8 @@ export interface SongReference {
   readonly at?: string;
 }
 
-const TRADITIONAL = 'traditional';
+/** For a song with no author worth searching for; said as nothing, not as this. */
+export const TRADITIONAL = 'traditional';
 
 /**
  * The table, by item id. Up and down are separate keys because they are

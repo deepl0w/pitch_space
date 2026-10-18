@@ -32,9 +32,11 @@ Six kinds of practice, each asked by ear or off the staff.
 | **Key identification** | Read a signature, or a line of notes, and name the key. |
 | **Rhythm** | Read or hear a rhythm, then play it back in time. The one answer that is a performance rather than a choice. |
 
-There are also reference screens — the circle of fifths, every scale in
-every key, the rhythm figures the generator builds from — for looking
-things up rather than being tested on them.
+There are also reference screens — every interval with songs that have
+it, the circle of fifths, every scale in every key, the rhythm figures the
+generator builds from — for looking things up rather than being tested on
+them. After an answer, each thing it judged has a button that opens its
+page over the question, so looking it up does not cost the question.
 
 **What is asked moves, so the skill transfers.** Scales, chords and
 degrees are asked in every key, and the answer never names the root: a

@@ -27,6 +27,7 @@ it ships or is dropped.
 - [Instruments that play like themselves](#instruments-that-play-like-themselves)
 - [A wrong answer that points at a song you know](#a-wrong-answer-that-points-at-a-song-you-know)
 - [A way from the answer to the reference](#a-way-from-the-answer-to-the-reference)
+  - [Built, 19 October](#built-19-october)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 [`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
@@ -556,38 +557,24 @@ Three things will be the work, and none of them is the parsing:
 
 From the user: after answering a question there should be a small button
 taking you to information on **that specific thing** in the theory reference —
-which also needs an intervals page, because there is not one.
+which also needed an intervals page, because there was not one.
 
-The reference today is Scales, Chords, Chords in a key, the Circle of Fifths
-and Rhythms. Intervals, the exercise most likely to want this, has no page.
+### Built, 19 October
 
-### Keyed on item ids, the same as the song list
+Each item an answer judged has a *Look it up* button in the readout, and it
+opens that item's reference page **as a layer over the question**, not as a
+route: the round and the session tally are state inside the practice screen,
+so navigating away and back gave a new question and a count of zero. The map
+is `src/ui/reference.ts`, keyed on item ids like the song table, and its test
+asks every item every exercise can grade at its widest settings — an item
+with no page fails there rather than quietly showing no button. The intervals
+page is new and lists the same songs a wrong answer offers two of.
 
-`scale:harmonic_minor`, `interval:m3:up`, `progression:major:V`. The exercise
-already knows the item it just asked; the button needs a map from an item id
-to a place in the reference, and nothing else. An item with no target shows no
-button rather than a broken one, which also makes the coverage question a
-one-line sweep.
-
-### The hazard: consulting the reference currently costs the answer
-
-**This is the part that would be found late.** `route` lives in `App` and is
-driven by `hashchange`; `round` and `session` are `useState` **inside**
-`PracticeScreen`. So a route change unmounts the screen, and coming back gives
-a new question and a session tally reset to zero.
-
-A learner who answers, taps through to read about the interval they just
-missed, and returns has lost the question they wanted to understand and their
-count for the session. That is worse than not having the button.
-
-**The app already has the shape that avoids it.** Settings opens over whatever
-is on screen — `settingsOpen` is state in `App`, not a route — so nothing
-unmounts and nothing is lost. A reference panel over the practice screen is
-the same move, and it keeps the answer visible beside what it explains, which
-is the point of reading it at that moment.
-
-The alternative is lifting `round` and `session` above the route, which is a
-larger change and buys the same thing less directly.
+What is still coarser than it could be: a progression item carries its mode
+and numeral and not the key it was asked in, so it opens *Chords in a key* on
+C major or A minor rather than on the question's key, and nothing on that
+page singles out the numeral. A scale degree opens the major or natural minor
+scale on C for the same reason.
 
 ## A wrong answer that points at a song you know
 

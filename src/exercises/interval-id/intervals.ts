@@ -240,6 +240,23 @@ export interface IntervalExercise extends ExerciseBase {
  */
 const DIATONIC_STEPS = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7];
 
+/**
+ * The note an interval away from `first`, spelled as the interval is named.
+ *
+ * Spelled from the staff step, not from the MIDI number: C-F# and C-Gb are
+ * the same sound and different notes, and an exercise that engraved
+ * whichever the enharmonic table happened to prefer would print a minor
+ * third as an augmented second about half the time. Exported so the
+ * reference page spells an interval the way the exercise that asks it does.
+ */
+export function spellInterval(first: Pitch, semitones: number, direction: IntervalDirection): Pitch {
+  const sign = direction === 'down' ? -1 : 1;
+  return respell(
+    diatonicOf(first) + sign * DIATONIC_STEPS[semitones],
+    midiOf(first) + sign * semitones,
+  );
+}
+
 /** Middle of each staff, so the drawn answer sits on the lines rather than above them. */
 const CLEF_CENTRE: Record<Clef, number> = { treble: 71, alto: 60, tenor: 57, bass: 50 };
 
@@ -315,15 +332,7 @@ export function generateInterval(spec: ExerciseSpec<IntervalSettings>): Interval
   const firstMidi = rngInt(rng, low, Math.max(low, high));
 
   const first = pitchFromMidi(firstMidi, preferFlats);
-  const sign = direction === 'down' ? -1 : 1;
-  // Spelled from the staff step up, not from the MIDI number: C-F# and C-Gb
-  // are the same sound and different notes, and an exercise that engraved
-  // whichever the enharmonic table happened to prefer would print a minor
-  // third as an augmented second about half the time.
-  const second = respell(
-    diatonicOf(first) + sign * DIATONIC_STEPS[semitones],
-    firstMidi + sign * semitones,
-  );
+  const second = spellInterval(first, semitones, direction);
 
   return {
     type: INTERVAL_EXERCISE_ID,

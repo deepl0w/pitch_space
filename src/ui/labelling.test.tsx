@@ -9,6 +9,7 @@ import { Calibration } from './screens/Calibration';
 import { Chords } from './screens/Chords';
 import { CircleOfFifths } from './screens/CircleOfFifths';
 import { Home } from './screens/Home';
+import { Intervals } from './screens/Intervals';
 import { KeyChords } from './screens/KeyChords';
 import { PracticeScreen } from './screens/PracticeScreen';
 import { Rhythms } from './screens/Rhythms';
@@ -16,6 +17,10 @@ import { Scales } from './screens/Scales';
 import { Settings } from './screens/Settings';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ExerciseBoundary } from './components/ExerciseBoundary';
+import { Overlay } from './components/Overlay';
+import { ReferenceOverlay } from './components/ReferenceOverlay';
+import { REFERENCE_MENU } from './menu';
+import type { ReferenceRoute } from './reference';
 import { EXERCISE_TYPES } from '../exercises/registry';
 import type { AudioOut } from '../exercises/types';
 
@@ -77,7 +82,24 @@ const SCREENS: Record<string, () => ReactElement> = {
   'screens/Calibration.tsx': () => <Calibration />,
   'screens/Chords.tsx': () => <Chords />,
   'screens/CircleOfFifths.tsx': () => <CircleOfFifths />,
+  'components/Overlay.tsx': () => (
+    <Overlay label="A layer" onClose={() => {}}><p>nothing is wrong</p></Overlay>
+  ),
+  // Every reference page as the layer opens it, from the menu rather than a
+  // list here, so a page added to the reference is asked about in its layer.
+  'components/ReferenceOverlay.tsx': () => (
+    <>
+      {REFERENCE_MENU.map((entry) => (
+        <ReferenceOverlay
+          key={entry.route}
+          target={{ route: entry.route as ReferenceRoute, focus: '' }}
+          onClose={() => {}}
+        />
+      ))}
+    </>
+  ),
   'screens/Home.tsx': () => <Home go={() => {}} />,
+  'screens/Intervals.tsx': () => <Intervals />,
   'screens/KeyChords.tsx': () => <KeyChords />,
   'screens/Rhythms.tsx': () => <Rhythms />,
   'screens/Scales.tsx': () => <Scales />,

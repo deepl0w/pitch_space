@@ -179,6 +179,27 @@ that *three sessions confirming through the same tool is reproducibility, not
 corroboration*, while their own three attempts had the identical shape one
 level down. The rule was applied to the fleet and not to the hand holding it.
 
+**And agreement establishes the reading, not the instrument** — which is a
+second caveat, distinct from the first and found on this document's own
+advice being followed correctly.
+
+The focus ring's contrast was settled by two genuinely independent means, a
+canvas pixel read and the arithmetic in `contrast.test.tsx`, **agreeing to two
+decimals**. That agreement was real. It was also silent about the canvas
+read's range: eight bits per channel is coarse enough below roughly 5%
+lightness that the same colour came back as two different byte triples on
+consecutive runs, which surfaced later on a darker pair where the two means
+disagreed by 0.03. The technique that holds is
+`color(from <expr> srgb-linear r g b)`, which the browser computes without
+quantising.
+
+So two instruments agreeing tells you **they agree on that input**. It does
+not tell you either is sound, and it says nothing at all about the inputs you
+have not tried — the agreement happened on colours light enough for the
+quantisation not to bite. The remedy above still holds and wants this beside
+it: redundancy of kind protects against a blind instrument, and nothing
+protects against a *narrow* one except finding its edge.
+
 **The caveat is what makes it fail quietly.** It works only while the second
 observer really is holding a different instrument. Two sessions reading the
 same file, or one agent asked to check another's reasoning on the evidence that
@@ -405,6 +426,15 @@ helps, because nothing is wrong with it.
   asserting through the first medium cannot express the state the second one
   keeps. `src/state/attempt.test.ts` now checks through `structuredClone` for
   this reason.
+
+  **A worse variant: a medium that substitutes rather than drops.** CSS
+  `var()` always parses, so `color: var(--some-length)` is not a parse error —
+  a length is rejected later, at computed-value time, where `color` falls back
+  to `inherit`. **A probe that paints once and reads the result cannot tell a
+  length from a colour**: it reads whatever was inherited, which is a real
+  colour, plausible, and nothing to do with the token under test. Where JSON
+  made the bad value vanish, this makes it *become something that looks
+  right* — harder to notice, and it reads as a pass rather than as an absence.
 - **A quantity whose rightness is not structural.** A diff review's claim is
   that the code does what it says: the types line up, the branch is reachable,
   the name means what it does. Two defects in `src/audio/output/instruments.ts`
@@ -423,6 +453,19 @@ helps, because nothing is wrong with it.
   three are code that rounded, and each is individually plausible — an
   implementation that is *nearly* the sentence is what a reasonable
   implementation of a prose sentence looks like.
+
+- **A number the suite computes and never asserts.** The contrast between
+  `--bg` and `--accent` sat among the pinned figures in `contrast.test.tsx`,
+  correctly calculated, and was attached to no reader-facing case. A palette
+  change dropped that pair to 3.05:1, under the 4.5 floor, and the suite
+  stayed green. **The mechanism existed, ran, and answered a question nobody
+  had asked it.**
+
+  That is the nastiest face of *a correlate is not the mechanism*, because
+  here the mechanism was genuinely run. A figure present in a test file reads
+  as a pair being checked, and a reader scanning for coverage finds the number
+  and stops. **A measurement with no assertion attached is a correlate of a
+  check**, and it is less visible than no measurement at all would have been.
 
 - **A double whose incompleteness is invisible at the call site.**
   `src/testing/audioContext.ts` implemented only the surface `Synth` used. When
@@ -467,6 +510,39 @@ helps, because nothing is wrong with it.
   destroys the unison, which a learner answers by striking one pitch twice.
   Pitch alone cannot tell a re-attack from a wobble inside one note; loudness
   is the half that discriminates, and it was the half dropped.
+
+  **The general form, which the day this was written supplied five instances
+  of: a citation that resolves to something real but wrong passes every check
+  a dangling one fails.** Three record numbers were cited from memory and each
+  named a real record that was not the right one — 0003 for a question about
+  polyphony, which is vexflow containment; 0029 for a platform guard, which is
+  import direction; 0043 for guard scoping, which is instrument choice. Two
+  commit hashes went the same way and were self-caught. **In every case the
+  reader has to open the thing to know**, and the reader is the one person who
+  assumed the writer had.
+
+  **The remedy stated here first was "read an identifier back from the
+  source", and it is incomplete — a fourth instance, found hours later, is
+  immune to it.** `synth.ts` cites *ADR 0005 says there is one context*; 0005
+  is *Seeds are minted outside the core* and contains `AudioContext` zero
+  times, and **no record made the one-context claim at all** until
+  [0049](adr/0049-one-audiocontext-owned-by-one-module.md). That number was
+  not recalled. A planning document proposed an 0005 about one `AudioContext`;
+  when records were written the number went to the seeds decision, and nothing
+  marked the plan as having stopped being authoritative. **Reading the
+  identifier back from its source would have confirmed it.**
+
+  So the remedy is one step further out: **verify a citation against what it
+  points at, not against where you got it.** Open 0005 and see whether it says
+  this. That covers both causes — the recalled number and the inherited one —
+  and it is the first convention of the ADR index pointed at a reference
+  rather than at a claim: *check it against the thing, not against the record
+  that made it.* The record that made this one was never marked as having
+  stopped being the record, which is a thing ADRs have a mechanism for
+  (`Superseded by`) and planning documents do not. What makes this worth a paragraph is not the cost of
+  being wrong but that **nothing downstream can catch it**: a wrong number
+  survives review, survives the suite, and arrives at somebody planning work
+  against the record it names.
 
   **What defeats inspection is that each half is independently sensible.**
   "Merge notes at the same pitch" reads as a complete rule. A reader checking
@@ -633,6 +709,18 @@ sweep's response shapes — a perfect performance, a late one, silence — could
 not construct the disagreeing case, so **it reported the absence of a case it
 could not build as agreement**, and the mutant confirmed the wiring of a
 statement nobody had checked.
+
+**A second limit, found once the palette became derived.** A mutant applied to
+an *ingredient* may not move the value under test far enough to fail. Nudging
+`--ink` barely shifts a `--muted` mixed from it, so the mutant survives — and
+survival reads as *the assertion is not load-bearing* when the truth is *the
+mutation was too small*. A false negative in the instrument rather than a
+finding about the test.
+
+The rule that follows is narrow and worth having wherever values are derived:
+**mutate the token under test, not its inputs.** This project's palette is now
+derived by design ([0048](adr/0048-one-accent-a-derived-palette-and-a-floor-it-knowingly-misses.md)),
+so the case is permanent rather than incidental.
 
 So mutation tests the connection between a test and the code. Truth needs the
 disagreeing case, and constructing one needs to know what the thing under test

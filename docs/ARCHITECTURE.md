@@ -509,6 +509,22 @@ mostly such claims. The ones that can carry a command now do. The ones that
 cannot — a measured bundle split, what a type cost on the day it landed — say
 which commit they describe instead, and stop pretending to be current.
 
+**The test is whether a claim is decidable, not whether it has a number in
+it**, and the difference decides how much of a document can be held. "Nothing
+captures audio into it yet" has no figure and is refuted the moment a grep
+returns a line; "sight reading is in the backlog, very late, and may be
+dropped" has no figure either and no command will ever settle it. Read as
+*extract the number*, the rule binds the counts and leaves every existence
+claim loose — which is most of what rots here, since a thing is usually built
+before anyone thinks to count it.
+
+**And the unit is the claim rather than the bullet.** One sentence can carry
+both kinds: *sight reading is in the backlog, very late, may be dropped, and
+nothing in the app offers it* is an intention welded to a fact. Pinning at
+bullet granularity forces a choice between pinning the intention — which is
+how a guard starts failing on rewording — and leaving the fact unwatched.
+Split the sentence instead, and bind the half that can be wrong.
+
 - **Sight reading has no exercise.** Seven exercise types across six families
   — note identification, chord progression, key, chord, scale and rhythm —
   and the one named in the brief with nothing behind it is reading from the

@@ -270,22 +270,25 @@ one role where that reduction is wrong, and `tools/sessions.sh` now says so
 explicitly rather than reading the socket and reporting addressable.
 
 **The name is unusable; the session is not.** `SendMessage`'s reservation
-blocks `to: "main"` and every ref tried against it — it does not block a
-reply built from a message main already sent. Copying the `from` address
-on an incoming cross-session message — the raw socket path, not the
-display name — reached main where the bare name refused, tried the same
-minute the refusal was confirmed, by more than one session since. **Put
-the other way round, so it cannot be misread as "main is cut off":**
-main's own messages reach every role normally, and whoever it writes to
-can answer back on that same thread. What the name collision actually
-costs is narrower than a severed link — it is main having to speak first,
-every time, rather than being reachable cold the way every other role is.
-**In practice that precondition costs nothing**, confirmed once every role
-had used the socket route: main's own merge and landing announcements are
-routine, so by the time any role has something to report back, it has
-already received a message from main to reply to. The gap is theoretical
-for anyone main has already written to, and real only for reaching main
-cold, which is rare — most traffic this way is a reply to begin with.
+blocks `to: "main"` and every ref tried against it. Two independent routes
+around it, found a week apart. Copying the `from` address on an incoming
+cross-session message — the raw socket path, not the display name —
+reached main where the bare name refused. And tester found the sharper
+one: `tools/sessions.sh` prints every role's pid, including main's, and
+`$socks/<pid>.sock` is the same convention every role's own socket already
+uses — so the address is derivable from a tool every role runs anyway,
+with no message from main required first. Sent cold, with nothing from
+main to reply to, and it arrived.
+
+**That narrows the gap from reachability to naming.** The first route left
+main needing to speak first, which this file called a cost that happened
+to be free in practice because main's announcements are routine. The
+second route removes the precondition entirely: main is reachable cold,
+the same as every other role, by a socket address a tool already supplies
+rather than one copied from an incoming message. What is actually still
+broken is narrower than either earlier framing suggested — the display
+*name* does not resolve, full stop, but nothing about reaching the
+*session* depends on who spoke first.
 
 Work is not stranded either way — `announce` and `status` read each role's
 own branch directly, so main's tooling still shows a branch moved without
@@ -302,15 +305,16 @@ one level up. Worth a main session's own habit, not only a tool's: before
 re-asking a role that cannot be reached cold, check what its branch
 already holds.
 
-**The fix is not a name this file controls.** The branch still says `main`,
-the role still says `main` — what needs to change is the session's own
-display title, which this project has had no reason to distinguish from
-either until now. A session titled literally `main` cannot be reached cold
-by `SendMessage` under a host that reserves the word; one titled anything
-else can, at no cost to the branch or the role, since neither reads the
-session's title at all. Renaming it is not a worktree session's call to
-make — it is not this checkout — so it is recorded here rather than acted
-on from one.
+**Renaming is no longer the fix for reachability, since `tools/sessions.sh`
+already is one — it would still be the fix for the name.** The branch
+still says `main`, the role still says `main`; what a rename would change
+is the session's own display title, so `ListAgents` shows something
+`SendMessage` can actually take and a role stops needing to construct a
+socket path by hand. That is a real convenience, not a reachability gap
+any more, and costs the branch and the role nothing either way, since
+neither reads the session's title. Renaming it is not a worktree session's
+call to make — it is not this checkout — so it is recorded here rather
+than acted on from one.
 
 **`user` failed the same way the same day, and the cause is not this
 one.** `ListAgents` lists it with no `[ref]` at all, unlike every other

@@ -26,6 +26,13 @@ jobs:
       - run: npx vitest run
       - run: npx oxlint src
       - run: npm run build
+      # The offline claim, checked where nobody is watching a screen.
+      # The checker said it ran here and it did not: CI ran the four steps
+      # above and nothing else, so it ran only when someone typed
+      # `./test.sh --all` by hand — a safeguard that fires only for whoever
+      # was already inclined to look. After the build, because it reads
+      # the service worker the build emits.
+      - run: node tools/check-precache.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

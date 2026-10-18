@@ -11,7 +11,7 @@ import { readFileSync, existsSync } from 'node:fs';
 
 const SW = 'dist/sw.js';
 if (!existsSync(SW)) {
-  console.error('No dist/sw.js — build first, or the PWA plugin is not wired up.');
+  console.error('No dist/sw.js — build first, or check vite-plugin-pwa in vite.config.ts.');
   process.exit(1);
 }
 

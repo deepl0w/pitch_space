@@ -26,12 +26,6 @@ describe('the menu', () => {
    * is registered, and asks whether family ids are distinct and storable.
    */
 
-  it('lists every built exercise before the unbuilt ones', () => {
-    const firstUnbuilt = EXERCISE_MENU.findIndex((e) => !e.ready);
-    const lastBuilt = EXERCISE_MENU.map((e) => e.ready).lastIndexOf(true);
-    if (firstUnbuilt >= 0) expect(lastBuilt).toBeLessThan(firstUnbuilt);
-  });
-
   it('never lists a route twice, so a built exercise has no planned twin', () => {
     const routes = [...EXERCISE_MENU, ...REFERENCE_MENU].map((e) => e.route);
     expect(new Set(routes).size).toBe(routes.length);

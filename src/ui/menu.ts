@@ -28,7 +28,6 @@ export interface MenuEntry {
    * the cog landed.
    */
   parent?: string;
-  ready: boolean;
 }
 
 /**
@@ -63,24 +62,21 @@ const BUILT: MenuEntry[] = EXERCISE_FAMILIES.map((family) => ({
   route: family.id,
   name: family.name,
   blurb: BLURBS[family.id] ?? family.members[0].description,
-  ready: true,
 }));
 
-/** Listed before they exist, so the shape of the app is visible. */
-const PLANNED: MenuEntry[] = [
-  {
-    route: 'sight-reading',
-    name: 'Sight reading',
-    blurb: 'Read a generated line and play it. Scored on pitch and on timing.',
-    ready: false,
-  },
-];
-
-/** Built first, then the rest in the order the brief lists them. */
-export const EXERCISE_MENU: readonly MenuEntry[] = [
-  ...BUILT,
-  ...PLANNED.filter((entry) => !BUILT.some((built) => built.route === entry.route)),
-];
+/**
+ * What the home screen offers: what is built, and nothing that is not.
+ *
+ * **There was a list of planned cards here, and sight reading was the only
+ * thing ever in it.** It showed greyed out as "not built yet", so the shape
+ * of the app was visible before it existed. Sight reading has since gone to
+ * the backlog — very late, and possibly dropped (see `docs/ROADMAP.md`) —
+ * so a card promising it was promising something that may never come. The
+ * list emptied with it and went too, rather than staying as a mechanism for
+ * nothing: a planned card now has to be argued for again by whoever wants
+ * one, which is the right cost for a promise made on the front page.
+ */
+export const EXERCISE_MENU: readonly MenuEntry[] = BUILT;
 
 /**
  * Not an exercise and not a reference — and no longer drawn on the home
@@ -104,7 +100,6 @@ export const SETUP_MENU: readonly MenuEntry[] = [
     blurb: 'Theme, volume, audio calibration, and what the app knows about you.',
     lede: 'The preferences that are not about a particular exercise. What an '
       + 'exercise asks lives in its own panel, beside the question it changes.',
-    ready: true,
   },
   {
     route: 'calibration',
@@ -114,7 +109,6 @@ export const SETUP_MENU: readonly MenuEntry[] = [
     lede: 'Your device takes a moment to get sound from the microphone into '
       + 'the app, and it will not say how long. Measuring it once makes rhythm '
       + 'judged against what you played rather than against your hardware.',
-    ready: true,
   },
 ];
 
@@ -125,7 +119,6 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
     blurb: 'Twenty scale types in every key, spelled as the scale requires.',
     lede: 'Twenty scale types in every key, spelled the way the scale requires '
       + 'rather than by whichever accidental is nearer.',
-    ready: true,
   },
   {
     route: 'chords',
@@ -133,7 +126,6 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
     blurb: 'Twenty-four chord types, any inversion, close or open voicing.',
     lede: 'Twenty-four chord types, in any inversion, on any root. The voicing '
       + 'shown is the one that sounds.',
-    ready: true,
   },
   {
     route: 'key-chords',
@@ -142,7 +134,6 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
     lede: 'Every chord the key supplies, numbered by degree. A minor key shows '
       + 'its natural form — the raised leading tone is a choice the harmony '
       + 'makes, not a property of the key.',
-    ready: true,
   },
   {
     route: 'circle',
@@ -151,7 +142,6 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
     lede: 'Major keys outside, their relative minors inside, one sharp or one '
       + 'flat per step. Pick any key to see what stands next to it and what '
       + 'chords it gives you.',
-    ready: true,
   },
   {
     route: 'rhythms',
@@ -160,7 +150,6 @@ export const REFERENCE_MENU: readonly MenuEntry[] = [
     lede: 'Pick a time signature to hear what it sounds like: the patterns '
       + 'players know by name, and the beat-level figures its bars are built '
       + 'from. Nothing here is generated — this is the stock itself.',
-    ready: true,
   },
 ];
 

@@ -63,7 +63,7 @@ export function Home({ go }: { go: (route: string) => void }) {
         <p className="lede">
           Exercises generated on the spot, following real patterns rather than
           random notes. Answer by naming what you hear, by tapping what you
-          read, or — on intervals so far — by playing it.
+          read, or — on intervals and scales so far — by playing it.
         </p>
       </header>
 
@@ -175,15 +175,6 @@ function MenuCard({ entry, go, progress }: {
   go: (route: string) => void;
   progress?: CardProgress;
 }) {
-  if (!entry.ready) {
-    return (
-      <li className="card card-pending">
-        <span className="card-name">{entry.name}</span>
-        <span className="card-blurb">{entry.blurb}</span>
-        <span className="card-state">not built yet</span>
-      </li>
-    );
-  }
   return (
     <li>
       <button className="card" onClick={() => go(entry.route)}>

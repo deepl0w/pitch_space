@@ -713,6 +713,29 @@ shape changes the notes, so it would reach `items(settings)` and the ruling
 would not cover it. That is 0039's escape clause territory and wants deciding
 before the catalogue is written, not after.
 
+## Sight reading — backlog, and possibly dropped
+
+**Deferred by the user, and not as a sequencing note.** Asked on 18 October:
+sight reading should be "a very late thing, everything else should be in an
+advanced stage", and "might even drop the sight reading feature later". So
+it is not next and not merely later — it is the one item on this roadmap
+whose existence is in question, and it should be read that way rather than
+as a queue position.
+
+**What is already built, so the decision costs nothing to defer.** The
+generation side is finished and tested: `generatePassage` in
+`src/generate/passage.ts` draws melody, harmony and rhythm together, and the
+pitch detector, onset detector and dynamic-programming rhythm alignment
+exist in `src/audio/dsp/`. Nothing outside `generate/` calls
+`generatePassage` — the engine is complete and disconnected. Dropping the
+feature would leave that code with no caller, which is the question to
+answer then rather than now.
+
+**Removed from the interface, 18 October.** The home screen listed it as a
+greyed card marked "not built yet" — the only unbuilt entry ever on it — and
+the README opened "Ear training and sight reading". Both promised something
+that may not come, and both were withdrawn with it.
+
 ## Also planned, not yet designed
 
 - **Guitar tablature** via VexFlow's `TabStave`, for fretted instruments.

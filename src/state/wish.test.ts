@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { nextWish } from './wish';
-import { INTERVALS_MS } from './schedule';
+import { INTERVALS_MS, schedule } from './schedule';
 import { tallyKey, type ItemTally, type TallyKey } from './progressStore';
 import type { ProgressLine } from './line';
 import type { ItemId } from '../exercises/types';
@@ -136,14 +136,17 @@ describe('the queue over histories nobody chose', () => {
    */
   function askedOver(line: ProgressLine, start: Map<TallyKey, ItemTally>, rounds: number) {
     const history = new Map(start);
-    const asked: ItemId[] = [];
+    const asked: { item: ItemId; dueNow: number }[] = [];
     let now = NOW;
     let previous: ItemId | undefined;
 
     for (let i = 0; i < rounds; i += 1) {
+      // How much choice the schedule had at this moment, which is what
+      // decides whether repeating an item was the only honest answer.
+      const dueNow = schedule(line, history, now).filter((row) => row.due).length;
       const wish = nextWish(line, history, now, previous);
       if (wish === undefined) break;
-      asked.push(wish);
+      asked.push({ item: wish, dueNow });
       history.set(tallyKey(line, wish), { seen: 2, correct: 0, lastSeenAt: now, streak: 0 });
       previous = wish;
       now += 60_000;
@@ -159,38 +162,75 @@ describe('the queue over histories nobody chose', () => {
       ]));
 
       // Three times round is room enough; the defect never reached three.
-      const asked = askedOver(line, everythingMissed, size * 3);
-      expect(new Set(asked).size, `a pool of ${size} never got past ${new Set(asked).size} of them`)
-        .toBe(size);
+      const asked = askedOver(line, everythingMissed, size * 3).map((step) => step.item);
+      const reached = new Set(asked).size;
+      expect(reached, `a pool of ${size} never got past ${reached} of them`).toBe(size);
     }
   });
 
+  /**
+   * One generated history: a pool, and a tally for most of its items.
+   *
+   * **Weighted towards misses on purpose.** The tie this is about needs two
+   * items equally overdue at the same moment, which only several streak-0
+   * tallies produce — ordinary histories almost never build one and a
+   * beginner's pool always does, which is why the defect reached a user and
+   * not a test. A generator drawing streaks uniformly makes the shape that
+   * can fail rare, and a sweep over shapes that cannot fail is a sweep over
+   * nothing. Architect's addendum to ADR 0037 makes the same point.
+   */
+  function generated(seed: number) {
+    const next = rng(seed);
+    const line = poolOf(2 + Math.floor(next() * 10));
+    const history = new Map<TallyKey, ItemTally>();
+    for (const item of line.askable) {
+      if (next() < 0.2) continue; // never asked
+      const streak = next() < 0.45 ? 0 : 1 + Math.floor(next() * 4);
+      history.set(tallyKey(line, item), {
+        seen: streak + 1,
+        correct: streak,
+        lastSeenAt: NOW - Math.floor(next() * INTERVALS_MS[INTERVALS_MS.length - 1] * 2),
+        streak,
+      });
+    }
+    return { line, history };
+  }
+
+  const missesIn = (history: Map<TallyKey, ItemTally>) =>
+    [...history.values()].filter((t) => t.streak === 0).length;
+
+  const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1);
+
+  it('generates the shape that can actually fail', () => {
+    /*
+      The corpus, before anything is asked of it. A pool with at most one
+      miss cannot produce the tie, so a run of such histories would pass the
+      case below however the comparator behaved.
+    */
+    const withTwo = SEEDS.filter((seed) => missesIn(generated(seed).history) >= 2).length;
+    expect(withTwo, 'almost no generated history has two items missed at once')
+      .toBeGreaterThan(SEEDS.length / 2);
+  });
+
   it('never asks the same item twice running while another is due', () => {
-    for (let seed = 1; seed <= 40; seed += 1) {
-      const next = rng(seed);
-      const line = poolOf(2 + Math.floor(next() * 10));
-      const history = new Map<TallyKey, ItemTally>();
-      for (const item of line.askable) {
-        // A quarter never asked, the rest seen with a spread of ages and streaks.
-        if (next() < 0.25) continue;
-        const streak = Math.floor(next() * 5);
-        history.set(tallyKey(line, item), {
-          seen: streak + 1,
-          correct: streak,
-          lastSeenAt: NOW - Math.floor(next() * INTERVALS_MS[INTERVALS_MS.length - 1] * 2),
-          streak,
-        });
-      }
+    for (const seed of SEEDS) {
+      const { line, history } = generated(seed);
 
       const asked = askedOver(line, history, 12);
-      const repeats = asked.filter((item, i) => i > 0 && item === asked[i - 1]);
       /*
-        A repeat is allowed only where the pool offered nothing else — the
-        documented fallback, and the one case `nextWish` is explicit about.
-        Anything else is the drill a learner did not choose.
+        A repeat is allowed exactly where the schedule had nothing else due
+        — the fallback `nextWish` is explicit about, since the alternative
+        is a question the schedule has no reason for. Asked of how many
+        were due at that moment rather than of the pool's size, which was
+        this case's own first mistake: recording a miss every round leaves
+        the asked item due again at once, so a pool of five with four
+        resting legitimately repeats one for ever.
       */
-      expect(repeats.length === 0 || line.askable.length === 1,
-        `seed ${seed}: ${JSON.stringify(asked)}`).toBe(true);
+      const unjustified = asked.filter((step, i) =>
+        i > 0 && step.item === asked[i - 1].item && step.dueNow > 1);
+
+      expect(unjustified, `seed ${seed}: ${JSON.stringify(asked.map((a) => a.item))}`)
+        .toEqual([]);
     }
   });
 });

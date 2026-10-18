@@ -511,6 +511,30 @@ helps, because nothing is wrong with it.
   Pitch alone cannot tell a re-attack from a wobble inside one note; loudness
   is the half that discriminates, and it was the half dropped.
 
+  **The same fault against an external source, where the remedy is sharper.**
+  Building the song table, two sources were each accurate about what they
+  described and both gave the wrong answer to the question being asked — and
+  agreed with each other while doing it. An encyclopaedia describes *Eine
+  kleine Nachtmusik* as opening with an ascending Mannheim rocket, which is
+  true of the passage; read as notation the first two notes fall. Every
+  interval chart cites *The Simpsons* for the tritone, which is true of the
+  theme; its score opens on a held chord and then a major third, with the
+  tritone spread across three notes.
+
+  **A chart says an interval is *in* a song. The hint says "the first two
+  notes". Those are different claims**, and the second is not answered by a
+  source that makes the first. So: **prefer the source that states the thing
+  itself over one that states a property of it** — the notation over the
+  contour word, the notes over the interval name. Two descriptions agreeing
+  established that they described the same property, not that the property
+  answered the question, which is this document's own caveat about agreement
+  arriving through music rather than through measurement.
+
+  Verified by the session that built the table, reading the score; this
+  document has not re-read it. Its disposal is in `songs.ts` — the Mozart
+  sits under `interval:P4:down`, and *The Simpsons* is absent with the reason
+  written where someone would otherwise add it back.
+
   **The general form, which the day this was written supplied five instances
   of: a citation that resolves to something real but wrong passes every check
   a dangling one fails.** Three record numbers were cited from memory and each

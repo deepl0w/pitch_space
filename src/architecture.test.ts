@@ -996,6 +996,46 @@ describe("the home screen's claim about how exercises are answered", () => {
     }
   });
 
+  /**
+   * And the same bullet from the other side: no way to hand a file over.
+   *
+   * **Two guesses that fail in opposite directions, which is why both.** The
+   * companion case in `ui/labelling.test.tsx` reads the *labels* of rendered
+   * controls, and misses an export whose button is worded unexpectedly. This
+   * reads the *mechanisms*, and misses an export that prints the history on
+   * screen for manual copying and downloads nothing. Each covers what the
+   * other lets through, and both realistic cases are in range of one of them.
+   *
+   * The names here are the reason it is tighter than a label: an author
+   * chooses what a button says, but nobody can invent a new way for a
+   * browser to hand over a file. All three have no hits in shipped code
+   * today, so this is green and narrow rather than green and vague.
+   * Architect's find.
+   *
+   * **The clipboard is deliberately not in the list.** `DebugColours.tsx`
+   * already writes CSS to it, so a bare ban would need an exception on the
+   * day it was written, and scoping the ban to history would put it back
+   * among the guesses. A predicate that needs an exception immediately is
+   * one to leave out, not one to qualify.
+   */
+  it('reaches for no way to hand a file to the reader, while it says it offers none', () => {
+    const HANDS_A_FILE_OVER = /\bcreateObjectURL\b|\bshowSaveFilePicker\b|\bdownload=/;
+    const shipped = filesUnder(SRC)
+      .filter((file) => !/\.test\.tsx?$/.test(file) && !file.includes(`${sep}testing${sep}`));
+    expect(shipped.length, 'no shipped source to scan').toBeGreaterThan(50);
+
+    const reaching = hits(shipped, HANDS_A_FILE_OVER);
+    const listed = /export and import/i.test(notBuiltSection());
+
+    if (reaching.length > 0) {
+      expect(listed, `${reaching[0]} can hand a file over and the README still calls export unbuilt`)
+        .toBe(false);
+    } else {
+      expect(listed, 'nothing can hand a file over and the README no longer says export is unbuilt')
+        .toBe(true);
+    }
+  });
+
   it('calls the Android build unbuilt exactly while Capacitor is absent', () => {
     const manifest = JSON.parse(readFileSync(join(SRC, '..', 'package.json'), 'utf8')) as {
       dependencies?: Record<string, string>; devDependencies?: Record<string, string>;

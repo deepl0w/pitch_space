@@ -26,6 +26,28 @@
 
 * { box-sizing: border-box; }
 
+/*
+ * The reader's text size, not the browser's guess at one.
+ *
+ * Android inflates text on its own — "font boosting" — scaling type up
+ * inside any block it judges wide for the screen. It fires on a phone and
+ * never in a narrow window on a desktop, which is exactly how it was
+ * reported: the same page with noticeably larger controls on the phone
+ * than at the same width on a PC. Every chip then carries its inflated
+ * label, so a row that fits on one line in testing wraps to two on the
+ * device nobody can emulate it on.
+ *
+ * **This does not stop anyone zooming.** It turns off the automatic
+ * resizing only; pinch-zoom and the reader's own text-size setting both
+ * still work, and `--page-inset` is in `rem` precisely so the layout
+ * follows the second of those. Suppressing zoom would be a different
+ * declaration and is not one this app should make.
+ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--bg);

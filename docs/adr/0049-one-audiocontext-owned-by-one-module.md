@@ -140,3 +140,53 @@ week has been a record correcting the source, and here the source had the
 better argument and the record did not. Checked against 0014 directly rather
 than taken from the comment or from the message reporting it, which is the
 only reason it is quoted here rather than paraphrased.
+
+## Correction, 18 October 2026 — there are two contexts, and this record's title is wrong
+
+**The Decision says "One `AudioContext`, constructed in one module". The app
+constructs two during a take, on purpose, and has done all along.**
+
+`src/audio/capture/microphone.ts:75` does `new AudioContext()`, with its
+reason stated above it and measured: the synth's context exists to play, may
+be suspended, and may run at a rate chosen for output, where capture wants
+whatever the device gives. Reading the wrong rate puts every pitch out by
+147 cents.
+
+**What is true, and what this record did instead.** The guard enforces that
+`new Synth()` appears in one place, which makes the **output** context single.
+This record read that guard and wrote down a larger claim than it supports —
+*one context for the app* rather than *one context behind the synth*. That is
+the third cause of mis-citation catalogued last week, committed here against
+a guard instead of against a record: **crediting a mechanism with a stronger
+claim than it makes.** The title carries the error and ADRs are not rewritten,
+so the index row says so.
+
+**The addendum I added this morning is contradicted by the same line.** It
+inferred from 0014's one-clock decision that *capture cannot mint its own
+context; the only way to share the clock is to be handed it*. Capture does
+mint its own, deliberately, for a reason measured on a real device — which is
+better evidence than my inference. I reached for 0014 as a stronger argument
+and did not read the file it was an argument about.
+
+**`synth.audioContext` has no production reader.** It is documented as *"The
+one `AudioContext`, for the capture layer"* and nothing consumes it;
+`measureLatency.ts:124` says in terms that it uses `prepare` *rather than*
+reading it. So the sharing that comment describes does not happen anywhere.
+
+## What is open, stated rather than resolved
+
+**Whether 0014's one clock is satisfied today.** It is, for the exercises that
+exist, and not for a reason anyone chose: a `PlayedNote`'s `startSeconds` is
+*seconds from the start of listening*, so capture reports take-relative times
+and nothing compares a captured absolute moment with a scheduled one. Two
+unrelated `currentTime` origins cost nothing while nothing spans them.
+
+**That changes the day a performance is aligned against a grid.** Rhythm
+answered by playing is exactly that comparison, and it is the first thing that
+would need the two contexts reconciled — or need the alignment to stay
+entirely inside the take. Whoever builds it should decide which, and this
+record should not pre-empt it from a position of having just been wrong about
+the same subject.
+
+So the honest scope of what is guarded is **one output context**, and the
+second context is deliberate, measured, and currently harmless.

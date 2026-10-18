@@ -148,6 +148,9 @@ function resolveWithin(file: string, specifier: string): string | null {
   return show(join(file, '..', specifier));
 }
 
+/** The build config, read by two describes below. */
+const VITE_CONFIG = readFileSync(join(SRC, '..', 'vite.config.ts'), 'utf8');
+
 describe('ADR 0001 — a pure core', () => {
   // Nothing here may reach for the platform. This is what lets the whole music
   // engine and the whole analysis chain run under vitest on a laptop.
@@ -430,12 +433,33 @@ describe('the npm scripts', () => {
 
   /**
    * A declared dependency that nothing imports is usually harmless, but these
-   * two are load-bearing claims: CLAUDE.md's first paragraph says the app ships
-   * as an installable PWA and as an Android APK. Neither is true while the
-   * plugin is unwired, so the gap should be visible here rather than only in a
-   * document nobody diffs.
+   * two are load-bearing claims: CLAUDE.md's first paragraph says the app
+   * ships as an installable PWA and as an Android APK, and neither is true
+   * while the dependency sits unwired. The gap belongs here rather than only
+   * in a document nobody diffs.
+   *
+   * **The PWA half is real now, so it is a case and no longer a todo.** It
+   * was written as a todo while the plugin sat in `package.json` doing
+   * nothing; wiring it is what `VitePWA(...)` in `vite.config.ts` does. A
+   * todo left standing after its work lands is the failure CLAUDE.md names
+   * in its own terms — a completed task still reading as outstanding, which
+   * sends the next reader looking for work already done.
    */
-  it.todo('wires vite-plugin-pwa into vite.config.ts so the PWA half is real');
+  it('wires the PWA plugin it declares, so the installable half is real', () => {
+    expect(pkg.devDependencies['vite-plugin-pwa'], 'the plugin is not declared at all')
+      .toBeDefined();
+    /*
+      Comments stripped first, and not as a precaution: the config's own
+      prose says the plugin "has been a dependency since the scaffold and was
+      never wired". Asking the raw text whether it mentions the plugin would
+      be answered by the sentence explaining that it does not.
+    */
+    const code = VITE_CONFIG.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    expect(code, 'the plugin is declared but never imported').toContain('vite-plugin-pwa');
+    expect(code, 'the plugin is imported but never applied').toMatch(/VitePWA\s*\(/);
+  });
+
+  /** Still outstanding, and still accurate: neither package is installed. */
   it.todo('installs @capacitor/cli and core so the android scripts can run');
 });
 
@@ -1445,7 +1469,6 @@ describe('the page shell', () => {
  * carries a rule whose entire enforcement is a list not naming something.
  */
 describe('what the service worker precaches', () => {
-  const CONFIG = readFileSync(join(SRC, '..', 'vite.config.ts'), 'utf8');
 
   /**
    * The precache globs, as written.
@@ -1458,7 +1481,7 @@ describe('what the service worker precaches', () => {
    * `path.matchesGlob`, not a regex guessing at brace expansion.
    */
   function precacheGlobs(): string[] {
-    const literal = /globPatterns\s*:\s*\[([^\]]*)\]/.exec(CONFIG);
+    const literal = /globPatterns\s*:\s*\[([^\]]*)\]/.exec(VITE_CONFIG);
     /*
       Absent is the failure, not a pass. Workbox falls back to its own
       default glob with no `globPatterns`, and that default is one of the

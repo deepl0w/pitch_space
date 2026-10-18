@@ -1,4 +1,5 @@
-import { ALL_KEYS, keyId, type Mode } from '../theory/key';
+import { ALL_KEYS, keyId, type Key, type Mode } from '../theory/key';
+import { pitchName } from '../theory/pitch';
 import { SCALE_TYPES } from '../theory/scale';
 import { CHORD_TYPES } from '../theory/chord';
 import { CELLS } from '../generate/cells';
@@ -26,6 +27,8 @@ export type ReferenceRoute = 'intervals' | 'scales' | 'chords' | 'key-chords' | 
 export interface ReferenceTarget {
   readonly route: ReferenceRoute;
   readonly focus: string;
+  /** The note a scale page starts on, when the question had a key. */
+  readonly tonic?: string;
 }
 
 /** The tonic a mode's page opens on, when the item names a mode and no key. */
@@ -38,15 +41,26 @@ function isMode(value: string | undefined): value is Mode {
   return value === 'major' || value === 'minor';
 }
 
+/** The asked key, if it is one and in the item's own mode. */
+function askedIn(asked: string | undefined, mode: Mode): Key | undefined {
+  return ALL_KEYS.find((k) => keyId(k) === asked && k.mode === mode);
+}
+
 /**
  * The reference page for an item, or nothing.
+ *
+ * `asked` is the key the question was in (`ExerciseBase.keyId`). Progression
+ * and degree items name a mode and not a key, so without it their page opens
+ * on C major or A minor; with it, on the key the learner just heard. A second
+ * argument rather than a richer id, because the id is what history is keyed
+ * on and the key is only where to point.
  *
  * Nothing is a real answer and shows no button: a cadence is graded by no
  * exercise yet and has no page, and an id this release does not recognise —
  * history outlives the code that wrote it — should cost a button rather than
  * open a page at an arbitrary default that claims to be about it.
  */
-export function referenceFor(item: ItemId): ReferenceTarget | null {
+export function referenceFor(item: ItemId, asked?: string): ReferenceTarget | null {
   const [kind, ...rest] = item.split(':');
   switch (kind) {
     case 'interval': {
@@ -65,12 +79,17 @@ export function referenceFor(item: ItemId): ReferenceTarget | null {
     case 'degree':
       // A degree is heard against its scale, and the scale page labels each
       // note with the degree it is.
-      return isMode(rest[1]) ? { route: 'scales', focus: MODE_SCALE[rest[1]] } : null;
+      if (!isMode(rest[1])) return null;
+      return {
+        route: 'scales',
+        focus: MODE_SCALE[rest[1]],
+        ...withTonic(askedIn(asked, rest[1])),
+      };
     case 'progression':
-      // The item carries the mode and the numeral and not the key, so the
-      // page opens on the mode's plainest key: every diatonic chord the
-      // numeral could be is on it.
-      return isMode(rest[0]) ? { route: 'key-chords', focus: TONIC_KEY[rest[0]] } : null;
+      // The key the question was in, or the mode's plainest key when the
+      // caller has none: every diatonic chord the numeral could be is on it.
+      if (!isMode(rest[0])) return null;
+      return { route: 'key-chords', focus: keyIdOf(askedIn(asked, rest[0])) ?? TONIC_KEY[rest[0]] };
     case 'key':
       return ALL_KEYS.some((k) => keyId(k) === rest.join(':'))
         ? { route: 'circle', focus: rest.join(':') } : null;
@@ -86,4 +105,12 @@ export function referenceFor(item: ItemId): ReferenceTarget | null {
     default:
       return null;
   }
+}
+
+function withTonic(key: Key | undefined): { tonic?: string } {
+  return key ? { tonic: pitchName(key.tonic, false) } : {};
+}
+
+function keyIdOf(key: Key | undefined): string | undefined {
+  return key ? keyId(key) : undefined;
 }

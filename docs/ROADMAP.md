@@ -570,11 +570,11 @@ asks every item every exercise can grade at its widest settings — an item
 with no page fails there rather than quietly showing no button. The intervals
 page is new and lists the same songs a wrong answer offers two of.
 
-What is still coarser than it could be: a progression item carries its mode
-and numeral and not the key it was asked in, so it opens *Chords in a key* on
-C major or A minor rather than on the question's key, and nothing on that
-page singles out the numeral. A scale degree opens the major or natural minor
-scale on C for the same reason.
+A progression or degree item names a mode and not a key — a tonic in the id
+would split one skill's history twelve ways — so the key the question was in
+travels beside it as `ExerciseBase.keyId`, and the page opens on that key.
+What is still coarser than it could be: nothing on *Chords in a key* singles
+out the numeral that was asked.
 
 ## A wrong answer that points at a song you know
 

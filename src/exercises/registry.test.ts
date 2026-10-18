@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { optionIds, widestSettings } from '../testing/settingsSpace';
+import { applyValue, optionIds, valuesOf, widestSettings, type AnyField } from '../testing/settingsSpace';
 import { EXERCISE_FAMILIES, EXERCISE_TYPES, exerciseTypeOr, findExerciseType } from './registry';
 import { RHYTHM_EXERCISE_ID as RHYTHM_ID } from './rhythm-id/rhythms';
 import { itemLabel } from './itemLabel';
@@ -267,6 +267,56 @@ describe('every exercise type’s generator', () => {
         expect(d.generate(spec)).toEqual(d.generate(spec));
       }
     });
+  });
+
+  /**
+   * And under every setting, not only the defaults.
+   *
+   * **The case above holds the claim at one point in the settings space.**
+   * ADR 0002's promise is that an exercise a user reports by its seed
+   * reproduces exactly — and a user who reports a seed is almost never on the
+   * defaults, because changing the settings is what the app is for. A
+   * generator that reads something unstable only on a path some option opens
+   * would satisfy the case above and fail the person reporting the bug.
+   *
+   * This is the shape `settingsSpace.ts` was written about: "three defects in
+   * two days had one shape: a sweep holding a user-facing control at its
+   * default". The determinism sweep was still one of them, so it is derived
+   * from the schema here too, and a field added tomorrow is swept tomorrow.
+   *
+   * One field moved at a time rather than the cross product, as everywhere
+   * else that walks this space: the combinatorics are not affordable and a
+   * generator that is stable on every axis alone is not where the doubt is.
+   */
+  it('is reproducible under every setting, not only the defaults', () => {
+    each((type) => {
+      const base = type.settings.coerce(type.settings.defaults);
+      for (const field of type.settings.fields as AnyField[]) {
+        for (const value of valuesOf(field, base)) {
+          const settings = type.settings.coerce(applyValue(field, base, value));
+          for (const seed of SEEDS) {
+            const spec = { seed, settings };
+            expect(type.generate(spec), `${type.id} with ${field.id}=${JSON.stringify(value)}, seed ${seed}`)
+              .toEqual(type.generate(spec));
+          }
+        }
+      }
+    });
+  });
+
+  it('is asking that of more than one setting per type', () => {
+    /*
+      The population. A schema whose fields stopped being enumerated would
+      make the sweep above pass by walking nothing, which is the failure this
+      file has had before in other sweeps.
+    */
+    const swept = EXERCISE_TYPES.map((type) => {
+      const base = type.settings.coerce(type.settings.defaults);
+      return (type.settings.fields as AnyField[])
+        .reduce((n, field) => n + valuesOf(field, base).length, 0);
+    });
+    expect(Math.min(...swept), 'some exercise type has no settings value to sweep')
+      .toBeGreaterThan(1);
   });
 
   it('accepts every seed the app can mint', () => {

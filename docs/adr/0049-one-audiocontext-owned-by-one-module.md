@@ -109,3 +109,34 @@ can open — written by the session that had spent the day cataloguing exactly
 that. The remedy this document arrived at was *verify a citation against what
 it points at, not against where you got it*, and the author applied it to
 0005 and not to the sentence explaining 0005.
+
+## Addendum, 18 October 2026 — a better reason, which the source found first
+
+This record argues for one context from cleanup: a second produces scheduled
+notes `stopSound` cannot reach, with the drift incident as evidence. That is
+true and it is the weaker half.
+
+**[0014](0014-one-clock-and-the-latency-nobody-can-measure.md) has the
+stronger one.** Its Decision reads: *"**One clock: `AudioContext.currentTime`.**
+Every time that is compared with another — scheduled playback, the expected
+grid, a captured attack, the moment an item became answerable — is expressed
+in it."*
+
+**The step from that to one context is an inference and is this record's, not
+0014's.** 0014 says one clock and names which; it does not say "one
+`AudioContext`" anywhere. But `currentTime` is a property of a particular
+context, and two contexts have two unrelated origins — so a captured attack
+and a scheduled note can only be compared if they are timed by the same one.
+**Capture therefore cannot mint its own; the only way to share the clock is to
+be handed the context.**
+
+That is a correctness argument rather than a tidiness one, and it reaches
+further: cleanup explains why a second context is a nuisance, and the clock
+explains why a second context makes every judged comparison meaningless.
+
+**Worth saying where it came from.** The reasoning arrived in a source comment
+in `audio/output/synth.ts` and not in this record — the usual direction this
+week has been a record correcting the source, and here the source had the
+better argument and the record did not. Checked against 0014 directly rather
+than taken from the comment or from the message reporting it, which is the
+only reason it is quoted here rather than paraphrased.

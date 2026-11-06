@@ -360,6 +360,26 @@ The intervals page the second of these needed did not exist and now does, which
 is the ordinary shape of this: a reference button is only as good as the pages
 it can point at.
 
+**The button opens the page as a layer over the question, not as a route**,
+and that is forced rather than chosen. The live round and the session tally
+are state inside the practice screen, so navigating away and back gives a new
+question and a count of zero — the same lifetime problem
+[ADR 0015](adr/0015-state-keyed-to-the-exercise-type-must-not-outlive-it.md)
+settles for switching exercise types, met from the other side. A learner
+checking what a minor sixth is has not finished answering.
+
+**A progression or degree item names a mode and not a key**, because a tonic
+in the id would split one skill's history twelve ways. So the key the question
+was asked in travels beside the item as `ExerciseBase.keyId`, and the page
+opens on it. The look-up takes it as a required argument that may be
+undefined, rather than an optional one: a caller must say which it means, and
+forgetting stops compiling.
+
+Coverage is a sweep rather than a hope, which is what keying on ids bought:
+`reference.test.ts` asks every item every exercise can grade at its widest
+settings, so an item with no page fails there instead of quietly showing no
+button.
+
 ## What a reference page does
 
 Six pages — intervals, scales, chords, chords in a key, the circle of fifths

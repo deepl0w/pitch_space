@@ -22,17 +22,25 @@ it ships or is dropped.
   - [Practising on a song you chose](#practising-on-a-song-you-chose)
   - [A workbench for the corpus, once there is one](#a-workbench-for-the-corpus-once-there-is-one)
   - [Recordings to go with them](#recordings-to-go-with-them)
+- [A practice count that is believable](#a-practice-count-that-is-believable)
 - [A settings screen](#a-settings-screen)
 - [Taking your progress with you](#taking-your-progress-with-you)
 - [Bringing your own material](#bringing-your-own-material)
 - [Instruments that play like themselves](#instruments-that-play-like-themselves)
 - [A wrong answer that points at a song you know](#a-wrong-answer-that-points-at-a-song-you-know)
 - [A way from the answer to the reference](#a-way-from-the-answer-to-the-reference)
-  - [Built, 19 October](#built-19-october)
+  - [What is left, now the button exists](#what-is-left-now-the-button-exists)
+- [Sight reading — backlog, and possibly dropped](#sight-reading--backlog-and-possibly-dropped)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
 [`roadmap-readiness.md`](roadmap-readiness.md) reviews this plan against the
-code as it stands and lists six places the two do not yet meet.
+code as it stands, gap by gap, and says of each whether it is closed. The
+count is not repeated here, because it moves whenever a gap is added or
+closed and this sentence would not:
+
+```bash
+grep -c '^## G' docs/roadmap-readiness.md; grep -c '^\*\*Closed' docs/roadmap-readiness.md
+```
 
 ## Spaced repetition
 
@@ -586,22 +594,16 @@ From the user: after answering a question there should be a small button
 taking you to information on **that specific thing** in the theory reference —
 which also needed an intervals page, because there was not one.
 
-### Built, 19 October
+### What is left, now the button exists
 
-Each item an answer judged has a *Look it up* button in the readout, and it
-opens that item's reference page **as a layer over the question**, not as a
-route: the round and the session tally are state inside the practice screen,
-so navigating away and back gave a new question and a count of zero. The map
-is `src/ui/reference.ts`, keyed on item ids like the song table, and its test
-asks every item every exercise can grade at its widest settings — an item
-with no page fails there rather than quietly showing no button. The intervals
-page is new and lists the same songs a wrong answer offers two of.
+The button shipped on 19 October and is therefore described in
+[`ARCHITECTURE.md`](ARCHITECTURE.md#two-tables-keyed-on-the-item-id) rather
+than here.
 
-A progression or degree item names a mode and not a key — a tonic in the id
-would split one skill's history twelve ways — so the key the question was in
-travels beside it as `ExerciseBase.keyId`, and the page opens on that key.
-What is still coarser than it could be: nothing on *Chords in a key* singles
-out the numeral that was asked.
+What is still planned: **nothing on *Chords in a key* singles out the numeral
+that was asked.** The page opens on the right key and leaves the learner to
+find the chord on it, which is the coarsest remaining step between an answer
+and the thing that explains it.
 
 ## A wrong answer that points at a song you know
 

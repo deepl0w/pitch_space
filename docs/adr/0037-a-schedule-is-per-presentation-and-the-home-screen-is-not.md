@@ -462,3 +462,35 @@ about, which the 6 October wording did not anticipate.
 Adopting FSRS whole is not among them. Its weights come from maximum-likelihood
 fitting over a large review corpus, and this app has one learner's log in their
 own browser with no server to fit anything on.
+
+## Correction, 6 November 2026 — the external half belongs in `docs/research/`
+
+Appended rather than edited into the section above, which is the rule for a
+published record, and the duplication is the reason this has to say which copy
+is authoritative.
+
+The addendum above carries its published evidence inline and **with no sources
+attached**. This project has a directory for exactly that — `docs/research/`,
+one dated file per enquiry, "so that a record can cite something other than
+general knowledge" — and its own README says a record resting on folklore is a
+record waiting for it. Quoting 0.25 for a four-option item with nothing to
+follow is the folklore shape, however true the figure.
+
+So the external half now lives in
+[`2026-11-06-guessing-and-the-answer-pool.md`](../research/2026-11-06-guessing-and-the-answer-pool.md),
+with its sources and with two qualifications the summary above rounded off:
+`c` is estimated per item rather than fixed at `1/k`, and the FSRS citation is
+a forum explanation rather than a paper. **Where the two differ, the research
+note is right and this record is the summary.**
+
+The section above remains correct about this repository — the floor coming
+from `choices` and not from `askable`, direction going ungraded on both answer
+paths, a played answer having no `k` — and those are facts about the tree,
+which is this record's own business.
+
+**How it happened is worth one line, because the remedy is a habit rather than
+a rule.** The research was done without looking for
+[`2026-10-07-spaced-repetition.md`](../research/2026-10-07-spaced-repetition.md),
+which already covered FSRS and had already recorded that this project's ladder
+has no per-item difficulty. Some of a search was spent re-finding it. The
+directory is small, tracked, and indexed; reading it costs less than one query.

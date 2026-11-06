@@ -33,11 +33,13 @@ Six kinds of practice, each asked by ear or off the staff.
 | **Rhythm** | Read or hear a rhythm, then play it back in time. The one answer that is a performance rather than a choice. |
 
 There are also reference screens — every interval with songs that have
-it, the circle of fifths, every scale in every key, the rhythm figures the
+it, every scale in every key, every chord quality on any root, the chords
+a key is built from, the circle of fifths, and the rhythm figures the
 generator builds from — for looking things up rather than being tested on
-them. Intervals, scales and chords can also be drawn on a piano keyboard or
-a guitar neck beside the stave. After an answer, each thing it judged has a button that opens its
-page over the question, so looking it up does not cost the question.
+them. Intervals, scales, chords and chords in a key can also be drawn on a
+piano keyboard or a guitar neck beside the stave. After an answer, each
+thing it judged has a button that opens its page over the question, so
+looking it up does not cost the question.
 
 **What is asked moves, so the skill transfers.** Scales, chords and
 degrees are asked in every key, and the answer never names the root: a

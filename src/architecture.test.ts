@@ -1828,3 +1828,74 @@ describe('roots a test mounts', () => {
       .toBeGreaterThan(10);
   });
 });
+
+/**
+ * A link to a heading in the same document finds one.
+ *
+ * **Found by committing the defect it catches.** A replacement whose anchor
+ * text ended at `## Persistence` and whose new text did not re-add it ate
+ * the heading; its body became the tail of the section above, and the
+ * contents list went on linking `[Persistence](#persistence)` at nothing.
+ * Three weeks, the author's own re-reads, a review and a merge, and the
+ * thing that would have said so in a second was a check nobody had pointed
+ * at it. Architect's find and architect's argument.
+ *
+ * Every tracked document, not the ones anyone remembers having a contents
+ * block — the same reason the README checks read the menus rather than a
+ * list of card names.
+ *
+ * **The slug rule is GitHub's and the trap is worth naming.** Each space
+ * becomes its own hyphen; whitespace is not collapsed. A heading like
+ * `## G1 — the latency signal` loses the em dash to punctuation-stripping
+ * and keeps two spaces, so its anchor is `#g1--the-latency-signal`. A
+ * slugger that collapsed them would report all seven of
+ * `roadmap-readiness.md`'s own links as broken, which is how a guard gets
+ * deleted rather than obeyed.
+ */
+describe('a document pointing inside itself', () => {
+  /** GitHub's heading anchor, including its repeat suffixes. */
+  function anchorsOf(text: string): Set<string> {
+    const slug = (heading: string) => heading
+      .replace(/`([^`]*)`/g, '$1')
+      .replace(/\*\*?([^*]*)\*\*?/g, '$1')
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .toLowerCase()
+      .replace(/[^\w\- ]/g, '')
+      .split(' ')
+      .join('-');
+
+    const found = new Set<string>();
+    const seen = new Map<string, number>();
+    for (const match of text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
+      const base = slug(match[1]);
+      const before = seen.get(base) ?? 0;
+      seen.set(base, before + 1);
+      // A heading repeated in one document gets `-1`, `-2`, … after the first.
+      found.add(before === 0 ? base : `${base}-${before}`);
+    }
+    return found;
+  }
+
+  it('is asked of every document, with headings in them', () => {
+    const docs = everyDocument();
+    expect(docs.length, 'no documents found to check').toBeGreaterThan(20);
+    const withHeadings = docs
+      .filter((file) => anchorsOf(readFileSync(file, 'utf8')).size > 0);
+    expect(withHeadings.length, 'no document had a heading, so the sweep read nothing')
+      .toBeGreaterThan(20);
+  });
+
+  it('finds the heading it points at', () => {
+    const dangling = everyDocument().flatMap((file) => {
+      const text = readFileSync(file, 'utf8');
+      const anchors = anchorsOf(text);
+      return [...text.matchAll(/\]\(#([^)]+)\)/g)]
+        .map((link) => link[1])
+        .filter((anchor) => !anchors.has(anchor))
+        .map((anchor) => `${show(file)} links #${anchor}, which is no heading in it`);
+    });
+
+    expect([...new Set(dangling)], 'a contents entry pointing at a heading that is gone')
+      .toEqual([]);
+  });
+});

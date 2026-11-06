@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { notBuiltSection } from '../testing/readme';
 import { readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -405,5 +406,50 @@ describe('a control a pointer is not required for', () => {
       .map((c) => `${file}: ${accessibleName(c) || c.tagName.toLowerCase()}`));
     expect(hidden, 'a control inside an element that takes it out of the tree')
       .toEqual([]);
+  });
+});
+
+/**
+ * The one "not built yet" claim that only a rendered screen can settle.
+ *
+ * **An absence has no home to enumerate.** The other bullets are bound in
+ * `architecture.test.ts` to things that exist — the menus a card must appear
+ * in, the dependency Capacitor would be. Export and import have neither:
+ * the code that would falsify them has not been written, so a predicate over
+ * identifiers is a guess at what somebody will one day call it. What does
+ * exist is the place it would have to be offered, which is a control on a
+ * screen, and these screens are already mounted here for another reason.
+ *
+ * **What this cannot see, said plainly.** The surface is real but the
+ * wording is still a guess: a control labelled "Save a copy" would pass. It
+ * is worth having anyway because a miss leaves exactly today's situation —
+ * the claim unwatched — while a hit catches the likely spellings. It is not
+ * worth trusting as proof that no export exists.
+ */
+describe('what the README says is not built', () => {
+  /** How a control offering to take your history away would most likely read. */
+  const TAKES_HISTORY_AWAY = /\b(export|import|download|back ?up|restore)\b/i;
+
+  it('offers no export or import, while it says it does not', () => {
+    const offered = Object.entries(SCREENS).flatMap(([file, screen]) =>
+      controlsIn(render(screen()))
+        .map((control) => ({ file, name: `${control.textContent ?? ''} ${control.getAttribute('aria-label') ?? ''}`.trim() }))
+        .filter(({ name }) => TAKES_HISTORY_AWAY.test(name)));
+
+    const listed = /export and import/i.test(notBuiltSection());
+
+    if (offered.length > 0) {
+      expect(listed, `${offered[0].file} offers "${offered[0].name}" and the README still calls it unbuilt`)
+        .toBe(false);
+    } else {
+      expect(listed, 'nothing offers export or import and the README no longer says so').toBe(true);
+    }
+  });
+
+  it('is asking it of the screens, not of an empty list', () => {
+    const controls = Object.values(SCREENS)
+      .reduce((n, screen) => n + controlsIn(render(screen())).length, 0);
+    expect(controls, 'no screen rendered a control, so the sweep asked nothing')
+      .toBeGreaterThan(20);
   });
 });

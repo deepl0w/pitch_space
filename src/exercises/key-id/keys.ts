@@ -100,7 +100,7 @@ export const KEY_DEFAULTS: KeySettings = {
 };
 
 /** Keys askable within the limit, in circle-of-fifths order. */
-export function keyPool(settings: KeySettings, mode: Mode): Key[] {
+function keyPool(settings: KeySettings, mode: Mode): Key[] {
   return ALL_KEYS
     .filter((k) => k.mode === mode && Math.abs(k.accidentals) <= settings.maxAccidentals)
     .sort((a, b) => a.accidentals - b.accidentals);

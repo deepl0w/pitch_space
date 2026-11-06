@@ -72,11 +72,6 @@ export function accidentalGlyph(alter: number): string {
   return alter < 0 ? 'b'.repeat(-alter) : '#'.repeat(alter);
 }
 
-/** The common accidentals, derived so the table and the glyphs cannot disagree. */
-export const ACCIDENTAL_GLYPHS: Record<number, string> = Object.fromEntries(
-  [-2, -1, 0, 1, 2].map((a) => [a, accidentalGlyph(a)]),
-);
-
 export function pitchName(p: Pitch, withOctave = true): string {
   return LETTER_NAMES[p.letter] + accidentalGlyph(p.alter) + (withOctave ? p.octave : '');
 }

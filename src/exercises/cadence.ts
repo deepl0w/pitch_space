@@ -1,7 +1,5 @@
 import { midiOf, type Pitch } from '../theory/pitch';
-import { establishingCadence } from '../generate/tonicize';
 import { schedule } from '../audio/output/schedule';
-import type { Key } from '../theory/key';
 import type { Voice } from '../audio/output/synth';
 
 /**
@@ -47,14 +45,4 @@ export function chordVoices(
     chords.map((pitches) => ({ midis: pitches.map(midiOf) })),
     { eventGap: timing.eventGap, rollGap: 0, hold: timing.hold },
   );
-}
-
-/** The I–IV–V–I that establishes a key, as voices. */
-export function cadenceVoices(key: Key, timing: CadenceTiming = ESTABLISHING): Voice[] {
-  return chordVoices(establishingCadence(key), timing);
-}
-
-/** Where the cadence ends, so a caller can schedule a question after it. */
-export function cadenceEndsAt(key: Key, timing: CadenceTiming = ESTABLISHING): number {
-  return establishingCadence(key).length * timing.eventGap;
 }

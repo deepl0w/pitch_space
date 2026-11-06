@@ -1,5 +1,5 @@
 import {
-  type NoteValue, type TimeSignature, beamSpanIndex, metricWeight, beatLevel,
+  type NoteValue, type TimeSignature, beamSpanIndex,
 } from '../theory/meter';
 import { type Rng, weightedPick } from '../theory/rng';
 import {
@@ -316,11 +316,4 @@ export function barFromCells(
     events: layOut(placements, ts, startTick, () => (tupletCount += 1)),
     cellIds: [...cellIds],
   };
-}
-
-/** Strong-beat positions a melody generator should target, for convenience. */
-export function strongBeats(ts: TimeSignature, bar: RhythmBar): RhythmEvent[] {
-  return bar.events.filter(
-    (e) => !e.isRest && metricWeight(ts, e.startTick - bar.startTick) >= beatLevel(ts),
-  );
 }

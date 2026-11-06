@@ -111,16 +111,40 @@ describe('settings over a running exercise', () => {
   });
 
   it('is asked of a handle that moves when the round really changes', () => {
-    // The sensitivity control for the case above. Without it, a `.prompt`
-    // that rendered the same markup for every round would make "unchanged"
-    // true of a round that had been thrown away and replaced.
+    /*
+      The sensitivity control for the case above. Without it, a `.prompt`
+      that rendered the same markup for every round would make "unchanged"
+      true of a round that had been thrown away and replaced.
+
+      **Drawn until it differs, because one draw is a coin.** This pressed
+      Skip once and asserted the markup had moved. A round takes a fresh
+      `newSeed()`, so two consecutive draws can land on the same interval
+      from the same root and render identically — the control then failed
+      while nothing was wrong. It did, on 6 November: red under one
+      `fleet.sh check` and green in the commit hook's run forty seconds
+      later, which is the shape that costs an afternoon to chase. The
+      evidence survived only because a failing check keeps its own log.
+
+      So the bound is the assertion. Any one round matching is ordinary;
+      eight in a row is the defect this exists to catch — markup that does
+      not move — and failing at the bound says exactly that rather than
+      "one round looks like the next", which was true and meant nothing.
+    */
     const app = appAt('interval-id');
     app.press('Reading');
     app.press('Start');
     const first = app.question();
     expect(first, 'nothing was drawn, so nothing is being compared').not.toBeNull();
-    app.press('Skip');
-    expect(app.question(), 'one round looks exactly like the next').not.toBe(first);
+
+    const TRIES = 8;
+    let moved = false;
+    for (let i = 0; i < TRIES && !moved; i += 1) {
+      app.press('Skip');
+      moved = app.question() !== first;
+    }
+
+    expect(moved, `${TRIES} rounds in a row drew the same markup, so this is not a `
+      + 'handle that moves when the round changes').toBe(true);
   });
 
   it('opens a layer rather than navigating, everywhere it is offered', () => {

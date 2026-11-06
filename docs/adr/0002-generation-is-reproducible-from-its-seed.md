@@ -157,3 +157,60 @@ the same reason the screen does.
 `aims: 'none'` — so for those a seed remains sufficient. That is a difference
 between exercises in what reproducing one requires, which nothing in this
 record anticipated and which is cheap only while the boundary is `aims`.
+
+## Correction, 6 November 2026 — "Where the entropy is allowed in" describes a function that no longer exists
+
+That subsection is not merely stale. **It argues for the opposite of what the
+project then did, in the present tense, with a link that resolves.** Found by
+tester, while measuring a proposed guard rather than building it.
+
+**What it asserts.** That `randomSeed()` calls `Math.random`, lives in
+`src/theory/rng.ts`, and is the only function allowed to mint a seed; that
+`CLAUDE.md`'s literal rule — nothing in `theory/` or `generate/` may call
+`Math.random` — is "already false" because of it; that deleting the function
+"would not improve anything"; and that the enforcing test asserts
+`randomSeed` is the *sole* caller "rather than that there are none".
+
+**What is true.** `rng.ts` exports `makeRng`, `rngInt`, `pick`, `chance`,
+`weightedPick`, `shuffled` and `sample`, and no `randomSeed`. The only
+occurrence of that name anywhere in `src` is a comment in
+`architecture.test.ts` explaining its removal. Minting is `newSeed()` in
+[`src/exercises/seed.ts`](../../src/exercises/seed.ts), outside the core, which
+is [0005](0005-seeds-are-minted-outside-the-core.md)'s decision. The test
+asserts `lets no entropy into the core at all` — zero hits, the exact
+assertion this record says would be the wrong one.
+
+So `CLAUDE.md`'s rule is now literally true, and the carve-out this section
+argues for is unnecessary rather than merely unused. **The reasoning was sound
+and the project took the other branch**: this record proposed redrawing the
+rule around the musical *choice* so the call could stay; 0005 moved the call
+out instead, which made the simpler rule correct. Both close the gap; only one
+happened.
+
+**Why nothing caught it, which is the part worth keeping.** The link
+`[randomSeed()](../../src/theory/rng.ts)` resolves, because `rng.ts` still
+exists — so the link scan passes it. The name is plausible for the file it
+points at, so a reader has no reason to doubt it. That is the
+wrong-but-real citation this project has catalogued, one layer out: not a path
+that resolves to the wrong file, but **a real file cited for a symbol it does
+not contain.**
+
+And the index knew. `docs/adr/README.md` carries `# 0002, narrowed by 0005 —
+no entropy reaches the core at all` as a standing command, and has since the
+narrowing. The index was updated and the record it indexes was not, which is
+*say a thing in one place* failing in the direction that looks safest — the
+summary current, the source stale, and the summary is not what a reader of
+0002 opens.
+
+**And 0005 predicted this, in writing, a month before it happened.** Its
+closing paragraph justifies existing at all on exactly this ground: "a reader
+who finds 0002 alone would otherwise go looking for a `randomSeed` that no
+longer exists." The hazard was named precisely and the remedy chosen for it —
+*write the narrowing record* — is the one remedy that cannot reach the reader
+it describes, because that reader is by definition the one who did not open
+0005. What was needed was a pointer **here**, in the record being read, which
+is what this section now is. A record that correctly anticipates being
+misread, and leaves the correction somewhere the misreader will not go, is the
+third tier of the same hierarchy `IN-FLIGHT.md` sets out for questions: a
+check beats a document, a document beats an entry that relies on somebody
+arriving.

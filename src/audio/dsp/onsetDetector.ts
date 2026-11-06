@@ -79,7 +79,7 @@ export interface OnsetAnalysis {
 export const ONSET_FRAME_SECONDS = 1024 / 44_100;
 
 /** A quarter of the frame: 256 samples, 5.8 ms, at 44.1 kHz. */
-export const ONSET_HOP_FRACTION = 4;
+const ONSET_HOP_FRACTION = 4;
 
 /**
  * Two attacks closer together than this are the same attack.

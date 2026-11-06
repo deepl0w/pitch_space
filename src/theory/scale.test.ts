@@ -171,6 +171,30 @@ describe('the form a scale comes down in', () => {
     expect(uneven, 'a stave that lights notes by index cannot line these up').toEqual([]);
   });
 
+  it('lights the note it sounds, except where the app has accepted it does not', () => {
+    /*
+      The stave draws the ascending form and the descending play reverses an
+      index against it, so event `i` lights the ascending note at the same
+      degree. That is only honest where the two forms agree note for note.
+
+      Melodic minor is the one place they do not, and the app accepts it:
+      F♯ is lit while F sounds, coming down. Pinned as the *only* exception
+      rather than merely allowed, because a second scale with its own
+      descending form would spread that mismatch silently — the lit note
+      would simply be wrong somewhere new, with nothing on screen to say so
+      and no test to notice. Widening this list is a decision, not a detail.
+    */
+    const root = parsePitch('C4');
+    const differing = SCALE_TYPES.filter((type) => {
+      const up = spellScale(root, type);
+      const down = spellScale(root, descendingType(type));
+      return up.some((pitch, i) => midiOf(pitch) !== midiOf(down[i]));
+    }).map((type) => type.id);
+
+    expect(differing, 'a scale whose descending form the stave would light wrongly')
+      .toEqual(['melodic_minor']);
+  });
+
   it('still comes down differently where a scale really does', () => {
     /*
       The other side, so the property above cannot be met by making every

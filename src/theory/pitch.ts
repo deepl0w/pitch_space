@@ -20,7 +20,7 @@ export interface Pitch {
 
 export const LETTER_NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'] as const;
 /** Semitone offset of each letter above C */
-export const LETTER_SEMITONES = [0, 2, 4, 5, 7, 9, 11] as const;
+const LETTER_SEMITONES = [0, 2, 4, 5, 7, 9, 11] as const;
 
 export function pitch(letter: Letter, alter: number, octave: number): Pitch {
   return { letter, alter, octave };

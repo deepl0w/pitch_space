@@ -73,7 +73,7 @@ export const DEVICE_OPEN_SECONDS = 0.2;
  * whose attack has no margin at all, and the margin is what the warm path
  * spends 60 ms on for the same reason.
  */
-export const CLOCKLESS_HEADROOM = DEVICE_OPEN_SECONDS + 0.05;
+const CLOCKLESS_HEADROOM = DEVICE_OPEN_SECONDS + 0.05;
 
 /**
  * Give the output stream something to carry before the first note needs it.

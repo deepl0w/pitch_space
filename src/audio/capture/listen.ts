@@ -272,7 +272,7 @@ export interface ListenUntilOptions extends ListenForOptions {
  * over the whole take so far, is a small fraction of the interval it runs
  * in.
  */
-export const POLL_SECONDS = 0.25;
+const POLL_SECONDS = 0.25;
 
 export interface ListenForOptions extends ListenOptions {
   /** How to pass the time. Defaults to a real timer. */

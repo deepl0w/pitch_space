@@ -56,7 +56,7 @@ export interface ScoreSpec {
 }
 
 /** The one default. Score passes `height` through, so it must not have its own. */
-export const DEFAULT_SCORE_HEIGHT = 170;
+const DEFAULT_SCORE_HEIGHT = 170;
 
 /** Where one note ended up, so something can be drawn over it. */
 export interface NotePlacement {

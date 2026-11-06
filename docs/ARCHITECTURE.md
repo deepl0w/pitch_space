@@ -18,6 +18,7 @@ file is what is true today.
   - [Presentation](#presentation)
 - [What an attempt records](#what-an-attempt-records)
 - [Two tables keyed on the item id](#two-tables-keyed-on-the-item-id)
+- [What a reference page does](#what-a-reference-page-does)
 - [Persistence](#persistence)
 - [The analysis chain](#the-analysis-chain)
 - [Generation](#generation)
@@ -358,6 +359,44 @@ a page that claims to be about it.
 The intervals page the second of these needed did not exist and now does, which
 is the ordinary shape of this: a reference button is only as good as the pages
 it can point at.
+
+## What a reference page does
+
+Six pages — intervals, scales, chords, chords in a key, the circle of fifths
+and rhythms — and they are not exercises: nothing is asked, nothing is graded,
+nothing reaches the attempt log. They show a thing and sound it. Two
+capabilities arrived on them in the autumn, and both are described here rather
+than left to be inferred from four screens.
+
+**A keyboard or a guitar neck beside the stave, and which question the drawing
+answers is a required argument.** `InstrumentDiagram` takes
+`marking: 'map' | 'sounding'`. A map draws every position of each pitch class,
+because on a guitar a scale is a pattern across the neck and a chord has many
+shapes, so fixing one octave would choose a fingering for the reader. A
+distance marks only where the two notes actually sound and dims the rest —
+intervals need that, because by pitch class an octave is the same six dots as
+a unison. Required rather than defaulted, so the next page has to answer the
+question instead of inheriting an answer meant for a different one.
+
+**Playback is followed on the stave, timed from the audio clock.**
+`Synth.playhead()` says where on the output clock the passage was laid, and
+`eventStarts` gives each event's start from the same arithmetic that scheduled
+it, so the drawing and the sound read one clock rather than two that agree for
+a while. The map runs from an event to a note index rather than from a time to
+a tick, which is what lets a descending scale walk the ascending stave from the
+right and an arpeggio stay on its one chord.
+
+```bash
+grep -rln 'usePlayAlong' src/ui/screens/*.tsx
+grep -rn 'marking=' src/ui/screens/*.tsx
+```
+
+Neither reaches an exercise. No sound box follows, and the rhythm prompt's
+cursor runs on `performance.now()` for the reason its own file gives.
+Following a *performance* note by note is the half that matters more, and
+[`ROADMAP.md`](ROADMAP.md) has what it would still take.
+
+## Persistence
 
 Split by what the data is, not by convenience
 ([ADR 0006](adr/0006-settings-in-localstorage-progress-in-indexeddb.md)):

@@ -127,6 +127,27 @@ migration.
 > It matters beyond tidiness — this gap had been picked up as the next piece
 > of work on the strength of the ordering below, which was wrong.
 
+> **Still open, 6 November, and sharper than when it was written.** The
+> commands above return exactly what they returned on 9 October, so nothing
+> here has rotted — but what they mean has changed. On 18 October the
+> scheduler acquired its first caller: [`wish.ts`](../src/state/wish.ts) aims
+> every question at what the ladder says is due. Before that, "the scheduler
+> cannot see the signal" described a module nothing called. Now **every
+> question a learner is asked is chosen by something blind to hesitation**,
+> which is the roadmap's stated differentiator not happening, continuously,
+> rather than pending.
+>
+> And the constraint below — the one the closing section says not to defer —
+> **was met, by the first caller not using latency at all.** That is a real
+> answer to "whatever the scheduler does with latency has to work when it is
+> absent", arrived at by omission rather than by decision, and nobody wrote it
+> down as the answer. It is also the cheapest one available and may well be
+> right; what it is not is a thing anybody chose. See
+> [0037](adr/0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md)'s
+> addenda of 19 October and 6 November for the same ladder's other blind spot,
+> which is that a streak cannot tell a correct answer out of thirteen from one
+> out of two.
+
 **And the signal's source is unreliable, which the roadmap does not know.**
 [0018](adr/0018-uncalibrated-is-not-zero.md) withholds `latencyMs` when no
 calibration is in force; [0025](adr/0025-agreement-among-trials-that-share-an-error-is-not-confidence.md)

@@ -977,6 +977,62 @@ describe("the home screen's claim about how exercises are answered", () => {
     expect(menuEntries().length, 'the menus came back empty').toBeGreaterThan(5);
   });
 
+  /**
+   * The README names every reference page that draws an instrument diagram.
+   *
+   * **A list in prose beside a list in code, with nothing tying them** —
+   * which is this section's recurring failure in its other form. The
+   * diagrams arrived on four pages and the sentence named three, so a
+   * reader was told the chords-in-a-key page had none.
+   *
+   * Bindable because every step has a vocabulary somebody else fixed: the
+   * route comes from `ReferenceOverlay`'s own `PAGES` map, the screen file
+   * from that file's imports, and the page's name from `REFERENCE_MENU`.
+   * The one thing guessed is that the README calls a page what the menu
+   * calls it, and that fails loudly — a reworded sentence stops matching
+   * and the case goes red rather than quietly passing.
+   */
+  function referenceScreens(): { route: string; file: string }[] {
+    const overlay = join(SRC, 'ui', 'components', 'ReferenceOverlay.tsx');
+    const source = codeOf(overlay).join('\n');
+    const files = new Map([...source.matchAll(/import \{ (\w+) \} from '(\.\.\/screens\/\w+)'/g)]
+      .map((m) => [m[1], join(overlay, '..', `${m[2]}.tsx`)]));
+    const map = /const PAGES[^{]*\{([\s\S]*?)\n\};/.exec(source);
+    if (map === null) throw new Error('could not find the PAGES map in ReferenceOverlay.tsx');
+
+    return [...map[1].matchAll(/'?([\w-]+)'?\s*:\s*(\w+),/g)].map(([, route, component]) => {
+      const file = files.get(component);
+      if (file === undefined) throw new Error(`PAGES names ${component}, which nothing imports`);
+      return { route, file };
+    });
+  }
+
+  it('says which reference pages draw an instrument, and names them all', () => {
+    const pages = referenceScreens();
+    expect(pages.length, 'the reference pages came back empty').toBeGreaterThan(3);
+
+    const draws = (file: string) => /<InstrumentDiagram/.test(codeOf(file).join('\n'));
+    const nameOf = (route: string) => REFERENCE_MENU.find((entry) => entry.route === route)?.name;
+
+    const readme = readFileSync(join(SRC, '..', 'README.md'), 'utf8').replace(/\s+/g, ' ');
+    const sentence = /([^.]*\bdrawn on a piano keyboard[^.]*\.)/i.exec(readme);
+    expect(sentence, 'the README no longer says anywhere that a page can draw an instrument')
+      .not.toBeNull();
+    const said = sentence![1].toLowerCase();
+
+    const wrong = pages.flatMap(({ route, file }) => {
+      const name = nameOf(route);
+      if (name === undefined) return [];
+      const named = said.includes(name.toLowerCase());
+      if (draws(file) && !named) return [`${name} draws one and the README does not say so`];
+      if (!draws(file) && named) return [`${name} draws none and the README says it does`];
+      return [];
+    });
+
+    expect(wrong, 'the README and the pages disagree about which can draw an instrument')
+      .toEqual([]);
+  });
+
   it('calls sight reading unbuilt exactly while nothing offers it', () => {
     /*
       The home screen's cards are `EXERCISE_FAMILIES` mapped, so a sight

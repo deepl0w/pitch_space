@@ -1900,8 +1900,7 @@ describe('roots a test mounts', () => {
  */
 describe('a document pointing inside itself', () => {
   /** GitHub's heading anchor, including its repeat suffixes. */
-  function anchorsOf(text: string): Set<string> {
-    const slug = (heading: string) => heading
+  const slugOf = (heading: string) => heading
       .replace(/`([^`]*)`/g, '$1')
       .replace(/\*\*?([^*]*)\*\*?/g, '$1')
       .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
@@ -1910,10 +1909,11 @@ describe('a document pointing inside itself', () => {
       .split(' ')
       .join('-');
 
+  function anchorsOf(text: string): Set<string> {
     const found = new Set<string>();
     const seen = new Map<string, number>();
     for (const match of text.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)) {
-      const base = slug(match[1]);
+      const base = slugOf(match[1]);
       const before = seen.get(base) ?? 0;
       seen.set(base, before + 1);
       // A heading repeated in one document gets `-1`, `-2`, … after the first.
@@ -1929,6 +1929,41 @@ describe('a document pointing inside itself', () => {
       .filter((file) => anchorsOf(readFileSync(file, 'utf8')).size > 0);
     expect(withHeadings.length, 'no document had a heading, so the sweep read nothing')
       .toBeGreaterThan(20);
+  });
+
+  /**
+   * And the other way: a section the contents block does not list.
+   *
+   * The same slug read backwards, and the same kind of silence — a reader
+   * scanning the contents simply never learns the section is there.
+   * `ROADMAP.md` had lost two that way.
+   *
+   * **One exclusion, and it is structural rather than a name anybody
+   * chose.** A contents block does not list itself, so its own heading is
+   * never in it. Nothing else is excused: the three research notes that
+   * omitted `Sources` looked like a convention and were not — the fourth,
+   * written the same fortnight, lists it — so they were one author's habit
+   * three times over rather than a rule, and are consistent now.
+   *
+   * Only `##`. A contents block lists sections, not the subheadings under
+   * them, and requiring those would be inventing a convention rather than
+   * holding one.
+   */
+  it('lists every section in its own contents block', () => {
+    const missing = everyDocument().flatMap((file) => {
+      const text = readFileSync(file, 'utf8');
+      const linked = new Set([...text.matchAll(/\]\(#([^)]+)\)/g)].map((link) => link[1]));
+      // A document with no in-page links has no contents block to be wrong.
+      if (linked.size === 0) return [];
+
+      return [...text.matchAll(/^##\s+(.+?)\s*$/gm)]
+        .map((heading) => slugOf(heading[1]))
+        .filter((anchor) => anchor !== 'contents' && !linked.has(anchor))
+        .map((anchor) => `${show(file)} has a #${anchor} section its contents does not list`);
+    });
+
+    expect([...new Set(missing)], 'a section a reader of the contents never learns about')
+      .toEqual([]);
   });
 
   it('finds the heading it points at', () => {

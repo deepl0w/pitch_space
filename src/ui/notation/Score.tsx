@@ -8,7 +8,7 @@ import { drawScore, type ScoreLayout, type ScoreSpec } from '../../exercises/ren
  * fighting: React never reconciles inside this div, and VexFlow never sees a
  * node React is about to replace.
  */
-export function Score({ spec, height, onLayout, cursorX }: {
+export function Score({ spec, height, onLayout, cursorX, lit }: {
   spec: ScoreSpec;
   height?: number;
   /**
@@ -27,8 +27,15 @@ export function Score({ spec, height, onLayout, cursorX }: {
    * only interchangeable with CSS pixels inside this box.
    */
   cursorX?: number | null;
+  /**
+   * The note sounding now, by index into the spec's notes, lit by a class on
+   * its drawn group — never by redrawing, which per animation frame is far
+   * too slow. Null or absent lights none.
+   */
+  lit?: number | null;
 }) {
   const host = useRef<HTMLDivElement>(null);
+  const placed = useRef<ScoreLayout['notes']>([]);
   const [stave, setStave] = useState<ScoreLayout['stave'] | null>(null);
   const [width, setWidth] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -106,6 +113,7 @@ export function Score({ spec, height, onLayout, cursorX }: {
     };
     try {
       const layout = drawScore(node, resolved, { width, height, colour });
+      placed.current = layout.notes;
       onLayout?.(layout);
       // oxlint-disable-next-line react/set-state-in-effect
       setStave(layout.stave);
@@ -128,6 +136,17 @@ export function Score({ spec, height, onLayout, cursorX }: {
       setError(cause instanceof Error ? cause.message : String(cause));
     }
   }, [spec, width, height, scheme, onLayout]);
+
+  /*
+    After every draw as well as every change of note, because a redraw —
+    a resize, a theme change — replaces the groups and drops the class.
+    `stave` is a new object per draw, which is what ties this to one.
+  */
+  useEffect(() => {
+    for (const note of placed.current) note.element?.classList.remove('score-lit');
+    if (lit == null) return;
+    placed.current[lit]?.element?.classList.add('score-lit');
+  }, [lit, stave]);
 
   return (
     <div className="score">

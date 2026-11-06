@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { usePlayAlong } from '../notation/follow';
 import { DiagramPicker, InstrumentDiagram } from '../notation/InstrumentDiagram';
 import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
@@ -37,6 +38,7 @@ export function Chords({ focus }: { focus?: string }) {
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();
+  const follow = usePlayAlong();
 
   const type = CHORD_TYPES.find((c) => c.id === chordId)!;
   const built = useMemo(() => {
@@ -85,13 +87,18 @@ export function Chords({ focus }: { focus?: string }) {
         <DiagramPicker />
       </Panel>
 
-      <Score spec={spec} />
+      <Score spec={spec} lit={follow.lit} cursorX={follow.cursorX} onLayout={follow.onLayout} />
       <InstrumentDiagram pitches={pitches} root={built.root} label={chordSymbol(built)} marking="map" />
 
       <Actions>
-        <button onClick={() => play(notes)}>Play as a chord</button>
-        <button onClick={() => play(notes, { rolled: true })}>Arpeggiate it</button>
-        <button onClick={() => play(pitches.map((p) => ({ pitches: [p] })), { gap: 0.45 })}>
+        {/* One stave note however it is sounded, so every event lights it. */}
+        <button onClick={() => follow.along(play(notes), [0])}>Play as a chord</button>
+        <button onClick={() => follow.along(play(notes, { rolled: true }), [0])}>Arpeggiate it</button>
+        <button
+          onClick={() => follow.along(
+            play(pitches.map((p) => ({ pitches: [p] })), { gap: 0.45 }), pitches.map(() => 0),
+          )}
+        >
           One note at a time
         </button>
       </Actions>

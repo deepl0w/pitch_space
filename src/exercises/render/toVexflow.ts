@@ -64,6 +64,12 @@ export interface NotePlacement {
   index: number;
   /** Centre of the notehead, in pixels from the left of the drawn SVG. */
   x: number;
+  /**
+   * The note's drawn group, so a caller can light it by class rather than
+   * redraw — re-engraving per animation frame is far too slow, and the SVG
+   * already has a group per note. Absent where the engraver made none.
+   */
+  element?: SVGElement;
 }
 
 /**
@@ -275,7 +281,10 @@ export function drawScore(
   // Read after drawing, because formatting is what decides these and it has
   // only just run.
   return {
-    notes: staveNotes.map((note, index) => ({ index, x: note.getAbsoluteX() })),
+    notes: staveNotes.map((note, index) => {
+      const element = note.getSVGElement();
+      return element ? { index, x: note.getAbsoluteX(), element } : { index, x: note.getAbsoluteX() };
+    }),
     stave: staveGeometry,
   };
 }

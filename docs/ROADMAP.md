@@ -14,6 +14,7 @@ it ships or is dropped.
   - [Storage and honesty](#storage-and-honesty)
 - [Following the music on the staff](#following-the-music-on-the-staff)
   - [How it has to work](#how-it-has-to-work)
+  - [Built for the reference pages, 6 November](#built-for-the-reference-pages-6-november)
 - [Importing sheet music](#importing-sheet-music)
   - [What a score is for, once it is in](#what-a-score-is-for-once-it-is-in)
   - [The parts that will actually be hard](#the-parts-that-will-actually-be-hard)
@@ -238,10 +239,21 @@ as the cursor.
   makes it ambiguous twice over. The map should be from a note's identity to
   its position rather than from a tick, with the caller holding the sequence.
 
-Worth building with the first exercise that grades a performance rather than
-an answer — sight reading or rhythm — because that is when the colouring half
-stops being decoration.
+### Built for the reference pages, 6 November
 
+Scales, chords, chords in a key and intervals light the sounding note and
+move a cursor across the stave while they play. Time comes from the audio
+clock — `Synth.playhead()` reports where on it the passage was laid, and
+`eventStarts` gives each event's start from the same arithmetic that
+scheduled it — and a note is lit by a class on its drawn group, which
+`drawScore` now hands back. The map is from an event to a note index, so a
+scale played downwards walks the ascending stave from the right and an
+arpeggio stays on its one chord.
+
+Still open: the exercises' own sound boxes do not follow yet, and the rhythm
+exercise's cursor runs on `performance.now()` for the reason its own file
+gives. Marking a performance note by note is the half that matters more and
+is not started.
 ## Importing sheet music
 
 Exercises are generated. The obvious thing they cannot do is use the piece

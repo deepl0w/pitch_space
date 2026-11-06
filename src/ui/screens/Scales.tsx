@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { usePlayAlong } from '../notation/follow';
 import { DiagramPicker, InstrumentDiagram } from '../notation/InstrumentDiagram';
 import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
@@ -30,6 +31,7 @@ export function Scales({ focus, tonic }: { focus?: string; tonic?: string }) {
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();
+  const follow = usePlayAlong();
 
   const tonicPitch = tonicFor(tonicName);
   const type = SCALE_TYPES.find((s) => s.id === scaleId)!;
@@ -87,12 +89,18 @@ export function Scales({ focus, tonic }: { focus?: string; tonic?: string }) {
         <DiagramPicker />
       </Panel>
 
-      <Score spec={spec} />
+      <Score spec={spec} lit={follow.lit} cursorX={follow.cursorX} onLayout={follow.onLayout} />
       <InstrumentDiagram pitches={pitches} root={pitches[0]} label={`${tonicName} ${type.name}`} marking="map" />
 
       <Actions>
-        <button onClick={() => play(notes)}>Play the scale</button>
-        <button onClick={() => play(descending)}>Play it descending</button>
+        <button onClick={() => follow.along(play(notes), notes.map((_, i) => i))}>
+          Play the scale
+        </button>
+        {/* Down the same stave from the right: the stave shows the scale
+            ascending, so each falling note lights its place on it. */}
+        <button onClick={() => follow.along(play(descending), descending.map((_, i) => descending.length - 1 - i))}>
+          Play it descending
+        </button>
       </Actions>
 
       <Readout

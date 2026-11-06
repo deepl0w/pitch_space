@@ -29,17 +29,32 @@ export interface ScheduleOptions {
 export function schedule(
   events: readonly TimedEvent[], options: ScheduleOptions,
 ): Voice[] {
-  const voices: Voice[] = [];
+  const starts = eventStarts(events, options);
+  return events.flatMap((event, e) => event.midis.map((midi, i) => ({
+    midi, start: starts[e] + i * options.rollGap, duration: options.hold,
+  })));
+}
+
+/**
+ * When each event begins, in seconds from the passage's start — what a
+ * score following the sound needs to know which note is sounding.
+ *
+ * One function for both, so the times the cursor reads are the times the
+ * notes were scheduled at, rather than a second calculation that agrees
+ * until someone changes the first.
+ */
+export function eventStarts(
+  events: readonly TimedEvent[], options: ScheduleOptions,
+): number[] {
+  const starts: number[] = [];
   let at = 0;
   for (const event of events) {
-    event.midis.forEach((midi, i) => {
-      voices.push({ midi, start: at + i * options.rollGap, duration: options.hold });
-    });
+    starts.push(at);
     // A rolled event takes longer to lay out, so the next one waits for it.
     // Without this a roll and the event after it overlap, which is audible as
     // the chord changing underneath the last note of the roll. The roll spans
     // (n - 1) gaps, not n: the first note is at the event's own start.
     at += options.eventGap + Math.max(0, event.midis.length - 1) * options.rollGap;
   }
-  return voices;
+  return starts;
 }

@@ -1018,3 +1018,47 @@ describe('the output spectrum', () => {
       .toBe(laidDown);
   });
 });
+
+/**
+ * Where the passage now sounding is, on the audio clock.
+ *
+ * What a score following the sound reads. The claim is that it is measured
+ * from the moment the notes were actually scheduled — not from the call,
+ * which is earlier by the headroom — so a cursor driven by it is where the
+ * sound is.
+ */
+describe('the playhead', () => {
+  it('reads nothing before anything has played', () => {
+    expect(synth.playhead()).toBeNull();
+  });
+
+  it('counts from the first note, not from the call that laid it', () => {
+    synth.play(notes(4));
+    // Laid ahead of the clock by the headroom, so the passage has not begun.
+    const before = synth.playhead()!;
+    expect(before).toBeLessThan(0);
+    advanceAudioClock(-before + 1.25);
+    expect(synth.playhead()).toBeCloseTo(1.25, 6);
+  });
+
+  it('reads nothing once the last note has ended', () => {
+    synth.play(notes(2, 0.5));
+    advanceAudioClock(DEVICE_OPEN_SECONDS + 5);
+    expect(synth.playhead()).toBeNull();
+  });
+
+  it('reads nothing once the passage is stopped, so a cursor does not run on over silence', () => {
+    synth.play(notes(8));
+    advanceAudioClock(DEVICE_OPEN_SECONDS + 0.5);
+    expect(synth.playhead()).not.toBeNull();
+    synth.stopAll();
+    expect(synth.playhead()).toBeNull();
+  });
+
+  it('starts again from zero when a new passage replaces the old', () => {
+    synth.play(notes(8));
+    advanceAudioClock(DEVICE_OPEN_SECONDS + 2);
+    synth.play(notes(8));
+    expect(synth.playhead()!).toBeLessThan(0.1);
+  });
+});

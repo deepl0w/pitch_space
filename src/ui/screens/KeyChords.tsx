@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { usePlayAlong } from '../notation/follow';
 import { DiagramPicker, InstrumentDiagram } from '../notation/InstrumentDiagram';
 import { useSettings } from '../../state/settingsStore';
 import { entryFor } from '../menu';
@@ -34,6 +35,7 @@ export function KeyChords({ focus }: { focus?: string }) {
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();
+  const follow = usePlayAlong();
 
   const key = ALL_KEYS.find((k) => keyId(k) === keyIdValue)!;
   const table = key.mode === 'major'
@@ -87,7 +89,7 @@ export function KeyChords({ focus }: { focus?: string }) {
         )}
       </Panel>
 
-      <Score spec={spec} />
+      <Score spec={spec} lit={follow.lit} cursorX={follow.cursorX} onLayout={follow.onLayout} />
       <InstrumentDiagram
         pitches={spellChord(chords[shown].chord)}
         root={chords[shown].chord.root}
@@ -96,8 +98,12 @@ export function KeyChords({ focus }: { focus?: string }) {
       />
 
       <Actions>
-        <button onClick={() => play(notes)}>Play each chord</button>
-        <button onClick={() => play(notes, { rolled: true })}>Roll each chord</button>
+        <button onClick={() => follow.along(play(notes), notes.map((_, i) => i))}>
+          Play each chord
+        </button>
+        <button onClick={() => follow.along(play(notes, { rolled: true }), notes.map((_, i) => i))}>
+          Roll each chord
+        </button>
       </Actions>
 
       <Readout

@@ -165,6 +165,18 @@ export class Synth {
   private soundingUntil = 0;
 
   /**
+   * Where the passage now sounding sits on the audio clock: when its time
+   * zero falls, and when its last note ends. Null when nothing is sounding.
+   *
+   * Kept so the score can follow the sound from the clock the sound is
+   * scheduled on. A cursor counting animation frames from the click drifts
+   * by the headroom — sixty milliseconds warm, the whole device-opening
+   * budget cold — and a cursor ahead of the note it points at teaches the
+   * wrong thing (docs/ROADMAP.md, "Following the music on the staff").
+   */
+  private passage: { start: number; end: number } | null = null;
+
+  /**
    * The output's own tap, for anything that draws what is sounding.
    *
    * An `AnalyserNode` passes its input through untouched, so it sits in the
@@ -504,6 +516,22 @@ export class Synth {
     this.soundingUntil = voices.reduce(
       (end, voice) => Math.max(end, now + voice.start + voice.duration), now,
     );
+    this.passage = { start: now, end: this.soundingUntil };
+  }
+
+  /**
+   * Seconds into the passage now sounding, measured on the audio clock, or
+   * null when none is.
+   *
+   * Negative inside the headroom before the first note, which is honest:
+   * the passage has been laid and has not begun. Null while a cold context
+   * is still waking, because nothing has been laid yet to be into.
+   */
+  playhead(): number | null {
+    if (!this.context || !this.passage) return null;
+    const now = this.context.currentTime;
+    if (now > this.passage.end) return null;
+    return now - this.passage.start;
   }
 
   /**
@@ -521,6 +549,7 @@ export class Synth {
     // to cut, but it may have a passage queued behind it, and that is exactly
     // what must not arrive after the screen it belonged to has gone.
     this.generation += 1;
+    this.passage = null;
     if (!this.context || !this.master) return;
     const now = this.context.currentTime;
     this.master.gain.cancelScheduledValues(now);

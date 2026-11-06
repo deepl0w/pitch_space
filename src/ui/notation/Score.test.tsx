@@ -203,3 +203,28 @@ describe('Score when the colour scheme changes', () => {
    */
   it.todo('redraws when the data-theme attribute changes');
 });
+
+describe('lighting the note that is sounding', () => {
+  const lit = () => [...hostNode().querySelectorAll('svg .vf-stavenote')]
+    .map((g, i) => (g.classList.contains('score-lit') ? i : -1)).filter((i) => i >= 0);
+  const spec = scale(['C4', 'D4', 'E4', 'F4']);
+  const draw = (index: number | null) => act(() => root.render(<Score spec={spec} lit={index} />));
+
+  it('lights exactly the note asked for, and moves when asked', () => {
+    draw(1);
+    act(() => resizeTo(hostNode(), 800));
+    expect(lit()).toEqual([1]);
+    draw(3);
+    expect(lit()).toEqual([3]);
+    draw(null);
+    expect(lit()).toEqual([]);
+  });
+
+  it('keeps the light through a redraw, which replaces every group', () => {
+    draw(2);
+    act(() => resizeTo(hostNode(), 800));
+    act(() => resizeTo(hostNode(), 640));
+    expect(lit()).toEqual([2]);
+  });
+});
+

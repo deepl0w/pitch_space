@@ -1564,3 +1564,9 @@ select,
 .diagram-dim circle { fill: none; stroke: var(--muted); stroke-width: 1; }
 .diagram-dim text { fill: var(--muted); }
 .diagram text { font-size: 8px; font-weight: 650; }
+
+/* The note sounding now, while a passage plays. CSS rather than VexFlow's
+   own styling because it changes every few hundred milliseconds and a
+   redraw per change is far too slow; a stylesheet `fill` outranks the
+   presentation attributes VexFlow writes, so the class wins. */
+.score-lit path, .score-lit rect { fill: var(--accent); stroke: var(--accent); }

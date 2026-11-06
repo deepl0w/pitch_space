@@ -1,5 +1,5 @@
 import { Synth } from '../audio/output/synth';
-import { schedule } from '../audio/output/schedule';
+import { eventStarts, schedule } from '../audio/output/schedule';
 import { midiOf, type Pitch } from '../theory/pitch';
 
 /**
@@ -29,18 +29,25 @@ export interface Sounded {
  * second copy over it. An earlier version locked the button for 250 ms
  * instead, which stopped a double-click and did nothing at all about a
  * passage longer than a quarter of a second — the case it was written for.
+ *
+ * Returns when each event starts, in seconds into the passage, for a score
+ * that follows what it plays.
  */
 export function usePlayer() {
-  return function play(events: readonly Sounded[], options: { rolled?: boolean; gap?: number } = {}) {
+  return function play(
+    events: readonly Sounded[], options: { rolled?: boolean; gap?: number } = {},
+  ): number[] {
     appSynth.stopAll();
 
     const timed = events.map((e) => ({ midis: e.pitches.map(midiOf) }));
     const gap = options.gap ?? 0.62;
-    appSynth.play(schedule(timed, {
+    const timing = {
       eventGap: gap,
       rollGap: options.rolled ? 0.14 : 0,
       hold: events.length === 1 ? 2.2 : Math.max(gap * 1.6, 0.5),
-    }));
+    };
+    appSynth.play(schedule(timed, timing));
+    return eventStarts(timed, timing);
   };
 }
 

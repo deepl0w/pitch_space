@@ -12,6 +12,7 @@ they left open. Nothing here is a measurement of this app.
 - [What a completion figure looks like elsewhere](#what-a-completion-figure-looks-like-elsewhere)
 - [The evidence for spacing is not uniform across this app](#the-evidence-for-spacing-is-not-uniform-across-this-app)
 - [Interleaving, which nothing here has considered](#interleaving-which-nothing-here-has-considered)
+- [Sources](#sources)
 
 ## FSRS, and the quantity 0040 was looking for
 

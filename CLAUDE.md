@@ -411,12 +411,18 @@ alone by every pass that follows, so the one-off case survives the reruns
 it is usually followed by instead of being the one case this mechanism
 could not keep.
 
-**Confirmed, 6 November** — argued from the hazard when built, now an
-instance: a control relying on two consecutive random draws differing
-failed once, the pre-commit rerun passed under a minute later, and the
-kept log was enough to diagnose the flake without reproducing it. The gap
-between the failing and passing runs was about forty seconds, tighter
-than the argument above assumed.
+**Confirmed, 6 November, and worth stating at the strength tester checked
+rather than the better-sounding one.** A control relying on two
+consecutive random draws differing failed once, the pre-commit rerun
+passed about forty seconds later — tighter than the argument above
+assumed — and the kept log was enough to diagnose the flake without
+reproducing it. The log had been exercised once before this, deliberately,
+to confirm a forced failure survived a passing rerun; this is the first
+time it kept one nobody arranged. Plausibly the same shape as the one
+lost in October, since a candidate control existed before that date —
+not confirmed, because October's failure lost its name along with the
+run that would have identified it, and a second plausible match is not a
+match.
 
 **`git merge` gets the same gate, separately, because `pre-commit` does not
 fire for it at all.** Found within the hour: main's traffic is almost

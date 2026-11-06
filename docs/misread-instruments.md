@@ -455,6 +455,31 @@ helps, because nothing is wrong with it.
   implementation that is *nearly* the sentence is what a reasonable
   implementation of a prose sentence looks like.
 
+- **A corpus that contains the record of the absence.** A grep offered as
+  evidence that every identifier cited in the documents still exists reported
+  seventeen of eighteen resolving. Three do not. `randomSeed` "resolved"
+  because the predicate searched the raw text of `src`, comments included,
+  and `architecture.test.ts` carries a comment explaining that the function
+  was deleted. **The instrument found the symbol's obituary and reported it
+  as alive.**
+
+  **This is not bad luck here, it is this repository's house style meeting a
+  text search.** The comment convention is that comments explain *why*, and
+  in practice that means they narrate what was removed and what it used to
+  do — *"an earlier draft carved out `randomSeed()`"*, *"this used to be
+  `MERGE_CENTS`"*, *"the previous version said six exercise types"*. Every
+  deletion leaves a prose trace near where it was. So any grep over source
+  text, anywhere in this codebase, systematically counts removed things as
+  present, and the better documented the removal the more reliably it lies.
+
+  The cure is cheap and belongs in every predicate of this shape: strip
+  comments, and resolve against *declarations* rather than occurrences — a
+  `function|const|class|interface|type` binding the name, not the name
+  appearing. Doing that reproduces the real three. Found when tester measured
+  the guard instead of building it on the number offered with it; had they
+  trusted the number, the shipped check would have passed `randomSeed` for
+  ever.
+
 - **A number the suite computes and never asserts.** The contrast between
   `--bg` and `--accent` sat among the pinned figures in `contrast.test.tsx`,
   correctly calculated, and was attached to no reader-facing case. A palette

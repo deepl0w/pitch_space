@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  INTERVALS_MS, completion, dueAt, dueCount, overdueRatio, schedule,
+  INTERVALS_MS, MAX_INTERVAL_MS, completion, dueAt, dueCount, overdueRatio, schedule,
 } from './schedule';
 import { tallyItems, tallyKey, type ItemTally, type TallyKey } from './progressStore';
 import type { ProgressLine } from './line';
@@ -77,6 +77,16 @@ describe('when an item comes back', () => {
   it('stops growing rather than running away past the cap', () => {
     const capped = dueAt(tally({ streak: INTERVALS_MS.length - 1 }));
     expect(dueAt(tally({ streak: 500 }))).toBe(capped);
+  });
+
+  it('rests no item longer than the cap the records name', () => {
+    // 0037 and 0040 cite `MAX_INTERVAL_MS` as the cap; this holds the name
+    // to the behaviour, so the citation cannot drift from the mechanism.
+    for (const streak of [0, 3, INTERVALS_MS.length - 1, INTERVALS_MS.length, 500]) {
+      const t = tally({ streak, lastSeenAt: 0 });
+      expect(dueAt(t), `streak ${streak}`).toBeLessThanOrEqual(MAX_INTERVAL_MS);
+    }
+    expect(dueAt(tally({ streak: 500, lastSeenAt: 0 }))).toBe(MAX_INTERVAL_MS);
   });
 });
 

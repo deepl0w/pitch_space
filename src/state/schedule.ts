@@ -48,8 +48,22 @@ export const INTERVALS_MS: readonly number[] = [
   14 * 24 * 60 * 60 * 1000,
 ];
 
-/** The longest an item ever rests, whatever its streak. */
+/**
+ * The longest an item ever rests, whatever its streak.
+ *
+ * **A name for the ladder's top, and the cap is the clamp in `restFor`.**
+ * Records 0037 and 0040 cite this as the cap on the review interval, which
+ * it is: a streak past the last rung rests this long and no longer. It had
+ * gone unread by any code, so the citations named a constant while the
+ * clamp did the work unnamed — found by tester. `restFor` now returns it
+ * for every streak at or past the top, so the cited name is the mechanism.
+ */
 export const MAX_INTERVAL_MS = INTERVALS_MS[INTERVALS_MS.length - 1];
+
+/** How long an item rests at this streak: its rung, or the cap past the last. */
+function restFor(streak: number): number {
+  return streak >= INTERVALS_MS.length - 1 ? MAX_INTERVAL_MS : INTERVALS_MS[streak];
+}
 
 /**
  * When this item next wants asking.
@@ -59,7 +73,7 @@ export const MAX_INTERVAL_MS = INTERVALS_MS[INTERVALS_MS.length - 1];
  * ratio: being wrong once should cost the spacing, not a fraction of it.
  */
 export function dueAt(tally: ItemTally): number {
-  const interval = INTERVALS_MS[Math.min(tally.streak, INTERVALS_MS.length - 1)];
+  const interval = restFor(tally.streak);
   return tally.lastSeenAt + interval;
 }
 
@@ -76,7 +90,7 @@ export function dueAt(tally: ItemTally): number {
  * ahead of this rather than inside it.
  */
 export function overdueRatio(tally: ItemTally, now: number): number {
-  const interval = INTERVALS_MS[Math.min(tally.streak, INTERVALS_MS.length - 1)];
+  const interval = restFor(tally.streak);
   if (interval === 0) return Number.POSITIVE_INFINITY;
   return (now - tally.lastSeenAt) / interval;
 }

@@ -2000,15 +2000,24 @@ describe('a document pointing inside itself', () => {
  * ordinary TypeScript, and a check demanding otherwise would be inventing
  * a convention and then enforcing the invention.
  *
- * A name is counted as used if any other file mentions it, which a comment
- * satisfies as well as an import. That is deliberately the permissive
- * direction: the thing worth catching is an export nothing anywhere refers
- * to, and a stricter reading would red on a file that cites its own API.
+ * **Used means used in code, with comments stripped.** This counted a
+ * mention anywhere, on the reasoning that a stricter reading would red on a
+ * file citing its own API. Measured rather than left as a guess — architect
+ * and I differenced the two readings over 476 exports independently and got
+ * the same answer — the permissive reading bought no safety at all: it
+ * changed exactly one verdict, and that one was wrong. `scheduledInThePast`
+ * was kept alive by a comment in `synth.test.ts` reading *"deliberately not
+ * `scheduledInThePast`"*, so the prose holding it up was prose explaining
+ * why nobody calls it. The helper is gone and the reading is code-only,
+ * because a predicate whose looser form has no false positives to avoid
+ * should say what it means.
  */
 describe('what the source exports', () => {
   const declared: { file: string; name: string }[] = [];
   const sources = filesUnder(SRC).filter((file) => /\.tsx?$/.test(file));
-  const text = new Map(sources.map((file) => [file, readFileSync(file, 'utf8')]));
+  // `codeOf` blanks comments and keeps the lines, so a note about a symbol
+  // is not mistaken for a use of it.
+  const text = new Map(sources.map((file) => [file, codeOf(file).join('\n')]));
 
   for (const file of sources) {
     if (/\.test\.tsx?$/.test(file)) continue;

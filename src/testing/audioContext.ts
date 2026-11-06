@@ -418,18 +418,6 @@ export function soundingAfter(time: number): RecordedOscillator[] {
   return recording.oscillators.filter((o) => o.stoppedAt === null || o.stoppedAt > time);
 }
 
-/**
- * Oscillators whose start time had already passed when they were scheduled.
- *
- * A real context plays these immediately or not at all; either way the
- * rhythm they were part of is not what was written.
- */
-export function scheduledInThePast(): RecordedOscillator[] {
-  return recording.oscillators.filter(
-    (o) => o.startedAt !== null && o.startedAt < o.scheduledAt,
-  );
-}
-
 /** Distinct attack times, which is what a listener hears as separate notes. */
 export function attackTimes(): number[] {
   return [...new Set(recording.oscillators.map((o) => o.startedAt ?? -1))].sort((a, b) => a - b);

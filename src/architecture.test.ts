@@ -1980,3 +1980,57 @@ describe('a document pointing inside itself', () => {
       .toEqual([]);
   });
 });
+
+/**
+ * Nothing is exported that nothing else uses.
+ *
+ * **Held at zero because the repository just put it there.** Ten such
+ * exports had accumulated — `cadenceVoices`, `strongBeats`,
+ * `ACCIDENTAL_GLYPHS` and the rest — half of them deletable outright and
+ * half still used inside their own file and merely exported for nobody.
+ * They were cleared in one commit, which is what makes zero a figure the
+ * tree supports rather than a number chosen to be strict.
+ *
+ * It is not covered by lint: `.oxlintrc.json` runs the react, typescript
+ * and oxc plugins, none of which reports an export with no importer.
+ *
+ * **Values only, and the reason is that types have no such convention
+ * here.** 185 types and interfaces are exported and 63 of them are named
+ * in no other file — a module describing its own shape for a reader is
+ * ordinary TypeScript, and a check demanding otherwise would be inventing
+ * a convention and then enforcing the invention.
+ *
+ * A name is counted as used if any other file mentions it, which a comment
+ * satisfies as well as an import. That is deliberately the permissive
+ * direction: the thing worth catching is an export nothing anywhere refers
+ * to, and a stricter reading would red on a file that cites its own API.
+ */
+describe('what the source exports', () => {
+  const declared: { file: string; name: string }[] = [];
+  const sources = filesUnder(SRC).filter((file) => /\.tsx?$/.test(file));
+  const text = new Map(sources.map((file) => [file, readFileSync(file, 'utf8')]));
+
+  for (const file of sources) {
+    if (/\.test\.tsx?$/.test(file)) continue;
+    for (const match of codeOf(file).join('\n')
+      .matchAll(/^export (?:async )?function (\w+)|^export const (\w+)\s*[:=]/gm)) {
+      declared.push({ file, name: match[1] ?? match[2] });
+    }
+  }
+
+  it('is asked of the exports there are', () => {
+    // A regex that stopped matching would pass the case below by finding
+    // nothing to ask about.
+    expect(declared.length, 'no value exports found anywhere in src').toBeGreaterThan(200);
+  });
+
+  it('is used somewhere other than the file that declares it', () => {
+    const unused = declared
+      .filter(({ file, name }) => ![...text].some(
+        ([other, body]) => other !== file && new RegExp(`\\b${name}\\b`).test(body),
+      ))
+      .map(({ file, name }) => `${show(file)} exports ${name}, which nothing else names`);
+
+    expect(unused, 'an export with nobody on the other end').toEqual([]);
+  });
+});

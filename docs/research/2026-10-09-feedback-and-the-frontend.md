@@ -14,6 +14,7 @@ does the right thing and nobody need do anything.
 - [A cursor and a colour are not one feature](#a-cursor-and-a-colour-are-not-one-feature)
 - [What the colour research says about the open question](#what-the-colour-research-says-about-the-open-question)
 - [Notation on a small screen, where nothing is owed](#notation-on-a-small-screen-where-nothing-is-owed)
+- [Sources](#sources)
 
 ## Concurrent visual feedback degrades retention; concurrent sound does not
 

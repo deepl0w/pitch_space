@@ -13,6 +13,7 @@ start from. Nothing here is a measurement of this app.
 - [Android, native path](#android-native-path)
 - [Bluetooth is the fat tail](#bluetooth-is-the-fat-tail)
 - [What this does and does not settle](#what-this-does-and-does-not-settle)
+- [Sources](#sources)
 
 ## The platform property does exist, and it lies
 

@@ -463,9 +463,13 @@ published findings had to be withdrawn because of it. Checking the app is
 cheap; withdrawing a claim is not.
 
 `./build.sh --android` exists and refuses with a reason: Capacitor is not set
-up yet, so the app currently ships as a PWA only. `./test.sh --offline` does
-the same for the service worker. Both are wired so they start working when
-those land rather than being added afterwards; `docs/ROADMAP.md` has the rest.
+up yet, so the app currently ships as a PWA only. `./test.sh --offline` was
+the same kind of stub, wired so it would start working once the PWA plugin
+landed rather than being added afterwards — the plugin is in now, so
+`--offline` actually asserts that the built service worker precaches what the
+app needs (the notation chunk and Bravura included), and a missing or broken
+worker fails it rather than printing a note nobody reads. `docs/ROADMAP.md`
+has what's still a stub.
 
 ## The code
 

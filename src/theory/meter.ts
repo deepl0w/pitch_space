@@ -316,12 +316,6 @@ export function isDownbeat(ts: TimeSignature, tick: number): boolean {
   return ((tick % ts.barTicks) + ts.barTicks) % ts.barTicks === 0;
 }
 
-/** The beam span containing a tick, or null when it falls outside every one. */
-export function beamSpanAt(ts: TimeSignature, tick: number): readonly [number, number] | null {
-  const t = ((tick % ts.barTicks) + ts.barTicks) % ts.barTicks;
-  return ts.beamSpans.find(([s, e]) => t >= s && t < e) ?? null;
-}
-
 /** Index of the beam span containing a tick, for grouping notes into beams. */
 export function beamSpanIndex(ts: TimeSignature, tick: number): number {
   const t = ((tick % ts.barTicks) + ts.barTicks) % ts.barTicks;

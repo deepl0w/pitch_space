@@ -420,7 +420,7 @@ export function coerceRhythmSettings(stored: unknown): RhythmSettings {
   };
 }
 
-export const SYNCOPATION_CHOICES: readonly number[] = [0, 1, 2, 3];
+const SYNCOPATION_CHOICES: readonly number[] = [0, 1, 2, 3];
 
 export const rhythmSettingsSchema: SettingsSchema<RhythmSettings> = {
   defaults: RHYTHM_DEFAULTS,

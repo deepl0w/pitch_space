@@ -95,7 +95,7 @@ export interface DegreeResponse {
  */
 const STARTING_DEGREES = [1, 2, 3, 5];
 
-export const DEGREE_DEFAULTS: DegreeSettings = {
+const DEGREE_DEFAULTS: DegreeSettings = {
   presentation: 'listen',
   degrees: STARTING_DEGREES,
   modes: ['major'],
@@ -225,7 +225,7 @@ function coerceDegrees(value: unknown, fallback: readonly number[]): readonly nu
   return kept.length ? kept : fallback;
 }
 
-export function coerceDegreeSettings(stored: unknown): DegreeSettings {
+function coerceDegreeSettings(stored: unknown): DegreeSettings {
   const raw = (typeof stored === 'object' && stored !== null ? stored : {}) as Record<string, unknown>;
   const modes: Mode[] = (['major', 'minor'] as Mode[])
     .filter((m) => Array.isArray(raw.modes) && raw.modes.includes(m));

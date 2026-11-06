@@ -169,7 +169,7 @@ export function entryFor(route: string): MenuEntry {
 }
 
 /** The same lookup, for callers that have a route which may not be a screen. */
-export function maybeEntryFor(route: string): MenuEntry | undefined {
+function maybeEntryFor(route: string): MenuEntry | undefined {
   return [...EXERCISE_MENU, ...REFERENCE_MENU, ...SETUP_MENU].find((e) => e.route === route);
 }
 

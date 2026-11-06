@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  SCALE_TYPES, degreeLabel, scaleLadder, scalePitchClasses, scaleType, spellScale,
+  SCALE_TYPES, degreeLabel, descendingType, scaleLadder, scalePitchClasses, scaleType, spellScale,
 } from './scale';
 import { type Pitch, diatonicOf, midiOf, parsePitch, pitchClass, pitchName } from './pitch';
 
@@ -139,5 +139,46 @@ describe('scaleLadder', () => {
 
   it('returns nothing for an empty range', () => {
     expect(scaleLadder(parsePitch('C4'), scaleType('major'), 61, 61)).toEqual([]);
+  });
+});
+
+/**
+ * The form a scale comes down in, which the reference pages lean on.
+ *
+ * **Untested, and two pages reverse an index against it.** `Scales` draws
+ * the ascending form and plays the descending one, lighting note
+ * `length - 1 - i` as event `i` sounds — so the two forms having the same
+ * number of notes is not a tidiness point, it is what keeps the lit note
+ * under the note being heard. Nothing said so.
+ *
+ * It holds today for a narrow reason: the only substitution is melodic
+ * minor for natural minor, and both have seven degrees. The catalogue
+ * already carries pentatonic and symmetric families with other lengths, so
+ * a second substitution is one edit away from misaligning every falling
+ * note by a silent offset.
+ */
+describe('the form a scale comes down in', () => {
+  it('is asked of a catalogue with something in it', () => {
+    expect(SCALE_TYPES.length, 'the scale catalogue came back nearly empty').toBeGreaterThan(10);
+  });
+
+  it('has as many notes as the form it goes up in', () => {
+    const uneven = SCALE_TYPES
+      .filter((type) => descendingType(type).semitones.length !== type.semitones.length)
+      .map((type) => `${type.id} goes up in ${type.semitones.length} and down in `
+        + `${descendingType(type).semitones.length}`);
+
+    expect(uneven, 'a stave that lights notes by index cannot line these up').toEqual([]);
+  });
+
+  it('still comes down differently where a scale really does', () => {
+    /*
+      The other side, so the property above cannot be met by making every
+      scale descend as itself. Melodic minor is the case the app already
+      plays and grades differently coming down.
+    */
+    const melodic = scaleType('melodic_minor');
+    expect(descendingType(melodic).id, 'melodic minor no longer descends as the natural minor')
+      .toBe('natural_minor');
   });
 });

@@ -591,6 +591,52 @@ describe('the records the code cites', () => {
    * whole point of citing it. Named with its reason rather than tolerated
    * by a scan that skips what it cannot find.
    */
+  /**
+   * A link to another file in the repository finds it.
+   *
+   * The scan above reads paths written in backticks — `src/…`, `docs/…` —
+   * which is how prose names a file. This reads markdown link *targets*,
+   * which is a different syntax and mostly relative: `../adr/0030-….md`
+   * names no directory the other pattern recognises, so a rename broke
+   * those silently while the backtick citations were watched.
+   *
+   * **The two gitignored directories are excluded, and the exclusion is the
+   * load-bearing part.** `docs/findings/` and `docs/process/` are written
+   * and never committed, so a citation of one does not resolve in any
+   * checkout but the worktree that wrote it — `0025` cites a findings note
+   * and says so in its own text. A checker without this exclusion reports a
+   * decision the repository has already recorded as a defect on every run,
+   * which is how a guard stops being read. Architect was twice about to
+   * raise that link as a bug and stopped both times by reading the record.
+   */
+  it('links to no file in the repository that is not there', () => {
+    const external = /^[a-z][a-z0-9+.-]*:/i;
+    const targets: { from: string; target: string; at: string }[] = [];
+
+    for (const file of everyDocument()) {
+      for (const match of readFileSync(file, 'utf8').matchAll(/\]\(([^)#][^)]*)\)/g)) {
+        const target = match[1].split('#')[0].trim();
+        if (target === '' || external.test(target)) continue;
+        targets.push({ from: show(file), target, at: join(file, '..', target) });
+      }
+    }
+
+    // The population: a pattern that stopped matching would pass by having
+    // nothing to resolve.
+    expect(targets.length, 'no in-repository links found in any document')
+      .toBeGreaterThan(20);
+
+    const dangling = targets
+      .filter(({ at }) => !UNCOMMITTED.some(
+        (prefix) => show(at).replace(/^\.\.\//, '').startsWith(prefix),
+      ))
+      .filter(({ at }) => !existsSync(at))
+      .map(({ from, target }) => `${from} links ${target}, which is not there`);
+
+    expect([...new Set(dangling)], 'a link to a file the repository does not hold')
+      .toEqual([]);
+  });
+
   it('names no file that does not exist', () => {
     const ELSEWHERE: Record<string, string> = {
       'lib.dom.d.ts': "TypeScript's own DOM declarations, in node_modules",

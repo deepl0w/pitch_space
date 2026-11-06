@@ -78,7 +78,7 @@ words:
 6. *State what you measured through* — not only what you measured.
 7. *A claim's altitude decides whether anything can falsify it* — a summary needs a mechanism its parts do not.
 8. *A claim about what the user wants* — the only kind nothing in the repository can contradict.
-9. *A guard must be able to fail* — a sound assertion over an empty or unlucky population is the usual way it cannot.
+9. *A guard must be able to fail* — a sound assertion over a population that is empty, unlucky, machine-dependent or merely tidy is the usual way it cannot.
 10. *A reason attached to working code* — unfalsifiable because the code is right — and its dual, *a distinction the type cannot state*; with the one constructive move against both, *pin the behaviour that exists*.
 
 **Check a claim about the code against the code, not against the record that
@@ -401,7 +401,11 @@ cannot fail — reached by a different route and needing a different cure. There
 the constraint was never wired to anything; here it is wired correctly and runs
 over a population that could not have contained the failure.
 
-Two instances, found by the tester a day apart and both now fixed:
+Four kinds, all fixed. The first two were found by the tester a day apart;
+the count in this line said *two* over three bullets for as long as the third
+one stood here, which is the entry's own subject arriving in the entry — a
+lead-in is a claim about the list under it, and nobody updates it when they
+append.
 
 - **A population that is structurally empty.** `src/packCoverage.test.tsx`
   mounts the practice screen for each exercise, presses Start, collects what
@@ -434,13 +438,42 @@ Two instances, found by the tester a day apart and both now fixed:
   red in another over a file the first does not have, and would have scanned
   neither in CI.**
 
-  This is the worst of the three, because it is the only one that breaks what
+  This is the worst of the four, because it is the only one that breaks what
   a shared gate means: every worktree's commit hook runs this suite, and
   "green" stopped being a property of the commit and became a property of the
   machine. Its cure is also the odd one out — not *assert that the case
   occurred* but **define the population instead of inheriting it**. The fix
   reads it from git rather than from the filesystem: *the population is what
   git has, not what this checkout holds.*
+
+- **A population of tidy values, where the domain's ordinary state is
+  untidy.** Four instances in one day, 19 October. `schedule()`'s comparator
+  subtracted two overdue ratios; a missed item's ratio is `Infinity`, and
+  `Infinity − Infinity` is `NaN`, so ties fell to catalogue order and a
+  learner was asked two items alternately for fourteen rounds. Every fixture
+  in its suite held finite ratios. **One** miss sorts correctly against
+  them — the case needs *two items missed at once*, which no fixture built
+  and which is what a beginner's pool looks like for their whole first
+  session. The same day: a guitar diagram's octave-versus-unison test passing
+  at C3 and C4 while the cases that distinguish sit at the range edges; a
+  capture guard staying green when `listen` was removed and `listenUntil`
+  left; and this session proposing *imports `audioIn`* as a predicate, which
+  every prompt satisfies.
+
+  **The untested case was an edge of the fixtures and the ordinary state of
+  the app**, which is the reverse of how an edge case earns the name. A
+  fixture is built tidy because a reader has to follow it — one miss, finite
+  intervals, a middle octave — and tidiness is precisely the property the
+  running app does not have.
+
+  Its cure is neither of the two below. *Assert the case occurred* needs to
+  know which case, and the whole fault is not knowing. *Derive the
+  population* has nothing to derive from — no interface lists the
+  interesting values. What is left is a question to ask of each quantity a
+  fixture fixes: **what is this value's degenerate form, and what does this
+  look like for somebody who has just started?** Zero, one, all, both-at-once
+  and the extremes of a range are where the arithmetic changes; the middle is
+  where it is easiest to read.
 
 **The first two are one convention because the cure is one, not because the
 cause is.** Structurally empty and stochastically unlucky are different

@@ -361,3 +361,104 @@ when a real caller hands it a real population. Both halves of what the wiring
 found — the anti-repeat rule and this — were invisible to a record written
 before the caller existed, and both were visible within one session of
 somebody using the app.
+
+## Addendum, 6 November 2026 — what the literature does and does not settle about the streak constraint
+
+The 6 October addendum left a constraint on the first caller: a correct
+answer out of thirteen alternatives and one out of two fold into `streak`
+identically, so narrowing a pool makes a streak cheap. The 19 October
+addendum recorded that the caller does not address it and left open whether
+it should. This chases that down. **It decides nothing** — what a score means
+is the user's call by [0036](0036-one-question-two-windows.md)'s precedent,
+and the options are set out at the end rather than chosen between.
+
+Two kinds of evidence below and they are kept apart deliberately: published
+work, which is borrowed, and facts about this repository, which were read off
+it today.
+
+### What the published work says
+
+**The problem has a standard formalism, and it is not in a scheduler.** Item
+response theory's three-parameter logistic model carries a pseudo-guessing
+parameter `c`, the lower asymptote on the probability of a correct response —
+exactly "what someone who knows nothing scores". For a *k*-alternative item it
+sits near `1/k`: reported around 0.25 for four options and 0.20 for five, with
+a value much above `1/k` taken as a sign that a distractor is not working.
+That is this record's constraint, named and quantified, in the assessment
+literature rather than the spacing one.
+
+**The schedulers in use do not model it, because their answers have no
+alternatives.** FSRS, the current state of the art and the one Anki ships,
+models memory as difficulty, stability and retrievability, fits its weights
+by maximum likelihood over review logs, and takes a *self-reported* grade —
+again, hard, good, easy. There is no pool size in it anywhere, and there does
+not need to be: an Anki review is free recall followed by the learner judging
+their own answer, so nothing was ever chosen from a list. SM-2's 0–5 quality
+grade sidesteps it the same way.
+
+**Combining the two has been done, and not at this point.** DAS3H and a model
+multiplying IRT by a retention function both exist, and the IRT half used is
+2PL — discrimination and difficulty, *no* guessing parameter. I did not find a
+published scheduler that corrects spacing for the number of alternatives, which
+is a gap in what I searched rather than a proof that none exists.
+
+**The intuitive move is the one the literature declines to support.** It is
+tempting to argue that a played answer should count for more than a click
+because production beats recognition — the standard testing-effect prediction,
+and Roediger and Karpicke's own framing is that production formats produce
+greater later benefit than multiple-choice. But their statement of it is
+hedged, and a meta-analysis has multiple-choice at least as effective as free
+and cued recall at producing the effect. **So "playing it is worth more than
+clicking it" is a reasonable belief and not a finding**, and a record that
+leaned on it would be borrowing authority the source does not give.
+
+### What this repository actually does
+
+Read off the tree today, because the constraint as written assumes a shape the
+code does not have.
+
+**Both answer paths grade the size and never the direction.** `gradeInterval`
+is `response.semitones === exercise.semitones`. The played path reaches the
+same field through `intervalPlayed`, which ends in `Math.abs`. An item id is
+`interval:m3:down`, so the schedule keeps a separate tally and a separate
+ladder position for each direction — fed, in both cases, by an answer that did
+not mention direction.
+
+That is defensible and is worth stating as a choice rather than discovering as
+a surprise: **the item is the question type, not the answer space.** Naming a
+third played downwards is a different perceptual task from naming one played
+upwards, so separate tallies track something real, even though no answer
+distinguishes them. What it means is that the two numbers are not independent —
+one answer is evidence about both — and a scheduler that treats them as
+independent is double-counting a single observation.
+
+**The guessing floor comes from the answer space, not from the scheduling
+pool, and the two differ.** `choices` is `[...settings.semitones]`;
+`intervalItems` is semitones × directions. Twelve ticked intervals with both
+directions is twenty-four askable items and twelve buttons. The floor is
+`1/12`. Anyone reaching for a correction will reach for `line.askable.length`,
+because that is what the schedule holds — and will be wrong by the number of
+directions, in the direction that understates how cheap a guess was.
+
+**A played answer has no `k` at all.** The learner produces two pitches on an
+instrument; the space is not a list and `1/k` does not apply to it. So the two
+answer paths for one question differ in exactly the property the constraint is
+about, which the 6 October wording did not anticipate.
+
+### What follows, for the user to choose between
+
+- **Leave it.** The ladder is eight rungs and the top is fourteen days; a
+  learner who reaches it by clicking out of two still answered correctly eight
+  times running. The cost is bounded and the mechanism is legible.
+- **Make the rung a function of the floor** — advance by less when `1/k` is
+  high. This is computable here where assessment systems have to estimate it,
+  since the app knows `choices` exactly, and the correction belongs to the
+  answer space rather than to `askable`.
+- **Count a played answer differently from a clicked one.** Available, and
+  the testing-effect literature does not currently justify it; it would be
+  this project's own judgement about its own purpose, which is a fine thing
+  to be as long as it is not dressed as evidence.
+
+Adopting FSRS whole is not among them. Its weights come from maximum-likelihood
+fitting over a large review corpus, and this app has one learner's log in their
+own browser with no server to fit anything on.

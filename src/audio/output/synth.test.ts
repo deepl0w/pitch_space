@@ -260,9 +260,10 @@ describe('the first play, on a context that is still waking up', () => {
    * a listener heard one note go missing is a failure message that sends the
    * next reader looking in the wrong place.
    *
-   * Deliberately not `scheduledInThePast`, which asks whether a note was
-   * behind *at the moment it was scheduled*. Nothing ever is: the jump
-   * happens afterwards. The question an ear asks is this one — when the first
+   * Deliberately not the other question — whether a note was behind *at the
+   * moment it was scheduled*. Nothing ever is: the jump happens afterwards,
+   * so a helper answering that returns an empty list for ever and reads as
+   * a passing check. The question an ear asks is this one — when the first
    * sample finally plays, is this attack still ahead of the clock?
    */
   const missed = () => attackTimes().filter((at) => at < audioClock());

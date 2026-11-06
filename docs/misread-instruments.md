@@ -308,6 +308,35 @@ Every case above is a finding *produced*. The same rule applies to failing to
 produce one, and that site is easier to miss because a non-reproduction does
 not feel like a measurement at all.
 
+**A step that silently did not run looks exactly like a step that ran and
+found something.** Reported by tester, who hit it twice inside one
+investigation and counts it as the fourth time. Checking whether a guard's
+comment-stripping missed a form, the first attempt reimplemented the stripper
+as a shell one-liner where `$` was mangled, and announced that comments
+survive stripping. The second wrapped the real code but read `stdout` while
+vitest writes failures to `stderr`, and announced that none of the three
+comment forms was flagged — **which reads precisely like the defect being
+real.** Neither run had executed the thing under test.
+
+This is the mirror of the vacuous guard above, and the more dangerous
+direction. A sound assertion over an empty population passes and hides a
+defect; **an investigation whose apparatus silently failed reports a defect
+that is not there**, with the confidence of a measurement. The null output of
+a step that did not run is byte-identical to the output of a step that ran and
+found nothing, and nothing in the text distinguishes them.
+
+The cure is this document's own rule aimed at an investigation rather than at
+a test: **before believing a negative, show the apparatus produces a positive
+on a case you already know is bad.** Tester's eventual method did exactly that
+— plant a dead export, confirm the guard flags it, *then* vary the comment
+form — which is "a guard must be able to fail" applied to a one-off enquiry.
+An ad-hoc check nobody will ever run again still has to demonstrate it can
+find something before its silence means anything.
+
+Worth recording that it happened inside a check specifically about whether two
+instruments shared a blind spot. Noticing a pattern is not immunity to it, and
+the thing that saved this one was re-running rather than reporting.
+
 **A clean-room reproduction has a range, and it is "bugs that do not depend on
 history".** Reporting "cannot reproduce" without that caveat claims "does not
 happen", which is wider than what was measured — the same shape as the ±1 ms

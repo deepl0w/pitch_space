@@ -411,6 +411,13 @@ alone by every pass that follows, so the one-off case survives the reruns
 it is usually followed by instead of being the one case this mechanism
 could not keep.
 
+**Confirmed, 6 November** — argued from the hazard when built, now an
+instance: a control relying on two consecutive random draws differing
+failed once, the pre-commit rerun passed under a minute later, and the
+kept log was enough to diagnose the flake without reproducing it. The gap
+between the failing and passing runs was about forty seconds, tighter
+than the argument above assumed.
+
 **`git merge` gets the same gate, separately, because `pre-commit` does not
 fire for it at all.** Found within the hour: main's traffic is almost
 entirely merges, one direct commit to roughly twenty merges in a day, so

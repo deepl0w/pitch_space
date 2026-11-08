@@ -509,6 +509,25 @@ helps, because nothing is wrong with it.
   trusted the number, the shipped check would have passed `randomSeed` for
   ever.
 
+  **Committed again two days later, by the author of this entry, with the
+  instrument this entry names.** Arguing to tester that a shallow CI clone
+  only threatens *history*-reading commands, I claimed the suite already ran
+  `git ls-files` and `git check-ignore` and that both were fine. It runs
+  neither. Both hits are comments explaining why git was *not* used —
+  `architecture.test.ts` walks the filesystem so an untracked file is in
+  scope, and `packs.test.ts` declines to shell out rather than make the suite
+  depend on being inside a repository at all. A bare grep found the prose
+  arguing against the commands and reported it as use, which is this entry's
+  first paragraph happening again verbatim.
+
+  Worth recording because of what it says about the entry rather than about
+  the mistake. The cure was already written three lines above — strip
+  comments, resolve declarations — and knowing it did not produce reaching
+  for it. **A rule you have to remember to apply is answered at exactly the
+  moment you are confident**, which is this project's safeguard convention
+  pointed at a rule rather than at a check: the person who most needs
+  stopping is the one who was not going to look.
+
 - **A number the suite computes and never asserts.** The contrast between
   `--bg` and `--accent` sat among the pinned figures in `contrast.test.tsx`,
   correctly calculated, and was attached to no reader-facing case. A palette

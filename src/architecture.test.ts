@@ -2098,3 +2098,60 @@ describe('what the source exports', () => {
     expect(unused, 'an export with nobody on the other end').toEqual([]);
   });
 });
+
+/**
+ * An inferred duration is read as a floor and for nothing else.
+ *
+ * **`HeardNote.durationSeconds` is always present and never measured.**
+ * Capture fills it by running from an onset to the *next* onset, so it is
+ * the gap until the next attack rather than how long the note sounded —
+ * there is no offset detection behind it. A value that is always there and
+ * never wrong-looking is the kind a grader picks up without asking where it
+ * came from, and grading on it would be grading an artefact of onset
+ * spacing. Architect's trigger on ADR 0012, written down here because the
+ * record cannot fire and this can.
+ *
+ * One honest use exists: `steadyNotes` discards anything under
+ * `BRIEFEST_NOTE_SECONDS`, which asks only whether a note lasted long
+ * enough to be a note. A floor is the one question an inferred duration
+ * answers truthfully, because the gap to the next onset is an upper bound
+ * on how long this note could have sounded.
+ *
+ * Capture itself is excluded: computing the value is not depending on it.
+ */
+describe('what reads an inferred duration', () => {
+  const FIELD = 'durationSeconds';
+  const capture = join(SRC, 'audio', 'capture');
+
+  /** Shipped files outside capture that name the field at all. */
+  function readers(): { file: string; line: string; at: number }[] {
+    return filesUnder(SRC)
+      .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
+      .filter((file) => !file.startsWith(capture))
+      .flatMap((file) => codeOf(file)
+        .map((line, i) => ({ file: show(file), line: line.trim(), at: i + 1 }))
+        .filter(({ line }) => line.includes(FIELD)));
+  }
+
+  it('is still a field something could read', () => {
+    // The population: a renamed field would empty this sweep and leave the
+    // case below passing about nothing.
+    const declared = readers().filter(({ line }) => line.startsWith(`${FIELD}:`));
+    expect(declared.length, `nothing declares ${FIELD} any more`).toBeGreaterThan(0);
+  });
+
+  it('is compared against a floor, or it is a declaration', () => {
+    const uses = readers().filter(({ line }) => !line.startsWith(`${FIELD}:`));
+
+    const beyondAFloor = uses
+      .filter(({ line }) => !line.includes('BRIEFEST_NOTE_SECONDS'))
+      .map(({ file, at, line }) => `${file}:${at} ${line}`);
+
+    expect(beyondAFloor,
+      'an inferred duration read for something other than a floor: capture fills it '
+      + 'from the next onset, so this would grade onset spacing')
+      .toEqual([]);
+    expect(uses.length, 'the one honest use has gone, so this guards nothing')
+      .toBeGreaterThan(0);
+  });
+});

@@ -143,3 +143,38 @@ deadline enforces itself.
 - **`SHAPE_AT` changes, or a second difficulty table appears.** The invariant
   above is stated against the only mapping that exists; two mappings mean the
   question becomes which catalogues each one must cover.
+
+## Addendum, 8 November 2026 — both halves of the first trigger have fired, and the thing it argued for is the wrong shape
+
+Found by tester sweeping the Revisit sections for conditions a command can
+answer, which is the eleventh convention being used rather than read.
+
+**The condition.** "A third catalogue is measured, or `patterns.ts` acquires a
+consumer." Both. `patterns.ts` has a consumer —
+[`Rhythms.tsx`](../../src/ui/screens/Rhythms.tsx) imports `patternsFor` and
+calls it to draw the figures the generator builds from — and it is measured,
+since [`patterns.test.ts`](../../src/generate/patterns.test.ts) exists, where
+[0011](0011-what-a-catalogue-owes.md) recorded it as referenced by no test at
+all.
+
+**What the trigger asked for, and why the answer is no.** It said a third
+instance "would argue for a shared reachability check rather than one per
+catalogue". There are now three, in two files: cells and templates in
+`catalogues.test.ts`, patterns in `patterns.test.ts`. They should stay three.
+
+What is duplicated is the sweep — build the set some query can produce, filter
+the catalogue by it, assert nothing is stranded — and that is three lines. What
+differs is the query, and the query is the whole content: cells are reachable
+through `chooseCells`, templates through `candidateTemplates`, patterns
+through `patternsFor` over every time signature. A shared helper would factor
+out the trivial half and take the interesting half as a parameter, which is an
+abstraction that costs a reader a hop and saves nobody anything.
+
+**The shareable thing is the obligation, not the code.** What a fourth
+catalogue actually needs is not a function to call but to be unable to ship
+without a reachability case at all — which is a guard asserting that every
+catalogue module has one, in the same family as the checks that already assert
+every document's anchors resolve and every export has a consumer. That is
+tester's to weigh and is offered rather than asked for; the point here is only
+that this record's own suggestion, read literally, would have produced the
+wrong artefact.

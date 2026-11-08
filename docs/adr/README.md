@@ -719,6 +719,16 @@ does for "a third special case is proposed". Where it is not — *latency
 becomes the complaint*, *a corpus of real playing lands* — prose is honest and
 a periodic sweep is the only backstop.
 
+**A third state the sweep missed: a trigger that can never fire.**
+[0029](0029-a-prompt-is-a-component-and-may-use-one.md) waits for "a second
+exercise sets `promptDrawsScores`", a field replaced by a required three-state
+value, so no commit can ever satisfy it — and nothing distinguishes that from
+a condition merely not yet met. A trigger naming an identifier dies at the
+rename and goes on advertising itself. The cure is the binding again: a bound
+trigger reds at the rename, which is the one moment anyone is placed to fix
+it. Found by tester sweeping for countable conditions, which is this
+convention being used rather than read.
+
 **Record a trigger that fired even when nothing is owed.** 0024's condition
 arrived and needed no change, because an inconclusive take records no attempt
 at all; without that written down the next sweep re-derives it. A fired

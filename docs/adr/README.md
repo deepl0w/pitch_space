@@ -752,7 +752,37 @@ later: a record *discussing* another's supersession would be listed as
 superseded itself, and a sweeper would then skip a record that still holds.
 The line pattern is fixed vocabulary rather than wording somebody may
 rephrase — `tools/check-adr-append-only.sh` already treats that exact line as
-structural, exempting it as the one sanctioned deletion. Checking whether a record still holds costs one line and
+structural, exempting it as the one sanctioned deletion.
+
+**The direction that argument does not cover is the expensive one, and it
+holds for a reason worth knowing.** Skipping a live record is bad; *missing* a
+superseded one is worse, because the sweeper then treats a dead record as in
+force, which is the whole mistake this category exists to stop. That depends
+on every record carrying the Status line in exactly this form, and all fifty
+do — checked by tester rather than assumed, with `ls docs/adr/0*.md` and the
+pattern above returning the same count.
+
+The precondition was, for about an hour, held only by something else: the
+append-only hook exempts that same line as its one sanctioned deletion, so a
+record could not lose or reword it without the gate objecting. **The format
+this sweep depends on was guarded by a mechanism built for an unrelated
+reason** — luck rather than design, written down here because nothing would
+have announced it if that exemption were ever narrowed.
+
+**It is held on its own account now.** A case asserts that every record
+carries a line matching `^- \*\*Status:\*\* `, with the population asserted
+separately so a collapsed walk cannot pass by reading nothing; rewording one
+record to `**Status**: Accepted` fails it by name. Narrow the hook's
+exemption and this sweep still has a guard of its own, so the two mechanisms
+hold the same line for their own reasons rather than one leaning silently on
+the other.
+
+**It pins the form and not the vocabulary**, which is the project's
+constraints-not-aesthetics rule aimed at a document. `Accepted`, `Superseded
+by NNNN` and whatever a later record needs are all allowed; what may not
+drift is the prefix both greps anchor to. A guard that pinned the words would
+red the first time somebody needed a third status, which is a guard failing
+at the moment the project is doing something legitimate. Checking whether a record still holds costs one line and
 precedes checking whether anything it says is true; we did the expensive half
 twice and skipped the cheap one. The addendum was withdrawn before merging
 rather than appended to, because a superseded record saying more than

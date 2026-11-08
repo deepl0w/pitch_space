@@ -7,6 +7,15 @@
 # by the author re-reading their own diff, which is exactly the safeguard
 # this project's conventions say not to rely on. This is the command.
 #
+# It reads `main`'s live tip, not a snapshot — so it cannot flag a commit
+# made before main's own publish actually reached that ref: if a branch is
+# genuinely racing a merge, the colliding commit can land first and this
+# has nothing yet to compare it against. Verified against the triggering
+# commit itself: at the moment it was made, it predated main's publish and
+# was correctly skipped. The next commit touching the same file — or the
+# merge, through pre-merge-commit — is where the comparison becomes
+# possible and the refusal actually lands.
+#
 # Scope: docs/adr/NNNN-*.md staged for a commit, or sitting in a completed
 # merge. docs/adr/README.md is excluded — it is the index, updated in place
 # by design. A record not yet on `main` has nothing published to violate,
@@ -64,8 +73,10 @@ while IFS= read -r f; do
         | grep -E '^< ' || true)
 
     if [ -n "$removed" ]; then
+        total_removed=$(printf '%s\n' "$removed" | wc -l)
         printf '✗ %s drops a line main already has published — ADRs are append-only\n' "$f"
-        printf '%s\n' "$removed" | sed 's/^/    /'
+        printf '%s\n' "$removed" | head -10 | sed 's/^/    /'
+        [ "$total_removed" -gt 10 ] && printf '    ... and %d more\n' "$((total_removed - 10))"
         fail=1
     fi
 done < <(git diff --cached --name-only -- 'docs/adr/[0-9][0-9][0-9][0-9]-*.md' 2>/dev/null || true)

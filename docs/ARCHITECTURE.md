@@ -418,7 +418,9 @@ prompt replays them.
 What makes that shareable is that it refuses the cases it cannot do honestly.
 `eventsOnStave` matches each sounded event to the stave note whose pitches
 contain it, nearest the note the last event landed on, and returns nothing at
-all if any event is not on the stave — so a wrong answer's replay, or a
+all if any event is not on the stave — with one override, that a repeat of the
+sound just played advances a note when the next note holds it, so a drawn
+unison does not leave the light on its first half — so a wrong answer's replay, or a
 degree's establishing cadence, is played and not followed. Strict about *refusing*,
 and the argument is worth repeating because it decides the shape: a cursor on
 the wrong note teaches the wrong thing, where no cursor teaches nothing.

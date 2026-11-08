@@ -64,8 +64,10 @@ while IFS= read -r f; do
         | grep -E '^< ' || true)
 
     if [ -n "$removed" ]; then
+        total_removed=$(printf '%s\n' "$removed" | wc -l)
         printf '✗ %s drops a line main already has published — ADRs are append-only\n' "$f"
-        printf '%s\n' "$removed" | sed 's/^/    /'
+        printf '%s\n' "$removed" | head -10 | sed 's/^/    /'
+        [ "$total_removed" -gt 10 ] && printf '    ... and %d more\n' "$((total_removed - 10))"
         fail=1
     fi
 done < <(git diff --cached --name-only -- 'docs/adr/[0-9][0-9][0-9][0-9]-*.md' 2>/dev/null || true)

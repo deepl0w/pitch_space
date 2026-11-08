@@ -752,7 +752,22 @@ later: a record *discussing* another's supersession would be listed as
 superseded itself, and a sweeper would then skip a record that still holds.
 The line pattern is fixed vocabulary rather than wording somebody may
 rephrase — `tools/check-adr-append-only.sh` already treats that exact line as
-structural, exempting it as the one sanctioned deletion. Checking whether a record still holds costs one line and
+structural, exempting it as the one sanctioned deletion.
+
+**The direction that argument does not cover is the expensive one, and it
+holds for a reason worth knowing.** Skipping a live record is bad; *missing* a
+superseded one is worse, because the sweeper then treats a dead record as in
+force, which is the whole mistake this category exists to stop. That depends
+on every record carrying the Status line in exactly this form, and all fifty
+do — checked by tester rather than assumed, with `ls docs/adr/0*.md` and the
+pattern above returning the same count.
+
+And the precondition is held by something else: the append-only hook exempts
+that same line as its one sanctioned deletion, so a record cannot lose or
+reword it without the gate objecting. **The format this sweep depends on is
+guarded by a mechanism built for an unrelated reason** — which is luck rather
+than design, and worth writing down precisely because nothing would announce
+it if the exemption were ever narrowed. Checking whether a record still holds costs one line and
 precedes checking whether anything it says is true; we did the expensive half
 twice and skipped the cheap one. The addendum was withdrawn before merging
 rather than appended to, because a superseded record saying more than

@@ -2155,3 +2155,39 @@ describe('what reads an inferred duration', () => {
       .toBeGreaterThan(0);
   });
 });
+
+/**
+ * A revisit trigger that a command can answer, answered by one.
+ *
+ * ADR 0019 leaves the calibration click gap where it is partly because
+ * `estimateInputLatency` has **one** caller: "two means the requirement is
+ * being inherited rather than kept, and the interface should be widened
+ * then". That is a condition about the code, so the record should not have
+ * to wait for a reader — the convention the ADR index added on 8 November,
+ * and the reason this case exists rather than a sentence.
+ *
+ * Counted over calls rather than mentions: the import line and the
+ * declaration both name the function without inheriting anything. Comments
+ * are stripped by `codeOf`, so a note *about* the function does not read as
+ * a second caller — the fault that made a deleted symbol resolve to its own
+ * obituary a week ago.
+ */
+describe('ADR 0019 — what calibration latency is measured for', () => {
+  const name = 'estimateInputLatency';
+
+  it('is called from one place, or the record wants re-reading', () => {
+    const callers = filesUnder(SRC)
+      .filter((file) => /\.tsx?$/.test(file) && !/\.test\.tsx?$/.test(file))
+      .flatMap((file) => codeOf(file)
+        .map((line, i) => ({ file: show(file), at: i + 1, line: line.trim() }))
+        .filter(({ line }) => new RegExp(`\\b${name}\\s*\\(`).test(line))
+        // The declaration is not a call.
+        .filter(({ line }) => !line.startsWith('export function')))
+      .map(({ file, at, line }) => `${file}:${at}  ${line}`);
+
+    expect(callers.length,
+      `${name} now has ${callers.length} callers; ADR 0019 says two means the `
+      + 'requirement is being inherited rather than kept, and the interface should '
+      + `be widened. Callers: ${callers.join(' | ')}`).toBe(1);
+  });
+});

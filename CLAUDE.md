@@ -453,6 +453,14 @@ commit flags a legitimate corrective commit that undoes an earlier
 mistake on the same branch as if it were a second violation, which is
 not hypothetical: it is exactly the shape the triggering incident took.
 
+**Reading the live tip has a limit worth stating plainly: it cannot flag
+a commit made before main's publish actually reached that ref.** Verified
+against the triggering commit itself — at the exact moment it was made,
+it predated main's own publish and the check would have had nothing yet
+to compare it against. The refusal lands at the next commit touching the
+same file, or at the merge via `pre-merge-commit`, not necessarily at the
+colliding commit itself if the two were close enough to race.
+
 **`fleet.sh brief` also checks the shared engine's own health, every
 session start.** `~/.claude/scripts/fleet.sh` is unversioned and actively
 executed by whoever is running at the time — editing it non-atomically can

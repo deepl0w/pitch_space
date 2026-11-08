@@ -739,7 +739,20 @@ written up as an addendum before either of two sessions read the status.
 The facts were right and the record had not been in force for a month.
 
 **So a sweep reads the Status line first, and this is the cheap half of the
-whole convention.** Checking whether a record still holds costs one line and
+whole convention.** Bound, since the convention's own argument is that a
+condition a command can decide should carry one:
+
+```bash
+grep -l '^- \*\*Status:\*\* Superseded' docs/adr/0*.md
+```
+
+Anchored to the Status line rather than to the phrase. `grep -l 'Superseded
+by'` returns the same three records today and fails in the worse direction
+later: a record *discussing* another's supersession would be listed as
+superseded itself, and a sweeper would then skip a record that still holds.
+The line pattern is fixed vocabulary rather than wording somebody may
+rephrase — `tools/check-adr-append-only.sh` already treats that exact line as
+structural, exempting it as the one sanctioned deletion. Checking whether a record still holds costs one line and
 precedes checking whether anything it says is true; we did the expensive half
 twice and skipped the cheap one. The addendum was withdrawn before merging
 rather than appended to, because a superseded record saying more than

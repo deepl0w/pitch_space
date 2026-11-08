@@ -475,6 +475,20 @@ append.
   and the extremes of a range are where the arithmetic changes; the middle is
   where it is easiest to read.
 
+  **A fifth instance, 8 November, and it is the detection route that is
+  worth adding.** `eventsOnStave` picks the stave note nearest where the
+  last event landed, which only engages when one pitch set sits at two
+  places — a repeated chord, `I IV I`, which is ordinary in a progression
+  rather than an edge of anything. No fixture had one, so the rule was
+  unexercised and its tie fell backwards, lighting the first chord while
+  the third sounded. **Replacing the entire rule with "take the first
+  match" passed all 1594 tests.** Reading the fixtures would not have
+  found it; mutating the rule did, in one run. Where asking what a value's
+  degenerate form is depends on imagining the case, a mutation asks the
+  suite directly whether anything is holding the line — so for a rule
+  whose trigger is hard to picture, mutate it rather than audit the
+  fixtures for it.
+
 **The first two are one convention because the cure is one, not because the
 cause is.** Structurally empty and stochastically unlucky are different
 faults — the first

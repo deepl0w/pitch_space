@@ -411,10 +411,42 @@ grep -rln 'usePlayAlong' src/ui/screens/*.tsx
 grep -rn 'marking=' src/ui/screens/*.tsx
 ```
 
-Neither reaches an exercise. No sound box follows, and the rhythm prompt's
-cursor runs on `performance.now()` for the reason its own file gives.
-Following a *performance* note by note is the half that matters more, and
-[`ROADMAP.md`](ROADMAP.md) has what it would still take.
+The diagrams are the reference pages' own. **The following is not: since 8
+November the practice screen uses it too**, lighting the answer's notes when a
+prompt replays them.
+
+What makes that shareable is that it refuses the cases it cannot do honestly.
+`eventsOnStave` matches each sounded event to the stave note whose pitches
+contain it, nearest the note the last event landed on, and returns nothing at
+all if any event is not on the stave — so a wrong answer's replay, or a
+degree's establishing cadence, is played and not followed. Strict about *refusing*,
+and the argument is worth repeating because it decides the shape: a cursor on
+the wrong note teaches the wrong thing, where no cursor teaches nothing.
+
+**It was not strict about everything, and the distinction is worth keeping
+separate.** Where the same pitches sit at two places on the stave, the rule
+picks the one nearer where the last event landed, and until 8 November a tie
+between two equally near places fell *backwards* — a `I IV I` replay lit the
+first chord while the third sounded. Nothing failed: replacing the whole
+nearest-to-last rule with "take the first match" passed the entire suite,
+because no fixture had one pitch set at two stave places, which in a
+progression is an ordinary thing rather than an edge. Found by mutating the
+rule rather than by reading it, and a tie now resolves forward. Tester then
+measured how much that mattered rather than assuming it was latent: dumping
+the mapping over 400 seeds under both rules, **70 differ** — roughly one
+progression in six showed the learner a cursor on the wrong chord. It is
+the same move as `intervalPlayed` refusing a three-note take and
+`referenceFor` returning null — the layer declines rather than guesses, and
+what it declines is visible to its caller rather than silently approximated.
+
+Two things still do not follow. **Partial following** — play the cadence, then
+light the stave from its first note — would cover the cases now refused
+wholesale, and is planned rather than built. And the rhythm prompt's cursor
+runs on `performance.now()` for the reason its own file gives, so the one
+exercise that already draws a moving cursor is the one not reading the audio
+clock. Following a *performance* note by note, against what the learner
+actually played, is the half that matters most and is not started;
+[`ROADMAP.md`](ROADMAP.md) has what each would take.
 
 ## Persistence
 

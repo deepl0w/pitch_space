@@ -431,7 +431,10 @@ first chord while the third sounded. Nothing failed: replacing the whole
 nearest-to-last rule with "take the first match" passed the entire suite,
 because no fixture had one pitch set at two stave places, which in a
 progression is an ordinary thing rather than an edge. Found by mutating the
-rule rather than by reading it, and a tie now resolves forward. It is
+rule rather than by reading it, and a tie now resolves forward. Tester then
+measured how much that mattered rather than assuming it was latent: dumping
+the mapping over 400 seeds under both rules, **70 differ** — roughly one
+progression in six showed the learner a cursor on the wrong chord. It is
 the same move as `intervalPlayed` refusing a three-note take and
 `referenceFor` returning null — the layer declines rather than guesses, and
 what it declines is visible to its caller rather than silently approximated.

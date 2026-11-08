@@ -220,3 +220,21 @@ What this addendum adds is that the two sources fill the same field to
 different standards, and nothing in the type says so. The moment a grader
 reads duration for anything but a floor, that difference stops being
 bookkeeping.
+
+**And that moment is now guarded rather than only named**, which is the thing
+a record cannot do for itself: this section can state the condition and cannot
+notice it arriving. `architecture.test.ts` refuses any read of
+`durationSeconds` in shipped code outside `capture/` on a line that does not
+also name `BRIEFEST_NOTE_SECONDS`, so a `heldLongEnough` thresholding on it
+fails on the commit that introduces it, with the reason in the message.
+Capture itself is excluded deliberately — computing an inferred value is not
+depending on one. Two population assertions sit beside the claim: that the
+field is still declared, so a rename cannot empty the sweep, and that the one
+honest use still exists, since a guard whose only permitted case has gone is
+guarding nothing. Written by tester.
+
+One gap, stated rather than left to be discovered: a consumer that copies the
+value into a differently named field and grades on that passes. The field
+name is vocabulary the author cannot rename without the guard noticing; a
+copy of it is vocabulary they choose freely, and no predicate over identifiers
+reaches that.

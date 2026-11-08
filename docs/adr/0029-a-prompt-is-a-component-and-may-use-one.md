@@ -129,3 +129,38 @@ plausible wrong answer rather than an error. That is latent at one caller.
 - **`ScoreLayout` grows beyond note placements** — system breaks, bar
   positions, a real height. At that point it is an interface between two layers
   rather than a convenience return, and the staleness above stops being latent.
+
+## Addendum, 8 November 2026 — the first trigger can never fire, and the question behind it was answered anyway
+
+Found by tester, sweeping Revisit sections for conditions a command can
+decide. This one is a category the 8 November sweep did not have: not a
+trigger that fired unnoticed, nor one whose subject was built without it
+firing, but **a trigger whose subject no longer exists**.
+
+**The condition is unreachable.** It says "a second exercise sets
+`promptDrawsScores`". No exercise sets it and none ever will: the field is
+gone. `types.ts` records that `promptDrawsScores` and
+`promptDrawsAnswerStaff` were replaced by one required three-state `staves`
+value, because two booleans admitted a fourth state nothing meant and both
+true was meaningless and unprevented. The only occurrence of the old name
+anywhere in `src` is the comment recording its removal — so a grep for it
+finds its obituary, which is the fault this project catalogues and which
+tester read correctly rather than as existence.
+
+**And the concern it encoded has been met.** The trigger's reasoning was that
+two setters would be "the point at which *the screen draws the staves* has
+stopped being the rule and the contract should say what it actually is". The
+contract now says what it actually is, and says it as a required field with
+three inhabited values — five exercises on one, one on another, key
+identification on the third — counted rather than argued. The refactor that
+killed the condition is the same one that satisfied it.
+
+**The hazard is worth more than the instance.** A trigger naming an
+identifier dies silently when the identifier is renamed, and **reads exactly
+like a trigger that has not fired yet**. Nothing distinguishes "no second
+exercise has done this" from "nothing can ever do this", so the record keeps
+advertising a live condition and a sweeper keeps finding it unfired. It is the
+same shape as a citation naming a symbol that no longer exists — pointed at a
+condition rather than at prose — and it has the same cure: a trigger bound to
+a command would have gone red at the rename, which is the one moment someone
+was in a position to update it.

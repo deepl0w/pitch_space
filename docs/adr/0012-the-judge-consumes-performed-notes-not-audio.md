@@ -177,3 +177,46 @@ No single step looked like an invention.
   than monophonic, so a chord exercise may feel slower to respond than a melodic
   one on the audio path and identical on the MIDI path. If that is what users
   notice, the problem is the window and not this seam.
+
+## Addendum, 8 November 2026 — the first capture path is built, and a note's end is inferred rather than detected
+
+The first revisit trigger has fired. `capture/` exists and two exercises are
+answered through it, so the question this record asked in advance — can the
+audio producer actually fill the structure, and in particular is a note's
+*end* available — now has an answer from the code rather than a guess.
+
+**The answer is a third thing the trigger did not offer.** It worried the
+field "may have to become optional in practice rather than in principle".
+It did not. `HeardNote.durationSeconds` is always present and is never
+measured: it runs *until the next onset, or the end of the take*
+([`listen.ts`](../../src/audio/capture/listen.ts)). So the structure is filled
+and the awkward part is hidden — a field that looks measured, is always there,
+and is an inference from the following attack.
+
+The consequence is the one 0008 would predict: a short note followed by
+silence reads as long, because nothing marks where it stopped. Offsets really
+are harder than onsets, and the implementation declined to detect them rather
+than declining to report them.
+
+**Nothing grades on it yet, which is why this is latent rather than a
+defect.** One consumer reads the field at all —
+[`played.ts`](../../src/exercises/played.ts) discards a note shorter than
+`BRIEFEST_NOTE_SECONDS`, which is a *floor* test and the one use an inferred
+duration supports honestly, since a reading that overstates length never
+wrongly discards. Rhythm is the exercise that would grade duration and it is
+answered by tapping, not by the microphone:
+
+```bash
+grep -rn 'durationSeconds' src --include='*.ts' --include='*.tsx' \
+  | grep -v '\.test\.' | grep -v 'listen.ts\|types.ts'
+grep -rln 'audioIn.listen' src/exercises/*/[A-Z]*.tsx
+```
+
+**So the seam holds and one of its fields is weaker than it looks.** The
+record's premise — that the judge consumes performed notes rather than audio —
+is unaffected: a `PlayedNote` is still the unit, still comes from either a
+microphone or MIDI, and MIDI gives a real note-off where capture gives a gap.
+What this addendum adds is that the two sources fill the same field to
+different standards, and nothing in the type says so. The moment a grader
+reads duration for anything but a floor, that difference stops being
+bookkeeping.

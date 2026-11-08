@@ -167,3 +167,39 @@ not ours alone and a write that fails is a write that fails silently.
   `answeredAt` is the device's clock. That is a change to the record shape and
   therefore a migration step, which is the thing this record exists to make
   possible rather than to avoid.
+
+## Addendum, 8 November 2026 — the first paint wanted the history, and the mistake made was the neighbour of the one predicted
+
+The first revisit trigger has fired: the home screen reads the attempt log on
+first paint, showing how far each line has advanced. This record said the
+answer is not to move the log into `localStorage` but to decide deliberately
+what the first frame shows while the log loads, and warned that **"the
+temptation at that moment will be the other one"**.
+
+**The temptation was resisted and a different mistake was made instead.** The
+log stayed in IndexedDB. What shipped was a count on each card, and it was
+pulled within the hour: with storage blocked, an unreadable history made
+every item unseen, unseen read as due, and a returning learner was shown a
+stranger's numbers. The failure was not *where the data lives* but *what a
+missing read looks like* — an absent history and an empty one rendering the
+same.
+
+So the warning pointed at the right moment and the wrong hazard, which is
+worth more than if it had been right: the moment is the hard part to
+anticipate and this record named it correctly in October, while the specific
+temptation it guessed at is the kind of detail a prediction gets wrong.
+
+**What stands now** is three states in the store and two on screen:
+`loading`, `unavailable` and a reading, with *cannot read* said in words and
+*loading* showing nothing rather than a zero that will change under the
+reader. `silent` deliberately covers both still-loading and never-practised,
+because the confusion this record exists to prevent is new-versus-unreadable,
+and those two are kept apart. `Home.tsx` carries the reasoning at the point
+of use.
+
+The second trigger — export or import landing — has **not** fired; nothing in
+`src` reads or writes the whole log:
+
+```bash
+grep -rln 'exportHistory\|importHistory' src || echo 'not yet'
+```

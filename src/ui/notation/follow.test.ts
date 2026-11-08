@@ -77,6 +77,35 @@ describe('what a played passage sounds on the stave', () => {
     expect(eventsOnStave([[60], [64], [67]], [[60, 64, 67]])).toEqual([0, 0, 0]);
   });
 
+  it('goes forward when two places on the stave are equally near', () => {
+    /*
+      A stave that holds the same pitches twice — `I IV I`, which nothing
+      dedups — leaves two candidates equally far from the note just lit. The
+      rule said "nearest the last", which is silent about a tie, and the tie
+      fell backwards: the third chord lit the first one's place, so the light
+      jumped to a chord already played while that chord sounded.
+
+      Forward is the answer because the passage is going forward; a tie is
+      the one case where that is the only thing left to go on. Nothing else
+      in this file changes — every other case has a single nearest note, and
+      the whole suite is green either way, which is why the rule could sit
+      unexercised. Found by replacing the whole tie-break with "first match"
+      and watching 1594 tests pass.
+    */
+    const chord = [60, 64, 67];
+    const fourth = [65, 69, 72];
+    expect(eventsOnStave([chord, fourth, chord], [chord, fourth, chord]))
+      .toEqual([0, 1, 2]);
+  });
+
+  it('still takes the nearer place when one really is nearer', () => {
+    // The half the rule was written for, which forward-on-a-tie must not
+    // swallow: coming back down, the note just below is nearer than the
+    // same pitch an octave of stave away.
+    expect(eventsOnStave([[60], [62], [60]], [[60], [62], [64], [65], [60]]))
+      .toEqual([0, 1, 0]);
+  });
+
   it('follows nothing when a note played is not on the stave', () => {
     // A wrong answer replayed from the same root: the root is there, the
     // other note is not, and lighting the root alone would claim the

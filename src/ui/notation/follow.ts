@@ -90,7 +90,7 @@ export function eventsOnStave(
     let best = -1;
     notes.forEach((note, i) => {
       if (!event.every((m) => note.includes(m))) return;
-      if (best < 0 || Math.abs(i - last) < Math.abs(best - last)) best = i;
+      if (best < 0 || Math.abs(i - last) <= Math.abs(best - last)) best = i;
     });
     if (best < 0) return null;
     out.push(best);

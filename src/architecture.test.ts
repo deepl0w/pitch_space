@@ -1959,6 +1959,51 @@ describe('a document pointing inside itself', () => {
    * them, and requiring those would be inventing a convention rather than
    * holding one.
    */
+  /**
+   * And a link into *another* document finds the heading it names.
+   *
+   * **Between two checks, watched for half of what it claims.** The link
+   * scan resolves the file and drops the fragment; the case above resolves
+   * the fragment but only against the document holding the link. A
+   * `ROADMAP.md` entry pointing at `ARCHITECTURE.md#what-a-reference-page-does`
+   * was therefore verified for the file and never for the section.
+   *
+   * The evidence is a near-miss rather than a count, and architect's: while
+   * updating that architecture section it nearly renamed the heading, and
+   * stopped only on remembering the roadmap links into it. Nothing would
+   * have caught it — the same shape as the `## Persistence` heading eaten
+   * in October, one document further out.
+   *
+   * Two such links exist today, which is thin enough that the population
+   * assertion carries most of the weight: at this size the realistic
+   * failure is the pattern quietly matching nothing, not a heading moving.
+   */
+  it('finds the heading a link into another document names', () => {
+    const external = /^[a-z][a-z0-9+.-]*:/i;
+    const crossing: { from: string; target: string; fragment: string; at: string }[] = [];
+
+    for (const file of everyDocument()) {
+      for (const match of readFileSync(file, 'utf8').matchAll(/\]\(([^)#]+)#([^)]+)\)/g)) {
+        const target = match[1].trim();
+        if (target === '' || external.test(target)) continue;
+        crossing.push({ from: show(file), target, fragment: match[2], at: join(file, '..', target) });
+      }
+    }
+
+    expect(crossing.length, 'no link into another document found, so this checked nothing')
+      .toBeGreaterThan(0);
+
+    const dangling = crossing
+      // A target that is not there at all is the link scan's to report, and
+      // saying it twice in two voices helps nobody.
+      .filter(({ at }) => existsSync(at) && at.endsWith('.md'))
+      .filter(({ at, fragment }) => !anchorsOf(readFileSync(at, 'utf8')).has(fragment))
+      .map(({ from, target, fragment }) => `${from} links ${target}#${fragment}, which is no heading in it`);
+
+    expect([...new Set(dangling)], 'a link into a section of another document that is gone')
+      .toEqual([]);
+  });
+
   it('lists every section in its own contents block', () => {
     const missing = everyDocument().flatMap((file) => {
       const text = readFileSync(file, 'utf8');

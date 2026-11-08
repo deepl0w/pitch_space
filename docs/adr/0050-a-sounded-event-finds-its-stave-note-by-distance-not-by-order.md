@@ -24,8 +24,11 @@ match.
 
 Two residues in two days made the rule visible. A tie between two equally near
 places fell backwards, so `I IV I` lit the first chord while the third
-sounded — live on roughly one progression in six, measured across 400 seeds
-rather than assumed latent. Then a melodic unison, two drawn notes of one
+sounded — live on roughly one progression in six — measured by
+dumping the mapping over 400 generated progressions under both rules and
+diffing, not by counting backward steps, which was the first proxy tried and
+would have overstated it by reading a legitimately nearer earlier note as a
+mis-resolved tie. Then a melodic unison, two drawn notes of one
 pitch, left the light on the first while the second sounded.
 
 ## Decision
@@ -58,6 +61,44 @@ general form is not a generalisation of the built one, it is a different and
 worse rule, and the narrow repeat clause is narrow because the case it fixes
 is the only one where distance is provably misleading — the same sound twice,
 where standing still is never right.
+
+### What the rule does, and which of it is held
+
+Measured by tester at `cfbb44c` and reproduced here rather than taken on
+report. **The last column is the part that matters**: a record listing
+behaviour implies the behaviour is supported, and two of these rows are
+supported by nothing but this table.
+
+| events | drawn notes | result | pinned |
+| --- | --- | --- | --- |
+| `[60] [60]` | `[60] [60]` | `[0,1]` | yes |
+| `[60] [60]` | `[60]` | `[0,0]` | yes |
+| `[60]×3` | `[60]×3` | `[0,1,2]` | yes |
+| `[60]×3` | `[60] [60]` | `[0,1,1]` | yes |
+| `[60] [60]` | `[60]` `[60,64,67]` | `[0,1]` | **no** |
+| `[60] [60]` | `[60] [62] [60]` | `[0,0]` | **no** |
+| I IV I | the same three | `[0,1,2]` | yes |
+| `[60] [62] [64] [62] [60]` | `[60] [62] [64]` | `[0,1,2,1,0]` | yes |
+| `[60] [64] [67]` | `[60,64,67]` | `[0,0,0]` | yes |
+
+The two unpinned rows are the two this record is least entitled to assert.
+Row five is a repeat advancing onto a *chord* that contains the pitch, which
+looks unreachable from anything the app draws. Row six is a repeat whose
+other match is not adjacent, so the narrow clause does not fire and the light
+stays put. Neither was judged a defect; neither is guarded, so a future change
+moves them with nothing going red. **Anyone who comes to depend on either
+should pin it first rather than cite this table.**
+
+**Row five is not the repeat rule and cannot be separated from row nine.** An
+event belongs to any note whose pitches *contain* its own — subset semantics —
+which is exactly what makes the arpeggio work, three events on one drawn
+chord. The same reading is what lets a repeat land on a chord. One cannot be
+removed without the other.
+
+The narrowness in rows seven to nine is the design rather than a property of
+the examples: the clause fires only for a repeat of the event *just* played
+and only to the next index, so a scale, an arpeggio and a non-consecutive
+return are untouched by construction, not by luck.
 
 ## Consequences
 

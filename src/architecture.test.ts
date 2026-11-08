@@ -1810,21 +1810,31 @@ describe('what the service worker precaches', () => {
   /**
    * And the other side, so narrowing is caught as well as widening.
    *
-   * The config's stated reason for precaching at all is the notation font:
-   * a cached shell that cannot draw a stave is a blank exercise. A glob
-   * tightened until the font fell out would leave this file's other case
-   * green while making offline worthless.
+   * A cached shell that cannot draw a stave is a blank exercise, so whatever
+   * carries the glyphs has to be in the precache. **This case asserted that
+   * a font file was, and no font file exists.** It checked the glob against
+   * `assets/Bravura.woff2` and `.otf`, and its comment claimed "the real
+   * font is emitted into `dist/assets` with a content hash" — written
+   * confidently and never checked against a build.
    *
-   * Asked of a representative name rather than the built file, deliberately:
-   * the real font is emitted into `dist/assets` with a content hash at build
-   * time, and the claim here is about the pattern, which exists now.
+   * What is true: `toVexflow.ts` imports `vexflow/bravura`, and vexflow
+   * ships that face as JavaScript — `build/esm/entry/vexflow-bravura.js`.
+   * There is no `@font-face` in the stylesheets and no font file tracked
+   * anywhere in the repository. The glyphs ride in the notation chunk, which
+   * `manualChunks` splits out and `tools/check-precache.mjs` requires by
+   * name. Offline works, for a different reason than three places said.
+   *
+   * So the claim is the chunk. The `woff`, `woff2` and `otf` entries in the
+   * glob are precautionary and nothing is asserted about them: a case that
+   * reds when they are trimmed would be reporting a broken offline that is
+   * not broken, which is worse than no case at all.
    */
-  it('still precaches the notation font', () => {
+  it('still precaches the chunk the glyphs ride in', () => {
     const globs = precacheGlobs();
-    for (const font of ['assets/Bravura.woff2', 'assets/Bravura.otf']) {
-      expect(globs.some((pattern) => matchesGlob(font, pattern)),
-        `nothing precaches ${font}, so an offline stave cannot be drawn`).toBe(true);
-    }
+    const chunk = 'assets/notation-D4t2hQ1s.js';
+    expect(globs.some((pattern) => matchesGlob(chunk, pattern)),
+      'nothing precaches the notation chunk, so an offline stave cannot be drawn')
+      .toBe(true);
   });
 });
 

@@ -112,4 +112,11 @@ describe('what a played passage sounds on the stave', () => {
     // stave shows what was heard.
     expect(eventsOnStave([[60], [63]], [[60], [64]])).toBeNull();
   });
+
+  it('moves on when the same sound is played again and the next note holds it', () => {
+    // A melodic unison: two notes of one pitch, each lit in turn.
+    expect(eventsOnStave([[60], [60]], [[60], [60]])).toEqual([0, 1]);
+    // And a repeat that has nowhere further to go stays where it is.
+    expect(eventsOnStave([[60], [60]], [[60]])).toEqual([0, 0]);
+  });
 });

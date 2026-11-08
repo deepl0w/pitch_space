@@ -85,16 +85,31 @@ export function eventsOnStave(
   notes: readonly (readonly number[])[],
 ): number[] | null {
   const out: number[] = [];
+  const holds = (note: readonly number[] | undefined, event: readonly number[]) =>
+    note !== undefined && event.every((m) => note.includes(m));
   let last = 0;
+  let previous: readonly number[] | null = null;
   for (const event of events) {
     let best = -1;
     notes.forEach((note, i) => {
-      if (!event.every((m) => note.includes(m))) return;
+      if (!holds(note, event)) return;
       if (best < 0 || Math.abs(i - last) <= Math.abs(best - last)) best = i;
     });
     if (best < 0) return null;
+    /*
+      The same sound again moves on when the next note holds it too. A
+      melodic unison draws two notes of one pitch, and "nearest" alone
+      kept the light on the first while the second sounded. Narrow on
+      purpose: only a repeat of the event just played, so a descending
+      scale (no repeats), an arpeggio (one note) and I–IV–I (not
+      consecutive) are untouched.
+    */
+    const repeat = previous !== null && previous.length === event.length
+      && previous.every((m, k) => m === event[k]);
+    if (repeat && out.length > 0 && holds(notes[last + 1], event)) best = last + 1;
     out.push(best);
     last = best;
+    previous = event;
   }
   return out;
 }

@@ -102,3 +102,54 @@ note is a real improvement and is in [`ROADMAP.md`](../ROADMAP.md), not here.
 - **Something other than a replay wants following** — a live performance, most
   likely. Then the events are not the app's own output, the pitches are
   approximate, and nothing above survives contact with that.
+
+## Correction and addendum, 8 November 2026 — the state it keeps, and what is measured but unheld
+
+Appended rather than edited in, which matters here for a reason beyond the
+rule: an earlier version of this material *replaced* a published sentence, and
+was caught before merging. A record published an hour ago is still published.
+
+**The correction.** Consequences says the rule is "three predicates and no
+state beyond the last index". It keeps two things — `last`, and `previous`,
+the event just played (`follow.ts:90–91`). The second is not incidental: the
+clause is defined as a repeat of the event *just* played, so remembering that
+event is precisely what the special case costs. The undercount landed in the
+paragraph arguing the rule is small enough to keep, and "no state beyond the
+last index and the event just played" is the measure that argument should run
+on. Found by tester, reading this record against the code rather than against
+the message that supplied its evidence.
+
+**What the rule does, measured at `cfbb44c`, with the support marked.**
+
+| events | drawn notes | result | pinned |
+| --- | --- | --- | --- |
+| `[60] [60]` | `[60] [60]` | `[0,1]` | yes |
+| `[60] [60]` | `[60]` | `[0,0]` | yes |
+| `[60]×3` | `[60]×3` | `[0,1,2]` | yes |
+| `[60]×3` | `[60] [60]` | `[0,1,1]` | yes |
+| `[60] [60]` | `[60]` `[60,64,67]` | `[0,1]` | **no** |
+| `[60] [60]` | `[60] [62] [60]` | `[0,0]` | **no** |
+| I IV I | the same three | `[0,1,2]` | yes |
+| `[60] [62] [64] [62] [60]` | `[60] [62] [64]` | `[0,1,2,1,0]` | yes |
+| `[60] [64] [67]` | `[60,64,67]` | `[0,0,0]` | yes |
+
+**The last column is the point.** A record that lists behaviour is read as
+saying the behaviour is supported, and two of these rows are supported by
+nothing but this table — a repeat advancing onto a chord that contains the
+pitch, and a repeat whose other match is not adjacent, where the clause does
+not fire and the light stays put. Neither is a defect; neither is guarded, so
+a change moves them with nothing going red. **Depend on either and pin it
+first rather than cite this.**
+
+Row five is not the repeat rule and cannot be removed separately from row
+nine: an event belongs to any note whose pitches *contain* its own, and that
+subset reading is exactly what makes an arpeggio work on one drawn chord. The
+narrowness of rows seven to nine is design rather than a property of the
+examples — the clause fires only for a repeat of the event just played and
+only to the next index.
+
+**How the one-in-six was measured**, since the Context states it: by dumping
+the mapping over 400 generated progressions under both rules and diffing, not
+by counting backward steps. That was the first proxy tried and would have
+overstated it, reading a legitimately nearer earlier note as a mis-resolved
+tie.

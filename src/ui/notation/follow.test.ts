@@ -77,6 +77,21 @@ describe('what a played passage sounds on the stave', () => {
     expect(eventsOnStave([[60], [64], [67]], [[60, 64, 67]])).toEqual([0, 0, 0]);
   });
 
+  it('keeps moving on while the stave has places, and stops when it runs out', () => {
+    /*
+      The repeat rule firing twice running, which is the path where `last`
+      has to have advanced for the second one to look in the right place —
+      a single firing cannot tell a correct `last + 1` from a stale one.
+
+      And the same rule against a stave with nowhere left to go: three
+      strikes of one pitch on two notes lights the second twice rather than
+      running off the end. `notes[last + 1]` is undefined there, which the
+      `holds` guard answers rather than the index arithmetic.
+    */
+    expect(eventsOnStave([[60], [60], [60]], [[60], [60], [60]])).toEqual([0, 1, 2]);
+    expect(eventsOnStave([[60], [60], [60]], [[60], [60]])).toEqual([0, 1, 1]);
+  });
+
   it('goes forward when two places on the stave are equally near', () => {
     /*
       A stave that holds the same pitches twice — `I IV I`, which nothing

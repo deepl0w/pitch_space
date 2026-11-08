@@ -419,9 +419,19 @@ What makes that shareable is that it refuses the cases it cannot do honestly.
 `eventsOnStave` matches each sounded event to the stave note whose pitches
 contain it, nearest the note the last event landed on, and returns nothing at
 all if any event is not on the stave — so a wrong answer's replay, or a
-degree's establishing cadence, is played and not followed. Strict on purpose,
+degree's establishing cadence, is played and not followed. Strict about *refusing*,
 and the argument is worth repeating because it decides the shape: a cursor on
-the wrong note teaches the wrong thing, where no cursor teaches nothing. It is
+the wrong note teaches the wrong thing, where no cursor teaches nothing.
+
+**It was not strict about everything, and the distinction is worth keeping
+separate.** Where the same pitches sit at two places on the stave, the rule
+picks the one nearer where the last event landed, and until 8 November a tie
+between two equally near places fell *backwards* — a `I IV I` replay lit the
+first chord while the third sounded. Nothing failed: replacing the whole
+nearest-to-last rule with "take the first match" passed the entire suite,
+because no fixture had one pitch set at two stave places, which in a
+progression is an ordinary thing rather than an edge. Found by mutating the
+rule rather than by reading it, and a tie now resolves forward. It is
 the same move as `intervalPlayed` refusing a three-note take and
 `referenceFor` returning null — the layer declines rather than guesses, and
 what it declines is visible to its caller rather than silently approximated.

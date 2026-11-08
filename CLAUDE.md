@@ -437,6 +437,22 @@ exit status regardless of which filter. Three hooks, each named for the
 one git operation it watches, rather than one check trusted to sit
 upstream of all three.
 
+**Append-only ran on discipline alone until 8 November, then broke once
+and got a command.** A commit rewrote a paragraph of ADR 0050 that main had
+published minutes earlier, on a branch its author had synced before the
+publish — caught before merging, by the author re-reading their own diff,
+which is this project's own "a safeguard that only fires for someone
+already inclined to look" aimed at itself. `tools/check-adr-append-only.sh`
+is the command version, in `CHECKS` and so run by all three hooks above:
+it diffs a staged `docs/adr/NNNN-*.md` against `main`'s own content for
+that file and fails on any line `main` already has that the proposal
+drops, with the one sanctioned exception (the `**Status:**` line, which
+superseding a record is allowed to rewrite in place). The baseline is
+`main`'s live tip, not the previous commit — diffing against the previous
+commit flags a legitimate corrective commit that undoes an earlier
+mistake on the same branch as if it were a second violation, which is
+not hypothetical: it is exactly the shape the triggering incident took.
+
 **`fleet.sh brief` also checks the shared engine's own health, every
 session start.** `~/.claude/scripts/fleet.sh` is unversioned and actively
 executed by whoever is running at the time — editing it non-atomically can
@@ -540,6 +556,8 @@ reproduce exactly.
 - **ADRs are append-only.** `docs/adr/` records decisions that would be expensive
   to reverse. A published record is never rewritten, only marked
   `Superseded by NNNN`, and the index in `docs/adr/README.md` is updated with it.
+  `tools/check-adr-append-only.sh` enforces this mechanically now — see
+  "Several agents work here at once" above.
 - **Tests assert constraints, never aesthetics.** The generator's weights are a
   tuning problem with no ground truth; a test that pins them makes tuning
   impossible. Assert that a suspension resolves down by step, not that a

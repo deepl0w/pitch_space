@@ -73,6 +73,7 @@ words:
 
 1. *Check a claim about the code against the code* — not the record that made it.
 2. *A description of work is not the work* — including the author's own, and most of all a description of **checking**.
+   Its mirror has no artefact at all: *a claim that something was **not** done* is checkable only where the consideration was written down.
 3. *Scope a guard to what can actually change the thing it guards* — and the silent half, where too narrow is blind rather than noisy.
 4. *Before deleting a test as a tautology* — ask whether it can fail for some input the test actually explores.
 5. *A comment that states a constraint is a test that cannot fail* — and its inverse, code that rounded.
@@ -144,6 +145,26 @@ part was checked and by what, rather than that it was checked** — "grepped
 this file for a population assertion and found one at line 171" cannot be
 mistaken for "confirmed both instances", and the gap between them is visible
 to the reader rather than only to the author.
+
+**The mirror of all this has no artefact, and tester named it on 8 November.**
+Every case above is a claim that something *was* done, and each was catchable
+because the thing either exists or does not — somebody greps and finds out.
+A claim that something was deliberately **not** done leaves nothing behind:
+an absence looks identical whether it was chosen, overlooked, or never
+considered. Two of these arrived in one hour. This session told main the
+architecture section had gained a clause it had not — checkable, and caught
+by a grep. Tester reported approvingly that a record omitted two unsupported
+rows, when the rows were there and the reviewed state merely predated them —
+not checkable, because there was no artefact to point at.
+
+So the constructive half is narrower than "verify claims": **write down what
+was considered and rejected, or the decision is indistinguishable from an
+oversight later.** An ADR's rejected alternatives do this by construction.
+`packs.test.ts` does it in a comment — it declines to shell out to
+`git check-ignore` and says why, so a reader three weeks later can tell that
+the absence of git is a decision about not depending on being inside a
+repository, rather than nobody having thought of it. That comment is what
+made a later argument about shallow clones in CI resolvable at all.
 
 The *working* rule that follows — read the code once it is synced rather than
 building on what a message said about it, because a merge gets independent

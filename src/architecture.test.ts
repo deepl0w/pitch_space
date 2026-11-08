@@ -2191,3 +2191,47 @@ describe('ADR 0019 — what calibration latency is measured for', () => {
       + `be widened. Callers: ${callers.join(' | ')}`).toBe(1);
   });
 });
+
+/**
+ * Every record carries the Status line two other mechanisms read.
+ *
+ * **Two things depend on this line's exact shape and neither holds it.**
+ * The ADR index's sweep command greps `^- **Status:** Superseded` to find
+ * which records no longer hold, and a sweeper who misses one treats a
+ * superseded record as live — the mistake that convention exists to stop,
+ * and the costlier direction because it fails silently. And
+ * `tools/check-adr-append-only.sh` exempts that same line as the one
+ * sanctioned deletion, since superseding a record replaces it in place.
+ *
+ * So the hook's exemption is what currently keeps the line from being
+ * reworded, and architect recorded that as **luck rather than design**:
+ * someone narrowing the exemption would have no way to know a command in
+ * another document was resting on its generosity. This is the line held on
+ * its own account, so neither mechanism depends on the other's reasons.
+ *
+ * The form rather than the value: `Accepted`, `Superseded by NNNN` and
+ * whatever a later record needs are all fine. What may not drift is the
+ * prefix the two greps anchor to.
+ */
+describe('the Status line every ADR carries', () => {
+  // `everyDocument` rather than a directory walk: it already excludes the
+  // gitignored notes, and `filesUnder` returns only TypeScript.
+  const records = () => everyDocument().filter((file) => /0\d{3}-.*\.md$/.test(file));
+
+  it('is asked of the records there are', () => {
+    // The index's own sweep reports 50; a population that collapsed would
+    // make the case below pass by reading almost nothing.
+    expect(records().length, 'the ADR directory came back nearly empty')
+      .toBeGreaterThan(20);
+  });
+
+  it('is on every record, in the form two greps anchor to', () => {
+    const without = records()
+      .filter((file) => !/^- \*\*Status:\*\* /m.test(readFileSync(file, 'utf8')))
+      .map((file) => `${show(file)} has no "- **Status:** " line`);
+
+    expect(without,
+      'a record the index sweep cannot classify: it would read as still holding')
+      .toEqual([]);
+  });
+});

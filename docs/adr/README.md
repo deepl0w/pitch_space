@@ -729,6 +729,26 @@ trigger reds at the rename, which is the one moment anyone is placed to fix
 it. Found by tester sweeping for countable conditions, which is this
 convention being used rather than read.
 
+**A fourth: a trigger on a superseded record, where firing is noise.** It can
+fire, the condition is decidable, and the answer is always *read the
+superseding record*. [0021](0021-a-catalogues-top-grade-must-be-reachable.md)
+is Superseded by [0027](0027-configure-by-naming-what-an-exercise-contains.md)
+— on its line 3, and in the table at the top of this file — and its trigger
+about `patterns.ts` was reported as fired, verified as to its facts, and
+written up as an addendum before either of two sessions read the status.
+The facts were right and the record had not been in force for a month.
+
+**So a sweep reads the Status line first, and this is the cheap half of the
+whole convention.** Checking whether a record still holds costs one line and
+precedes checking whether anything it says is true; we did the expensive half
+twice and skipped the cheap one. The addendum was withdrawn before merging
+rather than appended to, because a superseded record saying more than
+*superseded* is a record competing with the one that replaced it. What 0027
+says of 0021 is not that its question moved but that its finding "dissolves" —
+the unreachable cells were measured through an exercise that does not
+generate rhythm, so they were never a fact about the catalogue — and the
+table 0021 names as the test's home, `SHAPE_AT`, exists nowhere in `src`.
+
 **Record a trigger that fired even when nothing is owed.** 0024's condition
 arrived and needed no change, because an inconclusive take records no attempt
 at all; without that written down the next sweep re-derives it. A fired

@@ -82,6 +82,7 @@ words:
 8. *A claim about what the user wants* — the only kind nothing in the repository can contradict.
 9. *A guard must be able to fail* — a sound assertion over a population that is empty, unlucky, machine-dependent or merely tidy is the usual way it cannot.
 10. *A reason attached to working code* — unfalsifiable because the code is right — and its dual, *a distinction the type cannot state*; with the one constructive move against both, *pin the behaviour that exists*.
+11. *A revisit trigger names a moment and not a person* — bind its condition to a command wherever the condition is decidable.
 
 **Check a claim about the code against the code, not against the record that
 made it.** One unchecked reading of `CLAUDE.md` became four wrong documents in
@@ -684,6 +685,44 @@ surfaces years later in whoever edits on the strength of it.
 [`docs/judging-chain.md`](../judging-chain.md) reads 0007, 0012, 0013, 0014,
 0018 and 0020 as one argument, because five of them are the same rule meeting a
 new kind of ignorance and no single record says so.
+
+**A revisit trigger names a moment and not a person, so nobody is watching
+for it.** Every record here ends with conditions under which it should be
+re-examined — about 150 of them across 49 records. Swept on 8 November: **25
+records had never been revisited at all**, and of five triggers checked
+because they named something that plainly now exists, four had fired and
+nothing had been written.
+
+What fired is less interesting than how. [0010](0010-presentation-is-part-of-what-an-attempt-means.md)
+asked for a deliberate decision when the scheduler was built — whether a
+correct `listen` answer should shorten the `read` interval — and **predicted
+in the same sentence that "the first version will probably treat them as if
+they were" independent.** It does, by construction, and nobody weighed it.
+The record forecast its own neglect accurately and that changed nothing,
+because a forecast is still prose waiting for a reader.
+[0012](0012-the-judge-consumes-performed-notes-not-audio.md) asked whether
+capture could fill a note's end and got a third answer it had not offered —
+always present, never measured.
+[0006](0006-settings-in-localstorage-progress-in-indexeddb.md) named the
+right moment and the wrong hazard. [0005](0005-seeds-are-minted-outside-the-core.md)
+is the inverse: its condition never fired and the thing it gated was built
+anyway.
+
+**This is the "What is not built" failure one layer up**, and it has the same
+cure. That section rotted twice while addressing its warning to the reader,
+who was never the one who made it stale; it stopped rotting when each entry
+carried a command. A revisit trigger addresses the reader of the record, and
+the person who causes the moment — who writes the first caller, who ships the
+capture path — has no reason to open it. **Where the condition is decidable,
+carry the command**, as [0050](0050-a-sounded-event-finds-its-stave-note-by-distance-not-by-order.md)
+does for "a third special case is proposed". Where it is not — *latency
+becomes the complaint*, *a corpus of real playing lands* — prose is honest and
+a periodic sweep is the only backstop.
+
+**Record a trigger that fired even when nothing is owed.** 0024's condition
+arrived and needed no change, because an inconclusive take records no attempt
+at all; without that written down the next sweep re-derives it. A fired
+trigger with no consequence is a result, not a non-event.
 
 [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) describes the system as it stands
 today and links back to these records. It is a living document: when a record

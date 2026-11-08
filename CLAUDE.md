@@ -480,9 +480,11 @@ up yet, so the app currently ships as a PWA only. `./test.sh --offline` was
 the same kind of stub, wired so it would start working once the PWA plugin
 landed rather than being added afterwards — the plugin is in now, so
 `--offline` actually asserts that the built service worker precaches what the
-app needs (the notation chunk and Bravura included), and a missing or broken
-worker fails it rather than printing a note nobody reads. `docs/ROADMAP.md`
-has what's still a stub.
+app needs — the app shell, the bundle, the notation chunk (which carries
+Bravura: `vexflow/bravura` ships the glyphs as JavaScript, not as a font
+file, so there is no separate font to precache) and the stylesheet — and a
+missing or broken worker fails it rather than printing a note nobody reads.
+`docs/ROADMAP.md` has what's still a stub.
 
 ## The code
 

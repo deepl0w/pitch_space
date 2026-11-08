@@ -64,10 +64,17 @@ export default defineConfig({
       },
       workbox: {
         /*
-          The notation font is the reason offline is worth claiming at
-          all — a cached shell that cannot draw a stave is a blank
-          exercise — so the glyph formats are precached with everything
-          else rather than left to a runtime cache.
+          The notation glyphs are the reason offline is worth claiming
+          at all — a cached shell that cannot draw a stave is a blank
+          exercise. They are not a font file: `toVexflow.ts` imports
+          `vexflow/bravura`, which is the face as JavaScript, and
+          `manualChunks` splits it into `assets/notation-*.js`, so the
+          `js` entry is what carries it and `tools/check-precache.mjs`
+          requires that chunk by name. The font formats below match
+          nothing the build emits today; they are kept so a real font
+          file, if one is ever added, is precached rather than missed.
+          Found by tester, who had a guard asserting a `.woff2` that
+          was never there.
 
           **`.pack` is left out on purpose, and the omission is the
           whole of the protection.** ADR 0046 requires that a sampled

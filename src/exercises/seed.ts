@@ -11,11 +11,13 @@
  * Under *What this costs* it says there is no shared helper, that minting is
  * therefore a line per call site, and that this is "an opportunity for one of
  * them to do it badly — seeding from `Date.now()`". That is a predicted
- * failure, not a threshold for when a helper is earned; an earlier version of
- * this comment credited the record with the second and it says only the
- * first. The helper exists here because the registry makes the prediction
- * certain rather than likely: every exercise type needs a seed, so the
- * scattered version is five call sites rather than a hypothetical one.
+ * failure; the record's *Revisit when* did set a threshold — a `newSeed()`
+ * helper at two call sites — which architect has since withdrawn in favour
+ * of this file's argument. The helper exists because the registry makes the
+ * prediction certain rather than likely: every exercise type needs a seed,
+ * so without one place to mint it, each new type is another chance to mint
+ * it badly. What matters is whether minting can scatter, not how many
+ * places mint today.
  */
 
 /** Exclusive upper bound, matching what `makeRng` accepts. */

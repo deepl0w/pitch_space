@@ -6,7 +6,7 @@ import { useSettings } from '../../state/settingsStore';
 import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
-import { usePlayer } from '../sound';
+import { followSynth, usePlayer } from '../sound';
 import { ALL_KEYS, keyId, keyName } from '../../theory/key';
 import { chordSymbol, spellChord } from '../../theory/chord';
 import {
@@ -35,7 +35,7 @@ export function KeyChords({ focus }: { focus?: string }) {
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();
-  const follow = usePlayAlong();
+  const follow = usePlayAlong(followSynth);
 
   const key = ALL_KEYS.find((k) => keyId(k) === keyIdValue)!;
   const table = key.mode === 'major'

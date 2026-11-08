@@ -438,6 +438,13 @@ export interface AudioOut {
    * all, draws its own fallback.
    */
   spectrum?(into: Uint8Array<ArrayBuffer>): boolean;
+  /**
+   * Seconds into the passage now sounding, on the clock it was scheduled
+   * against, or null when nothing is — so the screen can follow what a
+   * prompt plays on the answer's stave. Optional for the same reason as
+   * `spectrum`: without it nothing is followed, and nothing else changes.
+   */
+  playhead?(): number | null;
 }
 
 /**

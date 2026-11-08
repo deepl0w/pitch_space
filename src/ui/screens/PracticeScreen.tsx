@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { Score } from '../notation/Score';
+import { eventsOf, eventsOnStave, usePlayAlong } from '../notation/follow';
+import { midiOf } from '../../theory/pitch';
 import { SettingsPanel } from '../components/SettingsPanel';
 import { Field, OneOf } from '../controls';
 import { ExerciseBoundary } from '../components/ExerciseBoundary';
@@ -603,6 +605,41 @@ function RoundView({
     [round, definition],
   );
 
+  /*
+    The answer's stave follows what the prompt plays, once there is one.
+
+    The prompt plays through `audio` and knows nothing of the stave; the
+    stave is the screen's. So the screen hands the prompt a wrapper that
+    plays as before and, when the passage it was given is on the answer's
+    stave note for note, lights each note as it sounds. A passage that is
+    not — a wrong answer's replay, a cadence the stave does not show — is
+    played and not followed, which is `eventsOnStave` declining rather than
+    guessing.
+  */
+  const follow = usePlayAlong(() => audio.playhead?.() ?? null);
+  const { along, stop } = follow;
+  const following = useMemo<AudioOut>(() => ({
+    play(voices) {
+      audio.play(voices);
+      const { starts, midis } = eventsOf(voices);
+      const onStave = answerScore
+        && eventsOnStave(midis, answerScore.notes.map((n) => n.pitches.map(midiOf)));
+      if (onStave) along(starts, onStave);
+      else stop();
+    },
+    stopAll: () => { audio.stopAll(); stop(); },
+    ...(audio.spectrum ? { spectrum: (into) => audio.spectrum!(into) } : {}),
+    ...(audio.playhead ? { playhead: () => audio.playhead!() } : {}),
+  }), [audio, answerScore, along, stop]);
+  const answerStave = answerScore && (
+    <Score
+      spec={answerScore}
+      lit={follow.lit}
+      cursorX={follow.cursorX}
+      onLayout={follow.onLayout}
+    />
+  );
+
   const Prompt = definition.Prompt;
 
   return (
@@ -629,7 +666,7 @@ function RoundView({
         there, so a definition that says so gets it as a prop instead and
         this slot stays empty.
       */}
-      {definition.staves === 'screen' && answerScore && <Score spec={answerScore} />}
+      {definition.staves === 'screen' && answerStave}
       <Prompt
         // A fresh exercise is a fresh component: remounting is what clears
         // the prompt's own state without a reset path that has to be kept in
@@ -639,12 +676,12 @@ function RoundView({
         settings={settings}
         result={round.result}
         onRespond={onRespond}
-        audio={audio}
+        audio={following}
         audioIn={audioIn}
         capture={capture}
         moveOn={moveOn}
-        answerStaff={definition.staves === 'answer-in-prompt' && answerScore
-          ? <Score spec={answerScore} />
+        answerStaff={definition.staves === 'answer-in-prompt' && answerStave
+          ? answerStave
           : undefined}
         scores={definition.staves === 'prompt' ? { questionScore, answerScore } : undefined}
       />

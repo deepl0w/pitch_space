@@ -5,7 +5,7 @@ import { DiagramPicker, InstrumentDiagram } from '../notation/InstrumentDiagram'
 import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
-import { usePlayer } from '../sound';
+import { followSynth, usePlayer } from '../sound';
 import { pitchName } from '../../theory/pitch';
 import { SCALE_TYPES, degreeLabel, descendingType, spellScale } from '../../theory/scale';
 import { noteValue } from '../../theory/meter';
@@ -31,7 +31,7 @@ export function Scales({ focus, tonic }: { focus?: string; tonic?: string }) {
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();
-  const follow = usePlayAlong();
+  const follow = usePlayAlong(followSynth);
 
   const tonicPitch = tonicFor(tonicName);
   const type = SCALE_TYPES.find((s) => s.id === scaleId)!;

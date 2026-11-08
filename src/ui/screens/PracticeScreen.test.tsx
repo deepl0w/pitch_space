@@ -804,3 +804,85 @@ describe('the schedule choosing what is asked', () => {
     expect(last().wished).toBeUndefined();
   });
 });
+
+/**
+ * The answer's stave following what the prompt plays.
+ *
+ * Through the screen and a real prompt, because the claim is the wiring:
+ * the prompt plays through the audio it is handed and knows nothing of the
+ * stave, so only the screen can join the two.
+ */
+describe('the answer stave, while an answer is replayed', () => {
+  it('lights the notes the replay sounds, and nothing for a replay not on the stave', () => {
+    // Animation frames faked too, so the follow loop runs only when the
+    // test says and a stale one cannot slip between two assertions.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'Date'] });
+    try {
+      let clock: number | null = null;
+      const played: unknown[] = [];
+      const timed: AudioOut = {
+        play: (voices) => { played.push(voices); clock = 0; },
+        stopAll: () => { clock = null; },
+        playhead: () => clock,
+      };
+      /*
+        Pinned to the defaults, which hold no unison. Earlier cases in this
+        file widen the stored pool, and a unison answered wrong replays
+        only the root — which is on the stave, so lighting it is right and
+        this case's second half would be asking for the wrong thing.
+      */
+      const interval = EXERCISE_TYPES.find((t) => t.id === 'interval-id')!;
+      settingsStore.getState().setExerciseSettings('interval-id', interval.settings.defaults);
+      const container = document.createElement('div');
+      document.body.append(container);
+      const root = createRoot(container);
+      act(() => root.render(<PracticeScreen exerciseId="interval-id" audio={timed} />));
+      act(() => resizeTo(container.querySelector('.practice-main') ?? container, 900));
+      const named = (text: string) => [...container.querySelectorAll('button')]
+        .find((b) => b.textContent?.trim() === text);
+      act(() => named('Start')?.click());
+
+      const choices = () => [...container.querySelectorAll('.choices button')] as HTMLButtonElement[];
+      // Answered wrong on purpose, drawing again until a round is: the case
+      // below needs a wrong answer's replay, and a guard whose second half
+      // runs only when the first chip happens to be wrong is half a guard.
+      for (let tries = 0; tries < 40; tries += 1) {
+        act(() => choices()[0].click());
+        if (container.querySelector('.choices button.wrong')) break;
+        act(() => named('Next')?.click());
+      }
+      expect(container.querySelector('.choices button.wrong'), 'never answered a round wrong')
+        .not.toBeNull();
+      for (const host of container.querySelectorAll('.score-host')) {
+        act(() => resizeTo(host as HTMLElement, 600));
+      }
+      const lit = () => [...container.querySelectorAll('.score-host .vf-stavenote')]
+        .map((g, i) => (g.classList.contains('score-lit') ? i : -1)).filter((i) => i >= 0);
+      const step = (seconds: number) => {
+        clock = seconds;
+        act(() => { vi.advanceTimersByTime(20); });
+      };
+
+      const right = container.querySelector('.choices button.right.playable') as HTMLButtonElement;
+      expect(right, 'no replayable right answer').not.toBeNull();
+      act(() => right.click());
+      step(0.01);
+      expect(lit(), 'the first note, as it sounds').toEqual([0]);
+      step(1.0);
+      expect(lit(), 'the second note, once it has begun').toEqual([1]);
+      clock = null;
+      act(() => { vi.advanceTimersByTime(20); });
+      expect(lit()).toEqual([]);
+
+      const wrong = container.querySelector('.choices button.wrong.playable') as HTMLButtonElement;
+      act(() => wrong.click());
+      step(0.01);
+      step(1.0);
+      expect(lit(), 'a replay whose notes are not on the stave lit something').toEqual([]);
+      act(() => root.unmount());
+      container.remove();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

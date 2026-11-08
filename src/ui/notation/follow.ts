@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ScoreLayout } from '../../exercises/render/toVexflow';
-import { appSynth } from '../sound';
+import type { Voice } from '../../audio/output/synth';
 
 /**
  * Following the music on the staff while it plays: which note is lit, and
@@ -57,19 +57,69 @@ export function cursorFor(
 const WAKE_GRACE_MS = 2500;
 
 /**
+ * The events in a set of voices: what starts together is one event.
+ */
+export function eventsOf(voices: readonly Voice[]): { starts: number[]; midis: number[][] } {
+  const byStart = new Map<number, number[]>();
+  for (const voice of voices) {
+    const key = Math.round(voice.start * 1e6) / 1e6;
+    byStart.set(key, [...(byStart.get(key) ?? []), voice.midi]);
+  }
+  const starts = [...byStart.keys()].sort((a, b) => a - b);
+  return { starts, midis: starts.map((s) => byStart.get(s)!) };
+}
+
+/**
+ * Which stave note each event sounds, or null if any event is not on it.
+ *
+ * Matched by pitch, not by count: an event belongs to the note whose
+ * pitches include all of its own, nearest the note the last event landed
+ * on — so a scale played down walks the stave back, an arpeggio stays on
+ * its chord, and a replay of a wrong answer, whose second note is nowhere
+ * on the stave, follows nothing rather than lighting a note it did not
+ * play. Strict on purpose: a cursor on the wrong note teaches the wrong
+ * thing, and no cursor teaches nothing.
+ */
+export function eventsOnStave(
+  events: readonly (readonly number[])[],
+  notes: readonly (readonly number[])[],
+): number[] | null {
+  const out: number[] = [];
+  let last = 0;
+  for (const event of events) {
+    let best = -1;
+    notes.forEach((note, i) => {
+      if (!event.every((m) => note.includes(m))) return;
+      if (best < 0 || Math.abs(i - last) < Math.abs(best - last)) best = i;
+    });
+    if (best < 0) return null;
+    out.push(best);
+    last = best;
+  }
+  return out;
+}
+
+/**
  * Play something and follow it on a stave.
  *
- * `play` is whatever plays the passage and returns when each event starts;
- * `indices` says which stave note each event sounds. The hook drives one
- * animation loop while the passage sounds and stops it when the synth
- * reports nothing sounding — including when another play or a navigation
- * cut it short, which is what keeps a cursor from running on over silence.
+ * `playhead` is the clock the passage was scheduled on — `Synth.playhead`,
+ * or an exercise's `AudioOut.playhead` — taken as an argument so the page
+ * that plays and the clock it reads cannot be two different synths, and so
+ * a test can drive it. `along` takes when each event starts and which
+ * stave note each sounds. One animation loop runs while the passage
+ * sounds and stops when the clock reports nothing sounding — including
+ * when another play or a navigation cut it short, which is what keeps a
+ * cursor from running on over silence.
  */
-export function usePlayAlong() {
+export function usePlayAlong(playhead: () => number | null) {
   const [seconds, setSeconds] = useState<number | null>(null);
   const [plan, setPlan] = useState<{ starts: number[]; indices: number[] } | null>(null);
   const [layout, setLayout] = useState<ScoreLayout | null>(null);
   const frame = useRef(0);
+  // Read through a ref so a caller passing an inline function does not
+  // restart the loop every render.
+  const clock = useRef(playhead);
+  useEffect(() => { clock.current = playhead; }, [playhead]);
 
   useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
@@ -79,7 +129,7 @@ export function usePlayAlong() {
     const began = performance.now();
     let heard = false;
     const step = () => {
-      const now = appSynth.playhead();
+      const now = clock.current();
       if (now === null) {
         // Not begun yet (a cold device is still opening) or already over.
         if (heard || performance.now() - began > WAKE_GRACE_MS) {
@@ -95,8 +145,22 @@ export function usePlayAlong() {
     frame.current = requestAnimationFrame(step);
   }, []);
 
+  /*
+    Called for a passage that will not be followed. Without it the loop
+    from the last one runs on and reads the *new* passage's clock against
+    the *old* notes — found by a test that replayed a wrong answer straight
+    after a right one and saw the right one's first note light.
+  */
+  const stop = useCallback(() => {
+    cancelAnimationFrame(frame.current);
+    setSeconds(null);
+    setPlan(null);
+  }, []);
+
   const lit = seconds !== null && plan ? soundingAt(seconds, plan.starts) : null;
   return {
+    /** Stop following, for a passage that is played but not on the stave. */
+    stop,
     /** Call with what `play` returned and the stave note each event sounds. */
     along,
     /** The stave note sounding now, for `Score`'s `lit`. */

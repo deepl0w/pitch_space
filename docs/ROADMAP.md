@@ -259,8 +259,13 @@ current-state claim in a document nobody reads for current truth.
 What is still planned is the larger half, and shipping the first half did not
 make it smaller:
 
-- **No sound box follows.** The reference pages are the easy case — the app
-  chose the passage, laid it on its own clock, and nothing is being judged.
+- **An exercise follows only a replay of what is on its answer's stave.**
+  Since 8 November the practice screen lights the answer's notes when a
+  prompt replays them — the right answer's chip, say — and follows nothing
+  when the passage is not all on the stave: a wrong answer's replay, a
+  degree's establishing cadence, a falling melodic minor whose lowered
+  notes the ascending stave does not show. Partial following — the cadence
+  played, then the stave lit from its first note — is the planned half.
 - **The rhythm prompt's cursor runs on `performance.now()`**, for the reason
   its own file gives, so the one exercise that already draws a moving cursor
   is the one not reading the audio clock.

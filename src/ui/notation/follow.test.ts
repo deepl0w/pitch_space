@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cursorFor, soundingAt } from './follow';
+import { cursorFor, eventsOf, eventsOnStave, soundingAt } from './follow';
 import { eventStarts, schedule } from '../../audio/output/schedule';
 import type { ScoreLayout } from '../../exercises/render/toVexflow';
 
@@ -56,5 +56,31 @@ describe('where the cursor stands', () => {
 
   it('draws none before the passage begins', () => {
     expect(cursorFor(-0.06, starts, [0, 1, 2], layout([100, 200, 300]))).toBeNull();
+  });
+});
+
+describe('what a played passage sounds on the stave', () => {
+  const v = (midi: number, start: number) => ({ midi, start, duration: 0.4 });
+
+  it('groups what starts together into one event', () => {
+    expect(eventsOf([v(60, 0), v(64, 0), v(67, 0), v(62, 0.6)]))
+      .toEqual({ starts: [0, 0.6], midis: [[60, 64, 67], [62]] });
+  });
+
+  it('walks a scale up and back down the one ascending stave', () => {
+    const stave = [[60], [62], [64], [65]];
+    expect(eventsOnStave([[60], [62], [64], [65], [64], [62], [60]], stave))
+      .toEqual([0, 1, 2, 3, 2, 1, 0]);
+  });
+
+  it('keeps an arpeggio on its chord', () => {
+    expect(eventsOnStave([[60], [64], [67]], [[60, 64, 67]])).toEqual([0, 0, 0]);
+  });
+
+  it('follows nothing when a note played is not on the stave', () => {
+    // A wrong answer replayed from the same root: the root is there, the
+    // other note is not, and lighting the root alone would claim the
+    // stave shows what was heard.
+    expect(eventsOnStave([[60], [63]], [[60], [64]])).toBeNull();
   });
 });

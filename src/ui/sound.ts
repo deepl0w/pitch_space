@@ -13,6 +13,11 @@ import { midiOf, type Pitch } from '../theory/pitch';
  */
 export const appSynth = new Synth();
 
+/** The app synth's playhead, for a page following what it plays. */
+export function followSynth(): number | null {
+  return appSynth.playhead();
+}
+
 /** Silence anything still scheduled. Called when a screen goes away. */
 export function stopSound(): void {
   appSynth.stopAll();

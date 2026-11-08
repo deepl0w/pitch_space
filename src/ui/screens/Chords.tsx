@@ -5,7 +5,7 @@ import { DiagramPicker, InstrumentDiagram } from '../notation/InstrumentDiagram'
 import { entryFor } from '../menu';
 import type { Clef } from '../../exercises/render/toVexflow';
 import { Actions, Panel, Picker, Readout } from '../controls';
-import { usePlayer } from '../sound';
+import { followSynth, usePlayer } from '../sound';
 import { midiOf, pitchName, simplifySpelling } from '../../theory/pitch';
 import { ALL_KEYS, keyId } from '../../theory/key';
 import { CHORD_TYPES, INVERSION_LABELS, chord, chordSymbol, voiceChord } from '../../theory/chord';
@@ -38,7 +38,7 @@ export function Chords({ focus }: { focus?: string }) {
   const [clef, setClef] = useState<Clef>('treble');
   const [octave, setOctave] = useState(4);
   const play = usePlayer();
-  const follow = usePlayAlong();
+  const follow = usePlayAlong(followSynth);
 
   const type = CHORD_TYPES.find((c) => c.id === chordId)!;
   const built = useMemo(() => {

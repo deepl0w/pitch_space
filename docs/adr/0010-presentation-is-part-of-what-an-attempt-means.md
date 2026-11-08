@@ -111,3 +111,52 @@ split.
   through. If a third axis like that arrives, check that it is genuinely a
   dimension of the attempt and not a different item, before adding it to the
   key by analogy with this one.
+
+## Addendum, 8 November 2026 — the scheduler is built and the question it was told to ask was never asked
+
+The first revisit trigger has fired. The scheduler exists, and since
+`03ad9e3` it steers every question through
+[`state/wish.ts`](../../src/state/wish.ts). This record asked for a decision
+at that moment and the decision was not taken — the default was inherited
+instead, exactly as the trigger predicted it would be.
+
+**What the trigger asked.** Whether a correct `listen` answer should shorten
+the `read` interval at all, given that the two are not independent: hearing a
+third surely teaches you something about reading one. The bullet says in
+advance that "the first version will probably treat them as if they were"
+independent.
+
+**What shipped.** Fully independent, by construction rather than by choice.
+`tallyKey` is `lineKey(line)::item`, and `lineKey` is
+`exercise ∥ presentation ∥ sorted askable`, so a `listen` tally and a `read`
+tally for one item are different keys with different streaks and different
+due times. Nothing crosses.
+
+```bash
+grep -n 'export function lineKey' -A4 src/state/line.ts
+grep -n 'export function tallyKey' -A3 src/state/progressStore.ts
+```
+
+**This is not a defect and it is not a decision either**, which is the whole
+reason for writing it down. Independence is defensible and may well be right:
+the skills come apart, a learner fluent by eye and lost by ear is in two
+different places, and that is this record's own argument for keeping
+presentation in the key at all. What is missing is anybody having weighed
+transfer against it. The prediction in the trigger came true — including the
+part where nobody notices.
+
+**It is the second of this shape found in two days**, which is why it is worth
+naming rather than just fixing. [0037](0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md)'s
+constraint that the scheduler must work when latency is absent was also met by
+the first caller not using latency at all: a real answer, reached by omission.
+A revisit trigger that names the moment but not the person reaches whoever
+happens to open the record, and the person who writes the first caller has no
+reason to open it. The same remedy the "What is not built" sections got
+applies here and is not applied: a trigger whose condition a command can
+decide should carry the command.
+
+**Left open rather than ruled on**, because whether a correct `listen` answer
+should shorten a `read` interval is a question about what a score means, which
+[0036](0036-one-question-two-windows.md) puts with the user. What this
+addendum settles is only that it is open, and that shipping independent is not
+evidence that independence was chosen.

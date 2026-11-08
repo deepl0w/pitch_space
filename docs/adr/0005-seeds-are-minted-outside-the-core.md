@@ -101,3 +101,49 @@ otherwise go looking for a `randomSeed` that no longer exists.
   thing that generates the sequence is a stateful object with a home somewhere
   — at which point where it lives is worth deciding deliberately rather than
   inheriting from this record.
+
+## Addendum, 8 November 2026 — the helper exists, the stated trigger has not fired, and the file says this record has no trigger
+
+Found by sweeping every ADR's "Revisit when" for conditions that have since
+come true. This one is the opposite case and more interesting for it: the
+condition has *not* come true, the thing it gated was built anyway, and the
+file that built it says this record never set a condition.
+
+**The state of the trigger.** The first bullet above says a `newSeed()` helper
+"earns its place" the moment there are two call sites. `newSeed()` exists, in
+[`src/exercises/seed.ts`](../../src/exercises/seed.ts), and has exactly one
+caller:
+
+```bash
+grep -rn 'newSeed()' src --include='*.ts' --include='*.tsx' | grep -v 'seed.ts:'
+```
+
+**What the implementing file says about this record, and the part that is
+wrong.** `seed.ts` argues its own existence against 0005, accurately about the
+section it quotes: *What this costs* predicts a failure — a line per call site
+and a chance for one to seed from `Date.now()` — and sets no threshold. The
+comment then says the record "says only the first", having corrected an
+earlier version that credited it with a threshold. **The threshold is real and
+is in the next section down**, naming `newSeed()` outright. A correction
+scoped to one section was generalised to the record, and landed one heading
+above the sentence it denied.
+
+**The ruling, so the two stop disagreeing.** The helper stays and the
+threshold is withdrawn rather than left unmet. Counting call sites was the
+wrong criterion: the question is not how many places mint a seed today but
+whether minting *can* scatter, and `seed.ts` has the better argument — every
+exercise type needs one, so the alternative to a helper is a line per type
+rather than a line per existing caller. A criterion that would have been
+satisfied by waiting for the second mistake is a worse criterion than one
+that asks whether the mistake is available.
+
+So this record's first bullet is superseded by its own implementation, and
+the implementation's reason is sound even though its account of this record
+is not. A future reader comparing the two should take `seed.ts`'s argument
+and this paragraph's correction of its premise.
+
+**One figure in that comment is unexplained and is not corrected here.** It
+says the scattered version would be "five call sites"; there are seven
+exercise types and six families, and the practice screen is generic over
+types, so nothing obviously counts five. Left as a question for whoever owns
+the file rather than guessed at.

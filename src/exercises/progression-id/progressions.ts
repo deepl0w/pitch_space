@@ -12,7 +12,7 @@ import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
-import { coercePresentation, presentationField } from '../types';
+import { coercePresentation, guessChance, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -478,6 +478,8 @@ export function gradeProgression(
     outcomes: exercise.numerals.map((want, i) => ({
       item: `progression:${key.mode}:${want}` as ItemId,
       correct: per[i],
+      // Each slot is its own pick from the palette.
+      chance: guessChance(exercise.palette.length),
       latencyMs: response.latencyMs,
     })),
   };

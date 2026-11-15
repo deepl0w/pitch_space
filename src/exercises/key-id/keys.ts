@@ -4,6 +4,7 @@ import type { Clef, ScoreSpec } from '../render/toVexflow';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
+import { guessChance } from '../types';
 
 /**
  * Key identification: read a key signature and name the key.
@@ -197,8 +198,12 @@ export function gradeKey(exercise: KeyExercise, response: KeyResponse): Result {
       ? `Yes — ${described} is ${keyName(asked)}, and ${keyName(relative)} alongside it.`
       : `That signature is ${described}: ${keyName(asked)}. Its relative is ${keyName(relative)}.`,
     outcomes: [
-      { item: `key:${exercise.keyId}` as ItemId, correct },
-      { item: `signature:${asked.accidentals}` as ItemId, correct },
+      { item: `key:${exercise.keyId}` as ItemId, correct, chance: guessChance(exercise.choices.length) },
+      {
+        item: `signature:${asked.accidentals}` as ItemId,
+        correct,
+        chance: guessChance(exercise.choices.length),
+      },
     ],
   };
 }

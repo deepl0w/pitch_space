@@ -60,6 +60,30 @@ export interface ItemOutcome {
    * meant to shorten the interval for hesitation as well as for error.
    */
   latencyMs?: number;
+  /**
+   * The chance that a guess would have been right: one over the number of
+   * buttons the answer was picked from, or more where several were right.
+   *
+   * The user's ruling, 15 November: a right answer should advance an item
+   * less when guessing was easy. Right out of two is weaker evidence than
+   * right out of twelve, and right out of one is none — ADR 0037's pool of
+   * one, where clicking the sole button built a streak to "mastered". The
+   * fold advances the streak by `1 - chance`.
+   *
+   * **The answer space, not the askable set**, which architect warned is
+   * the easy mistake: twelve intervals in both directions are twenty-four
+   * items and twelve buttons, and the buttons are the floor. Absent for an
+   * answer not picked from a list — a rhythm tapped — which counts in full.
+   */
+  chance?: number;
+}
+
+/**
+ * The chance of a right guess: `right` correct options among `offered`.
+ * Guarded so an empty list cannot divide by zero; it reads as certain.
+ */
+export function guessChance(offered: number, right = 1): number {
+  return offered <= 0 ? 1 : Math.min(1, right / offered);
 }
 
 /** What `grade` says about one response. */

@@ -6,7 +6,7 @@ import { establishingCadence } from '../../generate/tonicize';
 import { ESTABLISHING, chordVoices } from '../cadence';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
-import { coercePresentation, keysField, keysIn, presentationField } from '../types';
+import { coercePresentation, guessChance, keysField, keysIn, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -185,7 +185,12 @@ export function gradeDegree(
       ? `Yes — ${said}, which is ${pitchName(exercise.pitch, false)} in ${keyName(key)}.`
       : `That was ${said} — ${pitchName(exercise.pitch, false)} in ${keyName(key)}.`,
     outcomes: [
-      { item: `degree:${exercise.degree}:${key.mode}` as ItemId, correct, latencyMs: response.latencyMs },
+      {
+        item: `degree:${exercise.degree}:${key.mode}` as ItemId,
+        correct,
+        chance: guessChance(exercise.choices.length),
+        latencyMs: response.latencyMs,
+      },
     ],
   };
 }

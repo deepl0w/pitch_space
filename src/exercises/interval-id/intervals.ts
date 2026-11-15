@@ -10,7 +10,7 @@ import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreNote, ScoreSpec } from '../render/toVexflow';
 import { steadyNotes } from '../played';
-import { coercePresentation, presentationField } from '../types';
+import { coercePresentation, guessChance, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
 } from '../types';
@@ -483,6 +483,7 @@ export function gradeInterval(exercise: IntervalExercise, response: IntervalResp
     outcomes: [{
       item: exercise.items[0],
       correct,
+      chance: guessChance(exercise.choices.length),
       ...(response.latencyMs === undefined ? {} : { latencyMs: response.latencyMs }),
     }],
   };

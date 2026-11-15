@@ -278,7 +278,7 @@ function coerceAudio(value: unknown): AudioSettings {
 
 /* -- attempts ------------------------------------------------------------- */
 
-export const ATTEMPT_SCHEMA = 4;
+export const ATTEMPT_SCHEMA = 5;
 
 /**
  * One answered exercise, in the shape a spaced-repetition scheduler will
@@ -395,7 +395,18 @@ export interface AttemptV4 extends AttemptV3 {
   wished?: ItemId;
 }
 
-export type Attempt = AttemptV4;
+/**
+ * Version 5 gives an outcome its chance of a lucky guess (`ItemOutcome.chance`).
+ *
+ * A field on the outcome rather than the attempt, because a progression's
+ * slots and a key question's two items are each their own pick. Optional,
+ * and absent on every earlier row: those answers were recorded before
+ * anyone asked how many buttons there were, so the fold credits them in
+ * full, which is what they were credited before.
+ */
+export type AttemptV5 = AttemptV4;
+
+export type Attempt = AttemptV5;
 
 export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [
   // 2 -> 3 is deliberately a no-op, and that is the decision rather than
@@ -430,6 +441,9 @@ export const ATTEMPT_MIGRATIONS: readonly MigrationStep[] = [
   (data) => data,
   // 3 -> 4: nothing, and here the nothing is simply true. No row before
   // version 4 was generated from a wish, so an absent `wished` describes it.
+  (data) => data,
+  // 4 -> 5: nothing. An outcome without a chance is credited in full, as
+  // every outcome was before the field existed.
   (data) => data,
 ];
 
@@ -473,7 +487,9 @@ function isOutcome(value: unknown): value is ItemOutcome {
   if (typeof value !== 'object' || value === null) return false;
   const o = value as Partial<ItemOutcome>;
   return typeof o.item === 'string' && typeof o.correct === 'boolean'
-    && (o.latencyMs === undefined || typeof o.latencyMs === 'number');
+    && (o.latencyMs === undefined || typeof o.latencyMs === 'number')
+    && (o.chance === undefined
+      || (typeof o.chance === 'number' && o.chance >= 0 && o.chance <= 1));
 }
 
 /**
@@ -508,7 +524,7 @@ function isStoredPresentation(value: unknown): value is Presentation {
  */
 export function coerceAttempt(data: unknown): Attempt {
   if (typeof data !== 'object' || data === null) throw new Error('Attempt is not an object');
-  const a = data as Partial<AttemptV4>;
+  const a = data as Partial<AttemptV5>;
   if (typeof a.id !== 'string' || a.id === '') throw new Error('Attempt has no id');
   if (typeof a.exerciseType !== 'string') throw new Error(`Attempt ${a.id} has no exercise type`);
   /*

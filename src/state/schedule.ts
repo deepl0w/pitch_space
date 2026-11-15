@@ -62,7 +62,10 @@ export const MAX_INTERVAL_MS = INTERVALS_MS[INTERVALS_MS.length - 1];
 
 /** How long an item rests at this streak: its rung, or the cap past the last. */
 function restFor(streak: number): number {
-  return streak >= INTERVALS_MS.length - 1 ? MAX_INTERVAL_MS : INTERVALS_MS[streak];
+  // The whole part: a streak is fractional when its answers were easy to
+  // guess, and a rung is earned only when the evidence for it is complete.
+  const rung = Math.floor(streak);
+  return rung >= INTERVALS_MS.length - 1 ? MAX_INTERVAL_MS : INTERVALS_MS[rung];
 }
 
 /**

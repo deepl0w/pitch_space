@@ -7,7 +7,7 @@ import { noteValue } from '../../theory/meter';
 import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
-import { coercePresentation, presentationField } from '../types';
+import { coercePresentation, guessChance, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, Result, SettingsSchema,
 } from '../types';
@@ -233,6 +233,10 @@ export function gradeChord(exercise: ChordExercise, response: ChordResponse): Re
       {
         item: chordItemId(exercise.typeId, asking ? exercise.inversion : null),
         correct,
+        // Both halves have to be right when the bass is asked as well.
+        chance: guessChance(
+          exercise.choices.length * (asking ? exercise.inversionChoices.length : 1),
+        ),
         latencyMs: response.latencyMs,
       },
     ],

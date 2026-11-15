@@ -239,14 +239,15 @@ describe('grading an interval', () => {
   it('credits exactly the item the exercise tested', () => {
     const ex = exercise({ semitones: [3], directions: ['down'] });
     const result = gradeInterval(ex, { semitones: 3 });
-    expect(result.outcomes).toEqual([{ item: 'interval:m3:down', correct: true }]);
+    // One button offered, so a guess was certain and the chance says so.
+    expect(result.outcomes).toEqual([{ item: 'interval:m3:down', correct: true, chance: 1 }]);
     expect(result.outcomes.map((o) => o.item)).toEqual([...ex.items]);
   });
 
   it('blames the same item when the answer is wrong', () => {
     const ex = exercise({ semitones: [3], directions: ['down'] });
     const result = gradeInterval(ex, { semitones: 4 });
-    expect(result.outcomes).toEqual([{ item: 'interval:m3:down', correct: false }]);
+    expect(result.outcomes).toEqual([{ item: 'interval:m3:down', correct: false, chance: 1 }]);
   });
 
   it('carries latency through when it was measured, and omits it when it was not', () => {

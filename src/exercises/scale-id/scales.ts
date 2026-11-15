@@ -8,7 +8,7 @@ import { schedule } from '../../audio/output/schedule';
 import type { Voice } from '../../audio/output/synth';
 import type { Clef, ScoreSpec } from '../render/toVexflow';
 import { steadyNotes } from '../played';
-import { coercePresentation, presentationField } from '../types';
+import { coercePresentation, guessChance, presentationField } from '../types';
 import type {
   BaseSettings, ExerciseBase, ExerciseSpec, ItemId, PlayedNote, Result, SettingsSchema,
 } from '../types';
@@ -256,7 +256,18 @@ export function gradeScale(exercise: ScaleExercise, response: ScaleResponse): Re
       ? `Yes — ${asked.name}, on ${on}.${twin}`
       : `That was ${asked.name}, on ${on}.`,
     outcomes: [
-      { item: `scale:${exercise.typeId}` as ItemId, correct, latencyMs: response.latencyMs },
+      {
+        item: `scale:${exercise.typeId}` as ItemId,
+        correct,
+        // Two buttons are right where two names are one sound — a falling
+        // melodic minor is the natural minor's notes — so a guess is twice
+        // as likely to land.
+        chance: guessChance(
+          exercise.choices.length,
+          exercise.choices.filter((id) => sameAnswer(exercise, id, exercise.typeId)).length,
+        ),
+        latencyMs: response.latencyMs,
+      },
     ],
   };
 }

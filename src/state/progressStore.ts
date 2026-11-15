@@ -171,6 +171,11 @@ export interface ItemTally {
    * states: the first has just been forgotten and the second has just
    * been learned. The streak is the smallest thing that tells them apart,
    * and it is what {@link dueAt} reads.
+   *
+   * **Fractional since 15 November.** Each right answer adds what it rules
+   * out — one minus its chance of being a lucky guess — so a streak built
+   * from two-button questions climbs at half the rate of one built from
+   * questions with many. The ladder is read at its whole part.
    */
   streak: number;
 }
@@ -299,7 +304,15 @@ export function tallyItems(attempts: readonly Attempt[]): Map<TallyKey, ItemTall
       const entry = tally.get(key) ?? { seen: 0, correct: 0, lastSeenAt: 0, streak: 0 };
       entry.seen++;
       if (outcome.correct) entry.correct++;
-      entry.streak = outcome.correct ? entry.streak + 1 : 0;
+      /*
+        A right answer advances by what it rules out: `1 - chance`. Out of
+        twelve buttons that is nearly a full step; out of two, half a step;
+        out of one, nothing — the sole button proves nothing however often
+        it is pressed. The user's ruling, 15 November. An outcome without a
+        chance (a rhythm tapped, or a row older than the field) counts in
+        full, as before.
+      */
+      entry.streak = outcome.correct ? entry.streak + (1 - (outcome.chance ?? 0)) : 0;
       entry.lastSeenAt = Math.max(entry.lastSeenAt, attempt.answeredAt);
       tally.set(key, entry);
     }

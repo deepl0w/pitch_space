@@ -55,6 +55,9 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   container.remove();
+  // The root element outlives the container, so a case that set the theme
+  // and then failed would hand its attribute to every case after it.
+  document.documentElement.removeAttribute('data-theme');
 });
 
 const render = (spec: ScoreSpec, height?: number) => {
@@ -195,13 +198,40 @@ describe('Score when the colour scheme changes', () => {
   });
 
   /**
-   * The CSS honours a `data-theme` attribute as well as the media query, but
-   * Score only listens to the query. Nothing sets the attribute today — there
-   * is no theme toggle — so nothing exercises the gap. The moment a toggle
-   * exists, the ink will be read once and outlive the theme it came from, and
-   * this wants a MutationObserver on the documentElement.
+   * The reader's own choice of Light or Dark, which is the other half of the
+   * palette and moves no media query at all.
+   *
+   * This stood as a todo whose comment said the behaviour was missing and
+   * wanted a MutationObserver written. It is not missing — `App` sets
+   * `data-theme` from `appearance.theme` and `Score` watches the attribute,
+   * filtered. Only the test was outstanding, and the stale comment was the
+   * more costly half: read as written it authorised a second observer beside
+   * the one already there.
+   *
+   * Both directions, because removing the attribute is how the reader goes
+   * back to following the device, and a redraw on the way in that does not
+   * happen on the way out leaves the chosen ink outliving the choice.
    */
-  it.todo('redraws when the data-theme attribute changes');
+  it('redraws when the reader sets the theme, and when they stop', async () => {
+    render(scale(['C4', 'D4']));
+    act(() => resizeTo(hostNode(), 800));
+    const before = svg();
+    expect(before).not.toBeNull();
+
+    // A MutationObserver delivers on a microtask, so the redraw lands after
+    // the attribute is set rather than during it.
+    await act(async () => { document.documentElement.setAttribute('data-theme', 'dark'); });
+
+    expect(hostNode().querySelectorAll('svg'), 'the old stave was left beside the new one')
+      .toHaveLength(1);
+    const chosen = svg();
+    expect(chosen, 'the ink was read once and outlived the theme it came from').not.toBe(before);
+    expect(noteheads()).toBe(2);
+
+    await act(async () => { document.documentElement.removeAttribute('data-theme'); });
+    expect(svg(), 'going back to the device preference left the chosen ink on the page')
+      .not.toBe(chosen);
+  });
 });
 
 describe('lighting the note that is sounding', () => {

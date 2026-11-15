@@ -325,6 +325,28 @@ An [`ItemId`](../src/exercises/types.ts) is a colon-joined path —
 makes it a compatibility commitment from the first release. Renaming one
 silently orphans everything the user has learned about it.
 
+**An outcome also records how easy a guess would have been, and that is what
+decides how far it moves the item.** `chance` is the probability a uniform
+guess lands — one over the buttons the answer was picked from, or more where
+several are right — and a correct answer advances the streak by `1 - chance`
+rather than by one
+([ADR 0051](adr/0051-a-right-answer-advances-an-item-by-what-it-ruled-out.md)).
+So a streak is fractional, `restFor` takes its whole part, and a right answer
+out of two buys half a rung where one out of twelve buys most of it. Pressing
+a sole button buys nothing at all, by arithmetic rather than by a rule that
+names the case.
+
+It is computed from the **answer space** — the buttons — and never from the
+askable set, which is the near-miss worth knowing about: twelve intervals in
+both directions are twenty-four askable items and twelve buttons, so reading
+`askable.length` would understate how cheap a guess was by the number of
+directions. The field is optional and absent on rows written before it
+existed, which count in full.
+
+```bash
+grep -rn 'guessChance(' src/exercises --include='*.ts' | grep -v '\.test\.'
+```
+
 ## Two tables keyed on the item id
 
 The log is not the only thing that key buys. Two tables answer a graded item

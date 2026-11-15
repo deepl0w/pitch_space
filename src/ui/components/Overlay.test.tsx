@@ -179,4 +179,62 @@ describe('the reference, opened from an answer', () => {
     expect(lit()).toEqual([]);
     expect(asked()).toEqual([]);
   });
+
+  /**
+   * The mark is a claim about one question, and the key picker outlives it.
+   *
+   * `KeyChords` recomputes `markedAt` from the current key on every render,
+   * so the numeral follows the picker. Opened from a question about A
+   * minor's `v` and switched to E minor, the page labelled B minor "the one
+   * asked" — a chord the question was never about. The harmonic case is the
+   * same fault arriving the other way: `progression:minor:V` marks nothing
+   * in A minor, correctly, because the natural-minor table has `v`; switch
+   * to C major and the mark appears on a chord in a key the learner was
+   * never asked about.
+   *
+   * Asserted against the page's own stated principle rather than a
+   * preference of this test's: marking the diatonic chord on a numeral's
+   * degree "would be a different chord claiming to be the one asked", which
+   * is precisely what a key change produces.
+   *
+   * Both directions, and what each one kills, measured rather than assumed:
+   * blanking the mark only when the *mode* changes passes the harmonic case
+   * and still carries `v` from A minor into E minor, so the first direction
+   * is what rules that out. The second is the edge the change's author named
+   * as unprobed, and it is a different symptom rather than a second witness
+   * to the first — a mark that materialises where there was none, against
+   * one that moves.
+   */
+  it('leaves the mark behind in the key the question was asked in', () => {
+    const asked = () => [...container.querySelectorAll('.readout li')]
+      .filter((li) => li.textContent?.includes('the one asked'))
+      .map((li) => li.querySelector('.primary')?.textContent);
+    const setKey = (id: string) => {
+      const field = [...container.querySelectorAll('label.field')]
+        .find((l) => l.querySelector('span')?.textContent === 'Key');
+      const select = field!.querySelector('select') as HTMLSelectElement;
+      act(() => {
+        // React listens for the event, not the property, so set it the way
+        // the DOM would and let the change bubble.
+        Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!
+          .set!.call(select, id);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    };
+
+    open('progression:minor:v');
+    // The control: without this the case is satisfied by a page that never
+    // marks anything at all.
+    expect(asked(), 'the key the question was asked in marks nothing').toEqual(['v']);
+    setKey('E_minor');
+    expect(asked(), 'another key kept the mark, so a chord nobody asked about claims it')
+      .toEqual([]);
+
+    act(() => root.render(null));
+    open('progression:minor:V');
+    expect(asked(), 'a numeral the key does not supply was marked anyway').toEqual([]);
+    setKey('C_major');
+    expect(asked(), 'the numeral found a key to match in, which is not the one it was asked in')
+      .toEqual([]);
+  });
 });

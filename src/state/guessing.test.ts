@@ -117,4 +117,95 @@ describe('the chance an answer records', () => {
       }
     }
   });
+
+  /**
+   * The numerator, which the case above does not reach.
+   *
+   * `chance` is asserted there as a number in (0, 1]; three exercises
+   * compute it from something other than a plain button count and were
+   * unheld — the scale's twin answers (a falling melodic minor is the
+   * natural minor's notes, so two buttons are right), the chord's product
+   * of type and bass, and the progression's per-slot palette. Each is a
+   * different arithmetic, and a wrong one is invisible from the range.
+   *
+   * The property that covers all three without restating any of them: the
+   * chance an outcome records, times the responses the learner was offered
+   * for it, is the number of those responses the grader actually accepts.
+   * A guess is a uniform pick among the buttons, so that identity is what
+   * "how likely was luck" means, whatever the exercise does to arrive at it.
+   *
+   * Each exercise is configured to reach its own interesting branch, which
+   * is not the default in two cases — the scale needs a falling listening
+   * question for the twin to exist at all, and the chord needs the bass
+   * asked. Both were found by mutation: with the defaults, dropping the
+   * twin term and dropping the inversion factor were each undetectable
+   * here, because the branch never ran.
+   */
+  it('records a chance whose numerator is the answers the grader accepts', () => {
+    type Ex = Record<string, unknown>;
+    /** Every response on offer, grouped by the outcome it decides. */
+    const offers: Record<string, {
+      settings?: Record<string, unknown>;
+      groups: (ex: Ex) => Array<{ outcome: number; responses: unknown[] }>;
+    }> = {
+      'interval-id': {
+        groups: (ex) => [{ outcome: 0, responses: (ex.choices as number[]).map((semitones) => ({ semitones })) }],
+      },
+      'key-id': {
+        groups: (ex) => [{ outcome: 0, responses: (ex.choices as string[]).map((keyId) => ({ keyId })) }],
+      },
+      'degree-id': {
+        groups: (ex) => [{ outcome: 0, responses: (ex.choices as number[]).map((degree) => ({ degree })) }],
+      },
+      'scale-id': {
+        // Falling, and heard: the only shape in which two names are one sound.
+        settings: { presentation: 'listen', direction: 'down' },
+        groups: (ex) => [{ outcome: 0, responses: (ex.choices as string[]).map((typeId) => ({ typeId })) }],
+      },
+      'chord-id': {
+        settings: { inversions: true },
+        groups: (ex) => [{
+          outcome: 0,
+          responses: (ex.choices as string[]).flatMap((typeId) =>
+            ((ex.inversionChoices as number[]).length ? ex.inversionChoices as number[] : [0])
+              .map((inversion) => ({ typeId, inversion }))),
+        }],
+      },
+      'progression-id': {
+        groups: (ex) => (ex.numerals as string[]).map((_, i) => ({
+          outcome: i,
+          responses: (ex.palette as string[]).map((cand) => ({
+            numerals: (ex.numerals as string[]).map((n, j) => (j === i ? cand : n)),
+          })),
+        })),
+      },
+    };
+
+    const picked = EXERCISE_TYPES.filter((t) => t.id in offers);
+    expect(picked.length, 'an exercise answered from a list has no case here')
+      .toBe(EXERCISE_TYPES.filter((t) => t.id !== 'rhythm-id').length);
+
+    for (const type of picked) {
+      const { settings, groups } = offers[type.id];
+      // Several seeds: which scale or chord comes up decides whether a twin
+      // or an inversion is in play at all, and one seed can miss it.
+      for (let seed = 0; seed < 12; seed++) {
+        const ex = type.generate({
+          seed, settings: { ...type.settings.defaults, ...settings },
+        }) as unknown as Ex;
+        for (const { outcome, responses } of groups(ex)) {
+          const graded = responses.map((r) => type.grade(ex as never, r as never).outcomes[outcome]);
+          const accepted = graded.filter((o) => o.correct).length;
+          const chances = [...new Set(graded.map((o) => o.chance))];
+
+          expect(chances, `${type.id} seed ${seed}: the chance moved with the answer given, `
+            + 'so it is not a property of the buttons').toHaveLength(1);
+          expect(chances[0]! * responses.length,
+            `${type.id} seed ${seed} outcome ${outcome}: `
+            + `${accepted} of ${responses.length} offered answers are accepted`)
+            .toBeCloseTo(accepted, 10);
+        }
+      }
+    }
+  });
 });

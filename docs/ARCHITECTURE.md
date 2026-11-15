@@ -19,6 +19,7 @@ file is what is true today.
 - [What an attempt records](#what-an-attempt-records)
 - [Two tables keyed on the item id](#two-tables-keyed-on-the-item-id)
 - [What a reference page does](#what-a-reference-page-does)
+- [Settings, and the one thing that is not a setting](#settings-and-the-one-thing-that-is-not-a-setting)
 - [Persistence](#persistence)
 - [The analysis chain](#the-analysis-chain)
 - [Generation](#generation)
@@ -449,6 +450,40 @@ exercise that already draws a moving cursor is the one not reading the audio
 clock. Following a *performance* note by note, against what the learner
 actually played, is the half that matters most and is not started;
 [`ROADMAP.md`](ROADMAP.md) has what each would take.
+
+## Settings, and the one thing that is not a setting
+
+Everything about the app rather than about a particular exercise sits behind
+one cog in the home header: theme, volume, instrument, how a played answer is
+taken, and audio calibration. What an *exercise* asks lives in its own panel,
+beside the question it changes, which is the division the settings screen
+exists to make legible.
+
+**Calibration is behind that door rather than beside the exercises**, and the
+reason is a fact about the task rather than tidiness: measuring a microphone's
+delay is something a learner does once and forgets. It had a home card of its
+own, which offered the same destination twice, since Settings already links to
+it and names it in its own blurb.
+
+**The theme is a stored preference that the stave has to follow, and that is
+the part worth describing here.** `appearance.theme` is `system`, `light` or
+`dark`; `App` writes it to `data-theme` on the document element, or removes
+the attribute for `system`, and `palette.css` defines each palette under both
+the attribute and the `prefers-color-scheme` query.
+
+That leaves one seam that is easy to get wrong. The engraver is handed an ink
+colour rather than having its output recoloured afterwards, so `Score` reads
+`--score-ink` through `getComputedStyle` **at draw time** — which means a
+palette change after a stave is drawn has to force a redraw. A media query
+fires an event; an attribute does not. So `Score` watches both: a
+`change` listener on `prefers-color-scheme`, and a `MutationObserver` on the
+document element filtered to `data-theme`. Without the second, a reader who
+chose Dark kept black noteheads on a dark page until something else happened
+to redraw.
+
+```bash
+grep -n 'MutationObserver' -A4 src/ui/notation/Score.tsx
+```
 
 ## Persistence
 

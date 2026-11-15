@@ -23,13 +23,13 @@ it ships or is dropped.
   - [A workbench for the corpus, once there is one](#a-workbench-for-the-corpus-once-there-is-one)
   - [Recordings to go with them](#recordings-to-go-with-them)
 - [A practice count that is believable](#a-practice-count-that-is-believable)
-- [A settings screen](#a-settings-screen)
+- [A settings screen — built](#a-settings-screen--built)
 - [Taking your progress with you](#taking-your-progress-with-you)
 - [Bringing your own material](#bringing-your-own-material)
 - [Instruments that play like themselves](#instruments-that-play-like-themselves)
 - [A wrong answer that points at a song you know](#a-wrong-answer-that-points-at-a-song-you-know)
 - [A way from the answer to the reference](#a-way-from-the-answer-to-the-reference)
-  - [What is left, now the button exists](#what-is-left-now-the-button-exists)
+  - [Nothing is left of this one](#nothing-is-left-of-this-one)
 - [Sight reading — backlog, and possibly dropped](#sight-reading--backlog-and-possibly-dropped)
 - [Also planned, not yet designed](#also-planned-not-yet-designed)
 
@@ -532,22 +532,22 @@ free a 1998 recording of him.
 Prefer **CC0 for anything that ships**, since it carries no notice into the
 bundle, and CC BY for anything that stays at build time.
 
-## A settings screen
+## A settings screen — built
 
-Everything that is about the app rather than about an exercise, in one
-place: the theme, and the audio calibration that currently has a card on
-the home screen of its own.
+Everything about the app rather than about an exercise now lives behind the
+cog in the home header: the theme, the volume, the instrument, how a played
+answer is taken, and audio calibration.
 
-Calibration is the reason this is worth doing rather than a tidy-up.
-It sits in `SETUP_MENU`, a list invented for it because it is "not an
-exercise and not a reference" — a comment that is already describing a
-settings screen without having one. Measuring your microphone's delay is
-something you do once and forget, which is exactly what belongs behind a
-settings door and exactly what should not be a card next to the six kinds
-of practice.
+**The entry that stood here said calibration "currently has a card on the home
+screen of its own", and that stopped being true before this was noticed.**
+`SETUP_MENU`'s own comment records the change — the two cards offered the same
+destination twice, since Settings links to calibration and names it in its own
+blurb — so the document describing the plan was contradicted by a comment in
+the code implementing it, which is the ordinary direction for this to go.
 
-The theme toggle is listed below as well, and the two should land
-together: a toggle with nowhere to live is most of why it has not.
+```bash
+grep -n 'calibration' src/ui/menu.ts
+```
 
 ## Taking your progress with you
 
@@ -599,16 +599,16 @@ From the user: after answering a question there should be a small button
 taking you to information on **that specific thing** in the theory reference —
 which also needed an intervals page, because there was not one.
 
-### What is left, now the button exists
+### Nothing is left of this one
 
-The button shipped on 19 October and is therefore described in
+The button shipped on 19 October and the last gap — *Chords in a key* not
+singling out the numeral that was asked — closed on 15 November, when
+`ReferenceTarget` gained `mark`. Both are described in
 [`ARCHITECTURE.md`](ARCHITECTURE.md#two-tables-keyed-on-the-item-id) rather
-than here.
+than here, this file being what is planned.
 
-What is still planned: **nothing on *Chords in a key* singles out the numeral
-that was asked.** The page opens on the right key and leaves the learner to
-find the chord on it, which is the coarsest remaining step between an answer
-and the thing that explains it.
+Kept as a heading rather than deleted so the section above it, which argues
+why the route exists at all, does not read as still waiting on something.
 
 ## A wrong answer that points at a song you know
 
@@ -789,9 +789,6 @@ that may not come, and both were withdrawn with it.
 ## Also planned, not yet designed
 
 - **Guitar tablature** via VexFlow's `TabStave`, for fretted instruments.
-- **A theme toggle**, which needs `Score` to watch the `data-theme` attribute
-  as well as the media query (there is a `todo` pinning this in
-  `Score.test.tsx`). It belongs on the settings screen above.
 - **Sampled instruments — built, and this entry is kept for the part that is
   still reference.** Six packs ship, all CC0, listed with their source and
   licence in `src/audio/output/packs.json`;

@@ -276,3 +276,62 @@ applies. A reader of 0046 alone would conclude that synthesis sounds exactly
 when a pack is missing, and would be surprised to hear it for a note the
 manifest plainly lists. The reasoning for the limit itself lives beside the
 constant and in [`docs/instrument-pack-format.md`](../instrument-pack-format.md).
+
+## Addendum, 15 November 2026 — the measurable half of the open question, measured
+
+*What this costs* says the figure that would settle precaching "does not
+exist: nobody has measured how long 460 KiB actually takes on the connections
+this app is used on", and asks for a measurement before revisiting. That
+question has two halves. The seconds are a fact about this app's audience and
+are still unmeasured. **The bytes are a fact about this repository and are
+measured here**, because they were sitting unmeasured while two documents
+quoted figures for them.
+
+Built at this record's date and read off `dist/`:
+
+```bash
+npm run build          # prints "precache N entries (… KiB)"
+node -e 'const fs=require("fs"),z=require("zlib"),p=require("path");
+const w=d=>fs.readdirSync(d,{withFileTypes:true}).flatMap(e=>e.isDirectory()?w(p.join(d,e.name)):[p.join(d,e.name)]);
+for(const f of w("dist")){const b=fs.readFileSync(f);
+console.log((b.length/1024).toFixed(0),"KiB raw",(z.gzipSync(b).length/1024).toFixed(0),"KiB gz",f);}'
+```
+
+| | raw | gzipped |
+| --- | --- | --- |
+| precache, 16 entries | 1270 KiB | — |
+| the notation chunk, precached | 702 KiB | 378 KiB |
+| the main bundle | 387 KiB | 124 KiB |
+| largest pack (`piano`) | 396 KiB | 376 KiB |
+| all six packs | 1808 KiB | 1715 KiB |
+
+**This record's own figures.** "Roughly 460 KiB a pack" is high: the largest
+pack in the tree is 396 KiB and the rest run 254–327 KiB. "A third more first
+load" is **right** — 396 KiB against a 1270 KiB precache is 31% — provided
+*first load* means the precache payload rather than time to interactive, which
+is a distinction the sentence does not draw and which the research note of the
+same date separates.
+
+**The comment in `vite.config.ts` that enforces this decision has drifted
+further.** It says precaching the recordings would be "1.6 MB" and would
+"roughly triple the first load". They are 1.77 MiB, and the result is 2.4×,
+not 3×. Neither error changes the decision and both are the shape this project
+keeps writing down: a figure quoted in prose beside the thing it describes,
+with nothing reading it back.
+
+**One proportion worth seeing, which neither document mentions.** The notation
+chunk is 702 KiB raw and is precached — 55% of the whole precache, and nearly
+twice the pack this record declines. That is defensible, since a cached shell
+that cannot draw a stave is a blank exercise and the glyphs are needed by every
+exercise rather than by a preference. But it means "a third more" is a third
+added to a payload already dominated by one large asset, and anybody revisiting
+this should weigh the pack against that rather than against an abstract budget.
+
+**What the open question now is.** Not whether the bytes are known — they are —
+but what they cost the people using the app, which is a fact about their
+connections that no published distribution answers.
+[`2026-11-15-precaching-cost-and-when-it-is-paid.md`](../research/2026-11-15-precaching-cost-and-when-it-is-paid.md)
+has the platform half: registration is deferred to the window's `load` event,
+so the cost is bytes on a first visit rather than a slower start, and Chrome's
+own Workbox guidance independently recommends keeping large assets out of a
+precache — this record's decision, reached from a different argument.

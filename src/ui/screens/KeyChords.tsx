@@ -75,11 +75,19 @@ export function KeyChords({ focus, mark }: { focus?: string; mark?: string }) {
     ? -1
     : chords.findIndex(({ numeral: n }) => numeralText(n) === mark);
   const markedAt = marked < 0 ? null : marked;
-  // Shown on the instrument from the start, once, when there is one.
+  /*
+    Shown on the instrument from the start, and only at the start.
+
+    The latch closes on the first render whether or not there is a mark.
+    Closed only by a match, it stayed armed through every render that did
+    not match, and returning to the asked key brings the mark back — so it
+    would fire then and replace whichever chord the reader had picked in
+    the meantime. Found by tester.
+  */
   const [shownSeeded, setShownSeeded] = useState(false);
-  if (!shownSeeded && markedAt !== null) {
+  if (!shownSeeded) {
     setShownSeeded(true);
-    setShown(markedAt);
+    if (markedAt !== null) setShown(markedAt);
   }
 
   const notes = useMemo(

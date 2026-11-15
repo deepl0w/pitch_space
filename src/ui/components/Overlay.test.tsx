@@ -6,6 +6,7 @@ import { Overlay } from './Overlay';
 import { ReferenceOverlay } from './ReferenceOverlay';
 import { referenceFor } from '../reference';
 import { resizeTo } from '../../testing/resizeObserver';
+import { settingsStore } from '../../state/settingsStore';
 import type { ItemId } from '../../exercises/types';
 
 declare global {
@@ -236,5 +237,64 @@ describe('the reference, opened from an answer', () => {
     setKey('C_major');
     expect(asked(), 'the numeral found a key to match in, which is not the one it was asked in')
       .toEqual([]);
+  });
+
+  /**
+   * The seed is a starting position, not a preference the page keeps
+   * reasserting.
+   *
+   * What this kills, stated at the strength a mutant supports: dropping the
+   * latch so the seed reasserts itself puts the diagram back on the marked
+   * chord the moment the reader returns to the asked key, and the last
+   * assertion catches it.
+   *
+   * It does **not** hold the latch's own refinement — closing on the first
+   * render whether or not a mark matched, rather than only on a match — and
+   * reverting that passes this case. That is not a gap in the case: the
+   * refinement is unobservable, because `markedAt` is non-null only while
+   * the key is the one asked about and the table is triads, which is the
+   * mount state. Toggling to sevenths can lose a match and never gain one —
+   * checked across both modes and every palette setting, no numeral the
+   * exercise can ask about matches a sevenths table without matching the
+   * triads one. So a mark absent at mount is absent for ever, and the
+   * armed latch has nothing left to fire on.
+   *
+   * Needs an instrument chosen, because the control that shows which chord
+   * is on the diagram is not rendered while the diagram is off — which is
+   * why this went unheld when the seed was written.
+   */
+  it('seeds the instrument once, and does not take the choice back', () => {
+    const was = settingsStore.getState().doc.appearance.diagram;
+    act(() => settingsStore.getState().setAppearance({ diagram: 'guitar' }));
+    try {
+      const field = (label: string) => [...container.querySelectorAll('label.field')]
+        .find((l) => l.querySelector('span')?.textContent === label)
+        ?.querySelector('select') as HTMLSelectElement | undefined;
+      const set = (label: string, value: string) => {
+        const select = field(label)!;
+        act(() => {
+          // React listens for the event, not the property, so set it the way
+          // the DOM would and let the change bubble.
+          Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')!
+            .set!.call(select, value);
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      };
+
+      open('progression:major:V');
+      // The control: without the seed firing, every assertion below is
+      // satisfied by a page that never moved the diagram at all.
+      expect(field('Chord shown')?.value, 'the instrument did not start on the chord asked about')
+        .toBe('4');
+
+      set('Chord shown', '0');
+      set('Key', 'G_major');
+      set('Key', 'C_major');
+
+      expect(field('Chord shown')?.value,
+        'coming back to the asked key seeded again and took the reader’s choice away').toBe('0');
+    } finally {
+      act(() => settingsStore.getState().setAppearance({ diagram: was }));
+    }
   });
 });

@@ -535,14 +535,24 @@ helps, because nothing is wrong with it.
   file cut its explanatory comment **mid-sentence** — the last line read "had
   black noteheads on a dark page until something else forced a", and the next
   line, unread, completed it with *"redraw. Watching the attribute covers the
-  choice the same way the query covers the default"*, four lines above the
-  `MutationObserver` doing exactly that.
+  choice the same way the query covers the default"*, three lines above the
+  `MutationObserver` doing exactly that:
+
+  ```bash
+  grep -n 'Watching the attribute\|new MutationObserver' src/ui/notation/Score.tsx
+  git log -S 'new MutationObserver' --format='%h %ad' --date=short -- src/ui/notation/Score.tsx
+  ```
 
   So the file described the symptom in the **past tense, as the thing the fix
   fixed**, and both halves of the refutation sat inside the window either
   command would have shown unbounded. Combined with a still-pending `it.todo`
-  whose comment predicted the gap, it made a live user-visible defect that had
-  been closed for a week. It went no further than a draft message.
+  whose comment predicted the gap, it made a live user-visible defect out of
+  behaviour the second command dates to `35c9c0d` — **five weeks earlier, not
+  the week this entry first claimed.** Corrected by tester, who checked the
+  interval rather than the argument, and it is the sharper number: a todo had
+  been forecasting a gap that was already closed for over a month, which is
+  what made its comment persuasive enough to build a defect on. The draft went
+  no further than a message.
 
   **The cure is narrower than "beware truncation", and tester's framing is the
   one to keep: `head` is not a filter that might miss something, it is a cut

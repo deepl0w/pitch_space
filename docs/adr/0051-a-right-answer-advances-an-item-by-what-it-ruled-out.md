@@ -96,10 +96,30 @@ migration is a no-op. An answer recorded before anyone asked how many buttons
 there were is credited as it always was, which is the honest reading: nothing
 is known about its pool, and inventing one would be worse than crediting it.
 
-**What this does not do.** It does not weight a played answer above a clicked
-one. That was available and the literature declines to support it; a played
-answer simply has no `chance` at all, so it advances in full, which is the
-same outcome by a different and defensible route.
+**What this does not do, and the reason is sharper than the decision.** It
+does not weight a played answer above a clicked one — that was available, the
+user declined it, and the testing-effect literature does not support it. But
+the record first said a played answer "has no `chance` at all", and that is
+**false**: an interval or a scale answered on the instrument goes through the
+same `onRespond` and the same grader as a tap, and `gradeInterval` sets
+`chance` from `choices.length` either way. Played and clicked answers are
+credited *identically*.
+
+**The grader cannot tell them apart, which is what actually enforces the
+decline.** `IntervalResponse` is `{ semitones, latencyMs? }` and
+`ScaleResponse` is `{ typeId, latencyMs? }`; neither carries where the answer
+came from, and the prompt's own comment says a played take is "graded and
+recorded exactly as a tap would be". So weighting is not declined at grading
+time — it is unavailable there, by the shape of the seam.
+
+Rhythm is the only exercise with no `chance`, and not because it is played:
+it is *tapped against a written figure*, with no list of alternatives for a
+guess to land in.
+
+Caught by main, who read the graders while reviewing this record. The
+paragraph was the one claim here reasoned from the design rather than read off
+it — a played answer has no list, therefore no chance — and the reasoning was
+sound about the world and wrong about the code.
 
 ## Revisit when
 
@@ -121,4 +141,10 @@ same outcome by a different and defensible route.
 - **Anyone proposes weighting played answers.** The Consequences above decline
   it on the evidence; that is a judgement about this app's purpose and the
   user may take it, but it should be taken knowingly rather than argued from
-  the testing effect.
+  the testing effect. **It is also not a one-line change**: the response
+  carries no source, so the first step is making a grader able to tell a
+  played answer from a tapped one at all.
+
+  ```bash
+  grep -n 'interface IntervalResponse' -A5 src/exercises/interval-id/intervals.ts
+  ```

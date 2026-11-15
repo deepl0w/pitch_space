@@ -80,9 +80,11 @@ export default defineConfig({
           whole of the protection.** ADR 0046 requires that a sampled
           instrument is fetched on first use and never precached:
           synthesis is already in the bundle and guarantees an
-          instrument always sounds, so precaching 1.6 MB of recordings
-          would roughly triple the first load for every reader
-          including the ones who never change instrument.
+          instrument always sounds, so precaching every pack would
+          multiply the first load for every reader, including the ones
+          who never change instrument. The size is not quoted here
+          because it drifts with every pack added — `du -cb public/packs`
+          gives it; ADR 0046's 15 November addendum records it once.
 
           This list is what enforces that, by not naming them. Which
           means the rule dies quietly to anything that widens it — a

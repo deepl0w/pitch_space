@@ -29,6 +29,11 @@ export interface ReferenceTarget {
   readonly focus: string;
   /** The note a scale page starts on, when the question had a key. */
   readonly tonic?: string;
+  /**
+   * The one thing on the page the question was about, when the page shows
+   * several: the numeral a progression item names, among a key's seven.
+   */
+  readonly mark?: string;
 }
 
 /** The tonic a mode's page opens on, when the item names a mode and no key. */
@@ -91,7 +96,11 @@ export function referenceFor(item: ItemId, asked: string | undefined): Reference
       // The key the question was in, or the mode's plainest key when the
       // caller has none: every diatonic chord the numeral could be is on it.
       if (!isMode(rest[0])) return null;
-      return { route: 'key-chords', focus: keyIdOf(askedIn(asked, rest[0])) ?? TONIC_KEY[rest[0]] };
+      return {
+        route: 'key-chords',
+        focus: keyIdOf(askedIn(asked, rest[0])) ?? TONIC_KEY[rest[0]],
+        ...(rest[1] ? { mark: rest[1] } : {}),
+      };
     case 'key':
       return ALL_KEYS.some((k) => keyId(k) === rest.join(':'))
         ? { route: 'circle', focus: rest.join(':') } : null;

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Overlay } from './Overlay';
 import { ReferenceOverlay } from './ReferenceOverlay';
 import { referenceFor } from '../reference';
+import { resizeTo } from '../../testing/resizeObserver';
 import type { ItemId } from '../../exercises/types';
 
 declare global {
@@ -152,5 +153,30 @@ describe('the reference, opened from an answer', () => {
     */
     act(() => root.render(null));
     expect(open('progression:major:V')).toContain('C_major');
+  });
+
+  it('singles out the chord the progression asked about, and only a chord the key has', () => {
+    const lit = () => [...container.querySelectorAll('.score-host .vf-stavenote')]
+      .map((g, i) => (g.classList.contains('score-lit') ? i : -1)).filter((i) => i >= 0);
+    const asked = () => [...container.querySelectorAll('.readout li')]
+      .filter((li) => li.textContent?.includes('the one asked'))
+      .map((li) => li.querySelector('.primary')?.textContent);
+
+    open('progression:major:V');
+    for (const host of container.querySelectorAll('.score-host')) {
+      act(() => resizeTo(host as HTMLElement, 700));
+    }
+    // V is the fifth of the seven, counting from zero.
+    expect(lit()).toEqual([4]);
+    expect(asked()).toEqual(['V']);
+
+    act(() => root.render(null));
+    // V/V is not one of the key's own chords, so nothing claims to be it.
+    open('progression:major:V/V');
+    for (const host of container.querySelectorAll('.score-host')) {
+      act(() => resizeTo(host as HTMLElement, 700));
+    }
+    expect(lit()).toEqual([]);
+    expect(asked()).toEqual([]);
   });
 });

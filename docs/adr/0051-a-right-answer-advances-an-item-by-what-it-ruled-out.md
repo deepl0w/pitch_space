@@ -64,6 +64,18 @@ Scale is the one that needs its own rule: a falling melodic minor is the
 natural minor's notes, so two buttons are right and a guess is twice as likely
 to land.
 
+**That table restates arithmetic and is therefore the part of this record most
+able to drift. What holds it is an identity rather than a copy**: the chance an
+outcome records, times the responses the learner was offered, is the number of
+those responses the grader accepts. A guess is a uniform pick among the
+buttons, so that *is* what "how likely was luck" means, whatever route an
+exercise takes to it — the scale's twin answers, the chord's product of
+quality and bass, the progression's per-slot palette. `guessing.test.ts`
+asserts it for every exercise answered from a list, with the count of those
+exercises asserted separately so a missing case cannot pass as a clean sweep.
+Written by tester; a wrong numerator is invisible from the range alone, which
+is what that property exists to catch.
+
 **A rung is earned only when the evidence for it is whole.** `restFor` takes
 `Math.floor(streak)`, so a fractional streak rests at the rung below until it
 completes. `completion` uses the fraction directly, because a reading is a

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { tallyItems, tallyKey } from './progressStore';
-import { INTERVALS_MS, completion, dueAt } from './schedule';
+import { INTERVALS_MS, MAX_INTERVAL_MS, completion, dueAt } from './schedule';
 import type { ProgressLine } from './line';
 import type { Attempt } from './schema';
 import type { ItemId, ItemOutcome } from '../exercises/types';
 import { EXERCISE_TYPES } from '../exercises/registry';
+import { readFileSync } from 'node:fs';
 import { INTERVAL_DEFAULTS, generateInterval, gradeInterval, intervalItems } from '../exercises/interval-id/intervals';
 
 /**
@@ -207,5 +208,76 @@ describe('the chance an answer records', () => {
         }
       }
     }
+  });
+});
+
+/**
+ * ADR 0051's consequences table, kept true by the code it describes.
+ *
+ * Four figures — what a right answer is worth from a pool, and how many
+ * such answers reach the top rung — and every one of them depends on the
+ * ladder being eight rungs long. Adding a rung is an ordinary retune of
+ * `INTERVALS_MS` that would silently falsify all four, in a record that is
+ * append-only and so cannot simply be edited back into truth.
+ *
+ * This is the project's own remedy rather than a new one: bind the claim
+ * to a fact a command can verify, in the place the claim is made. A reader
+ * who changes the ladder gets a red test naming the record, and adds a
+ * dated correction to it, which is what append-only asks for.
+ *
+ * The table is read out of the file rather than copied here, so the two
+ * cannot drift into agreeing with each other while both are wrong.
+ */
+describe('what ADR 0051 tells a reader the discount is worth', () => {
+  const RECORD = 'docs/adr/0051-a-right-answer-advances-an-item-by-what-it-ruled-out.md';
+
+  /** `| twelve, two of them right | 0.833 | 9 |` → the three cells. */
+  const rows = () => readFileSync(RECORD, 'utf8')
+    .split('\n')
+    .map((line) => line.match(/^\| ([a-z].*?) \| ([\d.]+) \| (\d+|never) \|$/))
+    .filter((m): m is RegExpMatchArray => m !== null)
+    .map((m) => ({ pool: m[1], advance: Number(m[2]), answers: m[3] }));
+
+  /** The pool each row names, as the buttons offered and the buttons right. */
+  const POOLS: Record<string, { offered: number; right: number }> = {
+    'one button': { offered: 1, right: 1 },
+    two: { offered: 2, right: 1 },
+    twelve: { offered: 12, right: 1 },
+    'twelve, two of them right': { offered: 12, right: 2 },
+  };
+
+  it('names a pool this test knows how to work out', () => {
+    // The population, so a row added to the record cannot go unchecked by
+    // simply not matching anything here.
+    expect(rows().map((r) => r.pool).sort()).toEqual(Object.keys(POOLS).sort());
+  });
+
+  it('is what the schedule actually does', () => {
+    for (const { pool, advance, answers } of rows()) {
+      const { offered, right } = POOLS[pool];
+      const step = 1 - right / offered;
+      expect(step, `${RECORD}: "${pool}" is not worth ${advance} a right answer`)
+        .toBeCloseTo(advance, 3);
+
+      let streak = 0;
+      let n = 0;
+      // Bounded well past the ladder, so a pool that never arrives says so
+      // rather than hanging.
+      while (n < 500 && dueAt({ seen: n, correct: n, lastSeenAt: 0, streak }) !== MAX_INTERVAL_MS) {
+        streak += step;
+        n++;
+      }
+      expect(n >= 500 ? 'never' : String(n),
+        `${RECORD}: "${pool}" does not reach the top rung in ${answers}`).toBe(answers);
+    }
+  });
+
+  it('has a top rung the table was written against', () => {
+    /*
+      The figures above are all distances to the last rung, so they move
+      together if the ladder grows. Named here so a red run points at the
+      cause rather than at four separate arithmetic failures.
+    */
+    expect(INTERVALS_MS.length, `${RECORD}'s table was written for an eight-rung ladder`).toBe(8);
   });
 });

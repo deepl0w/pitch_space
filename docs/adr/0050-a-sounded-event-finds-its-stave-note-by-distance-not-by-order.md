@@ -153,3 +153,33 @@ the mapping over 400 generated progressions under both rules and diffing, not
 by counting backward steps. That was the first proxy tried and would have
 overstated it, reading a legitimately nearer earlier note as a mis-resolved
 tie.
+
+## Correction, 16 November 2026 — the revisit trigger's command counts one thing too many
+
+Found by running every command embedded in `docs/` rather than reading them.
+The trigger above — *a third special case is proposed* — offers
+`grep -c 'best = ' src/ui/notation/follow.ts` with the note "one search, one
+override today", which describes two. **It returns three.** The third is the
+declaration, `let best = -1`, which is not a case at all.
+
+So a reader checking this trigger sees three against a baseline of two and
+concludes a third special case has already arrived. **A trigger bound to a
+wrong command is worse than an unbound one**, which is the uncomfortable half:
+an unbound trigger is merely ignored, and this one actively sends somebody to
+replace a rule that has not grown.
+
+Counting the assignments that are decisions rather than the one that is
+initialisation:
+
+```bash
+grep -c '^\s*if.*best = ' src/ui/notation/follow.ts   # 2: the search, the repeat override
+```
+
+**How it got written is the part worth keeping.** The baseline was typed from
+reading the function, not from running the grep beside it. That is this
+project's first convention — a correlate is not the mechanism — inside the
+remedy the convention recommends: binding a claim to a command does nothing if
+the expected answer is written by hand next to it, because the hand-written
+half rots exactly like the prose the command was meant to replace. It also
+made the usual mistake about populations, counting a declaration as a member
+of the set of special cases.

@@ -792,6 +792,27 @@ the unreachable cells were measured through an exercise that does not
 generate rhythm, so they were never a fact about the catalogue — and the
 table 0021 names as the test's home, `SHAPE_AT`, exists nowhere in `src`.
 
+**A command with its answer written beside it by hand is half a mechanism.**
+On 16 November every `bash` block in `docs/` was run rather than read. Most
+hold. The ones that do not are, without exception, the ones carrying a
+hand-typed expectation in a trailing comment: [0050](0050-a-sounded-event-finds-its-stave-note-by-distance-not-by-order.md)'s
+own revisit trigger says "one search, one override today" beside a `grep -c`
+that returns three, because the count includes the declaration — so a reader
+checking it concludes the trigger has fired when it has not.
+[0037](0037-a-schedule-is-per-presentation-and-the-home-screen-is-not.md)'s
+`grep -rn "state/schedule"` is annotated "nothing" and now finds `Home.tsx`,
+which is true and is what that record's own addendum describes, so the body
+and the addendum disagree at a reader's first glance.
+
+The one in [0011](0011-what-a-catalogue-owes.md) that cannot rot is the one
+pinned to a commit — `git show 928ac46:src/generate/templates.ts | grep -c` —
+which still returns its stated 35 and always will. **The difference is not
+care, it is whether the answer is produced or remembered.** Binding a claim to
+a command does nothing if the expected answer is typed next to it, because
+the typed half is prose again and rots on the same schedule the command was
+meant to escape. Either let the command speak for itself, or pin it to a
+commit so the pair is dated together.
+
 **Record a trigger that fired even when nothing is owed.** 0024's condition
 arrived and needed no change, because an inconclusive take records no attempt
 at all; without that written down the next sweep re-derives it. A fired

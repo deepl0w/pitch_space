@@ -60,8 +60,20 @@ export function KeyChords({ focus, mark }: { focus?: string; mark?: string }) {
     claiming to be the one asked. Seventh chords are written differently
     from triads, so switching to sevenths takes the mark off; it is a
     triad that was asked.
+
+    The key is held for the same reason, and it has to be held separately:
+    the numeral alone matches wherever the picker happens to be, so a
+    learner who looked up A minor's `v` and then browsed to E minor was
+    told B minor was the one asked. The numeral a key does not supply
+    arrives at the same place from the other side — the harmonic minor's
+    `V` marks nothing in A minor and would find itself a chord in C major.
+    A mark that travels is the error this comment already rejects, by a
+    route the numeral test alone cannot see.
   */
-  const marked = chords.findIndex(({ numeral: n }) => numeralText(n) === mark);
+  const [markKey] = useState(keyIdValue);
+  const marked = keyIdValue !== markKey
+    ? -1
+    : chords.findIndex(({ numeral: n }) => numeralText(n) === mark);
   const markedAt = marked < 0 ? null : marked;
   // Shown on the instrument from the start, once, when there is one.
   const [shownSeeded, setShownSeeded] = useState(false);

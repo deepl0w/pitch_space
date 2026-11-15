@@ -21,10 +21,11 @@ const DEGREES: Degree[] = [1, 2, 3, 4, 5, 6, 7];
 const entry = entryFor('key-chords');
 
 /**
- * `focus` is a key id, from `ui/reference.ts` when this page is opened from
- * an answer; it decides where the page starts and nothing after.
+ * `focus` is a key id and `mark` a numeral, from `ui/reference.ts` when this
+ * page is opened from an answer: the key the question was in, and the chord
+ * it was about. They decide where the page starts and nothing after.
  */
-export function KeyChords({ focus }: { focus?: string }) {
+export function KeyChords({ focus, mark }: { focus?: string; mark?: string }) {
   const [keyIdValue, setKeyIdValue] = useState(
     () => ALL_KEYS.some((k) => keyId(k) === focus) ? focus! : 'C_major',
   );
@@ -49,6 +50,25 @@ export function KeyChords({ focus }: { focus?: string }) {
       return { numeral: n, chord: realizeNumeral({ ...key, tonic }, n) };
     });
   }, [key, table, octave]);
+
+  /*
+    The chord the question was about, among the seven, or none.
+
+    Matched as the numeral is written, so a numeral the key does not
+    supply — V/V, bVII, the harmonic minor's V — marks nothing rather than
+    the diatonic chord on its degree, which would be a different chord
+    claiming to be the one asked. Seventh chords are written differently
+    from triads, so switching to sevenths takes the mark off; it is a
+    triad that was asked.
+  */
+  const marked = chords.findIndex(({ numeral: n }) => numeralText(n) === mark);
+  const markedAt = marked < 0 ? null : marked;
+  // Shown on the instrument from the start, once, when there is one.
+  const [shownSeeded, setShownSeeded] = useState(false);
+  if (!shownSeeded && markedAt !== null) {
+    setShownSeeded(true);
+    setShown(markedAt);
+  }
 
   const notes = useMemo(
     () => chords.map(({ chord }) => ({ pitches: spellChord(chord), value: noteValue('h') })),
@@ -89,7 +109,7 @@ export function KeyChords({ focus }: { focus?: string }) {
         )}
       </Panel>
 
-      <Score spec={spec} lit={follow.lit} cursorX={follow.cursorX} onLayout={follow.onLayout} />
+      <Score spec={spec} lit={follow.lit ?? markedAt} cursorX={follow.cursorX} onLayout={follow.onLayout} />
       <InstrumentDiagram
         pitches={spellChord(chords[shown].chord)}
         root={chords[shown].chord.root}
@@ -108,9 +128,9 @@ export function KeyChords({ focus }: { focus?: string }) {
 
       <Readout
         title={`${keyName(key)} — ${sevenths ? 'diatonic sevenths' : 'diatonic triads'}`}
-        items={chords.map(({ numeral: n, chord }) => ({
+        items={chords.map(({ numeral: n, chord }, i) => ({
           primary: numeralText(n),
-          secondary: chordSymbol(chord),
+          secondary: i === markedAt ? `${chordSymbol(chord)} · the one asked` : chordSymbol(chord),
         }))}
       />
     </>

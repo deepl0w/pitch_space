@@ -58,18 +58,19 @@ describe('the way from an answer to the reference', () => {
     // circle beside its relative minor, so either would be one glance away.
     expect(referenceFor('signature:-3', undefined)).toEqual({ route: 'circle', focus: 'Eb_major' });
     expect(referenceFor('degree:5:minor', undefined)).toEqual({ route: 'scales', focus: 'natural_minor' });
-    expect(referenceFor('progression:minor:iv', undefined)).toEqual({ route: 'key-chords', focus: 'A_minor' });
+    expect(referenceFor('progression:minor:iv', undefined))
+      .toEqual({ route: 'key-chords', focus: 'A_minor', mark: 'iv' });
   });
 
   it('opens on the key the question was asked in, when the caller has it', () => {
     expect(referenceFor('progression:minor:iv', 'F#_minor'))
-      .toEqual({ route: 'key-chords', focus: 'F#_minor' });
+      .toEqual({ route: 'key-chords', focus: 'F#_minor', mark: 'iv' });
     expect(referenceFor('degree:5:major', 'Ab_major'))
       .toEqual({ route: 'scales', focus: 'major', tonic: 'Ab' });
     // A key that is not one, or is in the other mode, is no better than
     // none: the plainest key of the item's own mode, as without it.
     expect(referenceFor('progression:major:V', 'A_minor'))
-      .toEqual({ route: 'key-chords', focus: 'C_major' });
+      .toEqual({ route: 'key-chords', focus: 'C_major', mark: 'V' });
     expect(referenceFor('degree:5:major', 'H_major')).toEqual({ route: 'scales', focus: 'major' });
   });
 

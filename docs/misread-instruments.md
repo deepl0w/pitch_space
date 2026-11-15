@@ -528,6 +528,31 @@ helps, because nothing is wrong with it.
   pointed at a rule rather than at a check: the person who most needs
   stopping is the one who was not going to look.
 
+- **A limit you set yourself, read back as a fact about the corpus.** Two in
+  one investigation, 15 November. Checking whether `Score` followed a theme
+  change, a `grep -rn data-theme src/` was piped through `head -8`; `Score.tsx`
+  was not in the eight and was read as absent. Then `sed -n '50,62p'` on that
+  file cut its explanatory comment **mid-sentence** — the last line read "had
+  black noteheads on a dark page until something else forced a", and the next
+  line, unread, completed it with *"redraw. Watching the attribute covers the
+  choice the same way the query covers the default"*, four lines above the
+  `MutationObserver` doing exactly that.
+
+  So the file described the symptom in the **past tense, as the thing the fix
+  fixed**, and both halves of the refutation sat inside the window either
+  command would have shown unbounded. Combined with a still-pending `it.todo`
+  whose comment predicted the gap, it made a live user-visible defect that had
+  been closed for a week. It went no further than a draft message.
+
+  **The cure is narrower than "beware truncation", and tester's framing is the
+  one to keep: `head` is not a filter that might miss something, it is a cut
+  at a position you chose.** A limit cannot report that it bound — which puts
+  `head -n` in the same class as the interactive `cp` and the unrun step
+  elsewhere in this document: the output of a search that was cut short is
+  indistinguishable from the output of a search that found everything. `grep
+  -c` before truncating is the one check that separates them, and it costs a
+  command.
+
 - **A number the suite computes and never asserts.** The contrast between
   `--bg` and `--accent` sat among the pinned figures in `contrast.test.tsx`,
   correctly calculated, and was attached to no reader-facing case. A palette

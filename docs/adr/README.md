@@ -65,6 +65,7 @@ a reservation and the work it was meant to protect can cross in flight.
 | [0048](0048-one-accent-a-derived-palette-and-a-floor-it-knowingly-misses.md) | One accent, a derived palette, and a floor it knowingly misses | Accepted — accent no longer shared, see its correction |
 | [0049](0049-one-audiocontext-owned-by-one-module.md) | One AudioContext, owned by one module | Accepted — title overclaims; capture has its own, see its 18 Oct correction |
 | [0050](0050-a-sounded-event-finds-its-stave-note-by-distance-not-by-order.md) | A sounded event finds its stave note by distance, not by order | Accepted |
+| [0051](0051-a-right-answer-advances-an-item-by-what-it-ruled-out.md) | A right answer advances an item by what it ruled out | Accepted |
 
 **Ten conventions follow, in the order they were learned.** They are prose
 rather than headings because each is an argument with its instances attached,

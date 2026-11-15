@@ -160,3 +160,28 @@ should shorten a `read` interval is a question about what a score means, which
 [0036](0036-one-question-two-windows.md) puts with the user. What this
 addendum settles is only that it is open, and that shipping independent is not
 evidence that independence was chosen.
+
+## Addendum, 15 November 2026 — the trigger's question is answered: deliberately independent
+
+The 8 November addendum recorded that this record's first revisit trigger had
+fired, that the scheduler treats the two presentations as fully independent,
+and that **nobody had decided it** — the default was inherited exactly as the
+trigger predicted it would be.
+
+**The user ruled on 15 November: listening and reading are independent
+exercises.** So the behaviour stands unchanged, and what changes is its
+standing. `tallyKey` keys on a line that includes the presentation, a correct
+`listen` answer moves no `read` interval, and that is now a decision rather
+than a default nobody weighed.
+
+The transfer argument this record raised — that hearing a third surely teaches
+you something about reading one — is not refuted by the ruling and was not
+meant to be. It is outweighed: the two are different skills to practise, a
+learner fluent by eye and lost by ear is in two different places, and keeping
+the histories apart is what lets the app say so. That is the same argument
+this record already used for putting presentation in the key at all, which is
+why the ruling leaves no code to change.
+
+**This record's trigger is therefore closed rather than pending.** A later
+reader finding the two presentations independent should not read it as the
+first version's oversight.
